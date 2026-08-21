@@ -77,7 +77,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     lifespan=lifespan,
-    title="Catalys GOÄ engine",
+    title="Govatax GOÄ engine",
     version="0.3.0",
     description=(
         "GOÄ coding where the legal reasoning is symbolic and auditable.\n\n"

@@ -10,7 +10,7 @@ services:
     build:
       context: ../..
       dockerfile: apps/engine/Dockerfile
-    image: wigoo-engine:0.3.0
+    image: govatax-engine:0.3.0
     # Deliberately no `container_name`: a fixed name makes `docker compose run` collide with the
     # already-running service and shut it down, which breaks running the tests in a second shell
     # while the API is up.

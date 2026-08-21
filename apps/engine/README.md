@@ -128,8 +128,8 @@ pnpm --filter @workspace/contracts generate           # → packages/contracts/t
 
 ```bash
 # from the MONOREPO ROOT — the image needs logic/ and data/, which live outside apps/engine
-docker build -f apps/engine/Dockerfile -t wigoo-engine:0.3.0 .
-docker run --rm -p 8000:8000 wigoo-engine:0.3.0
+docker build -f apps/engine/Dockerfile -t govatax-engine:0.3.0 .
+docker run --rm -p 8000:8000 govatax-engine:0.3.0
 
 # or, with the rules mounted read-write-nothing for live editing:
 docker compose -f infra/docker/docker-compose.yml up --build engine

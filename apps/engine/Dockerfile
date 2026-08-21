@@ -3,7 +3,7 @@
 # Build context is the MONOREPO ROOT, not this directory: the image needs logic/ and data/, which
 # live outside apps/engine on purpose. From the repo root:
 #
-#     docker build -f apps/engine/Dockerfile -t wigoo-engine:0.3.0 .
+#     docker build -f apps/engine/Dockerfile -t govatax-engine:0.3.0 .
 #
 # or use infra/docker/docker-compose.yml, which sets the context correctly.
 
