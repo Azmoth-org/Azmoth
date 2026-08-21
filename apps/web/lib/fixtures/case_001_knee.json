@@ -1,0 +1,74 @@
+{
+  "patient": { "age": 58, "sex": "m", "setting": "ambulant" },
+  "consultation": {
+    "id": "consultation",
+    "type": "eingehende_beratung",
+    "duration_minutes": 12,
+    "confidence": "1.0"
+  },
+  "examinations": [
+    {
+      "id": "exam_focused",
+      "type": "symptombezogene_untersuchung",
+      "organ_system": "bewegungsapparat",
+      "organs": ["knie"],
+      "complexity": "mittel",
+      "confidence": "0.80"
+    },
+    {
+      "id": "exam_complete",
+      "type": "vollstaendige_untersuchung_organsystem",
+      "organ_system": "bewegungsapparat",
+      "organs": ["knie", "huefte", "wirbelsaeule"],
+      "complexity": "komplex",
+      "confidence": "0.95"
+    }
+  ],
+  "procedures": [
+    {
+      "id": "proc_punktion",
+      "type": "punktion",
+      "organ": "knie",
+      "details": "Punktion des rechten Kniegelenks, 15 ml seröse Flüssigkeit entlastet",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_sono",
+      "type": "sonographie",
+      "organ": "knie",
+      "details": "Sonographie des Kniegelenks mit Ergussnachweis",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_roentgen",
+      "type": "roentgen",
+      "organ": "knie",
+      "details": "Röntgen Knie in zwei Ebenen",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_verband",
+      "type": "verband",
+      "organ": "knie",
+      "details": "Kompressionsverband nach Punktion",
+      "complexity": "einfach",
+      "confidence": "1.0"
+    }
+  ],
+  "lab_tests": [],
+  "diagnoses": [
+    { "text": "Verdacht auf mediale Gonarthrose mit Reizerguss", "confidence": "0.85" }
+  ],
+  "justification_factors": [
+    {
+      "reason": "Erschwerte Gelenkpunktion bei ausgeprägtem Reizerguss, Aspiration von 15 ml unter sonographischer Kontrolle",
+      "severity": "mittel",
+      "applies_to": ["proc_punktion"],
+      "confidence": "1.0"
+    }
+  ],
+  "notes": "Synthetic case. No real patient data."
+}

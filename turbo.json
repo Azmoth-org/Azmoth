@@ -42,5 +42,8 @@
         "typescript/schema.ts"
       ]
     }
-  }
+  },
+  "globalPassThroughEnv": [
+    "ENGINE_BASE_URL"
+  ]
 }
