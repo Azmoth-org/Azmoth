@@ -1,0 +1,24 @@
+{
+  "name": "@workspace/contracts",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Generated API contract shared by the engine and the web app. Do not hand-edit.",
+  "exports": {
+    ".": "./typescript/index.ts",
+    "./openapi": "./openapi/openapi.json"
+  },
+  "files": [
+    "typescript",
+    "openapi"
+  ],
+  "scripts": {
+    "generate": "openapi-typescript ./openapi/openapi.json --output ./typescript/schema.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@workspace/typescript-config": "workspace:*",
+    "openapi-typescript": "^7.9.1",
+    "typescript": "^5"
+  }
+}

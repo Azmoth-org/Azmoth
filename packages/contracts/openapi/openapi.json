@@ -1,0 +1,3195 @@
+{
+  "components": {
+    "schemas": {
+      "AnalogDecision": {
+        "properties": {
+          "act_id": {
+            "title": "Act Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "legal_basis": {
+            "default": "§ 6 Abs. 2 GOÄ",
+            "title": "Legal Basis",
+            "type": "string"
+          },
+          "quote": {
+            "default": "",
+            "title": "Quote",
+            "type": "string"
+          },
+          "requires_human_review": {
+            "default": true,
+            "title": "Requires Human Review",
+            "type": "boolean"
+          },
+          "rule_id": {
+            "default": "",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "similarity": {
+            "title": "Similarity",
+            "type": "string"
+          },
+          "ziffer": {
+            "title": "Ziffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "act_id",
+          "entity_type",
+          "ziffer",
+          "similarity"
+        ],
+        "title": "AnalogDecision",
+        "type": "object"
+      },
+      "ApprovalRequest": {
+        "properties": {
+          "approved_by": {
+            "description": "Who is accepting responsibility.",
+            "minLength": 1,
+            "title": "Approved By",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approved_by"
+        ],
+        "title": "ApprovalRequest",
+        "type": "object"
+      },
+      "AuditTrail": {
+        "properties": {
+          "base_factor_policy": {
+            "default": "schwellenwert",
+            "title": "Base Factor Policy",
+            "type": "string"
+          },
+          "catalog_sha256": {
+            "default": "",
+            "title": "Catalog Sha256",
+            "type": "string"
+          },
+          "catalog_source": {
+            "default": "",
+            "title": "Catalog Source",
+            "type": "string"
+          },
+          "catalog_version": {
+            "default": "",
+            "title": "Catalog Version",
+            "type": "string"
+          },
+          "extraction_confidence_avg": {
+            "default": "1.0",
+            "title": "Extraction Confidence Avg",
+            "type": "string"
+          },
+          "extraction_mode": {
+            "title": "Extraction Mode",
+            "type": "string"
+          },
+          "extraction_model": {
+            "default": "manual",
+            "title": "Extraction Model",
+            "type": "string"
+          },
+          "llm_saw_goae_catalog": {
+            "default": false,
+            "title": "Llm Saw Goae Catalog",
+            "type": "boolean"
+          },
+          "logic_version": {
+            "default": "",
+            "title": "Logic Version",
+            "type": "string"
+          },
+          "optimizer": {
+            "default": "clingo",
+            "title": "Optimizer",
+            "type": "string"
+          },
+          "optimizer_version": {
+            "default": "",
+            "title": "Optimizer Version",
+            "type": "string"
+          },
+          "per_code": {
+            "items": {
+              "$ref": "#/components/schemas/AuditTrailEntry"
+            },
+            "title": "Per Code",
+            "type": "array"
+          },
+          "rule_coverage": {
+            "default": "partial",
+            "title": "Rule Coverage",
+            "type": "string"
+          },
+          "rule_coverage_detail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleCoverage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rule_summary": {
+            "additionalProperties": true,
+            "title": "Rule Summary",
+            "type": "object"
+          },
+          "rules_engine": {
+            "default": "souffle",
+            "title": "Rules Engine",
+            "type": "string"
+          },
+          "rules_engine_version": {
+            "default": "",
+            "title": "Rules Engine Version",
+            "type": "string"
+          },
+          "rules_version": {
+            "default": "",
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "solver_status": {
+            "default": "",
+            "title": "Solver Status",
+            "type": "string"
+          },
+          "stage_timings_ms": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Stage Timings Ms",
+            "type": "object"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "unverified_rule_policy": {
+            "default": "warn",
+            "title": "Unverified Rule Policy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "extraction_mode",
+          "timestamp"
+        ],
+        "title": "AuditTrail",
+        "type": "object"
+      },
+      "AuditTrailEntry": {
+        "properties": {
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ProofStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "ziffer": {
+            "title": "Ziffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ziffer"
+        ],
+        "title": "AuditTrailEntry",
+        "type": "object"
+      },
+      "BilingualOption": {
+        "description": "An option whose label is interface text, so it exists in both languages.",
+        "properties": {
+          "label_de": {
+            "title": "Label De",
+            "type": "string"
+          },
+          "label_en": {
+            "title": "Label En",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label_de",
+          "label_en"
+        ],
+        "title": "BilingualOption",
+        "type": "object"
+      },
+      "BlockedCode": {
+        "properties": {
+          "blocked_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked By"
+          },
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "explanation": {
+            "default": "",
+            "title": "Explanation",
+            "type": "string"
+          },
+          "legal_basis": {
+            "default": "",
+            "title": "Legal Basis",
+            "type": "string"
+          },
+          "official_text": {
+            "default": "",
+            "title": "Official Text",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "exclusion",
+              "mutual_exclusion",
+              "zielleistung",
+              "less_specific",
+              "unknown_ziffer",
+              "inactive_ziffer",
+              "conflict_lost"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "reconciled_with_final_invoice": {
+            "default": true,
+            "title": "Reconciled With Final Invoice",
+            "type": "boolean"
+          },
+          "rule_id": {
+            "default": "",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "ziffer": {
+            "title": "Ziffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ziffer",
+          "reason"
+        ],
+        "title": "BlockedCode",
+        "type": "object"
+      },
+      "CatalogResponse": {
+        "additionalProperties": true,
+        "description": "Catalog provenance and coverage — deliberately not the full 2000-entry dump.",
+        "properties": {
+          "active_ziffern": {
+            "default": 0,
+            "title": "Active Ziffern",
+            "type": "integer"
+          },
+          "catalog_sha256": {
+            "default": "",
+            "title": "Catalog Sha256",
+            "type": "string"
+          },
+          "catalog_version": {
+            "title": "Catalog Version",
+            "type": "string"
+          },
+          "coverage_detail": {
+            "additionalProperties": true,
+            "title": "Coverage Detail",
+            "type": "object"
+          },
+          "imported_rules": {
+            "additionalProperties": true,
+            "title": "Imported Rules",
+            "type": "object"
+          },
+          "overrides_applied": {
+            "default": 0,
+            "title": "Overrides Applied",
+            "type": "integer"
+          },
+          "provenance_breakdown": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Provenance Breakdown",
+            "type": "object"
+          },
+          "punktwert_cent": {
+            "default": "",
+            "title": "Punktwert Cent",
+            "type": "string"
+          },
+          "rounding": {
+            "additionalProperties": true,
+            "title": "Rounding",
+            "type": "object"
+          },
+          "rule_coverage": {
+            "default": "partial",
+            "title": "Rule Coverage",
+            "type": "string"
+          },
+          "rule_coverage_detail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleCoverage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rules_version": {
+            "default": "",
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/CatalogSource"
+          },
+          "text_quality_flagged": {
+            "default": 0,
+            "title": "Text Quality Flagged",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "ziffern": {
+            "default": 0,
+            "title": "Ziffern",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "catalog_version"
+        ],
+        "title": "CatalogResponse",
+        "type": "object"
+      },
+      "CatalogSource": {
+        "properties": {
+          "legal_status": {
+            "default": "",
+            "title": "Legal Status",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "publisher": {
+            "default": "",
+            "title": "Publisher",
+            "type": "string"
+          },
+          "retrieved_at": {
+            "default": "",
+            "title": "Retrieved At",
+            "type": "string"
+          },
+          "sha256_raw": {
+            "default": "",
+            "title": "Sha256 Raw",
+            "type": "string"
+          },
+          "url": {
+            "default": "",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "title": "CatalogSource",
+        "type": "object"
+      },
+      "ClinicalExtraction-Input": {
+        "additionalProperties": false,
+        "description": "Manual clinical entities. The pipeline's only input.",
+        "properties": {
+          "consultation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Consultation-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "diagnoses": {
+            "items": {
+              "$ref": "#/components/schemas/Diagnosis-Input"
+            },
+            "title": "Diagnoses",
+            "type": "array"
+          },
+          "examinations": {
+            "items": {
+              "$ref": "#/components/schemas/Examination-Input"
+            },
+            "title": "Examinations",
+            "type": "array"
+          },
+          "justification_factors": {
+            "items": {
+              "$ref": "#/components/schemas/JustificationFactor-Input"
+            },
+            "title": "Justification Factors",
+            "type": "array"
+          },
+          "lab_tests": {
+            "items": {
+              "$ref": "#/components/schemas/LabTest-Input"
+            },
+            "title": "Lab Tests",
+            "type": "array"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/Patient"
+          },
+          "procedures": {
+            "items": {
+              "$ref": "#/components/schemas/Procedure-Input"
+            },
+            "title": "Procedures",
+            "type": "array"
+          }
+        },
+        "title": "ClinicalExtraction",
+        "type": "object"
+      },
+      "ClinicalExtraction-Output": {
+        "additionalProperties": false,
+        "description": "Manual clinical entities. The pipeline's only input.",
+        "properties": {
+          "consultation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Consultation-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "diagnoses": {
+            "items": {
+              "$ref": "#/components/schemas/Diagnosis-Output"
+            },
+            "title": "Diagnoses",
+            "type": "array"
+          },
+          "examinations": {
+            "items": {
+              "$ref": "#/components/schemas/Examination-Output"
+            },
+            "title": "Examinations",
+            "type": "array"
+          },
+          "justification_factors": {
+            "items": {
+              "$ref": "#/components/schemas/JustificationFactor-Output"
+            },
+            "title": "Justification Factors",
+            "type": "array"
+          },
+          "lab_tests": {
+            "items": {
+              "$ref": "#/components/schemas/LabTest-Output"
+            },
+            "title": "Lab Tests",
+            "type": "array"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/Patient"
+          },
+          "procedures": {
+            "items": {
+              "$ref": "#/components/schemas/Procedure-Output"
+            },
+            "title": "Procedures",
+            "type": "array"
+          }
+        },
+        "title": "ClinicalExtraction",
+        "type": "object"
+      },
+      "Coding": {
+        "properties": {
+          "analog_codes": {
+            "items": {
+              "$ref": "#/components/schemas/AnalogDecision"
+            },
+            "title": "Analog Codes",
+            "type": "array"
+          },
+          "blocked_codes": {
+            "items": {
+              "$ref": "#/components/schemas/BlockedCode"
+            },
+            "title": "Blocked Codes",
+            "type": "array"
+          },
+          "conflicts_arbitrated": {
+            "items": {
+              "$ref": "#/components/schemas/Conflict"
+            },
+            "title": "Conflicts Arbitrated",
+            "type": "array"
+          },
+          "missing_documentation": {
+            "items": {
+              "$ref": "#/components/schemas/MissingDocumentation"
+            },
+            "title": "Missing Documentation",
+            "type": "array"
+          },
+          "proposed_codes": {
+            "items": {
+              "$ref": "#/components/schemas/InvoiceLine"
+            },
+            "title": "Proposed Codes",
+            "type": "array"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Totals"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/Warning_"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "title": "Coding",
+        "type": "object"
+      },
+      "CodingResponse": {
+        "description": "The invoice draft itself. Wrapped in a `Proposal` by the API.",
+        "properties": {
+          "audit_trail": {
+            "$ref": "#/components/schemas/AuditTrail"
+          },
+          "coding": {
+            "$ref": "#/components/schemas/Coding"
+          },
+          "extraction": {
+            "$ref": "#/components/schemas/ClinicalExtraction-Output"
+          }
+        },
+        "required": [
+          "extraction",
+          "coding",
+          "audit_trail"
+        ],
+        "title": "CodingResponse",
+        "type": "object"
+      },
+      "ComplexityRef": {
+        "description": "A complexity an entity type actually has a mapping row for.\n\nCarries no label on purpose: the display text for `einfach` / `mittel` / `komplex` is the same\neverywhere and lives once in the top-level `complexities` list. Repeating it per entity type\nwould be three ways for the same word to disagree with itself.",
+        "properties": {
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "ziffern": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ziffern",
+            "type": "array"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "ComplexityRef",
+        "type": "object"
+      },
+      "Conflict": {
+        "properties": {
+          "legal_basis": {
+            "default": "",
+            "title": "Legal Basis",
+            "type": "string"
+          },
+          "rule_id": {
+            "default": "",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "ziffer_a": {
+            "title": "Ziffer A",
+            "type": "string"
+          },
+          "ziffer_b": {
+            "title": "Ziffer B",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ziffer_a",
+          "ziffer_b"
+        ],
+        "title": "Conflict",
+        "type": "object"
+      },
+      "Consultation-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "1.0",
+            "title": "Confidence"
+          },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Minutes"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Consultation",
+        "type": "object"
+      },
+      "Consultation-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "default": "1.0",
+            "title": "Confidence",
+            "type": "string"
+          },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Minutes"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Consultation",
+        "type": "object"
+      },
+      "Diagnosis-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "1.0",
+            "title": "Confidence"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "text": {
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "Diagnosis",
+        "type": "object"
+      },
+      "Diagnosis-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "default": "1.0",
+            "title": "Confidence",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "text": {
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "Diagnosis",
+        "type": "object"
+      },
+      "EntityTypeOption": {
+        "description": "One thing a user can record, with exactly the choices that map to something.",
+        "properties": {
+          "analog_only": {
+            "default": false,
+            "title": "Analog Only",
+            "type": "boolean"
+          },
+          "complexities": {
+            "items": {
+              "$ref": "#/components/schemas/ComplexityRef"
+            },
+            "title": "Complexities",
+            "type": "array"
+          },
+          "complexity_qualified": {
+            "default": false,
+            "title": "Complexity Qualified",
+            "type": "boolean"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "consultation",
+              "examination",
+              "lab_test",
+              "procedure"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label_de": {
+            "title": "Label De",
+            "type": "string"
+          },
+          "label_en": {
+            "title": "Label En",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          },
+          "organs": {
+            "items": {
+              "$ref": "#/components/schemas/LabelledOption"
+            },
+            "title": "Organs",
+            "type": "array"
+          },
+          "requires_organ": {
+            "default": false,
+            "title": "Requires Organ",
+            "type": "boolean"
+          },
+          "requires_subtype": {
+            "default": false,
+            "title": "Requires Subtype",
+            "type": "boolean"
+          },
+          "subtypes": {
+            "items": {
+              "$ref": "#/components/schemas/LabelledOption"
+            },
+            "title": "Subtypes",
+            "type": "array"
+          },
+          "ziffern": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ziffern",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entity_type",
+          "kind",
+          "label_de",
+          "label_en"
+        ],
+        "title": "EntityTypeOption",
+        "type": "object"
+      },
+      "Examination-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "complexity": {
+            "default": "mittel",
+            "enum": [
+              "einfach",
+              "mittel",
+              "komplex"
+            ],
+            "title": "Complexity",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "1.0",
+            "title": "Confidence"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "organ_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organ System"
+          },
+          "organs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Organs",
+            "type": "array"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Examination",
+        "type": "object"
+      },
+      "Examination-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "complexity": {
+            "default": "mittel",
+            "enum": [
+              "einfach",
+              "mittel",
+              "komplex"
+            ],
+            "title": "Complexity",
+            "type": "string"
+          },
+          "confidence": {
+            "default": "1.0",
+            "title": "Confidence",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "organ_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organ System"
+          },
+          "organs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Organs",
+            "type": "array"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Examination",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "app_env": {
+            "title": "App Env",
+            "type": "string"
+          },
+          "cache_enabled": {
+            "default": true,
+            "title": "Cache Enabled",
+            "type": "boolean"
+          },
+          "cache_entries": {
+            "default": 0,
+            "title": "Cache Entries",
+            "type": "integer"
+          },
+          "catalog_version": {
+            "title": "Catalog Version",
+            "type": "string"
+          },
+          "catalog_ziffern": {
+            "default": 0,
+            "title": "Catalog Ziffern",
+            "type": "integer"
+          },
+          "clingo_version": {
+            "default": "",
+            "title": "Clingo Version",
+            "type": "string"
+          },
+          "extraction_mode": {
+            "title": "Extraction Mode",
+            "type": "string"
+          },
+          "logic_version": {
+            "default": "",
+            "title": "Logic Version",
+            "type": "string"
+          },
+          "rule_coverage": {
+            "title": "Rule Coverage",
+            "type": "string"
+          },
+          "rules_enforced": {
+            "default": 0,
+            "title": "Rules Enforced",
+            "type": "integer"
+          },
+          "solver_timeout_seconds": {
+            "default": 0.0,
+            "title": "Solver Timeout Seconds",
+            "type": "number"
+          },
+          "souffle_available": {
+            "title": "Souffle Available",
+            "type": "boolean"
+          },
+          "souffle_version": {
+            "default": "",
+            "title": "Souffle Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unverified_rules_not_enforced": {
+            "default": 0,
+            "title": "Unverified Rules Not Enforced",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "app_env",
+          "extraction_mode",
+          "catalog_version",
+          "rule_coverage",
+          "souffle_available"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "InvoiceLine": {
+        "properties": {
+          "amount_cent_unrounded": {
+            "default": "0",
+            "title": "Amount Cent Unrounded",
+            "type": "string"
+          },
+          "amount_eur": {
+            "default": "0",
+            "title": "Amount Eur",
+            "type": "string"
+          },
+          "amount_eur_before_minderung": {
+            "default": "0",
+            "title": "Amount Eur Before Minderung",
+            "type": "string"
+          },
+          "analog_for": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analog For"
+          },
+          "catalog_provenance": {
+            "default": "official",
+            "title": "Catalog Provenance",
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "factor_basis": {
+            "title": "Factor Basis",
+            "type": "string"
+          },
+          "factor_legal_basis": {
+            "default": "",
+            "title": "Factor Legal Basis",
+            "type": "string"
+          },
+          "is_analog": {
+            "default": false,
+            "title": "Is Analog",
+            "type": "boolean"
+          },
+          "justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Justification"
+          },
+          "justification_present": {
+            "default": false,
+            "title": "Justification Present",
+            "type": "boolean"
+          },
+          "justification_required": {
+            "default": false,
+            "title": "Justification Required",
+            "type": "boolean"
+          },
+          "minderung_applied": {
+            "default": false,
+            "title": "Minderung Applied",
+            "type": "boolean"
+          },
+          "official_text": {
+            "title": "Official Text",
+            "type": "string"
+          },
+          "proof": {
+            "items": {
+              "$ref": "#/components/schemas/ProofStep"
+            },
+            "title": "Proof",
+            "type": "array"
+          },
+          "punkte": {
+            "title": "Punkte",
+            "type": "integer"
+          },
+          "status": {
+            "default": "billable",
+            "enum": [
+              "billable",
+              "billable_analog"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text_quality": {
+            "default": "ok",
+            "title": "Text Quality",
+            "type": "string"
+          },
+          "ziffer": {
+            "title": "Ziffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ziffer",
+          "official_text",
+          "punkte",
+          "category",
+          "factor",
+          "factor_basis",
+          "confidence"
+        ],
+        "title": "InvoiceLine",
+        "type": "object"
+      },
+      "JustificationFactor-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "applies_to": {
+            "description": "Entity ids or entity types this refers to. Empty = the whole encounter.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Applies To",
+            "type": "array"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "1.0",
+            "title": "Confidence"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "severity": {
+            "default": "leicht",
+            "enum": [
+              "leicht",
+              "mittel",
+              "schwer"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "JustificationFactor",
+        "type": "object"
+      },
+      "JustificationFactor-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "applies_to": {
+            "description": "Entity ids or entity types this refers to. Empty = the whole encounter.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Applies To",
+            "type": "array"
+          },
+          "confidence": {
+            "default": "1.0",
+            "title": "Confidence",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "severity": {
+            "default": "leicht",
+            "enum": [
+              "leicht",
+              "mittel",
+              "schwer"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "JustificationFactor",
+        "type": "object"
+      },
+      "LabTest-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "1.0",
+            "title": "Confidence"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "LabTest",
+        "type": "object"
+      },
+      "LabTest-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "default": "1.0",
+            "title": "Confidence",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "LabTest",
+        "type": "object"
+      },
+      "LabelledOption": {
+        "description": "An option with one display label: an organ, a subtype, a complexity qualifier.\n\nOrgan and subtype names are clinical vocabulary and are deliberately NOT translated — the same\nreason GOÄ service texts are not. `ziffern` is informational, so a picker can show which\nposition a choice leads to; the engine still decides.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "ziffern": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ziffern",
+            "type": "array"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "LabelledOption",
+        "type": "object"
+      },
+      "MissingDocumentation": {
+        "description": "A higher Steigerungsfaktor that the law would permit but the record does not support.\n\nDerived only from what the existing logic already emits — the § 5 band, the cap, the ladder's\nown output and whether a written reason is present. **Nothing here changes what is billed.**\nThe solver's objective is untouched: this is the gap between what was documented and what\nwould have to be documented, stated so a physician can decide whether to document it.\n\n``current_factor`` is what the solver actually chose and what the invoice charges.\n``possible_factor`` is the ceiling that a written justification (§ 12 Abs. 3 GOÄ) would open,\nnever a proposal to charge it.",
+        "properties": {
+          "current_factor": {
+            "title": "Current Factor",
+            "type": "string"
+          },
+          "legal_basis": {
+            "default": "§ 12 Abs. 3 GOÄ",
+            "title": "Legal Basis",
+            "type": "string"
+          },
+          "missing": {
+            "title": "Missing",
+            "type": "string"
+          },
+          "possible_factor": {
+            "title": "Possible Factor",
+            "type": "string"
+          },
+          "ziffer": {
+            "title": "Ziffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ziffer",
+          "current_factor",
+          "possible_factor",
+          "missing"
+        ],
+        "title": "MissingDocumentation",
+        "type": "object"
+      },
+      "PadnextAuditReport": {
+        "additionalProperties": false,
+        "properties": {
+          "advisory_rule_count": {
+            "default": 0,
+            "title": "Advisory Rule Count",
+            "type": "integer"
+          },
+          "arithmetic_delta_eur": {
+            "default": "0.00",
+            "title": "Arithmetic Delta Eur",
+            "type": "string"
+          },
+          "at_risk_eur": {
+            "default": "0.00",
+            "title": "At Risk Eur",
+            "type": "string"
+          },
+          "catalog_sha256": {
+            "default": "",
+            "title": "Catalog Sha256",
+            "type": "string"
+          },
+          "catalog_version": {
+            "default": "",
+            "title": "Catalog Version",
+            "type": "string"
+          },
+          "claimed_total_eur": {
+            "default": "0.00",
+            "title": "Claimed Total Eur",
+            "type": "string"
+          },
+          "comparable_claimed_eur": {
+            "default": "0.00",
+            "title": "Comparable Claimed Eur",
+            "type": "string"
+          },
+          "defensible_total_eur": {
+            "default": "0.00",
+            "title": "Defensible Total Eur",
+            "type": "string"
+          },
+          "echtdaten": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Echtdaten"
+          },
+          "enforced_rule_count": {
+            "default": 0,
+            "title": "Enforced Rule Count",
+            "type": "integer"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/PadnextFinding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "logic_version": {
+            "default": "",
+            "title": "Logic Version",
+            "type": "string"
+          },
+          "nachrichtentyp": {
+            "default": "",
+            "title": "Nachrichtentyp",
+            "type": "string"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/PadnextAuditedPosition"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "receipt_hash": {
+            "default": "",
+            "title": "Receipt Hash",
+            "type": "string"
+          },
+          "recomputed_total_eur": {
+            "default": "0.00",
+            "title": "Recomputed Total Eur",
+            "type": "string"
+          },
+          "rule_coverage_detail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleCoverage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rules_version": {
+            "default": "",
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "setting": {
+            "default": "ambulant",
+            "enum": [
+              "ambulant",
+              "stationaer",
+              "belegarzt"
+            ],
+            "title": "Setting",
+            "type": "string"
+          },
+          "setting_source": {
+            "default": "",
+            "title": "Setting Source",
+            "type": "string"
+          },
+          "source_name": {
+            "default": "",
+            "title": "Source Name",
+            "type": "string"
+          },
+          "suppressed_unverified_rule_count": {
+            "default": 0,
+            "title": "Suppressed Unverified Rule Count",
+            "type": "integer"
+          },
+          "unpriceable_claimed_eur": {
+            "default": "0.00",
+            "title": "Unpriceable Claimed Eur",
+            "type": "string"
+          }
+        },
+        "title": "PadnextAuditReport",
+        "type": "object"
+      },
+      "PadnextAuditedPosition": {
+        "additionalProperties": false,
+        "description": "A claimed position, with our verdict on it.",
+        "properties": {
+          "accepted_as_claimed": {
+            "default": false,
+            "title": "Accepted As Claimed",
+            "type": "boolean"
+          },
+          "amount_delta_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Delta Eur"
+          },
+          "blocked_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked By"
+          },
+          "claimed_amount_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed Amount Eur"
+          },
+          "claimed_faktor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed Faktor"
+          },
+          "factor_within_band": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Within Band"
+          },
+          "go": {
+            "title": "Go",
+            "type": "string"
+          },
+          "in_catalog": {
+            "default": false,
+            "title": "In Catalog",
+            "type": "boolean"
+          },
+          "is_analog": {
+            "default": false,
+            "title": "Is Analog",
+            "type": "boolean"
+          },
+          "justification_present": {
+            "default": false,
+            "title": "Justification Present",
+            "type": "boolean"
+          },
+          "justification_required": {
+            "default": false,
+            "title": "Justification Required",
+            "type": "boolean"
+          },
+          "legal_basis": {
+            "default": "",
+            "title": "Legal Basis",
+            "type": "string"
+          },
+          "official_text": {
+            "default": "",
+            "title": "Official Text",
+            "type": "string"
+          },
+          "positionsnr": {
+            "title": "Positionsnr",
+            "type": "string"
+          },
+          "proof": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Proof",
+            "type": "array"
+          },
+          "punkte": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Punkte"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          },
+          "recomputed_amount_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recomputed Amount Eur"
+          },
+          "verdict": {
+            "default": "chargeable",
+            "enum": [
+              "chargeable",
+              "blocked",
+              "out_of_scope",
+              "unknown_ziffer"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          },
+          "ziffer": {
+            "title": "Ziffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "positionsnr",
+          "ziffer",
+          "go"
+        ],
+        "title": "PadnextAuditedPosition",
+        "type": "object"
+      },
+      "PadnextFinding": {
+        "additionalProperties": false,
+        "description": "Something the audit noticed. Every non-chargeable position produces at least one.",
+        "properties": {
+          "claimed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed"
+          },
+          "legal_basis": {
+            "default": "",
+            "title": "Legal Basis",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "positionsnr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Positionsnr"
+          },
+          "recomputed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recomputed"
+          },
+          "rule_id": {
+            "default": "",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "severity": {
+            "default": "warning",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "ziffer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ziffer"
+          }
+        },
+        "required": [
+          "type",
+          "message"
+        ],
+        "title": "PadnextFinding",
+        "type": "object"
+      },
+      "Patient": {
+        "additionalProperties": false,
+        "properties": {
+          "age": {
+            "anyOf": [
+              {
+                "maximum": 130.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age"
+          },
+          "setting": {
+            "default": "ambulant",
+            "enum": [
+              "ambulant",
+              "stationaer",
+              "belegarzt"
+            ],
+            "title": "Setting",
+            "type": "string"
+          },
+          "sex": {
+            "anyOf": [
+              {
+                "enum": [
+                  "m",
+                  "w",
+                  "d"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sex"
+          }
+        },
+        "title": "Patient",
+        "type": "object"
+      },
+      "Procedure-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "complexity": {
+            "default": "mittel",
+            "enum": [
+              "einfach",
+              "mittel",
+              "komplex"
+            ],
+            "title": "Complexity",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "1.0",
+            "title": "Confidence"
+          },
+          "details": {
+            "default": "",
+            "title": "Details",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "organ": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organ"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Procedure",
+        "type": "object"
+      },
+      "Procedure-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "complexity": {
+            "default": "mittel",
+            "enum": [
+              "einfach",
+              "mittel",
+              "komplex"
+            ],
+            "title": "Complexity",
+            "type": "string"
+          },
+          "confidence": {
+            "default": "1.0",
+            "title": "Confidence",
+            "type": "string"
+          },
+          "details": {
+            "default": "",
+            "title": "Details",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable identifier, assigned if omitted.",
+            "title": "Id"
+          },
+          "organ": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organ"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Procedure",
+        "type": "object"
+      },
+      "ProofStep": {
+        "properties": {
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "legal_basis": {
+            "default": "",
+            "title": "Legal Basis",
+            "type": "string"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "rule_id": {
+            "default": "",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "ziffer": {
+            "title": "Ziffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ziffer",
+          "rule"
+        ],
+        "title": "ProofStep",
+        "type": "object"
+      },
+      "Proposal": {
+        "description": "One solve, wrapped with everything a reviewer needs to accept or refuse it.",
+        "properties": {
+          "advisory_rule_count": {
+            "default": 0,
+            "title": "Advisory Rule Count",
+            "type": "integer"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "cached": {
+            "default": false,
+            "title": "Cached",
+            "type": "boolean"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "catalog_sha256": {
+            "default": "",
+            "title": "Catalog Sha256",
+            "type": "string"
+          },
+          "catalog_version": {
+            "title": "Catalog Version",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "enforced_rule_count": {
+            "default": 0,
+            "title": "Enforced Rule Count",
+            "type": "integer"
+          },
+          "logic_version": {
+            "default": "",
+            "title": "Logic Version",
+            "type": "string"
+          },
+          "missing_documentation": {
+            "items": {
+              "$ref": "#/components/schemas/MissingDocumentation"
+            },
+            "title": "Missing Documentation",
+            "type": "array"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "string"
+          },
+          "receipt_hash": {
+            "title": "Receipt Hash",
+            "type": "string"
+          },
+          "rejected_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected Reason"
+          },
+          "rule_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleCoverage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rules_engine_version": {
+            "default": "",
+            "title": "Rules Engine Version",
+            "type": "string"
+          },
+          "rules_hash": {
+            "default": "",
+            "title": "Rules Hash",
+            "type": "string"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "solver_result": {
+            "$ref": "#/components/schemas/CodingResponse"
+          },
+          "solver_version": {
+            "title": "Solver Version",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProposalStatus",
+            "default": "DRAFT"
+          },
+          "suppressed_unverified_rule_count": {
+            "default": 0,
+            "title": "Suppressed Unverified Rule Count",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/Warning_"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "created_at",
+          "receipt_hash",
+          "catalog_version",
+          "rules_version",
+          "solver_version",
+          "solver_result"
+        ],
+        "title": "Proposal",
+        "type": "object"
+      },
+      "ProposalStatus": {
+        "enum": [
+          "DRAFT",
+          "APPROVED",
+          "REJECTED",
+          "EXPORTED"
+        ],
+        "title": "ProposalStatus",
+        "type": "string"
+      },
+      "RejectionRequest": {
+        "properties": {
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "rejected_by": {
+            "minLength": 1,
+            "title": "Rejected By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rejected_by",
+          "reason"
+        ],
+        "title": "RejectionRequest",
+        "type": "object"
+      },
+      "RuleCoverage": {
+        "description": "How much of the rule set is actually being enforced, on every response that has one.\n\nThe API must never imply that unverified rules are enforced. ``enforced_rule_count`` is what\ncan suppress a position; ``advisory_rule_count`` is what only warns. Under the default\n``UNVERIFIED_RULE_POLICY=warn`` the advisory set is the automatically extracted majority, and\na response carrying a non-zero advisory count also carries a warning saying so.",
+        "properties": {
+          "advisory_rule_count": {
+            "default": 0,
+            "title": "Advisory Rule Count",
+            "type": "integer"
+          },
+          "enforced_rule_count": {
+            "default": 0,
+            "title": "Enforced Rule Count",
+            "type": "integer"
+          },
+          "policy_for_unverified_rules": {
+            "title": "Policy For Unverified Rules",
+            "type": "string"
+          },
+          "rule_coverage": {
+            "default": "partial",
+            "title": "Rule Coverage",
+            "type": "string"
+          },
+          "rules_version": {
+            "default": "",
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "suppressed_unverified_rule_count": {
+            "default": 0,
+            "title": "Suppressed Unverified Rule Count",
+            "type": "integer"
+          },
+          "verified_share": {
+            "default": "0/0",
+            "title": "Verified Share",
+            "type": "string"
+          }
+        },
+        "required": [
+          "policy_for_unverified_rules"
+        ],
+        "title": "RuleCoverage",
+        "type": "object"
+      },
+      "SolveRequest": {
+        "additionalProperties": false,
+        "description": "``POST /api/v1/solve`` — clinical entities in, an auditable draft out.\n\nAccepts either the envelope ``{\"extraction\": {...}, \"setting\": ...}`` or a bare extraction\nposted directly, because ``curl -d @logic/tests/cases/case_001_knee/input.json`` is the\nobvious thing to reach for and the case files are bare extractions.",
+        "properties": {
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Caller's identifier for this encounter, echoed onto the proposal.",
+            "title": "Case Id"
+          },
+          "extraction": {
+            "$ref": "#/components/schemas/ClinicalExtraction-Input"
+          },
+          "setting": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ambulant",
+                  "stationaer",
+                  "belegarzt"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Overrides patient.setting; drives § 6a Minderung.",
+            "title": "Setting"
+          }
+        },
+        "required": [
+          "extraction"
+        ],
+        "title": "SolveRequest",
+        "type": "object"
+      },
+      "Totals": {
+        "properties": {
+          "amount_cent_unrounded": {
+            "default": "0",
+            "title": "Amount Cent Unrounded",
+            "type": "string"
+          },
+          "amount_eur": {
+            "default": "0",
+            "title": "Amount Eur",
+            "type": "string"
+          },
+          "amount_eur_before_minderung": {
+            "default": "0",
+            "title": "Amount Eur Before Minderung",
+            "type": "string"
+          },
+          "minderung_applied": {
+            "default": false,
+            "title": "Minderung Applied",
+            "type": "boolean"
+          },
+          "minderung_rate": {
+            "default": "0",
+            "title": "Minderung Rate",
+            "type": "string"
+          },
+          "punkte": {
+            "default": 0,
+            "title": "Punkte",
+            "type": "integer"
+          },
+          "punktwert_cent": {
+            "default": "5.82873",
+            "title": "Punktwert Cent",
+            "type": "string"
+          },
+          "rounding_legal_basis": {
+            "default": "",
+            "title": "Rounding Legal Basis",
+            "type": "string"
+          },
+          "rounding_policy": {
+            "default": "ROUND_HALF_UP",
+            "title": "Rounding Policy",
+            "type": "string"
+          }
+        },
+        "title": "Totals",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VocabularyResponse": {
+        "description": "What `GET /api/v1/vocabulary` returns.\n\nDeclared as a model rather than a bare dict for one concrete reason: an endpoint with no\nOpenAPI schema cannot have a TypeScript client generated for it, so the front end wrote one by\nhand and got the shape wrong in three ways — `entity_types` declared as a flat array when the\nAPI returns a mapping keyed by kind, options keyed on `value` rather than `entity_type`, and an\ninvented `sexes` list. None of it failed a type check on either side.\n\n`entity_types` is a mapping so a UI can group the pickers without re-deriving groups.",
+        "properties": {
+          "catalog_version": {
+            "title": "Catalog Version",
+            "type": "string"
+          },
+          "complexities": {
+            "items": {
+              "$ref": "#/components/schemas/BilingualOption"
+            },
+            "title": "Complexities",
+            "type": "array"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "entity_types": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/EntityTypeOption"
+              },
+              "type": "array"
+            },
+            "title": "Entity Types",
+            "type": "object"
+          },
+          "settings": {
+            "items": {
+              "$ref": "#/components/schemas/BilingualOption"
+            },
+            "title": "Settings",
+            "type": "array"
+          },
+          "severities": {
+            "items": {
+              "$ref": "#/components/schemas/BilingualOption"
+            },
+            "title": "Severities",
+            "type": "array"
+          }
+        },
+        "required": [
+          "catalog_version",
+          "settings",
+          "complexities",
+          "severities",
+          "entity_types",
+          "counts"
+        ],
+        "title": "VocabularyResponse",
+        "type": "object"
+      },
+      "Warning_": {
+        "description": "A non-fatal finding. Named with a trailing underscore to avoid the builtin.",
+        "properties": {
+          "legal_basis": {
+            "default": "",
+            "title": "Legal Basis",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "rule_id": {
+            "default": "",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "severity": {
+            "default": "warning",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "ziffer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ziffer"
+          }
+        },
+        "required": [
+          "type",
+          "message"
+        ],
+        "title": "Warning_",
+        "type": "object"
+      },
+      "ZifferResponse": {
+        "additionalProperties": true,
+        "description": "One catalog position, with the rules that touch it.",
+        "properties": {
+          "annotations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Annotations",
+            "type": "array"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "exclusions_enforced": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Exclusions Enforced",
+            "type": "array"
+          },
+          "factor_band": {
+            "additionalProperties": true,
+            "title": "Factor Band",
+            "type": "object"
+          },
+          "factor_cap": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Cap"
+          },
+          "minderung_exempt": {
+            "default": false,
+            "title": "Minderung Exempt",
+            "type": "boolean"
+          },
+          "official_text": {
+            "title": "Official Text",
+            "type": "string"
+          },
+          "provenance": {
+            "default": "official",
+            "title": "Provenance",
+            "type": "string"
+          },
+          "punkte": {
+            "title": "Punkte",
+            "type": "integer"
+          },
+          "rule_coverage": {
+            "default": "partial",
+            "title": "Rule Coverage",
+            "type": "string"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "section_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Title"
+          },
+          "status": {
+            "default": "active",
+            "title": "Status",
+            "type": "string"
+          },
+          "text_quality": {
+            "default": "ok",
+            "title": "Text Quality",
+            "type": "string"
+          },
+          "ziffer": {
+            "title": "Ziffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ziffer",
+          "official_text",
+          "punkte"
+        ],
+        "title": "ZifferResponse",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "GOÄ coding where the legal reasoning is symbolic and auditable.\n\n`POST /api/v1/solve` takes structured clinical entities — no model runs anywhere in this service. A Soufflé Datalog program decides what is certainly chargeable, a Clingo ASP program resolves what genuinely requires a choice under a hard timeout, an independent validation pass re-checks the result, and every line carries a proof tree with rule ids and paragraph references.\n\n**The response is a DRAFT proposal, not an invoice.** It leaves `DRAFT` only when a named person approves it. Every response carries `receipt_hash` (SHA-256 over the catalog, the rule tables, the logic programs, the solver versions, the policy and the input) and the rule-coverage counts: `enforced_rule_count` is what can suppress a position, `advisory_rule_count` is what only warns.\n\nThe catalog is imported from the official GOÄ published at gesetze-im-internet.de. Rule coverage is **partial** — see `GET /api/v1/catalog`. **Synthetic data only.**",
+    "title": "Catalys GOÄ engine",
+    "version": "0.3.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/catalog": {
+      "get": {
+        "description": "Provenance and coverage — deliberately not the full 2000-entry dump.\n\nThe warnings are not decoration: rule coverage is `partial`, most exclusion rules were\nmachine-extracted and are unverified, and no Zielleistung pairs are loaded at all. Publishing\nthat is the difference between a defensible tool and one that overclaims.",
+        "operationId": "catalog_api_v1_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Catalog",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/ziffer/{ziffer}": {
+      "get": {
+        "operationId": "catalog_ziffer_api_v1_catalog_ziffer__ziffer__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ziffer",
+            "required": true,
+            "schema": {
+              "title": "Ziffer",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZifferResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Catalog Ziffer",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/padnext/audit": {
+      "post": {
+        "description": "Audit a PADnext delivery against the GOÄ rules.\n\nThe body is the file itself, not a JSON wrapper or a multipart upload: either a `.padx`\ncontainer (a ZIP, sniffed by magic bytes) or a bare `*_padx.xml` payload. Taking raw bytes\navoids a `python-multipart` dependency for what is one file per request.\n\nA delivery flagged as production data is refused with 422 — see `app.padnext.audit` and\n`docs/compliance/PRIVATE_DATA_WARNING.md`.",
+        "operationId": "padnext_audit_api_v1_padnext_audit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "contentMediaType": "application/octet-stream",
+                "default": "",
+                "title": "Body",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PadnextAuditReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Padnext Audit",
+        "tags": [
+          "padnext"
+        ]
+      }
+    },
+    "/api/v1/proposals": {
+      "get": {
+        "operationId": "list_proposals_api_v1_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ProposalStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Proposal"
+                  },
+                  "title": "Response List Proposals Api V1 Proposals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Proposals",
+        "tags": [
+          "proposals"
+        ]
+      }
+    },
+    "/api/v1/proposals/{proposal_id}": {
+      "get": {
+        "operationId": "get_proposal_api_v1_proposals__proposal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Proposal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Proposal",
+        "tags": [
+          "proposals"
+        ]
+      }
+    },
+    "/api/v1/proposals/{proposal_id}/approve": {
+      "post": {
+        "description": "Accept a draft. `approved_by` is required — an unattributed approval is not one.",
+        "operationId": "approve_api_v1_proposals__proposal_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Proposal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve",
+        "tags": [
+          "proposals"
+        ]
+      }
+    },
+    "/api/v1/proposals/{proposal_id}/export": {
+      "post": {
+        "description": "Record that an approved proposal left the system. Only reachable from APPROVED.",
+        "operationId": "mark_exported_api_v1_proposals__proposal_id__export_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Proposal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Exported",
+        "tags": [
+          "proposals"
+        ]
+      }
+    },
+    "/api/v1/proposals/{proposal_id}/reject": {
+      "post": {
+        "description": "Refuse a draft, with a reason. Terminal: a rejected draft is not re-decided, it is re-run.",
+        "operationId": "reject_api_v1_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Proposal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject",
+        "tags": [
+          "proposals"
+        ]
+      }
+    },
+    "/api/v1/solve": {
+      "post": {
+        "description": "Run the deterministic pipeline and store the result as a DRAFT proposal.\n\nThe response is a proposal, never an invoice: `status` is `DRAFT` and stays there until a\nnamed person approves it via `POST /api/v1/proposals/{id}/approve`. `receipt_hash` identifies\nthe catalog, rule tables, logic programs, solver versions, policy and input that produced it.",
+        "operationId": "solve_api_v1_solve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Proposal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Solve",
+        "tags": [
+          "solve"
+        ]
+      }
+    },
+    "/api/v1/vocabulary": {
+      "get": {
+        "description": "Exactly the clinical vocabulary the bridge can map, for a UI to offer as pickers.\n\nGenerated from `data/mappings/entity_to_ziffer.csv`, so it cannot drift from what the engine\nactually understands. This is what lets a form stop asking users to type identifiers like\n`vollstaendige_untersuchung_organsystem` — a typo there produces an `unmapped_entity` warning\nand the service is silently not charged.",
+        "operationId": "vocabulary_api_v1_vocabulary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VocabularyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Vocabulary",
+        "tags": [
+          "catalog"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "description": "Liveness, versions and engine availability.",
+      "name": "health"
+    },
+    {
+      "description": "Clinical entities → a receipted DRAFT proposal.",
+      "name": "solve"
+    },
+    {
+      "description": "The human approval boundary.",
+      "name": "proposals"
+    },
+    {
+      "description": "Audit an already-coded PADnext delivery.",
+      "name": "padnext"
+    },
+    {
+      "description": "Catalog provenance and the mappable vocabulary.",
+      "name": "catalog"
+    }
+  ]
+}
