@@ -28,10 +28,13 @@ def build(rules: RuleStore, *, rule_coverage: str = "partial", rules_version: st
             + summary["specificity_enforced"]
             + summary["factor_caps_enforced"]
         ),
-        #: Analog candidates are offers, not constraints — they are always loaded and can never
-        #: suppress anything, so they are advisory by construction, alongside every unverified
-        #: rule the policy kept out of the enforcement path.
+        #: The advisory total, and then the two things it is made of. Reported separately because
+        #: they are advisory for different reasons and a caller may need to say which: an analog
+        #: candidate is an *offer* under § 6 Abs. 2 GOÄ and could never suppress a position, while a
+        #: suppressed unverified rule could — the current policy is simply not letting it.
         advisory_rule_count=summary["analog_candidates"] + summary["unverified_rules_not_enforced"],
+        analog_candidate_count=summary["analog_candidates"],
+        unverified_rule_count=summary["unverified_constraint_rules"],
         suppressed_unverified_rule_count=summary["unverified_rules_not_enforced"],
         rule_coverage=rule_coverage,
         rules_version=rules_version,
@@ -49,11 +52,12 @@ def warnings_for(coverage: RuleCoverage) -> list[Warning_]:
                 severity="warning",
                 message=(
                     f"{coverage.enforced_rule_count} Regeln werden durchgesetzt; "
-                    f"{coverage.advisory_rule_count} Regeln sind nur beratend "
-                    f"({coverage.suppressed_unverified_rule_count} davon nicht verifiziert und "
-                    f"unter Policy '{coverage.policy_for_unverified_rules}' NICHT blockierend). "
-                    "Nicht verifizierte Regeln unterdrücken keine Position – das Ergebnis darf "
-                    "nicht als vollständige Regelprüfung gelesen werden."
+                    f"{coverage.advisory_rule_count} Regeln sind nur beratend: "
+                    f"{coverage.suppressed_unverified_rule_count} nicht verifizierte Regeln, die "
+                    f"unter Policy '{coverage.policy_for_unverified_rules}' NICHT blockieren, und "
+                    f"{coverage.analog_candidate_count} Analogkandidaten (§ 6 Abs. 2 GOÄ), die "
+                    "als Angebot und nie als Einschränkung wirken. Das Ergebnis darf nicht als "
+                    "vollständige Regelprüfung gelesen werden."
                 ),
             )
         )

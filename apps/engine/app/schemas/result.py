@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.schemas.case import ClinicalExtraction
-from app.schemas.common import Dec, RuleCoverage, Warning_
+from app.schemas.common import Dec, FactorBasis, RuleCoverage, Warning_
 from app.schemas.facts import BlockedCode, Conflict, ProofStep
 from app.schemas.solver import AnalogDecision, MissingDocumentation
 
@@ -20,7 +20,8 @@ class InvoiceLine(BaseModel):
     punkte: int
     category: str | None
     factor: Dec
-    factor_basis: str
+    #: Closed union, identical to `FactorDecision.basis` — a client can label every value.
+    factor_basis: FactorBasis
     factor_legal_basis: str = ""
     justification_required: bool = False
     justification_present: bool = False

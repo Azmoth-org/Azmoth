@@ -8,7 +8,12 @@
  * string always reaches the DOM.
  */
 
-import type { BlockedReason, ProposalStatus, WarningSeverity } from "@/lib/review/types"
+import type {
+  BlockedReason,
+  FactorBasis,
+  ProposalStatus,
+  WarningSeverity,
+} from "@/lib/review/types"
 
 /** `"130.39"` → `"130.39 €"`. The digits are untouched. */
 export function eur(amount: string | null | undefined): string {
@@ -77,10 +82,11 @@ export const SEVERITY_LABEL: Record<WarningSeverity, string> = {
 // ------------------------------------------------------------------------------------------
 
 /**
- * `factor_basis` is a plain string in the OpenAPI schema (not a closed enum), so an unknown value
- * is shown verbatim rather than hidden behind a fallback label.
+ * `factor_basis` is a closed union in the contract, so this mapping is exhaustive: TypeScript fails
+ * the build if the engine adds a basis and nobody labels it. It used to be an open `string` with a
+ * fallback that printed the raw identifier at a reviewer.
  */
-const FACTOR_BASIS_LABEL: Record<string, string> = {
+const FACTOR_BASIS_LABEL: Record<FactorBasis, string> = {
   einfachsatz: "Einfachsatz",
   schwellenwert: "Schwellenwert",
   ueber_schwellenwert: "über Schwellenwert",
@@ -88,9 +94,9 @@ const FACTOR_BASIS_LABEL: Record<string, string> = {
   capped: "Leistungslegende begrenzt",
 }
 
-export function factorBasis(value: string | null | undefined): string {
+export function factorBasis(value: FactorBasis | null | undefined): string {
   if (!value) return "—"
-  return FACTOR_BASIS_LABEL[value] ?? value
+  return FACTOR_BASIS_LABEL[value]
 }
 
 const LINE_STATUS_LABEL: Record<string, string> = {

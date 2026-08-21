@@ -274,6 +274,13 @@
             "title": "Official Text",
             "type": "string"
           },
+          "proof": {
+            "items": {
+              "$ref": "#/components/schemas/ProofStep"
+            },
+            "title": "Proof",
+            "type": "array"
+          },
           "reason": {
             "enum": [
               "exclusion",
@@ -1222,6 +1229,13 @@
             "type": "string"
           },
           "factor_basis": {
+            "enum": [
+              "einfachsatz",
+              "schwellenwert",
+              "ueber_schwellenwert",
+              "hoechstsatz",
+              "capped"
+            ],
             "title": "Factor Basis",
             "type": "string"
           },
@@ -2144,6 +2158,11 @@
             "title": "Advisory Rule Count",
             "type": "integer"
           },
+          "analog_candidate_count": {
+            "default": 0,
+            "title": "Analog Candidate Count",
+            "type": "integer"
+          },
           "approved_at": {
             "anyOf": [
               {
@@ -2260,6 +2279,16 @@
           "solver_result": {
             "$ref": "#/components/schemas/CodingResponse"
           },
+          "solver_status": {
+            "default": "",
+            "title": "Solver Status",
+            "type": "string"
+          },
+          "solver_timed_out": {
+            "default": false,
+            "title": "Solver Timed Out",
+            "type": "boolean"
+          },
           "solver_version": {
             "title": "Solver Version",
             "type": "string"
@@ -2271,6 +2300,11 @@
           "suppressed_unverified_rule_count": {
             "default": 0,
             "title": "Suppressed Unverified Rule Count",
+            "type": "integer"
+          },
+          "unverified_rule_count": {
+            "default": 0,
+            "title": "Unverified Rule Count",
             "type": "integer"
           },
           "warnings": {
@@ -2331,6 +2365,11 @@
             "title": "Advisory Rule Count",
             "type": "integer"
           },
+          "analog_candidate_count": {
+            "default": 0,
+            "title": "Analog Candidate Count",
+            "type": "integer"
+          },
           "enforced_rule_count": {
             "default": 0,
             "title": "Enforced Rule Count",
@@ -2353,6 +2392,11 @@
           "suppressed_unverified_rule_count": {
             "default": 0,
             "title": "Suppressed Unverified Rule Count",
+            "type": "integer"
+          },
+          "unverified_rule_count": {
+            "default": 0,
+            "title": "Unverified Rule Count",
             "type": "integer"
           },
           "verified_share": {
