@@ -18,8 +18,9 @@ jobs:
   # Rules-engine tests SKIP when the `souffle` binary is absent, and a green run that skipped them
   # tested almost nothing. Installing Soufflé on a bare runner would duplicate the Dockerfile and
   # could drift from it; building the image is the only way to be sure CI tested what ships.
-  # Expect 566 passed + 4 skipped — the 4 are repo-hygiene checks with nothing to assert inside an
-  # image (no .git, no .env.example), and each says so.
+  # Expect 566 passed + 4 skipped. The 4 are repo-hygiene checks with nothing to assert inside an
+  # image (no .git, no .env.example) and each says so; REQUIRE_ENGINES ensures they are the ONLY
+  # skips, because any engine-related skip becomes a failure.
   # ---------------------------------------------------------------------------------------------
   engine:
     name: engine (in image)
@@ -35,20 +36,14 @@ jobs:
       - name: Stack check (engines, catalog, logic, end-to-end probe)
         run: docker run --rm govatax-engine:ci python scripts/engine_cli.py check
 
-      - name: Test suite
-        run: docker run --rm govatax-engine:ci python -m pytest -q -rs
-
-      - name: Fail if the tests skipped more than the known hygiene checks
-        # Guards the guard: if a future change makes Soufflé unavailable in the image, the suite
-        # would go green while testing nothing. Four skips are expected and no more.
-        run: |
-          skipped=$(docker run --rm govatax-engine:ci python -m pytest -q 2>&1 \
-            | grep -oE '[0-9]+ skipped' | grep -oE '[0-9]+' || echo 0)
-          echo "skipped: ${skipped:-0}"
-          if [ "${skipped:-0}" -gt 4 ]; then
-            echo "::error::${skipped} tests skipped, expected at most 4. Did souffle go missing?"
-            exit 1
-          fi
+      - name: Test suite (engines required)
+        # REQUIRE_ENGINES makes a missing solver binary FAIL rather than skip. Without it, a run
+        # that silently skipped every rules-engine test would look identical to one that passed
+        # them — see tests/conftest.py::_engines_required.
+        #
+        # No extra `-q` here: pytest.ini already passes it, and a second one means `-qq`, at which
+        # pytest prints no summary line at all.
+        run: docker run --rm -e REQUIRE_ENGINES=1 govatax-engine:ci python -m pytest -rs
 
   # ---------------------------------------------------------------------------------------------
   # The committed contract must match what the engine actually publishes. Generated inside the
