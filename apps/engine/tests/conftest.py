@@ -12,6 +12,7 @@ directory pytest was invoked from or on where `LOGIC_DIR` points.
 from __future__ import annotations
 
 import json
+import os
 from decimal import Decimal
 
 import pytest
@@ -36,6 +37,39 @@ from app.solvers.souffle_engine import SouffleEngine
 from app.validation.validator import Validator
 
 PADNEXT_DIR = CASES_DIR / "padnext"
+
+
+def _engines_required() -> bool:
+    """Whether a missing solver binary should FAIL the run instead of skipping it.
+
+    Skipping is right on a laptop without Soufflé installed, and dangerous in CI: a run that
+    skipped every rules-engine test looks exactly like a run that passed them. Set
+    `REQUIRE_ENGINES=1` where the binaries are guaranteed — the container image, CI — and the
+    absence becomes a failure that names itself.
+
+    This replaces an earlier attempt that parsed pytest's skip count out of its own output. That
+    check could not work: `pytest.ini` already passes `-q`, so CI's second `-q` made it `-qq`, at
+    which pytest prints no summary line at all. The count was always empty, so the guard passed
+    unconditionally — including the case it existed to catch.
+    """
+    return os.getenv("REQUIRE_ENGINES", "").strip().lower() in {"1", "true", "yes"}
+
+
+def _no_souffle(settings) -> str:
+    return (
+        f"Soufflé binary {settings.souffle_bin!r} is not on PATH, so every test that drives the "
+        "rules engine would be skipped."
+    )
+
+
+def _require_or_skip(settings) -> None:
+    if _engines_required():
+        pytest.fail(
+            f"REQUIRE_ENGINES is set but {_no_souffle(settings)} Install it (apps/engine/README.md) "
+            "or run the suite inside the engine image, where it is guaranteed.",
+            pytrace=False,
+        )
+    pytest.skip(_no_souffle(settings))
 
 
 @pytest.fixture(scope="session")
@@ -66,7 +100,7 @@ def rules(settings):
 def souffle(settings, catalog, rules):
     engine = SouffleEngine(settings, catalog, rules)
     if not engine.available():
-        pytest.skip("souffle binary not on PATH")
+        _require_or_skip(settings)
     return engine
 
 
@@ -84,7 +118,7 @@ def validator(settings, catalog, rules):
 def pipeline(settings, catalog, rules):
     p = Pipeline(settings, catalog, rules)
     if not p.souffle.available():
-        pytest.skip("souffle binary not on PATH")
+        _require_or_skip(settings)
     return p
 
 
@@ -103,7 +137,7 @@ def client():
     deps.reset()
     with TestClient(app) as test_client:
         if not deps.pipeline().souffle.available():
-            pytest.skip("souffle binary not on PATH")
+            _require_or_skip(deps.pipeline().settings)
         yield test_client
     deps.reset()
 
