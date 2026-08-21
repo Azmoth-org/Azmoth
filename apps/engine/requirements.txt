@@ -1,0 +1,19 @@
+# Pinned. These are the versions the engine is developed, tested and shipped against; the receipt
+# hash and the audit trail both record the solver versions, so an unpinned bump would silently
+# change what a receipt means.
+fastapi==0.140.0
+uvicorn[standard]==0.51.0
+pydantic==2.13.4
+pydantic-settings==2.14.2
+
+# The optimiser. Same major/minor as the POC: a different Clingo can legitimately pick a different
+# model among equally optimal ones, which would move a golden snapshot.
+clingo==5.8.0
+
+# The Datalog engine is the `souffle` BINARY, not a Python package — see the Dockerfile and README.
+
+httpx==0.28.1
+
+# -- development / test ------------------------------------------------------------------------
+pytest==9.1.1
+pytest-asyncio==1.4.0

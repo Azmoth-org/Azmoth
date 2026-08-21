@@ -1,0 +1,47 @@
+{
+  "description": "Orthopaedic knee case. Exercises all three suppression rule types at once plus the § 5 Abs. 2 factor ladder.",
+  "catalog_version": "goae_official_snapshot_2026-07-25",
+  "accepted_ziffern": ["3", "7", "301", "410", "5030"],
+  "blocked_ziffern": [
+    {
+      "ziffer": "5",
+      "reason_contains": "conflict_lost",
+      "blocked_by": "7",
+      "note": "Nr. 5 and Nr. 7 exclude each other mutually, so Datalog refuses to decide and the solver arbitrates. Nr. 7 wins on evidence (0.95 vs 0.80), not on money."
+    },
+    {
+      "ziffer": "300",
+      "reason_contains": "less_specific",
+      "blocked_by": "301",
+      "note": "A knee puncture matches both the generic Nr. 300 and the knee-specific Nr. 301."
+    },
+    {
+      "ziffer": "200",
+      "reason_contains": "zielleistung",
+      "blocked_by": "301",
+      "note": "The dressing is a component of the puncture (§ 4 Abs. 2a GOÄ)."
+    }
+  ],
+  "warnings_contain": ["rule_coverage_incomplete"],
+  "factor_expectations": [
+    {
+      "ziffer": "301",
+      "factor": "2.6",
+      "min_factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": true,
+      "note": "Category C band, 'mittel' justification: 2.3 + 0.3"
+    },
+    {
+      "ziffer": "5030",
+      "factor": "1.8",
+      "max_factor": "2.5",
+      "requires_justification": false,
+      "note": "Abschnitt O takes the § 5 Abs. 3 band, not the general one"
+    },
+    { "ziffer": "7", "factor": "2.3", "max_factor": "3.5", "requires_justification": false }
+  ],
+  "total_amount_eur": "130.39",
+  "total_punkte": 1030,
+  "minderung_applied": false
+}

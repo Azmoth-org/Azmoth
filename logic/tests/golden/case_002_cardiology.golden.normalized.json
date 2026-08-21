@@ -1,0 +1,1337 @@
+{
+  "audit_trail": {
+    "base_factor_policy": "schwellenwert",
+    "catalog_sha256": "244b403386d39052115ff5853e8b1e0b65714082241fdc03babdb283def9e845",
+    "catalog_source": "https://www.gesetze-im-internet.de/go__1982/xml.zip",
+    "catalog_version": "goae_official_snapshot_2026-07-25",
+    "extraction_confidence_avg": "0.9542",
+    "extraction_mode": "manual",
+    "extraction_model": "manual",
+    "llm_saw_goae_catalog": false,
+    "optimizer": "clingo",
+    "optimizer_version": "5.8.0",
+    "per_code": [
+      {
+        "steps": [
+          {
+            "detail": "650",
+            "legal_basis": "GOÄ Anmerkung zu den Nummern 650 bis 653 (Abschnitt F)",
+            "rule": "conflict_pending_arbitration",
+            "rule_id": "excl_man_650_651",
+            "ziffer": "651"
+          },
+          {
+            "detail": "ekg",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "651"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "651"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "651"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "651"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "651"
+          }
+        ],
+        "ziffer": "651"
+      },
+      {
+        "steps": [
+          {
+            "detail": "651",
+            "legal_basis": "GOÄ Anmerkung zu den Nummern 650 bis 653 (Abschnitt F)",
+            "rule": "conflict_pending_arbitration",
+            "rule_id": "excl_man_650_651",
+            "ziffer": "650"
+          },
+          {
+            "detail": "ekg_rhythmusfeststellung",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "650"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "650"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "650"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "650"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "650"
+          }
+        ],
+        "ziffer": "650"
+      },
+      {
+        "steps": [
+          {
+            "detail": "echokardiographie",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "423"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "423"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "423"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "423"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "423"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "423"
+          }
+        ],
+        "ziffer": "423"
+      },
+      {
+        "steps": [
+          {
+            "detail": "eingehende_beratung",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3"
+          }
+        ],
+        "ziffer": "3"
+      },
+      {
+        "steps": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3511"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3511"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3511"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3511"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3511"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3511"
+          }
+        ],
+        "ziffer": "3511"
+      },
+      {
+        "steps": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3550"
+          }
+        ],
+        "ziffer": "3550"
+      },
+      {
+        "steps": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3560"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3560"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3560"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3560"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3560"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3560"
+          }
+        ],
+        "ziffer": "3560"
+      },
+      {
+        "steps": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3741"
+          }
+        ],
+        "ziffer": "3741"
+      },
+      {
+        "steps": [
+          {
+            "detail": "langzeit_ekg",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "659"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "659"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "659"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "659"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "659"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "659"
+          }
+        ],
+        "ziffer": "659"
+      },
+      {
+        "steps": [
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "vollstaendige_untersuchung_organsystem",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "7"
+          }
+        ],
+        "ziffer": "7"
+      }
+    ],
+    "rule_coverage": "partial",
+    "rule_summary": {
+      "analog_candidates": 3,
+      "exclusions_enforced": 30,
+      "exclusions_mutual": 15,
+      "factor_caps_enforced": 0,
+      "files_loaded": [
+        "analog_candidates.csv",
+        "exclusions.csv",
+        "exclusions.manual.csv",
+        "factor_caps.csv",
+        "specificity.csv",
+        "zielleistung.csv",
+        "zielleistung.manual.csv"
+      ],
+      "policy_for_unverified_rules": "warn",
+      "specificity_enforced": 2,
+      "unverified_rules_not_enforced": 859,
+      "verified_share": "30/30",
+      "zielleistung_enforced": 3
+    },
+    "rules_engine": "souffle",
+    "rules_engine_version": "2.5 (2.5)",
+    "rules_version": "auto_extracted_2026-07-25",
+    "unverified_rule_policy": "warn"
+  },
+  "coding": {
+    "analog_codes": [],
+    "blocked_codes": [
+      {
+        "blocked_by": "651",
+        "detail": "blocked_by:651",
+        "explanation": "GOÄ 650 konkurriert wechselseitig mit GOÄ 651. Der Optimierer hat GOÄ 651 gewählt, weil diese Position im Befund besser belegt bzw. spezifischer ist – die Entscheidung folgt der Dokumentationslage, nicht der Honorarhöhe.",
+        "legal_basis": "GOÄ Anmerkung zu den Nummern 650 bis 653 (Abschnitt F)",
+        "official_text": "Elektrokardiographische Untersuchung zur Feststellung einer Rhythmusstörung und/oder zur Verlaufskontrolle - gegebenenfalls als Notfall-EKG -",
+        "reason": "conflict_lost",
+        "reconciled_with_final_invoice": true,
+        "rule_id": "excl_man_650_651",
+        "ziffer": "650"
+      }
+    ],
+    "conflicts_arbitrated": [
+      {
+        "legal_basis": "GOÄ Anmerkung zu den Nummern 650 bis 653 (Abschnitt F)",
+        "rule_id": "excl_man_650_651",
+        "ziffer_a": "650",
+        "ziffer_b": "651"
+      }
+    ],
+    "proposed_codes": [
+      {
+        "amount_cent_unrounded": "1340.6079000",
+        "amount_eur": "13.41",
+        "amount_eur_before_minderung": "13.41",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "M",
+        "confidence": "1.0",
+        "factor": "1.15",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 4 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "C-reaktives Protein (CRP), Ligandenassay -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, Immundiffusion oder ähnliche Untersuchungsmethoden",
+        "proof": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3741"
+          }
+        ],
+        "punkte": 200,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "3741"
+      },
+      {
+        "amount_cent_unrounded": "2144.972640",
+        "amount_eur": "21.45",
+        "amount_eur_before_minderung": "21.45",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "B",
+        "confidence": "1.0",
+        "factor": "2.3",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Vollständige körperliche Untersuchung mindestens eines der folgenden Organsysteme: das gesamte Hautorgan, die Stütz- und Bewegungsorgane, alle Brustorgane, alle Bauchorgane, der gesamte weibliche Genitaltrakt (gegebenenfalls einschließlich Nieren und ableitende Harnwege) - gegebenenfalls einschließlich Dokumentation -",
+        "proof": [
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "vollstaendige_untersuchung_organsystem",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "7"
+          }
+        ],
+        "punkte": 160,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "7"
+      },
+      {
+        "amount_cent_unrounded": "2273.204700",
+        "amount_eur": "22.73",
+        "amount_eur_before_minderung": "22.73",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "B",
+        "confidence": "1.0",
+        "factor": "2.6",
+        "factor_basis": "ueber_schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
+        "is_analog": false,
+        "justification": "Multimorbide Patientin mit komplexer kardiovaskulaerer Fragestellung, erhoehter Aufklaerungs- und Koordinationsaufwand",
+        "justification_present": true,
+        "justification_required": true,
+        "minderung_applied": false,
+        "official_text": "Eingehende, das gewöhnliche Maß übersteigende Beratung - auch mittels Fernsprecher -",
+        "proof": [
+          {
+            "detail": "eingehende_beratung",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3"
+          }
+        ],
+        "punkte": 150,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "3"
+      },
+      {
+        "amount_cent_unrounded": "268.1215800",
+        "amount_eur": "2.68",
+        "amount_eur_before_minderung": "2.68",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "M",
+        "confidence": "1.0",
+        "factor": "1.15",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 4 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Glukose",
+        "proof": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3560"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3560"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3560"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3560"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3560"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3560"
+          }
+        ],
+        "punkte": 40,
+        "status": "billable",
+        "text_quality": "possibly_truncated",
+        "ziffer": "3560"
+      },
+      {
+        "amount_cent_unrounded": "335.1519750",
+        "amount_eur": "3.35",
+        "amount_eur_before_minderung": "3.35",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "M",
+        "confidence": "1.0",
+        "factor": "1.15",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 4 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Untersuchung eines Körpermaterials mit vorgefertigten Reagenzträgern oder Reagenzzubereitungen und visueller Auswertung (z.B. Glukose, Harnstoff, Urinteststreifen), qualitativ oder semiquantitativ, auch bei Verwendung eines Mehrfachreagenzträgers, je Untersuchung",
+        "proof": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3511"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3511"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3511"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3511"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3511"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3511"
+          }
+        ],
+        "punkte": 50,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "3511"
+      },
+      {
+        "amount_cent_unrounded": "3391.737987",
+        "amount_eur": "33.92",
+        "amount_eur_before_minderung": "33.92",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "F",
+        "confidence": "1.0",
+        "factor": "2.3",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Elektrokardiographische Untersuchung in Ruhe - auch gegebenenfalls nach Belastung - mit Extremitäten- und Brustwandableitungen (mindestens neun Ableitungen)",
+        "proof": [
+          {
+            "detail": "650",
+            "legal_basis": "GOÄ Anmerkung zu den Nummern 650 bis 653 (Abschnitt F)",
+            "rule": "conflict_arbitration_won",
+            "rule_id": "excl_man_650_651",
+            "ziffer": "651"
+          },
+          {
+            "detail": "ekg",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "651"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "651"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "651"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "651"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "651"
+          }
+        ],
+        "punkte": 253,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "651"
+      },
+      {
+        "amount_cent_unrounded": "402.1823700",
+        "amount_eur": "4.02",
+        "amount_eur_before_minderung": "4.02",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "M",
+        "confidence": "1.0",
+        "factor": "1.15",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 4 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Blutbild und Blutbildbestandteile",
+        "proof": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3550"
+          }
+        ],
+        "punkte": 60,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "3550"
+      },
+      {
+        "amount_cent_unrounded": "5362.431600",
+        "amount_eur": "53.62",
+        "amount_eur_before_minderung": "53.62",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "F",
+        "confidence": "1.0",
+        "factor": "2.3",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Elektrokardiographische Untersuchung über mindestens 18 Stunden (Langzeit-EKG) - gegebenenfalls einschließlich gleichzeitiger Registrierung von Puls und Atmung -, mit Auswertung",
+        "proof": [
+          {
+            "detail": "langzeit_ekg",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "659"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "659"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "659"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "659"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "659"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "659"
+          }
+        ],
+        "punkte": 400,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "659"
+      },
+      {
+        "amount_cent_unrounded": "6703.039500",
+        "amount_eur": "67.03",
+        "amount_eur_before_minderung": "67.03",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "C",
+        "confidence": "1.0",
+        "factor": "2.3",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Zweidimensionale echokardiographische Untersuchung mittels Real-Time-Verfahren (B-Mode), mit Bilddokumentation -einschließlich der Leistung nach Nummer 422 -",
+        "proof": [
+          {
+            "detail": "echokardiographie",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "423"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "423"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "423"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "423"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "423"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "423"
+          }
+        ],
+        "punkte": 500,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "423"
+      }
+    ],
+    "total": {
+      "amount_cent_unrounded": "22221.4502520",
+      "amount_eur": "222.21",
+      "amount_eur_before_minderung": "222.21",
+      "minderung_applied": false,
+      "minderung_rate": "0",
+      "punkte": 1813,
+      "punktwert_cent": "5.82873",
+      "rounding_legal_basis": "§ 5 Abs. 1 Satz 4 GOÄ (ROUND_HALF_UP auf Cent)",
+      "rounding_policy": "ROUND_HALF_UP"
+    },
+    "warnings": [
+      {
+        "legal_basis": "",
+        "message": "Der Leistungstext für GOÄ 3560 wurde beim Import als 'possibly_truncated' markiert (mehrzeilige Legende). Bitte gegen die amtliche Fassung prüfen.",
+        "rule_id": "",
+        "severity": "warning",
+        "type": "catalog_text_quality",
+        "ziffer": "3560"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 3 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "3"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 3511 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "3511"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 3550 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "3550"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 3560 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "3560"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 3741 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "3741"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 423 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "423"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 651 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "651"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 659 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "659"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 7 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "7"
+      },
+      {
+        "legal_basis": "",
+        "message": "Regelabdeckung ist unvollständig: 30 Ausschlussregeln werden durchgesetzt, 859 automatisch extrahierte Regeln sind NICHT verifiziert und wirken bei Policy 'warn' nicht blockierend. Die Rechnung ist ein Vorschlag und ersetzt keine ärztliche Prüfung.",
+        "rule_id": "",
+        "severity": "warning",
+        "type": "rule_coverage_incomplete",
+        "ziffer": null
+      }
+    ]
+  },
+  "extraction": {
+    "consultation": {
+      "confidence": "1.0",
+      "duration_minutes": 15,
+      "id": "consultation",
+      "type": "eingehende_beratung"
+    },
+    "diagnoses": [
+      {
+        "confidence": "0.80",
+        "id": "dx_2",
+        "text": "Verdacht auf beginnende hypertensive Herzerkrankung"
+      },
+      {
+        "confidence": "0.95",
+        "id": "dx_1",
+        "text": "Arterielle Hypertonie"
+      }
+    ],
+    "examinations": [
+      {
+        "complexity": "mittel",
+        "confidence": "1.0",
+        "id": "exam_complete",
+        "organ_system": "herz_kreislauf",
+        "organs": [
+          "herz"
+        ],
+        "type": "vollstaendige_untersuchung_organsystem"
+      }
+    ],
+    "justification_factors": [
+      {
+        "applies_to": [
+          "consultation"
+        ],
+        "confidence": "1.0",
+        "id": "just_1",
+        "reason": "Multimorbide Patientin mit komplexer kardiovaskulaerer Fragestellung, erhoehter Aufklaerungs- und Koordinationsaufwand",
+        "severity": "mittel"
+      }
+    ],
+    "lab_tests": [
+      {
+        "confidence": "1.0",
+        "id": "lab_bb",
+        "type": "blutbild"
+      },
+      {
+        "confidence": "1.0",
+        "id": "lab_crp",
+        "type": "crp"
+      },
+      {
+        "confidence": "1.0",
+        "id": "lab_glu",
+        "type": "glukose"
+      },
+      {
+        "confidence": "1.0",
+        "id": "lab_urin",
+        "type": "urinstatus"
+      }
+    ],
+    "notes": "Synthetic case, no real patient data. Nr. 650 and Nr. 651 are mutually exclusive under the official Anmerkung to Nr. 650-653, so the solver must arbitrate; Nr. 651 has the stronger evidence here.",
+    "patient": {
+      "age": 67,
+      "setting": "ambulant",
+      "sex": "w"
+    },
+    "procedures": [
+      {
+        "complexity": "einfach",
+        "confidence": "0.70",
+        "details": "EKG zur Feststellung einer Rhythmusstoerung",
+        "id": "proc_ekg_rhythmus",
+        "organ": "herz",
+        "type": "ekg_rhythmusfeststellung"
+      },
+      {
+        "complexity": "einfach",
+        "confidence": "1.0",
+        "details": "Elektrokardiographische Untersuchung in Ruhe, 12 Ableitungen",
+        "id": "proc_ekg_ruhe",
+        "organ": "herz",
+        "type": "ekg"
+      },
+      {
+        "complexity": "mittel",
+        "confidence": "1.0",
+        "details": "Langzeit-EKG ueber 24 Stunden",
+        "id": "proc_langzeit_ekg",
+        "organ": "herz",
+        "type": "langzeit_ekg"
+      },
+      {
+        "complexity": "mittel",
+        "confidence": "1.0",
+        "details": "Zweidimensionale echokardiographische Untersuchung",
+        "id": "proc_echo",
+        "organ": "herz",
+        "type": "echokardiographie"
+      }
+    ]
+  }
+}

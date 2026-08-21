@@ -1,0 +1,3 @@
+rule_id,specific_ziffer,general_ziffer,legal_basis,quote,verified,verified_at,source
+spec_301_300,301,300,"Leistungslegenden Nr. 300 / Nr. 301 (speziellere Leistungsbeschreibung verdrängt die allgemeine)","Nr. 300: Punktion eines Gelenks — Nr. 301: Punktion eines Ellenbogen-, Knie- oder Wirbelgelenks",true,2026-07-25,manual_verification
+spec_302_300,302,300,"Leistungslegenden Nr. 300 / Nr. 302 (speziellere Leistungsbeschreibung verdrängt die allgemeine)","Nr. 300: Punktion eines Gelenks — Nr. 302: Punktion eines Schulter- oder Hüftgelenks",true,2026-07-25,manual_verification

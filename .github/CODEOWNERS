@@ -1,0 +1,48 @@
+# Who must review what.
+#
+# This file is the enforcement half of the "hard rules" in CONTRIBUTING.md. GitHub requires the
+# listed owners' approval on any PR touching a matched path, provided branch protection on `main`
+# has "Require review from Code Owners" enabled — the file alone does nothing.
+#
+# TODO when the organization exists: replace the individual handle with teams, so review does not
+# depend on one person being available. Suggested teams:
+#     @<org>/legal-review     for logic/ and data/  (needs GOÄ + legal competence, not just code)
+#     @<org>/engine           for apps/engine/
+#     @<org>/web              for apps/web/ and packages/ui/
+# Owners must have write access to the repository or the rule is silently ignored.
+
+# Default owner for anything not matched below.
+*                               @oussamakhadraoui
+
+# ---------------------------------------------------------------------------------------------
+# Legal artefacts — a second approver is required, and the reviewer needs domain competence.
+# ---------------------------------------------------------------------------------------------
+
+# The solver logic. The objective ordering here (@5/@4/@3/@2/@1, revenue LAST) is the legal posture
+# of the whole system; changing it changes what this product is willing to bill for.
+/logic/                         @oussamakhadraoui
+
+# Official GOÄ catalog, rule tables and their provenance. Never hand-edited; corrections go through
+# data/catalogs/goae_current/overrides.json.
+/data/                          @oussamakhadraoui
+
+# Frozen evidence of what the engine billed. A moved snapshot is a behaviour change, not a fixture
+# update.
+/logic/tests/golden/            @oussamakhadraoui
+
+# The money path and the layer that refuses to trust the solver.
+/apps/engine/app/validation/    @oussamakhadraoui
+/apps/engine/app/solvers/       @oussamakhadraoui
+
+# The compliance posture and the input boundary.
+/docs/compliance/               @oussamakhadraoui
+/apps/engine/app/core/extraction_prompts.py  @oussamakhadraoui
+
+# ---------------------------------------------------------------------------------------------
+# Generated — do not hand-edit; regenerate from the engine instead.
+# ---------------------------------------------------------------------------------------------
+/packages/contracts/            @oussamakhadraoui
+
+# Conventions, CI and this file.
+/CONTRIBUTING.md                @oussamakhadraoui
+/.github/                       @oussamakhadraoui

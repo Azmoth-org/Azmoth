@@ -1,0 +1,59 @@
+{
+  "patient": { "age": 45, "sex": "m", "setting": "ambulant" },
+  "consultation": {
+    "id": "consultation",
+    "type": "beratung",
+    "duration_minutes": 8,
+    "confidence": "1.0"
+  },
+  "examinations": [
+    {
+      "id": "exam_haut",
+      "type": "symptombezogene_untersuchung",
+      "organ_system": "haut",
+      "organs": ["unterarm"],
+      "complexity": "einfach",
+      "confidence": "1.0"
+    }
+  ],
+  "procedures": [
+    {
+      "id": "proc_dermatoskopie",
+      "type": "dermatoskopie",
+      "organ": "haut",
+      "details": "Auflichtmikroskopie der pigmentierten Laesion, atypisches Pigmentnetz",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_exzision",
+      "type": "exzision_hautgeschwulst",
+      "organ": "haut",
+      "details": "Exzision der pigmentierten Laesion am rechten Unterarm, 8 mm",
+      "complexity": "einfach",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_histologie",
+      "type": "histologische_untersuchung",
+      "organ": "haut",
+      "details": "Histologische Untersuchung und Begutachtung des Exzidats",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_oct",
+      "type": "optische_kohaerenztomographie",
+      "organ": "haut",
+      "details": "Optische Kohaerenztomographie der Laesion zur Tiefenausdehnung",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    }
+  ],
+  "lab_tests": [],
+  "diagnoses": [
+    { "text": "Verdacht auf atypischen melanozytaeren Naevus", "confidence": "0.80" }
+  ],
+  "justification_factors": [],
+  "notes": "Synthetic case, no real patient data. The optical coherence tomography has no position in the 1982 Gebuehrenverzeichnis and must go through the § 6 Abs. 2 Analogansatz path with a human-review warning."
+}

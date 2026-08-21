@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC PADnext Auftragsdatei (order file) for the payload beside it.
+
+  echtdaten="0" means TEST DATA. The spec says test data must not be processed in a production
+  system; this project's rule is the mirror image — it processes ONLY test data, and
+  app/padnext/audit.py refuses a delivery flagged echtdaten="1" unless PADNEXT_ALLOW_REAL_DATA=1.
+
+  verschluesselung verfahren="0" means unencrypted. A real delivery would be PKCS#7, which this
+  proof of concept reports as unsupported rather than half-handling.
+
+  dateilaenge/@pruefsumme and @laenge are placeholders here: a conforming sender computes them over
+  the payload, and this file is hand-written.
+-->
+<auftrag transfernr="1"
+         echtdaten="0"
+         erstellungsdatum="2026-07-26T09:30:00Z"
+         dateianzahl="1"
+         xmlns="http://padinfo.de/ns/pad"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://padinfo.de/ns/pad http://www.padinfo.de/ns/pad/padx_auf_v2.12.xsd">
+
+  <empfaenger>
+    <logisch kundennr="4711">Musterpraxis Dr. Beispiel (synthetisch)</logisch>
+    <physikalisch rzid="000">Beispiel-Rechenzentrum (synthetisch)</physikalisch>
+  </empfaenger>
+
+  <absender>
+    <logisch kundennr="4711">Musterpraxis Dr. Beispiel (synthetisch)</logisch>
+    <physikalisch rzid="000">Beispiel-Rechenzentrum (synthetisch)</physikalisch>
+  </absender>
+
+  <nachrichtentyp version="02.12">ADL</nachrichtentyp>
+
+  <system>
+    <produkt>Catalys GOÄ Coding POC</produkt>
+    <version>0.1</version>
+    <hersteller>proof of concept</hersteller>
+  </system>
+
+  <verschluesselung verfahren="0"/>
+  <empfangsquittung>0</empfangsquittung>
+
+  <datei erstellungsdatum="2026-07-26T09:30:00Z" id="synth-0001">
+    <dokumententyp>PADneXt</dokumententyp>
+    <name>00004711_20260726_ADL_000001_padx.xml</name>
+    <beschreibung>Synthetische Beispiellieferung mit absichtlichen Fehlern zur Pruefung.</beschreibung>
+    <dateilaenge pruefsumme="0000000000000000000000000000000000000000" laenge="0"/>
+  </datei>
+</auftrag>

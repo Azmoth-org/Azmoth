@@ -1,0 +1,16 @@
+# The build context is the repo root; keep it small and keep local state out of the image.
+**/node_modules
+**/.next
+**/.turbo
+**/.git
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/.env
+apps/engine/facts
+data/licensed/*
+!data/licensed/README.md
+data/raw/*.zip

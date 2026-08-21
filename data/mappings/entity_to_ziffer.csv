@@ -1,0 +1,34 @@
+entity_type,entity_subtype,organ,ziffer,priority,kind,label_de,label_en,provenance,notes
+beratung,,,1,100,consultation,Beratung,Consultation,manual_verification,Nr. 1 Beratung - auch mittels Fernsprecher
+eingehende_beratung,,,3,100,consultation,Eingehende Beratung (mind. 10 Min),Extended consultation (min. 10 min),manual_verification,Nr. 3 Eingehende das gewöhnliche Maß übersteigende Beratung
+symptombezogene_untersuchung,,,5,100,examination,Symptombezogene Untersuchung,Symptom-focused examination,manual_verification,Nr. 5 Symptombezogene Untersuchung
+vollstaendige_untersuchung_organsystem,,,7,100,examination,Vollständige Untersuchung eines Organsystems,Complete examination of one organ system,manual_verification,Nr. 7 Vollständige körperliche Untersuchung mindestens eines Organsystems
+untersuchung_ganzkoerperstatus,,,8,100,examination,Untersuchung Ganzkörperstatus,Whole-body status examination,manual_verification,Nr. 8 Untersuchung zur Erhebung des Ganzkörperstatus
+punktion,,gelenk,300,80,procedure,Punktion (Gelenk),Puncture (joint),manual_verification,Nr. 300 Punktion eines Gelenks - generic fallback
+punktion,,knie,300,80,procedure,Punktion (Gelenk),Puncture (joint),manual_verification,Generic joint puncture; the specificity rule prefers Nr. 301
+punktion,,knie,301,100,procedure,Punktion (Gelenk),Puncture (joint),manual_verification,Nr. 301 Punktion eines Ellenbogen- Knie- oder Wirbelgelenks
+punktion,,ellenbogen,301,100,procedure,Punktion (Gelenk),Puncture (joint),manual_verification,Nr. 301 covers the elbow explicitly
+punktion,,wirbelgelenk,301,100,procedure,Punktion (Gelenk),Puncture (joint),manual_verification,Nr. 301 covers vertebral joints explicitly
+punktion,,schulter,302,100,procedure,Punktion (Gelenk),Puncture (joint),manual_verification,Nr. 302 Punktion eines Schulter- oder Hüftgelenks
+punktion,,huefte,302,100,procedure,Punktion (Gelenk),Puncture (joint),manual_verification,Nr. 302 Punktion eines Schulter- oder Hüftgelenks
+sonographie,,,410,100,procedure,Sonographie,Ultrasound,manual_verification,Nr. 410 Ultraschalluntersuchung eines Organs
+sonographie,,knie,410,100,procedure,Sonographie,Ultrasound,manual_verification,Nr. 410 Ultraschalluntersuchung eines Organs
+sonographie,,schilddruese,417,100,procedure,Sonographie,Ultrasound,manual_verification,Nr. 417 Ultraschalluntersuchung der Schilddrüse
+echokardiographie,,herz,423,100,procedure,Echokardiographie (2D),Echocardiography (2D),manual_verification,Nr. 423 Zweidimensionale echokardiographische Untersuchung
+echokardiographie_doppler,,herz,424,100,procedure,Echokardiographie (2D Doppler),Echocardiography (2D Doppler),manual_verification,Nr. 424 Zweidimensionale doppler-echokardiographische Untersuchung
+ekg,,,651,100,procedure,EKG in Ruhe,Resting ECG,manual_verification,Nr. 651 Elektrokardiographische Untersuchung in Ruhe
+langzeit_ekg,,,659,100,procedure,Langzeit-EKG (mind. 18 h),Long-term ECG (min. 18 h),manual_verification,Nr. 659 Elektrokardiographische Untersuchung über mindestens 18 Stunden
+roentgen,,knie,5030,100,procedure,Röntgenaufnahme,X-ray,manual_verification,Nr. 5030 Kniegelenk jeweils in zwei Ebenen
+roentgen,,huefte,5030,100,procedure,Röntgenaufnahme,X-ray,manual_verification,Nr. 5030 covers hip and knee
+roentgen,,thorax,5135,100,procedure,Röntgenaufnahme,X-ray,manual_verification,Nr. 5135 Brustorgane-Übersicht in einer Ebene
+verband,,,200,100,procedure,Verband,Dressing,manual_verification,Nr. 200 Verband
+exzision_hautgeschwulst,klein,haut,2403,100,procedure,Exzision einer Hautgeschwulst,Excision of a skin lesion,manual_verification,Nr. 2403 Exzision einer kleinen in oder unter der Haut liegenden Geschwulst
+exzision_hautgeschwulst,gross,haut,2404,100,procedure,Exzision einer Hautgeschwulst,Excision of a skin lesion,manual_verification,Nr. 2404 Exzision einer größeren Geschwulst
+dermatoskopie,,haut,750,100,procedure,Auflichtmikroskopie (Dermatoskopie),Dermatoscopy,manual_verification,Nr. 750 Auflichtmikroskopie der Haut (Dermatoskopie) je Sitzung
+histologische_untersuchung,,,4800,100,procedure,Histologische Untersuchung,Histological examination,manual_verification,Nr. 4800 Histologische Untersuchung und Begutachtung eines Materials
+labor,blutbild,,3550,100,lab_test,Laborleistung,Laboratory test,manual_verification,Nr. 3550 Blutbild und Blutbildbestandteile
+labor,crp,,3741,100,lab_test,Laborleistung,Laboratory test,manual_verification,Nr. 3741 C-reaktives Protein (CRP)
+labor,glukose,,3560,100,lab_test,Laborleistung,Laboratory test,manual_verification,Nr. 3560 Glukose
+labor,urinstatus,,3511,100,lab_test,Laborleistung,Laboratory test,manual_verification,Nr. 3511 Untersuchung eines Körpermaterials mit vorgefertigten Reagenzträgern
+ekg_rhythmusfeststellung,,,650,100,procedure,EKG zur Rhythmusfeststellung,ECG for rhythm assessment,manual_verification,Nr. 650 EKG zur Feststellung einer Rhythmusstörung
+echokardiographie_eindimensional,,herz,422,100,procedure,"Echokardiographie (1D, Time-Motion)","Echocardiography (1D, time-motion)",manual_verification,Nr. 422 Eindimensionale echokardiographische Untersuchung

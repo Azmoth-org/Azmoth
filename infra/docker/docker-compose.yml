@@ -1,0 +1,55 @@
+# Run the engine from the monorepo root:
+#
+#     docker compose -f infra/docker/docker-compose.yml up --build engine
+#
+# The build context is the repo root, because the image needs `logic/` and `data/`, which live
+# outside `apps/engine` by design.
+
+services:
+  engine:
+    build:
+      context: ../..
+      dockerfile: apps/engine/Dockerfile
+    image: wigoo-engine:0.3.0
+    # Deliberately no `container_name`: a fixed name makes `docker compose run` collide with the
+    # already-running service and shut it down, which breaks running the tests in a second shell
+    # while the API is up.
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: "${APP_ENV:-development}"
+      DEBUG: "${DEBUG:-false}"
+      EXTRACTION_MODE: "manual"
+      UNVERIFIED_RULE_POLICY: "${UNVERIFIED_RULE_POLICY:-warn}"
+      BASE_FACTOR_POLICY: "${BASE_FACTOR_POLICY:-schwellenwert}"
+      SOLVER_TIMEOUT_SECONDS: "${SOLVER_TIMEOUT_SECONDS:-5}"
+      CACHE_ENABLED: "${CACHE_ENABLED:-true}"
+      SOUFFLE_BIN: souffle
+      LOGIC_DIR: /srv/logic
+      DATA_DIR: /srv/data
+      # Refusing production data is the default and should stay that way. See
+      # docs/compliance/PRIVATE_DATA_WARNING.md before changing it.
+      PADNEXT_ALLOW_REAL_DATA: "false"
+    volumes:
+      # Live-edit the rules while developing: change goae_rules.dl, goae_optimize.lp or any CSV in
+      # data/rules/ and the next request picks it up, no rebuild. Read-only, so a container cannot
+      # modify the committed catalog.
+      - ../../logic:/srv/logic:ro
+      - ../../data:/srv/data:ro
+      - ../../apps/engine/app:/srv/app:ro
+      - ../../apps/engine/tests:/srv/tests:ro
+      - ../../apps/engine/scripts:/srv/scripts:ro
+    command:
+      ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,json,sys; d=json.load(urllib.request.urlopen('http://localhost:8000/api/v1/health')); sys.exit(0 if d['souffle_available'] and d['status']=='ok' else 1)",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
