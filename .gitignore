@@ -36,6 +36,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the annotated templates. They carry no secrets and a fresh clone needs them: the
+# engine's own test suite checks that every setting is documented in apps/engine/.env.example.
+!.env.example
 
 # vercel
 .vercel
@@ -43,3 +46,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ---------------------------------------------------------------------------------------
+# apps/engine (Python)
+# ---------------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+apps/engine/facts/
+
+# Licensed GOÄ datasets must never be committed: the bundled catalog is the official, public-domain
+# text (§ 5 UrhG), but a licensed dataset dropped here would not be. Everything in data/licensed/
+# except its README is ignored on purpose — see data/licensed/README.md.
+data/licensed/*
+!data/licensed/README.md
+
+# Raw downloads are large and reproducible from data/raw/manifest.json; the XML the committed
+# catalog was actually built from is the one exception and is tracked deliberately.
+data/raw/*.zip
