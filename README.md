@@ -1,4 +1,4 @@
-# wigoo
+# Govatax
 
 A monorepo holding a deterministic **GOÄ coding engine** and the Next.js app that will front it.
 

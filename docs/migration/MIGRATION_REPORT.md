@@ -1,4 +1,4 @@
-# Migration report — POC backend → `wigoo` monorepo
+# Migration report — POC backend → `Govatax` monorepo
 
 Executed against the plan in [`MIGRATION_PLAN.md`](./MIGRATION_PLAN.md).
 
@@ -272,7 +272,7 @@ same value from the host venv, from a live `uvicorn` server, and from inside the
 $ cd apps/engine && .venv/bin/python -m pytest
 570 passed in 20.49s
 
-$ docker run --rm wigoo-engine:0.3.0 python -m pytest -q
+$ docker run --rm govatax-engine:0.3.0 python -m pytest -q
 566 passed, 4 skipped in 18.90s
 ```
 

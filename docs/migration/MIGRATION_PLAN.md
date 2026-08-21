@@ -1,4 +1,4 @@
-# Migration plan — POC backend → `wigoo` monorepo
+# Migration plan — POC backend → `Govatax` monorepo
 
 Written before any file was moved. Status of every item is recorded in
 [`MIGRATION_REPORT.md`](./MIGRATION_REPORT.md) after execution.

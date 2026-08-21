@@ -2727,7 +2727,7 @@
   },
   "info": {
     "description": "GOÄ coding where the legal reasoning is symbolic and auditable.\n\n`POST /api/v1/solve` takes structured clinical entities — no model runs anywhere in this service. A Soufflé Datalog program decides what is certainly chargeable, a Clingo ASP program resolves what genuinely requires a choice under a hard timeout, an independent validation pass re-checks the result, and every line carries a proof tree with rule ids and paragraph references.\n\n**The response is a DRAFT proposal, not an invoice.** It leaves `DRAFT` only when a named person approves it. Every response carries `receipt_hash` (SHA-256 over the catalog, the rule tables, the logic programs, the solver versions, the policy and the input) and the rule-coverage counts: `enforced_rule_count` is what can suppress a position, `advisory_rule_count` is what only warns.\n\nThe catalog is imported from the official GOÄ published at gesetze-im-internet.de. Rule coverage is **partial** — see `GET /api/v1/catalog`. **Synthetic data only.**",
-    "title": "Catalys GOÄ engine",
+    "title": "Govatax GOÄ engine",
     "version": "0.3.0"
   },
   "openapi": "3.1.0",

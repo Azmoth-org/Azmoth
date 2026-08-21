@@ -30,19 +30,19 @@ jobs:
 
       - name: Build the engine image
         # Context is the repo root: the image needs logic/ and data/, which live outside apps/engine.
-        run: docker build -f apps/engine/Dockerfile -t wigoo-engine:ci .
+        run: docker build -f apps/engine/Dockerfile -t govatax-engine:ci .
 
       - name: Stack check (engines, catalog, logic, end-to-end probe)
-        run: docker run --rm wigoo-engine:ci python scripts/engine_cli.py check
+        run: docker run --rm govatax-engine:ci python scripts/engine_cli.py check
 
       - name: Test suite
-        run: docker run --rm wigoo-engine:ci python -m pytest -q -rs
+        run: docker run --rm govatax-engine:ci python -m pytest -q -rs
 
       - name: Fail if the tests skipped more than the known hygiene checks
         # Guards the guard: if a future change makes Soufflé unavailable in the image, the suite
         # would go green while testing nothing. Four skips are expected and no more.
         run: |
-          skipped=$(docker run --rm wigoo-engine:ci python -m pytest -q 2>&1 \
+          skipped=$(docker run --rm govatax-engine:ci python -m pytest -q 2>&1 \
             | grep -oE '[0-9]+ skipped' | grep -oE '[0-9]+' || echo 0)
           echo "skipped: ${skipped:-0}"
           if [ "${skipped:-0}" -gt 4 ]; then
@@ -62,11 +62,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build the engine image
-        run: docker build -f apps/engine/Dockerfile -t wigoo-engine:ci .
+        run: docker build -f apps/engine/Dockerfile -t govatax-engine:ci .
 
       - name: Export the OpenAPI document from the running app
         run: |
-          docker run --rm wigoo-engine:ci sh -c \
+          docker run --rm govatax-engine:ci sh -c \
             'python scripts/export_openapi.py -o /tmp/openapi.json >/dev/null && cat /tmp/openapi.json' \
             > /tmp/generated.json
 
