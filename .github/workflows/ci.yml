@@ -1,0 +1,161 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push to the same branch cancels the previous run. The engine job builds a Docker image, so
+# duplicated runs are expensive.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------------------------
+  # The engine runs inside its own image, deliberately.
+  #
+  # Rules-engine tests SKIP when the `souffle` binary is absent, and a green run that skipped them
+  # tested almost nothing. Installing Soufflé on a bare runner would duplicate the Dockerfile and
+  # could drift from it; building the image is the only way to be sure CI tested what ships.
+  # Expect 566 passed + 4 skipped — the 4 are repo-hygiene checks with nothing to assert inside an
+  # image (no .git, no .env.example), and each says so.
+  # ---------------------------------------------------------------------------------------------
+  engine:
+    name: engine (in image)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the engine image
+        # Context is the repo root: the image needs logic/ and data/, which live outside apps/engine.
+        run: docker build -f apps/engine/Dockerfile -t wigoo-engine:ci .
+
+      - name: Stack check (engines, catalog, logic, end-to-end probe)
+        run: docker run --rm wigoo-engine:ci python scripts/engine_cli.py check
+
+      - name: Test suite
+        run: docker run --rm wigoo-engine:ci python -m pytest -q -rs
+
+      - name: Fail if the tests skipped more than the known hygiene checks
+        # Guards the guard: if a future change makes Soufflé unavailable in the image, the suite
+        # would go green while testing nothing. Four skips are expected and no more.
+        run: |
+          skipped=$(docker run --rm wigoo-engine:ci python -m pytest -q 2>&1 \
+            | grep -oE '[0-9]+ skipped' | grep -oE '[0-9]+' || echo 0)
+          echo "skipped: ${skipped:-0}"
+          if [ "${skipped:-0}" -gt 4 ]; then
+            echo "::error::${skipped} tests skipped, expected at most 4. Did souffle go missing?"
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------------------------
+  # The committed contract must match what the engine actually publishes. Generated inside the
+  # image and diffed on the host, so the check needs no mounted volume and prints a real diff.
+  # ---------------------------------------------------------------------------------------------
+  contract:
+    name: contract in sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the engine image
+        run: docker build -f apps/engine/Dockerfile -t wigoo-engine:ci .
+
+      - name: Export the OpenAPI document from the running app
+        run: |
+          docker run --rm wigoo-engine:ci sh -c \
+            'python scripts/export_openapi.py -o /tmp/openapi.json >/dev/null && cat /tmp/openapi.json' \
+            > /tmp/generated.json
+
+      - name: Diff against the committed document
+        run: |
+          if ! diff -u packages/contracts/openapi/openapi.json /tmp/generated.json; then
+            echo "::error::packages/contracts/openapi/openapi.json is stale. Run, in this order: (cd apps/engine && python scripts/export_openapi.py) && pnpm generate:contracts"
+            exit 1
+          fi
+          echo "contract is in sync"
+
+  # ---------------------------------------------------------------------------------------------
+  # The JS/TS workspace.
+  # ---------------------------------------------------------------------------------------------
+  web:
+    name: web + packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        # Version comes from the `packageManager` field in package.json.
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm turbo typecheck lint build
+
+      - name: Fail on a stale generated contract
+        # `pnpm generate:contracts` must have been run and committed. This catches a hand-edited or
+        # forgotten schema.ts, which the `contract` job above cannot see (it only checks the JSON).
+        run: |
+          pnpm generate:contracts
+          if ! git diff --quiet -- packages/contracts/typescript; then
+            echo "::error::packages/contracts/typescript is out of date. Run: pnpm generate:contracts"
+            git --no-pager diff --stat -- packages/contracts/typescript
+            exit 1
+          fi
+          echo "generated TypeScript is in sync"
+
+  # ---------------------------------------------------------------------------------------------
+  # Legal artefacts. This job never fails a build — CODEOWNERS does the blocking. It exists so the
+  # change is impossible to miss in the PR conversation, and so the reviewer is told what to look at.
+  # ---------------------------------------------------------------------------------------------
+  legal-artefacts:
+    name: legal-artefact guard
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Report changes to logic/, data/ and the golden snapshots
+        run: |
+          base="origin/${{ github.base_ref }}"
+          changed=$(git diff --name-only "$base"...HEAD)
+
+          logic=$(echo "$changed" | grep -E '^(logic|data)/' || true)
+          golden=$(echo "$changed" | grep -E '^logic/tests/golden/' || true)
+          asp=$(echo "$changed" | grep -E '^logic/asp/' || true)
+
+          if [ -n "$golden" ]; then
+            echo "::warning title=Golden snapshot changed::A frozen record of what the engine billed has moved. This is a behaviour change, not a fixture update — the PR must say which number changed and why the new value is correct. Files: $(echo $golden | tr '\n' ' ')"
+          fi
+          if [ -n "$asp" ]; then
+            echo "::warning title=Solver objective touched::logic/asp/ changed. Confirm the objective ordering (@5/@4/@3/@2/@1, revenue LAST) is intact and that no hard constraint became a weighted term. See logic/README.md."
+          fi
+          if [ -n "$logic" ]; then
+            echo "::warning title=Legal artefacts changed::This PR touches logic/ or data/ and needs a second approver with domain competence. Files:"
+            echo "$logic" | sed 's/^/  /'
+          else
+            echo "No changes under logic/ or data/."
+          fi
+
+      - name: Refuse committed secrets and real .env files
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$'; then
+            echo "::error::A .env file is tracked. Only .env.example belongs in the repository."
+            exit 1
+          fi
+          if git grep -lIE '(sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY)' -- . ; then
+            echo "::error::Something that looks like a credential is committed."
+            exit 1
+          fi
+          echo "no tracked .env, no credential-shaped strings"
