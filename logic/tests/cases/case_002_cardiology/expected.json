@@ -1,0 +1,40 @@
+{
+  "description": "Cardiology case. Exercises mutual-exclusion arbitration on the EKG cluster, the § 5 Abs. 4 lab band, and a justification bound to one line only.",
+  "catalog_version": "goae_official_snapshot_2026-07-25",
+  "accepted_ziffern": ["3", "7", "423", "651", "659", "3511", "3550", "3560", "3741"],
+  "blocked_ziffern": [
+    {
+      "ziffer": "650",
+      "reason_contains": "conflict_lost",
+      "blocked_by": "651",
+      "note": "Nr. 650-653 are mutually exclusive per the official Anmerkung. Nr. 651 has the stronger evidence (1.0 vs 0.70) even though Nr. 650 is worth fewer points either way."
+    }
+  ],
+  "warnings_contain": ["rule_coverage_incomplete"],
+  "factor_expectations": [
+    {
+      "ziffer": "3",
+      "factor": "2.6",
+      "requires_justification": true,
+      "note": "'mittel' justification bound to the consultation only"
+    },
+    {
+      "ziffer": "3550",
+      "factor": "1.15",
+      "max_factor": "1.3",
+      "requires_justification": false,
+      "note": "Abschnitt M: § 5 Abs. 4 band. The justification on the consultation must NOT leak here."
+    },
+    { "ziffer": "3741", "factor": "1.15", "max_factor": "1.3", "requires_justification": false },
+    {
+      "ziffer": "659",
+      "factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": false,
+      "note": "The official text contains no exclusion between Nr. 659 and the Nr. 650-653 cluster, so the Langzeit-EKG is chargeable alongside. No rule was invented to make it look tidier."
+    }
+  ],
+  "total_amount_eur": "222.21",
+  "total_punkte": 1813,
+  "minderung_applied": false
+}

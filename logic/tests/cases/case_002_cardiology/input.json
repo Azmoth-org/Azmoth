@@ -1,0 +1,72 @@
+{
+  "patient": { "age": 67, "sex": "w", "setting": "ambulant" },
+  "consultation": {
+    "id": "consultation",
+    "type": "eingehende_beratung",
+    "duration_minutes": 15,
+    "confidence": "1.0"
+  },
+  "examinations": [
+    {
+      "id": "exam_complete",
+      "type": "vollstaendige_untersuchung_organsystem",
+      "organ_system": "herz_kreislauf",
+      "organs": ["herz"],
+      "complexity": "mittel",
+      "confidence": "1.0"
+    }
+  ],
+  "procedures": [
+    {
+      "id": "proc_ekg_rhythmus",
+      "type": "ekg_rhythmusfeststellung",
+      "organ": "herz",
+      "details": "EKG zur Feststellung einer Rhythmusstoerung",
+      "complexity": "einfach",
+      "confidence": "0.70"
+    },
+    {
+      "id": "proc_ekg_ruhe",
+      "type": "ekg",
+      "organ": "herz",
+      "details": "Elektrokardiographische Untersuchung in Ruhe, 12 Ableitungen",
+      "complexity": "einfach",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_langzeit_ekg",
+      "type": "langzeit_ekg",
+      "organ": "herz",
+      "details": "Langzeit-EKG ueber 24 Stunden",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_echo",
+      "type": "echokardiographie",
+      "organ": "herz",
+      "details": "Zweidimensionale echokardiographische Untersuchung",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    }
+  ],
+  "lab_tests": [
+    { "id": "lab_bb", "type": "blutbild", "confidence": "1.0" },
+    { "id": "lab_crp", "type": "crp", "confidence": "1.0" },
+    { "id": "lab_glu", "type": "glukose", "confidence": "1.0" },
+    { "id": "lab_urin", "type": "urinstatus", "confidence": "1.0" }
+  ],
+  "diagnoses": [
+    { "text": "Arterielle Hypertonie", "confidence": "0.95" },
+    { "text": "Verdacht auf beginnende hypertensive Herzerkrankung", "confidence": "0.80" }
+  ],
+  "justification_factors": [
+    {
+      "reason": "Multimorbide Patientin mit komplexer kardiovaskulaerer Fragestellung, erhoehter Aufklaerungs- und Koordinationsaufwand",
+      "severity": "mittel",
+      "applies_to": ["consultation"],
+      "confidence": "1.0"
+    }
+  ],
+  "notes": "Synthetic case, no real patient data. Nr. 650 and Nr. 651 are mutually exclusive under the official Anmerkung to Nr. 650-653, so the solver must arbitrate; Nr. 651 has the stronger evidence here."
+}

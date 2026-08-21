@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC PADnext ADL payload. No real patient, no real practice, no real invoice.
+
+  Shape follows the PADneXt 2.12 interface (namespace http://padinfo.de/ns/pad): rechnungen >
+  rechnung > abrechnungsfall > positionen > goziffer. It is a hand-written subset for exercising
+  the audit, not a schema-validated conforming document.
+
+  Note what is NOT here: no name, no address, no date of birth. The reader does not parse patient
+  identity, so the example does not carry any.
+
+  This invoice contains DELIBERATE errors, one per position, so the audit has something to report:
+
+    1  GOÄ 1     factor 3.5 is at the Höchstsatz with no begruendung      → § 12 Abs. 3
+    2  GOÄ 301   factor 2.6 above the threshold, begruendung present       → correctly justified
+    3  GOÄ 200   a dressing charged beside the puncture it belongs to      → § 4 Abs. 2a
+    4  GOÄ 5     charged alongside GOÄ 7, which excludes it                → mutual exclusion
+    5  GOÄ 7     gesamtbetrag understated by 1.00 €                        → arithmetic
+    6  GOÄ 410   punktzahl claimed as 180, catalog says 200                → control field wrong
+    7  GOÄ 99999 not a GOÄ number at all                                   → unknown Ziffer
+    8  GOZ 2020  a dental position, outside this engine's scope            → reported, not silent
+    9  GOÄ 3     factor 4.0 exceeds the Höchstsatz of 3.5                  → § 5 Abs. 1
+
+  Position 1 is worth a note: 3.5 IS the legal maximum for Abschnitt B, so it is not too high —
+  it just may not be charged without a written reason. An earlier draft of this file called it
+  "above the maximum", and the audit correctly disagreed.
+-->
+<rechnungen anzahl="1"
+            xmlns="http://padinfo.de/ns/pad"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://padinfo.de/ns/pad http://www.padinfo.de/ns/pad/padx_adl_v2.12.xsd">
+
+  <nachrichtentyp version="02.12">ADL</nachrichtentyp>
+
+  <rechnungsersteller>
+    <name>Musterpraxis Dr. Beispiel (synthetisch)</name>
+  </rechnungsersteller>
+
+  <leistungserbringer id="01">
+    <name>Dr. Beispiel</name>
+  </leistungserbringer>
+
+  <rechnung id="SYNTH-2026-0001" aisrechnungsnr="RG-0001">
+
+    <abrechnungsfall>
+      <behandlungsart>0</behandlungsart>
+      <vertragsart>1</vertragsart>
+
+      <positionen posanzahl="9">
+
+        <!-- 1 · at the Höchstsatz, but no begruendung -->
+        <goziffer positionsnr="1" go="GOÄ" ziffer="1">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <text>Beratung, auch fernmündlich</text>
+          <faktor>3.5</faktor>
+          <punktzahl>80</punktzahl>
+          <gesamtbetrag>16.32</gesamtbetrag>
+        </goziffer>
+
+        <!-- 2 · above the threshold, but justified as § 12 Abs. 3 requires -->
+        <goziffer positionsnr="2" go="GOÄ" ziffer="301">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <text>Punktion eines Kniegelenks</text>
+          <faktor>2.6</faktor>
+          <begruendung>Erschwerte Punktion bei ausgepraegtem Reizzustand und Adipositas.</begruendung>
+          <punktzahl>160</punktzahl>
+          <gesamtbetrag>24.25</gesamtbetrag>
+        </goziffer>
+
+        <!-- 3 · component of the puncture, not a service beside it -->
+        <goziffer positionsnr="3" go="GOÄ" ziffer="200">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <text>Verband</text>
+          <faktor>2.3</faktor>
+          <gesamtbetrag>6.03</gesamtbetrag>
+        </goziffer>
+
+        <!-- 4 · mutually exclusive with position 5 -->
+        <goziffer positionsnr="4" go="GOÄ" ziffer="5">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <text>Symptombezogene Untersuchung</text>
+          <faktor>2.3</faktor>
+          <gesamtbetrag>10.72</gesamtbetrag>
+        </goziffer>
+
+        <!-- 5 · gesamtbetrag understated by exactly 1.00 € -->
+        <goziffer positionsnr="5" go="GOÄ" ziffer="7">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <text>Vollstaendige koerperliche Untersuchung</text>
+          <faktor>2.3</faktor>
+          <gesamtbetrag>20.45</gesamtbetrag>
+        </goziffer>
+
+        <!-- 6 · control field disagrees with the catalog -->
+        <goziffer positionsnr="6" go="GOÄ" ziffer="410">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <text>Ultraschalluntersuchung eines Organs</text>
+          <zusatztext>Kniegelenk rechts</zusatztext>
+          <faktor>2.3</faktor>
+          <punktzahl>180</punktzahl>
+          <punktwert>5.82873</punktwert>
+          <gesamtbetrag>26.81</gesamtbetrag>
+        </goziffer>
+
+        <!-- 7 · not a GOÄ number -->
+        <goziffer positionsnr="7" go="GOÄ" ziffer="99999">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <text>Frei erfundene Leistung</text>
+          <faktor>1.0</faktor>
+          <gesamtbetrag>99.99</gesamtbetrag>
+        </goziffer>
+
+        <!-- 8 · a different fee schedule entirely -->
+        <goziffer positionsnr="8" go="GOZ" ziffer="2020">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <text>Zahnaerztliche Leistung, hier ausserhalb des Pruefumfangs</text>
+          <faktor>2.3</faktor>
+          <gesamtbetrag>12.00</gesamtbetrag>
+        </goziffer>
+
+        <!-- 9 · factor above the legal maximum of 3.5 -->
+        <goziffer positionsnr="9" go="GOÄ" ziffer="3">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <text>Eingehende Beratung, mindestens 10 Minuten</text>
+          <faktor>4.0</faktor>
+          <begruendung>Sehr ausfuehrliches Gespraech.</begruendung>
+          <gesamtbetrag>34.97</gesamtbetrag>
+        </goziffer>
+
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

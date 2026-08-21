@@ -1,0 +1,15 @@
+{
+ "note": "Manual corrections applied on top of the imported catalog. Every entry needs a reason, a source and a verification date; app/catalog.py refuses to load an override that lacks them, and marks the affected Ziffer provenance='manual_override'. Overrides exist to correct import artefacts against the official text — never to change what the law says.",
+ "overrides": [
+  {
+   "ziffer": "5030",
+   "override": {
+    "official_text": "Röntgenaufnahme(n) Schultergelenk, Ellenbogengelenk, Handgelenk, Kniegelenk, Hüftgelenk - jeweils in zwei Ebenen",
+    "text_quality": "ok"
+   },
+   "reason": "Import artefact: the official table splits this legend across rows, so the parser captured only the trailing fragment 'jeweils in zwei Ebenen'. Reassembled from the anatomy headings immediately above it in the source.",
+   "source": "manual_verification against data/raw/goae_source.xml (Abschnitt O I, Skelett)",
+   "verified_at": "2026-07-25"
+  }
+ ]
+}

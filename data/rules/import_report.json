@@ -1,0 +1,1153 @@
+{
+ "generated_at": "2026-07-25T14:20:01+00:00",
+ "catalog_version": "goae_official_snapshot_2026-07-25",
+ "coverage": {
+  "ziffern_parsed": 2192,
+  "unparsed_rows": 256,
+  "annotations_captured": 447,
+  "exclusion_rules_auto": 837,
+  "exclusion_rules_mutual": 102,
+  "zielleistung_rules_auto": 0,
+  "factor_cap_rules_auto": 22,
+  "rules_needing_review": 187,
+  "duplicates": 1,
+  "validation_problems": 0,
+  "rule_coverage": "partial",
+  "note": "Ziffern and Punktzahlen come verbatim from the official source. Exclusion and Zielleistung rules were extracted from the Anmerkungen prose automatically and are unverified; they warn rather than block by default."
+ },
+ "duplicates": [
+  {
+   "ziffer": "4114",
+   "existing": "Renin-Aldosteron-Suppressionstest (Zweimalige Bestimmung von Renin und Aldostero",
+   "duplicate": "Lithium",
+   "table": 49,
+   "row": 129
+  }
+ ],
+ "validation_problems": [],
+ "validation_problem_count": 0,
+ "rules_needing_review": [
+  {
+   "owner_ziffer": "3",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 3 (Dauer mindestens 10 Minuten) ist nur berechnungsfähig als einzige Leistung oder im Zusammenhang mit einer Untersuchung nach Nummer 5, 6, 7, 8, 800 oder 801."
+  },
+  {
+   "owner_ziffer": "4",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 4 ist im Behandlungsfall nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "15",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 15 darf nur einmal im Kalenderjahr berechnet werden."
+  },
+  {
+   "owner_ziffer": "15",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben der Leistung nach Nummer 15 ist die Leistung nach Nummer 4 im Behandlungsfall nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "A",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Buchstabe A ist neben den Zuschlägen nach den Buchstaben B, C und/oder D nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "A",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Buchstabe A ist für Krankenhausärzte nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "C",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben dem Zuschlag nach Buchstabe C ist der Zuschlag nach Buchstabe B nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "D",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Werden Leistungen innerhalb einer Sprechstunde an Samstagen erbracht, so ist der Zuschlag nach Buchstabe D nur mit dem halben Gebührensatz berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "D",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Werden Leistungen an Samstagen, Sonn- oder Feiertagen zwischen 20 und 8 Uhr erbracht, ist neben dem Zuschlag nach Buchstabe D ein Zuschlag nach Buchstabe B oder C berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "D",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Buchstabe D ist für Krankenhausärzte im Zusammenhang mit zwischen 8 und 20 Uhr erbrachten Leistungen nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "21",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 21 ist innerhalb eines halben Jahres nach Beginn des Beratungsfalls nicht mehr als viermal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "26",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Lebensjahr je Kalenderjahr höchstens einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "27",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben der Leistung nach Nummer 27 sind die Leistungen nach den Nummern 1, 3, 5, 6, 7, 8 297, 3500, 3511, 3650 und/oder 3652 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "30",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 30 ist innerhalb von einem Jahr nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "31",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 31 ist innerhalb von sechs Monaten höchstens dreimal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "33",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 33 ist innerhalb von einem Jahr höchstens dreimal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "34",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 34 ist innerhalb von 6 Monaten höchstens zweimal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "45",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 45 ist neben anderen Leistungen des Abschnitts B nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "45",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Anstelle oder neben der Visite im Krankenhaus sind die Leistungen nach den Nummern 1, 3, 4, 5, 6, 7, 8, 15, 48, 50 und/oder 51 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "45",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 45 ist nur berechnungsfähig, wenn diese durch einen liquidationsberechtigten Arzt des Krankenhauses oder dessen ständigen ärztlichen Vertreter persönlich erbracht wird."
+  },
+  {
+   "owner_ziffer": "46",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 46 ist neben anderen Leistungen des Abschnitts B nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "46",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Anstelle oder neben der Zweitvisite im Krankenhaus sind die Leistungen nach den Nummern 1, 3, 4, 5, 6, 7, 8, 15, 45, 48, 50 und/oder 51 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "46",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 46 ist nur berechnungsfähig, wenn diese durch einen liquidationsberechtigten Arzt des Krankenhauses oder dessen ständigen ärztlichen Vertreter persönlich erbracht wird."
+  },
+  {
+   "owner_ziffer": "52",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Sie ist nicht berechnungsfähig, wenn das nichtärztliche Personal den Arzt begleitet."
+  },
+  {
+   "owner_ziffer": "52",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Wegegeld ist daneben nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "60",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 60 ist nicht berechnungsfähig, wenn die Ärzte Mitglieder derselben Krankenhausabteilung oder derselben Gemeinschaftspraxis oder einer Praxisgemeinschaft von Ärzten gleicher oder ähnlicher Fachrichtung (z.B. praktischer Arzt und Allgemeinarzt, Internist und praktischer Arzt) sind."
+  },
+  {
+   "owner_ziffer": "60",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Sie ist nicht berechnungsfähig für routinemäßige Besprechungen (z.B."
+  },
+  {
+   "owner_ziffer": "61",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 61 ist neben anderen Leistungen nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "61",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 61 darf nicht berechnet werden, wenn die Assistenz durch nicht liquidationsberechtigte Ärzte erfolgt."
+  },
+  {
+   "owner_ziffer": "E",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Buchstabe E ist neben Leistungen nach den Nummern 45 und/oder 46 nicht berechnungsfähig, es sei denn, die Visite wird durch einen Belegarzt durchgeführt."
+  },
+  {
+   "owner_ziffer": "E",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Buchstabe E ist neben Zuschlägen nach den Buchstaben F, G und/oder H nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "F",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Buchstabe F ist neben den Leistungen nach den Nummern 45, 46, 48 und 52 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "G",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Buchstabe G ist neben den Leistungen nach den Nummern 45, 46, 48 und 52 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "G",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben dem Zuschlag nach Buchstabe G ist der Zuschlag nach Buchstabe F nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "H",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Buchstabe H ist neben den Leistungen nach den Nummern 45, 46, 48 und 52 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "77",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 77 ist für eine im zeitlichen Zusammenhang durchgeführte Kur unabhängig von deren Dauer nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "96",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Schreibgebühren nach den Nummern 95 und 96 sind nur neben den Leistungen nach den Nummern 80, 85 und 90 und nur mit dem einfachen Gebührensatz berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "260",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 260 ist neben Leistungen nach den Nummern 355 bis 361, 626 bis 632 und/oder 648 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "261",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 261 ist im Zusammenhang mit einer Anästhesie/Narkose nicht berechnungsfähig für die Einbringung von Anästhetika, Anästhesieadjuvantien und Anästhesieantidoten."
+  },
+  {
+   "owner_ziffer": "273",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistungen nach den Nummern 271, 272 und 273 sind im Zusammenhang mit einer Anästhesie/Narkose nicht berechnungsfähig für die Einbringung von Anästhetika, Anästhesieadjuvantien und Anästhesieantidoten."
+  },
+  {
+   "owner_ziffer": "280",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Infusion von Albumin oder von Präparaten, die als einzigen Blutbestandteil Albumin enthalten, ist nicht nach der Leistung nach Nummer 280 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "281",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Infusion von Albumin oder von Präparaten, die als einzigen Blutbestandteil Albumin enthalten, ist nicht nach der Leistung nach Nummer 281 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "282",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Infusion von Albumin oder von Präparaten, die als einzigen Blutbestandteil Albumin enthalten, ist nicht nach der Leistung nach Nummer 282 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "351",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 351 ist je Sitzung nicht mehr als zweimal berechnungsfähig"
+  },
+  {
+   "owner_ziffer": "355",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Wird die Leistung nach Nummer 355 im zeitlichen Zusammenhang mit der Leistung nach Nummer 360 erbracht, ist die Leistung nach Nummer 355 nur mit dem einfachen Gebührensatz berechnungsfähig"
+  },
+  {
+   "owner_ziffer": "356",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Wird die Leistung nach Nummer 356 im zeitlichen Zusammenhang mit der Leistung nach Nummer 360 erbracht, ist die Leistung nach Nummer 356 nur mit dem einfachen Gebührensatz berechnungsfähig"
+  },
+  {
+   "owner_ziffer": "357",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Wird die Leistung nach Nummer 357 im Zusammenhang mit der Leistung nach Nummer 351 erbracht, ist die Leistung nach Nummer 357 nur mit dem einfachen Gebührensatz berechnungsfähig"
+  },
+  {
+   "owner_ziffer": "361",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 361 ist je Sitzung nicht mehr als zweimal berechnungsfähig"
+  },
+  {
+   "owner_ziffer": "382",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Mehr als 100 Epikutantests sind je Behandlungsfall nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "387",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Mehr als 80 Pricktests sind je Behandlungsfall nicht berechnungsfähig"
+  },
+  {
+   "owner_ziffer": "391",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Mehr als 80 Intrakutantests sind je Behandlungsfall nicht berechnungsfähig"
+  },
+  {
+   "owner_ziffer": "420",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 420 kann je Sitzung höchstens dreimal berechnet werden."
+  },
+  {
+   "owner_ziffer": "430",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 430 ist auch bei mehrfacher Verabfolgung von Stromstößen in engem zeitlichen Zusammenhang zur Erreichung der Defibrillation nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "435",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben der Leistung nach Nummer 435 sind für die Dauer der stationären intensivmedizinischen Überwachung und Behandlung Leistungen nach den Abschnitten C III und M sowie die Leistungen nach den Nummern 1 bis 56, 61 bis 96, 200 bis 211, 247, 250 bis 268, 270 bis 286a, 288 bis 298, 401 bis 424, 427 bis 433, 483 bis 485, 488 bis 490, 500, 501, 505, 600 bis 609, 634 bis 648, 650 bis 657, 659 bis 661, 665 bis 672, 1529 bis 1532, 1728 bis 1733 und 3055 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "437",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben der Leistung nach Nummer 437 sind Leistungen nach Abschnitt M - mit Ausnahme von Leistungen nach den Abschnitten M III 13 (Blutgruppenmerkmale, HLA-System) und M IV (Untersuchungen zum Nachweis und zur Charakterisierung von Krankheitserregern) -nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "440",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 440 ist je Behandlungstag nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "440",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 441 ist je Behandlungstag nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "442",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 442 ist je Behandlungstag nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "442",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Nummer 442 ist neben den Zuschlägen nach den Nummern 443 bis 445 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "443",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 443 ist je Behandlungstag nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "443",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Nummer 443 ist neben den Zuschlägen nach den Nummern 442, 444 und/oder 445 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "444",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 444 ist je Behandlungstag nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "444",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Nummer 444 ist neben den Zuschlägen nach den Nummern 442, 443 und/oder 445 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "445",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 445 ist je Behandlungstag nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "445",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Nummer 445 ist neben den Zuschlägen nach den Nummern 442 bis 444 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "446",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 446 ist je Behandlungstag nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "446",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Nummer 446 ist neben dem Zuschlag nach Nummer 447 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "447",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 447 ist je Behandlungstag nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "447",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Nummer 447 ist neben dem Zuschlag nach Nummer 446 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "448",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 448 ist je Behandlungstag nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "448",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Nummer 448 ist neben den Leistungen nach den Nummern 1 bis 8 und 56 sowie dem Zuschlag nach Nummer 449 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "449",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 449 ist je Behandlungstag nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "449",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Der Zuschlag nach Nummer 449 ist neben den Leistungen nach den Nummern 1 bis 8 und 56 sowie dem Zuschlag nach Nummer 448 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "551",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Wird Reizstrombehandlung nach Nummer 551 gleichzeitig neben einer Leistung nach Nummer 535, 536, 538, 539, 548, 549, 552 oder 747 an demselben Körperteil oder an denselben Körperteilen verabreicht, so ist nur die höherbewertete Leistung berechnungsfähig; dies gilt auch bei Verwendung eines Apparatesystems an mehreren Körperteilen."
+  },
+  {
+   "owner_ziffer": "560",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Werden mehrere Kranke gleichzeitig mit Ultraviolettlicht behandelt, so darf die Nummer 560 nur einmal berechnet werden."
+  },
+  {
+   "owner_ziffer": "623",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 623 zur Temperaturmessung an der Hautoberfläche der Brustdrüse ist nur bei Vorliegen eines abklärungsbedürftigen mammographischen Röntgenbefundes berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "626",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 626 ist je Sitzung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "627",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 627 ist je Sitzung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "628",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 628 ist je Sitzung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "629",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 629 ist je Sitzung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "726",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 726 ist neben der Leistung nach Nummer 725 an demselben Tage nur berechnungsfähig, wenn beide Behandlungen zeitlich getrennt voneinander mit einer Dauer von jeweils mindestens 45 Minuten erbracht werden."
+  },
+  {
+   "owner_ziffer": "793",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Leistungen nach den Abschnitten B und C (mit Ausnahme der Leistung nach Nummer 50 in Verbindung mit einem Zuschlag nach den Buchstaben E, F, G und/oder H) sowie die Leistungen nach den Nummern 3550, 3555, 3557, 3558, 3562.H1, 3565.H1, 3574, 3580.H1, 3584.H1, 3585.H1, 3587.H1, 3592.H1, 3594.H1, 3595.H1, 3620, 3680, 3761 und 4381, die in ursächlichem Zusammenhang mit der Dialysebehandlung erbracht werden, sind nicht gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "807",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 807 ist im Behandlungsfall nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "833",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Verweilgebühren sind nach Ablauf einer halben Stunde zusätzlich berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "842",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 842 ist im Behandlungsfall nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "860",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Nummer 860 ist im Behandlungsfall nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "871",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Bei einer Sitzungsdauer von mindestens 100 Minuten kann die Leistung nach Nummer 871 zweimal berechnet werden."
+  },
+  {
+   "owner_ziffer": "1056",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben den Leistungen nach den Nummern 1055 und 1056 ist die intravaginale oder intrazervikale Applikation von Prostaglandin-Gel nicht gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "1213",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Wurden harte Kontaktlinsen (Haftschalen) nicht vertragen und müssen deshalb weiche Kontaktlinsen angepaßt werden, sind die Leistungen nach der Nummer 1210 oder 1211 nicht erneut, sondern lediglich die Leistungen nach der Nummer 1212 oder 1213 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "1473",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben der Leistung nach Nummer 1473 ist die Nummer 1485 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "1532",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 1532 ist im Zusammenhang mit einer Intubationsnarkose nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "1730",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Wird eine Harnblasenkatheterisierung lediglich ausgeführt, um eine gynäkologische Untersuchung nach Nummer 7 zu erleichtern, so ist sie neben der Leistung nach Nummer 7 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "1793",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Injektion von pharmakodynamisch wirksamen Substanzen ist gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "1812",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Kosten für die Schiene bzw. den Katheter sind gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "1815",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Kosten für die Schlinge sind nicht gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "3500",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Kosten für ausgegebenes Testmaterial sind anstelle der Leistung nach Nummer 3500 berechnungsfähig, wenn die Auswertung aus Gründen unterbleibt, die der Arzt nicht zu vertreten hat."
+  },
+  {
+   "owner_ziffer": "3511",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Können mehrere Meßgrößen durch Verwendung eines Mehrfachreagenzträgers erfaßt werden, so ist die Leistung nach Nummer 3511 auch dann nur einmal berechnungsfähig, wenn mehrere Einfachreagenzträger verwandt wurden."
+  },
+  {
+   "owner_ziffer": "3550",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 3550 beinhaltet die Erbringung mindestens eines der folgenden Parameter, darf jedoch unabhängig von der Zahl der erbrachten Parameter aus demselben Probenmaterial nur einmal berechnet werden:"
+  },
+  {
+   "owner_ziffer": "3650",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Kosten für ausgegebenes Testmaterial sind anstelle der Leistung nach Nummer 3650 berechnungsfähig, wenn die Auswertung aus Gründen unterbleibt, die der Arzt nicht zu vertreten hat."
+  },
+  {
+   "owner_ziffer": "4601",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Kosten für Versuchstiere sind nicht gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "4851",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben der Leistung nach Nummer 4851 ist die Leistung nach Nummer 4850 bei Untersuchungen aus demselben Material nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5000",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Werden mehrere Zähne mittels einer Röntgenaufnahme erfaßt, so darf die Leistung nach Nummer 5000 nur einmal und nicht je aufgenommenem Zahn berechnet werden."
+  },
+  {
+   "owner_ziffer": "5011",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Werden mehrere Finger oder Zehen mittels einer Röntgenaufnahme erfaßt. so dürfen die Leistungen nach den Nummern 5010 und 5011 nur einmal und nicht je aufgenommenem Finger oder Zehen berechnet werden."
+  },
+  {
+   "owner_ziffer": "5021",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Werden mehrere der in der Leistungsbeschreibung genannten Skeletteile mittels einer Röntgenaufnahme erfaßt. so dürfen die Leistungen nach den Nummern 5020 und 5021 nur einmal und nicht je aufgenommenem Skeletteil berechnet werden."
+  },
+  {
+   "owner_ziffer": "5031",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Werden mehrere der in der Leistungsbeschreibung genannten Skeletteile mittels einer Röntgenaufnahme erfaßt, so dürfen die Leistungen nach den Nummern 5030 und 5031 nur einmal und nicht je aufgenommenem Skeletteil berechnet werden."
+  },
+  {
+   "owner_ziffer": "5035",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 5035 ist je Skeletteil und Sitzung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5111",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 5111 ist je Sitzung nicht mehr als zweimal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5135",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 5135 ist je Sitzung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5190",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 5190 ist je Sitzung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5260",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 5260 ist nicht berechnungsfähig für Untersuchungen des Harntrakts, der Gebärmutter und Eileiter sowie der Gallenblase."
+  },
+  {
+   "owner_ziffer": "5265",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 5265 ist je Seite und Sitzung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5301",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Bei der angiographischen Darstellung von hirnversorgenden Arterien ist auch die vierte bis sechste Serie jeweils nach Nummer 5301 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5304",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Bei der angiographischen Darstellung von hirnversorgenden Arterien ist auch die vierte bis sechste Serie jeweils nach Nummer 5304 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5308",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben den Leistungen nach den Nummern 5306 bis 5308 sind die Leistungen nach den Nummern 5309 bis 5312 für die Untersuchung der Beine nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5308",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Werden die Leistungen nach den Nummern 5306 bis 5308 im zeitlichen Zusammenhang mit einer oder mehreren Leistung(en) nach den Nummern 5300 bis 5305 erbracht, sind die Leistungen nach den Nummern 5306 bis 5308 nur mit dem einfachen Gebührensatz berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5315",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 5315 ist je Sitzung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5316",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 5316 ist je Sitzung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5328",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 5328 ist je Sitzung nur einmal und nur mit dem einfachen Gebührensatz berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5335",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Der Zuschlag nach Nummer 5335 kann je Untersuchungstag unabhängig von der Anzahl der Einzeluntersuchungen nur einmal und nur mit dem einfachen Gebührensatz berechnet werden."
+  },
+  {
+   "owner_ziffer": "5345",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Wurde innerhalb eines Zeitraums von vierzehn Tagen vor Erbringung der Leistung nach Nummer 5345 bereits eine Leistung nach den Nummern 5300 bis 5313 berechnet, darf neben der Leistung nach Nummer 5345 für dieselbe Sitzung eine Leistung nach den Nummern 5300 bis 5313 nicht erneut berechnet werden."
+  },
+  {
+   "owner_ziffer": "5348",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Wurde innerhalb eines Zeitraums von vierzehn Tagen vor Erbringung der Leistung nach Nummer 5348 bereits eine Leistung nach den Nummern 5315 bis 5327 berechnet, darf neben der Leistung nach Nummer 5348 für dieselbe Sitzung eine Leistung nach den Nummern 5315 bis 5327 nicht erneut berechnet werden."
+  },
+  {
+   "owner_ziffer": "5356",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben der Leistung nach Nummer 5356 ist die Leistung nach Nummer 5355 für Eingriffe an Koronararterien nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5378",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben oder anstelle der computergesteuerten Tomographie zur Bestrahlungsplanung oder zu interventionellen Maßnahmen sind die Leistungen nach den Nummern 5370 bis 5376 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5421",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben der Leistung nach Nummer 5421 ist bei zusätzlicher Erste-Passage-Untersuchung die Leistung nach Nummer 5473 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5431",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Für die Untersuchung mehrerer Regionen ist die Leistung nach Nummer 5430 nicht mehrfach berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5442",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistungen nach den Nummern 5440 bis 5442 sind je Sitzung nur einmal und nicht nebeneinander berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5466",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "(Stamm und Extremitäten) Für die Untersuchung mehrerer Regionen ist die Leistung nach Nummer 5465 nicht mehr berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5606",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 5606 ist nur bei Zugrundeliegen einer Leistung nach den Nummern 5600, 5603 und/oder 5605 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5607",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 5607 ist nur bei Zugrundeliegen einer Leistung nach den Nummern 5600, 5603 und/oder 5605 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5803",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistungen nach den Nummern 5802 und 5803 sind für die Bestrahlung flächenhafter Dermatosen jeweils nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5812",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Bei Bestrahlung mit einem Telecaesiumgerät wegen einer bösartigen Erkrankung ist die Leistung nach Nummer 5812 je Fraktion zweimal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5851",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistung nach Nummer 5851 ist unabhängig von der Anzahl der Fraktionen insgesamt nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "5854",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistungen nach den Nummern 5852 bis 5854 sind nur in Verbindung mit einer Strahlenbehandlung oder einer regionären intravenösen oder intraarteriellen Chemotherapie und nur mit dem einfachen Gebührensatz berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Herzkatheter-Einbringung(en) und anschließende intraarterielle Einbringung(en) des Kontrastmittels nach selektiver arterieller Katheterplazierung zur selektiven Koronarangiographie - einschließlich Röntgenkontrolle und fortlaufender EKG-Kontrolle -, je Sitzung Die Leistung nach Nummer 360 kann je Sitzung nur einmal berechnet werden."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Stationäre intensivmedizinische Überwachung und Behandlung eines Patienten auf einer dafür eingerichteten gesonderten Betteneinheit eines Krankenhauses mit spezieller Personal-und Geräteausstattung - einschließlich aller im Rahmen der Intensivbehandlung erbrachten Leistungen, soweit deren Berechnungsfähigkeit nachfolgend ausgeschlossen ist -, bis zu 24 Stunden Dauer"
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Überwachung einer assistierenden Zirkulation, je angefangene Stunde Die Leistung nach Nummer 3055 ist nur während einer Operation berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Entfernung von Fremdkörpern aus dem Mastdarm Eine neben der Leistung nach Nummer 3238 erforderliche Rektoskopie ist nach Nummer 690 zusätzlich berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistung nach Nummer 4001 ist für die Identitätssicherung im ABO-System am Krankenbett (bedside-test) nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Rufbereitschaft sowie das Bereitstehen eines Arztes oder Arztteams sind nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "(1) Neben den für die einzelnen ärztlichen Leistungen vorgesehenen Gebühren können als Auslagen nur berechnet werden 1.die Kosten für diejenigen Arzneimittel, Verbandmittel und sonstigen Materialien, die der Patient zur weiteren Verwendung behält oder die mit einer einmaligen Anwendung verbraucht sind, soweit in Absatz 2 nichts anderes bestimmt ist, 2.Versand- und Portokosten, soweit deren Berechnung nach Absatz 3 nicht ausgeschlossen ist, 3.die im Zusammenhang mit Leistungen nach Abschnitt O bei der Anwendung radioaktiver Stoffe durch deren Verbrauch entstandenen Kosten sowie 4.die nach den Vorschriften des Gebührenverzeichnisses als gesondert berechnungsfähig ausgewiesenen Kosten."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "(2) Nicht berechnet werden können die Kosten für 1.Kleinmaterialien wie Zellstoff, Mulltupfer, Schnellverbandmaterial, Verbandspray, Gewebeklebstoff auf Histoacrylbasis, Mullkompressen, Holzspatel, Holzstäbchen, Wattestäbchen, Gummifingerlinge, 2.Reagenzien und Narkosemittel zur Oberflächenanästhesie, 3.Desinfektions- und Reinigungsmittel, 4.Augen-, Ohren-, Nasentropfen, Puder, Salben und geringwertige Arzneimittel zur sofortigen Anwendung sowie für 5.folgende Einmalartikel: Einmalspritzen, Einmalkanülen, Einmalhandschuhe, Einmalharnblasenkatheter, Einmalskalpelle, Einmalproktoskope, Einmaldarmrohre, Einmalspekula."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Kosten für Versandmaterial, für den Versand des Untersuchungsmaterials und die Übermittlung des Untersuchungsergebnisses innerhalb einer Laborgemeinschaft oder innerhalb eines Krankenhausgeländes sind nicht berechnungsfähig; dies gilt auch, wenn Material oder ein Teil davon unter Nutzung der Transportmittel oder des Versandweges oder der Versandgefäße einer Laborgemeinschaft zur Untersuchung einem zur Erbringung von Leistungen beauftragten Arzt zugeleitet wird."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Für die Versendung der Arztrechnung dürfen Versand- und Portokosten nicht berechnet werden."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Allgemeine Bestimmungen 1.Als Behandlungsfall gilt für die Behandlung derselben Erkrankung der Zeitraum eines Monats nach der jeweils ersten Inanspruchnahme des Arztes.2.Die Leistungen nach den Nummern 1 und/oder 5 sind neben Leistungen nach den Abschnitten C bis O im Behandlungsfall nur einmal berechnungsfähig.3.Die Leistungen nach den Nummern 1, 3, 5, 6, 7 und/oder 8 können an demselben Tag nur dann mehr als einmal berechnet werden, wenn dies durch die Beschaffenheit des Krankheitsfalls geboten war."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Allgemeine Bestimmungen 1.Die Gebühren für Laboratoriumsuntersuchungen des Abschnitts M umfassen die Eingangsbegutachtung des Probenmaterials, die Probenvorbereitung, die Durchführung der Untersuchung (einschließlich der erforderlichen Qualitätssicherungsmaßnahmen) sowie die Erstellung des daraus resultierenden ärztlichen Befunds.Mit den Gebühren für die berechnungsfähigen Leistungen sind außer den Kosten - mit Ausnahme der Versand- und Portokosten sowie der Kosten für Pharmaka im Zusammenhang mit Funktionstesten - auch die Beurteilung, die obligatorische Befunddokumentation, die Befundmitteilung sowie der einfache Befundbericht abgegolten."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Verwendung radioaktiven Materials kann nicht gesondert berechnet werden.Kosten für den Versand des Untersuchungsmaterials und die Übermittlung des Untersuchungsergebnisses innerhalb einer Laborgemeinschaft sind nicht berechnungsfähig.2.Stehen dem Arzt für die Erbringung bestimmter Laboruntersuchungen mehrere in ihrer klinischen Aussagefähigkeit und analytischen Qualität gleichwertige Verfahren zur Verfügung, so kann er nur das niedriger bewertete Verfahren abrechnen.3.Bei Weiterversand von Untersuchungsmaterial durch einen Arzt an einen anderen Arzt wegen der Durchführung von Laboruntersuchungen der Abschnitte M III und/oder M IV hat die Rechnungsstellung durch den Arzt zu erfolgen, der die Laborleistung selbst erbracht hat.4.Mehrmalige Blutentnahmen an einem Kalendertag (z.B. im Zusammenhang mit Funktionsprüfungen) sind entsprechend mehrfach berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Anstelle der Blutentnahme kann die intravenöse Einbringung von Testsubstanzen berechnet werden, wenn beide Leistungen bei liegender Kanüle nacheinander erbracht werden.Entnahmen aus liegender Kanüle oder liegendem Katheter sind nicht gesondert berechnungsfähig.5.Die rechnerische Ermittlung von Ergebnissen aus einzelnen Meßgrößen ist nicht berechnungsfähig (z.B."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Blut einschließlich seiner Bestandteile Serum, Plasma und Blutzellen), das an einem Kalendertag gewonnen wurde, auch wenn dieses an mehreren Tagen untersucht wurde.Sind aus medizinischen Gründen an einem Kalendertag mehrere Untersuchungen einer Meßgröße aus einer Materialart zu verschiedenen Tageszeiten erforderlich, so können diese entsprechend mehrfach berechnet werden."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Wird eine Untersuchung mittels Ligandenassay, die obligatorisch eine Doppelbestimmung beinhaltet, als Einfachbestimmung durchgeführt, so dürfen nur zwei Drittel der Gebühr berechnet werden.10.Sofern nicht gesondert gekennzeichnet, handelt es sich bei den aufgeführten Untersuchungen um quantitative oder semiquantitative Bestimmungen.11.Laboratoriumsuntersuchungen der Abschnitte M I, M II und M III (mit Ausnahme der Leistungen nach den Nummern 3980 bis 4014) im Rahmen einer Intensivbehandlung nach Nummer 435 sind nur nach Nummer 437 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Allgemeine Bestimmungen 1.Mit den Gebühren sind alle Kosten (auch für Dokumentation und Aufbewahrung der Datenträger) abgegolten.2.Die Leistungen für Strahlendiagnostik mit Ausnahme der Durchleuchtung(en) (Nummer 5295) sind nur bei Bilddokumentation auf einem Röntgenfilm oder einem anderen Langzeitdatenträger berechnungsfähig.3.Die Befundmitteilung oder der einfache Befundbericht mit Angaben zu Befund(en) und zur Diagnose ist Bestandteil der Leistungen und nicht gesondert berechnungsfähig.4.Die Beurteilung von Röntgenaufnahmen (auch Fremdaufnahmen) als selbständige Leistung ist nicht berechnungsfähig.5.Die nach dem Strahlenschutzgesetz und den auf dessen Grundlage erlassenen Rechtsverordnungen notwendige ärztliche Überprüfung der Indikation und des Untersuchungsumfangs ist auch im Überweisungsfall Bestandteil der Leistungen des Abschnitts O und mit den Gebühren abgegolten.6.Die Leistungen nach den Nummern 5011, 5021, 5031, 5101, 5106, 5121, 5201, 5267, 5295, 5302, 5305, 5308, 5311, 5318, 5331, 5339, 5376 und 5731 dürfen unabhängig von der Anzahl der Ebenen, Projektionen, Durchleuchtungen bzw."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Serien insgesamt jeweils nur einmal berechnet werden.7.Die Kosten für Kontrastmittel auf Bariumbasis und etwaige Zusatzmittel für die Doppelkontrastuntersuchung sind in den abrechnungsfähigen Leistungen enthalten."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Wiederholungsuntersuchungen, die nicht ausdrücklich aufgeführt sind, sind nur mit besonderer Begründung und wie die jeweilige Basisleistung berechnungsfähig.2.Ergänzungsleistungen nach den Nummern 5480 bis 5485 sind je Basisleistung oder zulässiger Wiederholungsuntersuchung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistungen nach den Nummern 5473, 5480, 5481 und 5483 sind nur mit Angabe der Indikation berechnungsfähig.3.Die Befunddokumentation, die Aufbewahrung der Datenträger sowie die Befundmitteilung oder der einfache Befundbericht mit Angaben zu Befund(en) und zur Diagnose sind Bestandteil der Leistungen und nicht gesondert berechnungsfähig.4.Die Materialkosten für das Radiopharmazeutikum (Nuklid, Markierungs- oder Testbestecke) sind gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Kosten für Beschaffung, Aufbereitung, Lagerung und Entsorgung der zur Untersuchung notwendigen Substanzen, die mit ihrer Anwendung verbraucht sind, sind nicht gesondert berechnungsfähig.5.Die Einbringung von zur Diagnostik erforderlichen Stoffen in den Körper - mit Ausnahme der Einbringung durch Herzkatheter, Arterienkatheter, Subokzipitalpunktion oder Lumbalpunktion - sowie die gegebenenfalls erforderlichen Entnahmen von Blut oder Urin sind mit den Gebühren abgegolten, soweit zu den einzelnen Leistungen dieses Abschnitts nichts anderes bestimmt ist.6.Die Einbringung von zur Therapie erforderlichen radioaktiven Stoffen in den Körper - mit Ausnahme der intraartikulären, intralymphatischen, endoskopischen oder operativen Einbringungen des Strahlungsträgers oder von Radionukliden - ist mit den Gebühren abgegolten, soweit zu den einzelnen Leistungen dieses Abschnitts nichts anderes bestimmt ist.7.Rechnungsbestimmungena)Der Arzt darf nur die für den Patienten verbrauchte Menge an radioaktiven Stoffen berechnen.b)Bei der Berechnung von Leistungen nach Abschnitt O II sind die Untersuchungs- und Behandlungsdaten der jeweils eingebrachten Stoffe sowie die Art der ausgeführten Maßnahmen in der Rechnung anzugeben, sofern nicht durch die Leistungsbeschreibung eine eindeutige Definition gegeben ist."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "die nach den Vorschriften des Gebührenverzeichnisses als gesondert berechnungsfähig ausgewiesenen Kosten."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Die Leistungen nach den Nummern 1 und/oder 5 sind neben Leistungen nach den Abschnitten C bis O im Behandlungsfall nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Anstelle oder neben der Visite im Krankenhaus sind die Leistungen nach den Nummern 1, 3, 4, 5, 6, 7, 8 und/oder 15 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Besuchsgebühren nach den Nummern 48, 50 und/oder 51 sind für Besuche von Krankenhaus- und Belegärzten im Krankenhaus nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Terminvereinbarungen sind nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben den Leistungen nach den Nummern 100 und 101 sind Zuschläge nach den Buchstaben F bis H berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Erforderliche Nachbeobachtungen am Tag der Impfung oder Testung sind in den Leistungsansätzen enthalten und nicht gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben den Leistungen nach den Nummern 376 bis 378 sind die Leistungen nach den Nummern 1 und 2 und die gegebenenfalls erforderliche Eintragung in den Impfpaß nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Leistungen nach den Nummern 410 bis 418 sind nicht nebeneinander berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistungen nach den Nummern 448 und 449 sind im Zusammenhang mit derselben Operation nur von einem der an dem Eingriff beteiligten Ärzte und nur entweder neben den Leistungen nach den Nummern 442 bis 445 oder den Leistungen nach den Nummern 446 bis 447 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Zuschläge nach den Nummern 442 bis 449 sind nicht berechnungsfähig, wenn der Patient an demselben Tag wegen derselben Erkrankung in stationäre Krankenhausbehandlung aufgenommen wird; das gilt nicht, wenn die stationäre Behandlung wegen unvorhersehbarer Komplikationen während oder nach der ambulanten Operation notwendig und entsprechend begründet wird."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Mit den Gebühren für die berechnungsfähigen Leistungen sind außer den Kosten - mit Ausnahme der Versand- und Portokosten sowie der Kosten für Pharmaka im Zusammenhang mit Funktionstesten - auch die Beurteilung, die obligatorische Befunddokumentation, die Befundmitteilung sowie der einfache Befundbericht abgegolten."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Kosten für den Versand des Untersuchungsmaterials und die Übermittlung des Untersuchungsergebnisses innerhalb einer Laborgemeinschaft sind nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Mehrmalige Blutentnahmen an einem Kalendertag (z.B. im Zusammenhang mit Funktionsprüfungen) sind entsprechend mehrfach berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Entnahmen aus liegender Kanüle oder liegendem Katheter sind nicht gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die rechnerische Ermittlung von Ergebnissen aus einzelnen Meßgrößen ist nicht berechnungsfähig (z.B."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Sind aus medizinischen Gründen an einem Kalendertag mehrere Untersuchungen einer Meßgröße aus einer Materialart zu verschiedenen Tageszeiten erforderlich, so können diese entsprechend mehrfach berechnet werden."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Laboratoriumsuntersuchungen der Abschnitte M I, M II und M III (mit Ausnahme der Leistungen nach den Nummern 3980 bis 4014) im Rahmen einer Intensivbehandlung nach Nummer 435 sind nur nach Nummer 437 berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistungen für Strahlendiagnostik mit Ausnahme der Durchleuchtung(en) (Nummer 5295) sind nur bei Bilddokumentation auf einem Röntgenfilm oder einem anderen Langzeitdatenträger berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Befundmitteilung oder der einfache Befundbericht mit Angaben zu Befund(en) und zur Diagnose ist Bestandteil der Leistungen und nicht gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Beurteilung von Röntgenaufnahmen (auch Fremdaufnahmen) als selbständige Leistung ist nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Serien insgesamt jeweils nur einmal berechnet werden."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Wiederholungsuntersuchungen, die nicht ausdrücklich aufgeführt sind, sind nur mit besonderer Begründung und wie die jeweilige Basisleistung berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Ergänzungsleistungen nach den Nummern 5480 bis 5485 sind je Basisleistung oder zulässiger Wiederholungsuntersuchung nur einmal berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Leistungen nach den Nummern 5473, 5480, 5481 und 5483 sind nur mit Angabe der Indikation berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Befunddokumentation, die Aufbewahrung der Datenträger sowie die Befundmitteilung oder der einfache Befundbericht mit Angaben zu Befund(en) und zur Diagnose sind Bestandteil der Leistungen und nicht gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Materialkosten für das Radiopharmazeutikum (Nuklid, Markierungs- oder Testbestecke) sind gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Kosten für Beschaffung, Aufbereitung, Lagerung und Entsorgung der zur Untersuchung notwendigen Substanzen, die mit ihrer Anwendung verbraucht sind, sind nicht gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "quantity_or_time_restriction_not_modelled",
+   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
+   "quote": "Auf Verlangen ist die mehr als zweimalige Berechnung einer Visite an demselben Tag zu begründen.Anstelle oder neben der Visite im Krankenhaus sind die Leistungen nach den Nummern 1, 3, 4, 5, 6, 7, 8 und/oder 15 nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Gebühren für Laboratoriumsuntersuchungen des Abschnitts M umfassen die Eingangsbegutachtung des Probenmaterials, die Probenvorbereitung, die Durchführung der Untersuchung (einschließlich der erforderlichen Qualitätssicherungsmaßnahmen) sowie die Erstellung des daraus resultierenden ärztlichen Befunds.Mit den Gebühren für die berechnungsfähigen Leistungen sind außer den Kosten - mit Ausnahme der Versand- und Portokosten sowie der Kosten für Pharmaka im Zusammenhang mit Funktionstesten - auch die Beurteilung, die obligatorische Befunddokumentation, die Befundmitteilung sowie der einfache Befundbericht abgegolten."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Die Verwendung radioaktiven Materials kann nicht gesondert berechnet werden.Kosten für den Versand des Untersuchungsmaterials und die Übermittlung des Untersuchungsergebnisses innerhalb einer Laborgemeinschaft sind nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Anstelle der Blutentnahme kann die intravenöse Einbringung von Testsubstanzen berechnet werden, wenn beide Leistungen bei liegender Kanüle nacheinander erbracht werden.Entnahmen aus liegender Kanüle oder liegendem Katheter sind nicht gesondert berechnungsfähig."
+  }
+ ]
+}

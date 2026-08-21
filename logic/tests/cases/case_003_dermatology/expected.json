@@ -1,0 +1,31 @@
+{
+  "description": "Dermatology case. Exercises the § 6 Abs. 2 Analogansatz, including the collision rule that stops an analog position being charged twice, and the § 5 band for Abschnitt N.",
+  "catalog_version": "goae_official_snapshot_2026-07-25",
+  "accepted_ziffern": ["1", "5", "750", "2403", "4800", "410"],
+  "blocked_ziffern": [],
+  "analog_expectations": [
+    {
+      "entity_type": "optische_kohaerenztomographie",
+      "ziffer": "410",
+      "requires_human_review": true,
+      "note": "The closest analog (Nr. 750) is already charged directly for the dermatoscopy, so the @5 collision objective forces the next-best candidate. Charging Nr. 750 twice for two different services would be wrong."
+    }
+  ],
+  "warnings_contain": [
+    "analogansatz_requires_human_review",
+    "rule_coverage_incomplete"
+  ],
+  "factor_expectations": [
+    {
+      "ziffer": "4800",
+      "factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": false,
+      "note": "Abschnitt N (Histologie) is NOT named in § 5 Abs. 4, so it takes the general 3.5 band. Capping it at 1.3 like the lab section would undercharge it."
+    },
+    { "ziffer": "750", "factor": "2.3", "max_factor": "3.5", "requires_justification": false }
+  ],
+  "total_amount_eur": "111.26",
+  "total_punkte": 830,
+  "minderung_applied": false
+}
