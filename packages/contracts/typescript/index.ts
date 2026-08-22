@@ -83,6 +83,16 @@ export type PadnextFinding = Schemas["PadnextFinding"];
 /** Closed union: every value needs a label, or a verdict renders as a raw identifier. */
 export type PadnextVerdict = PadnextAuditedPosition["verdict"];
 
+/**
+ * Which of the three honest financial buckets a claimed position was counted into.
+ *
+ * Distinct from `PadnextVerdict`, and the distinction is the point: a verdict says what the
+ * *enforced* rules concluded, a bucket says how much weight that conclusion can bear. A position
+ * the rules failed to confirm is `blocked` in the verdict but only `unconfirmed` here — and a UI
+ * must never render `unconfirmed` as a defect. See `PadnextAuditReport.unconfirmed_eur`.
+ */
+export type PadnextPositionBucket = PadnextAuditedPosition["bucket"];
+
 /* -- catalog and vocabulary ---------------------------------------------------------------- */
 
 export type HealthResponse = Schemas["HealthResponse"];

@@ -22,9 +22,14 @@ from app.padnext import (
     read_delivery,
     read_file,
 )
-from app.config import PADNEXT_EXAMPLES_DIR
+from app.config import PADNEXT_EXAMPLES_DIR, UnverifiedRulePolicy
 from app.padnext.audit import build_audit_input, derive_setting
-from app.schemas.padnext import PadnextCase, PadnextDelivery, PadnextInvoice
+from app.schemas.padnext import (
+    PadnextCase,
+    PadnextDelivery,
+    PadnextInvoice,
+    PadnextPosition,
+)
 
 EXAMPLES = PADNEXT_EXAMPLES_DIR
 ORDER_NAME = "00004711_20260726_ADL_000001.auf"
@@ -412,7 +417,6 @@ def test_the_totals_are_internally_consistent(report):
     assert report.recomputed_total_eur == sum(
         (p.recomputed_amount_eur or Decimal("0") for p in report.positions), Decimal("0")
     )
-    assert report.at_risk_eur == report.claimed_total_eur - report.defensible_total_eur
 
 
 def test_the_defensible_total_counts_only_lines_that_survive_everything(report):
@@ -436,6 +440,114 @@ def test_amounts_are_decimal_not_float(report):
     for row in report.positions:
         for value in (row.claimed_amount_eur, row.recomputed_amount_eur, row.amount_delta_eur):
             assert value is None or isinstance(value, Decimal)
+
+
+# ------------------------------------------------------------------------------------------
+# the three honest buckets
+# ------------------------------------------------------------------------------------------
+
+
+def test_the_three_buckets_account_for_every_claimed_euro(report):
+    """The identity the whole split rests on. If it does not hold, some position's euros were
+    counted twice or dropped, and every figure a practice would act on is wrong."""
+    assert (
+        report.confirmed_fine_eur + report.confirmed_wrong_eur + report.unconfirmed_eur
+        == report.claimed_total_eur
+    )
+    assert report.bucket_summary() == {
+        "confirmed_fine": 1,
+        "confirmed_wrong": 5,
+        "unconfirmed": 3,
+    }
+    assert sum(report.bucket_summary().values()) == len(report.positions)
+
+
+def test_the_bundled_example_splits_into_the_three_buckets(report):
+    """The concrete numbers, so a change in bucketing policy shows up as a diff here.
+
+    Read against what the old `at_risk_eur` would have said about the same file: 251.54 claimed
+    minus 51.06 defensible was 200.48 — 80 % of the invoice presented as disputed. Of that, only
+    88.49 is actually demonstrable.
+    """
+    assert report.claimed_total_eur == Decimal("251.54")
+    assert report.confirmed_fine_eur == Decimal("24.25")
+    assert report.confirmed_wrong_eur == Decimal("88.49")
+    assert report.unconfirmed_eur == Decimal("138.80")
+
+
+def test_the_coverage_ratio_reports_the_audited_share_not_the_wrong_share(report):
+    """`coverage_ratio` answers "how much of this invoice could we judge at all?" — so it counts
+    confirmed_wrong as covered. An audit that proved a position wrong audited it."""
+    judged = report.confirmed_fine_eur + report.confirmed_wrong_eur
+    assert report.coverage_ratio == pytest.approx(float(judged / report.claimed_total_eur))
+    assert 0.0 <= report.coverage_ratio <= 1.0
+    # Under 50 % on a nine-line invoice, and that is the honest figure: it is what "837 of 869
+    # exclusion rules are unverified" actually costs.
+    assert report.coverage_ratio < 0.5
+
+
+def test_every_position_carries_a_bucket_and_a_reason(report):
+    for row in report.positions:
+        assert row.bucket in {"confirmed_fine", "confirmed_wrong", "unconfirmed"}
+        assert row.bucket_reason, f"position {row.positionsnr} bucketed without a reason"
+
+
+def test_a_verified_zielleistung_violation_is_confirmed_wrong(report):
+    """Position 3 charges a dressing beside the puncture it belongs to. `ziel_man_301_200` is
+    manually verified, so this is provable, not advisory."""
+    row = position(report, "3")
+    assert row.bucket == "confirmed_wrong"
+    assert "ziel_man_301_200" in row.verified_rule_ids
+
+
+def test_a_position_validated_by_a_verified_rule_is_confirmed_fine(report):
+    """Position 2 passed every check AND a verified rule actually bore on it — it is the
+    Zielleistung that `ziel_man_301_200` names. That is what earns green."""
+    row = position(report, "2")
+    assert row.bucket == "confirmed_fine"
+    assert row.verified_rule_ids == ["ziel_man_301_200"]
+    assert row.advisory_rule_ids == []
+
+
+def test_a_clean_position_with_no_verified_rule_is_unconfirmed_not_fine(report):
+    """Position 6 recomputes to the cent and no rule touches GOÄ 410. It is still not `fine`:
+    nothing verified checked it, so calling it safe would be an overclaim. This is the case that
+    separates honest semantics from flattering ones."""
+    row = position(report, "6")
+    assert row.accepted_as_claimed is True
+    assert row.verdict == "chargeable"
+    assert row.verified_rule_ids == []
+    assert row.bucket == "unconfirmed"
+
+
+def test_an_unknown_ziffer_is_unconfirmed_not_wrong(report):
+    """Position 7 charges 99.99 € on a Ziffer our catalog does not have. That is a serious finding
+    and an error-severity one, but our catalog's own coverage is `partial` — absence from it is a
+    gap in our data, not proof the practice invented a service. It must not be counted as a
+    refund."""
+    row = position(report, "7")
+    assert row.verdict == "unknown_ziffer"
+    assert "padnext_unknown_ziffer" in finding_types(report, "7")
+    assert row.bucket == "unconfirmed"
+    assert Decimal("99.99") <= report.unconfirmed_eur
+
+
+def test_another_fee_schedule_is_unconfirmed_and_borrows_no_goae_rules(report):
+    """GOZ 2020 is not GOÄ 2020. Attributing GOÄ rules to a dental position by number would be a
+    fabricated verdict, so out-of-scope positions get no rules at all."""
+    row = position(report, "8")
+    assert row.bucket == "unconfirmed"
+    assert row.verified_rule_ids == []
+    assert row.advisory_rule_ids == []
+
+
+def test_the_old_at_risk_field_is_gone(report):
+    """`at_risk_eur` was `claimed_total − defensible_total`, which reported unverified rule
+    coverage as disputed revenue. It was removed rather than kept as an alias, so that no caller
+    can keep rendering the misleading figure by accident — a missing field breaks a build, a
+    quietly redefined one does not."""
+    assert not hasattr(report, "at_risk_eur")
+    assert "at_risk_eur" not in report.model_dump(mode="json")
 
 
 def test_amounts_serialise_as_json_strings(report):
@@ -650,3 +762,335 @@ def test_the_receipt_hash_is_stable_across_identical_audits(pipeline, payload_by
         ).receipt_hash
 
     assert audit_once() == audit_once()
+
+
+# ------------------------------------------------------------------------------------------
+# honest semantics, proved on a synthetic invoice with nothing else going on
+# ------------------------------------------------------------------------------------------
+#
+# The bundled example is the realistic test, and it is a poor *proof*: every position in it has
+# several things wrong at once, the amounts are whatever 5.82873 cent per point happens to produce,
+# and the buckets it lands in depend on which of 869 real rules happen to touch which Ziffer. So the
+# three cases below are built from nothing — a three-entry catalog, one rule, a stubbed solver — and
+# priced so the money is legible: 100 €, 50 €, 200 €.
+#
+# Each position isolates exactly one reason for its bucket:
+#
+#   A  8100  100 €  a verified rule bears on it, every check passes   → confirmed_fine
+#   B  8200   50 €  the same verified rule excludes it                → confirmed_wrong
+#   C  8300  200 €  no rule in the store mentions this Ziffer at all  → unconfirmed
+#
+# C is the one that matters. It is a perfectly ordinary position: in the catalog, active, priced
+# correctly to the cent, within its factor band, not excluded by anything. Under the old
+# `at_risk_eur = claimed_total − defensible_total` it contributed nothing to the disputed figure only
+# because the solver happened to confirm it; had the solver merely failed to return it, all 200 €
+# would have been reported as revenue at risk. It is neither safe nor wrong. It is unchecked, and the
+# report has to be able to say so.
+
+SYNTHETIC_PUNKTWERT_CENT = "100"  # 1 point = 1.00 €, so the euros in the assertions are readable
+
+
+def _synthetic_catalog(tmp_path):
+    """A three-Ziffer catalog priced so that punkte × faktor lands on a round euro amount."""
+    from app.catalog.catalog_loader import Catalog
+
+    raw = {
+        "catalog_version": "synthetic-honest-buckets",
+        "rules_version": "synthetic",
+        "punktwert_cent": SYNTHETIC_PUNKTWERT_CENT,
+        "coverage": {"rule_coverage": "partial"},
+        # Threshold 2.3 with every position at 2.0: below the § 12 Abs. 3 line, so no position
+        # needs a written justification and that check cannot muddy the buckets.
+        "factor_bands": {"T": {"threshold": "2.3", "max": "3.5", "legal_basis": "§ 5 Abs. 1 GOÄ"}},
+        "ziffern": [
+            {"ziffer": "8100", "punkte": 50, "category": "T", "provenance": "illustrative",
+             "official_text": "Synthetische Zielleistung"},
+            {"ziffer": "8200", "punkte": 25, "category": "T", "provenance": "illustrative",
+             "official_text": "Synthetische ausgeschlossene Leistung"},
+            {"ziffer": "8300", "punkte": 100, "category": "T", "provenance": "illustrative",
+             "official_text": "Synthetische Leistung ohne Regelabdeckung"},
+            {"ziffer": "8400", "punkte": 75, "category": "T", "provenance": "illustrative",
+             "official_text": "Synthetische Leistung, die der Solver nicht bestätigt"},
+        ],
+    }
+    path = tmp_path / "synthetic_catalog.json"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    # A catalog with no overrides file: the third argument points at something that does not exist.
+    return Catalog.load(path, tmp_path / "no_overrides.json")
+
+
+def _synthetic_rules():
+    """One rule, verified, excluding 8200 whenever 8100 is charged.
+
+    Deliberately the only rule in the store. 8300 is therefore untouched by anything, which is what
+    makes it a clean test of "no verified rule maps to this Ziffer" rather than of some accident of
+    the real rule tables.
+    """
+    from app.rules.rule_store import ExclusionRule, RuleStore
+
+    return RuleStore(
+        policy=UnverifiedRulePolicy.WARN,
+        exclusions=[
+            ExclusionRule(
+                rule_id="excl_synthetic_verified",
+                from_ziffer="8100",
+                to_ziffer="8200",
+                direction="one_way",
+                legal_basis="Synthetische Leistungslegende",
+                verified=True,
+                verified_at="2026-08-22",
+                source="manual_verification",
+            )
+        ],
+    )
+
+
+def _synthetic_delivery():
+    def goziffer(nr: str, ziffer: str, amount: str) -> PadnextPosition:
+        # No punktzahl and no punktwert on purpose: those are control fields, and a mismatch on one
+        # raises a finding that has nothing to do with the bucket under test.
+        return PadnextPosition(
+            positionsnr=nr,
+            go="GOÄ",
+            ziffer=ziffer,
+            anzahl=1,
+            faktor=Decimal("2.0"),
+            gesamtbetrag=Decimal(amount),
+            text=f"Synthetische Position {nr}",
+        )
+
+    return PadnextDelivery(
+        nachrichtentyp="ADL",
+        version="02.12",
+        echtdaten=False,
+        source_name="synthetic_honest_buckets_padx.xml",
+        invoices=[
+            PadnextInvoice(
+                invoice_id="SYNTH-BUCKETS-1",
+                cases=[
+                    PadnextCase(
+                        behandlungsart="0",  # ambulant → no § 6a Minderung to complicate the money
+                        positions=[
+                            goziffer("A", "8100", "100.00"),
+                            goziffer("B", "8200", "50.00"),
+                            goziffer("C", "8300", "200.00"),
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+
+
+def _synthetic_souffle_run():
+    """Stands in for Soufflé, so the test states the rule outcome instead of depending on a binary.
+
+    It returns what the real engine returns for this input: 8100 and 8300 survive, 8200 is removed
+    by the verified exclusion, and the block names the rule that did it — which is what
+    `classify_position` looks up to decide whether the suppression rests on a verified basis.
+    """
+    from app.schemas.facts import BlockedCode, RulesResult
+
+    def run(extraction, bridge, proposed_factors=None):
+        return RulesResult(
+            billable=["8100", "8300"],
+            blocked=[
+                BlockedCode(
+                    ziffer="8200",
+                    reason="exclusion",
+                    blocked_by="8100",
+                    rule_id="excl_synthetic_verified",
+                    legal_basis="Synthetische Leistungslegende",
+                    explanation="GOÄ 8200 ist neben GOÄ 8100 nicht berechnungsfähig.",
+                )
+            ],
+        )
+
+    return run
+
+
+@pytest.fixture
+def honest_report(tmp_path, settings):
+    return audit_delivery(
+        _synthetic_delivery(),
+        catalog=_synthetic_catalog(tmp_path),
+        rules=_synthetic_rules(),
+        souffle_run=_synthetic_souffle_run(),
+        settings=settings,
+    )
+
+
+def test_the_synthetic_invoice_splits_exactly_one_hundred_fifty_two_hundred(honest_report):
+    """The headline assertion: 100 € fine, 50 € wrong, 200 € unconfirmed, and nothing anywhere else."""
+    assert honest_report.claimed_total_eur == Decimal("350.00")
+    assert honest_report.confirmed_fine_eur == Decimal("100.00")
+    assert honest_report.confirmed_wrong_eur == Decimal("50.00")
+    assert honest_report.unconfirmed_eur == Decimal("200.00")
+    assert honest_report.bucket_summary() == {
+        "confirmed_fine": 1,
+        "confirmed_wrong": 1,
+        "unconfirmed": 1,
+    }
+
+
+def test_position_a_is_confirmed_fine_because_a_verified_rule_checked_it(honest_report):
+    row = position(honest_report, "A")
+    assert row.claimed_amount_eur == Decimal("100.00")
+    assert row.recomputed_amount_eur == Decimal("100.00")  # the money is not in dispute
+    assert row.verdict == "chargeable"
+    assert row.accepted_as_claimed is True
+    assert row.bucket == "confirmed_fine"
+    assert row.verified_rule_ids == ["excl_synthetic_verified"]
+    assert row.advisory_rule_ids == []
+
+
+def test_position_b_is_confirmed_wrong_because_the_rule_that_blocked_it_is_verified(honest_report):
+    """A verified exclusion is the strongest thing this engine can say: not "unconfirmed", not
+    "advisory" — a human checked the rule, and the invoice violates it."""
+    row = position(honest_report, "B")
+    assert row.claimed_amount_eur == Decimal("50.00")
+    assert row.verdict == "blocked"
+    assert row.blocked_by == "8100"
+    assert row.bucket == "confirmed_wrong"
+    assert "excl_synthetic_verified" in row.verified_rule_ids
+
+
+def test_position_c_is_unconfirmed_because_no_verified_rule_maps_to_its_ziffer(honest_report):
+    """The position at the centre of the refactor. Nothing is wrong with it — it survives the rules,
+    it prices to the cent, its factor is inside the band. It is still not `confirmed_fine`, because
+    no verified rule ever looked at GOÄ 8300. Reporting these 200 € as safe would be as dishonest as
+    reporting them as at risk."""
+    row = position(honest_report, "C")
+    assert row.claimed_amount_eur == Decimal("200.00")
+    assert row.recomputed_amount_eur == Decimal("200.00")
+    assert row.verdict == "chargeable"
+    assert row.accepted_as_claimed is True  # passed every check that exists
+    assert row.verified_rule_ids == []  # but nothing verified checked it
+    assert row.bucket == "unconfirmed"
+    assert finding_types(honest_report, "C") == set()  # and it is not a finding against the practice
+
+
+def test_the_synthetic_invoice_reports_its_own_coverage_honestly(honest_report):
+    """150 € of 350 € could be judged. The remaining 200 € is our rule coverage, not their billing."""
+    assert honest_report.coverage_ratio == pytest.approx(150 / 350)
+    assert (
+        honest_report.confirmed_fine_eur
+        + honest_report.confirmed_wrong_eur
+        + honest_report.unconfirmed_eur
+        == honest_report.claimed_total_eur
+    )
+
+
+def test_the_unconfirmed_position_is_not_counted_as_refund_exposure(honest_report):
+    """Stated as the comparison that motivated the change. The old figure was
+    `claimed_total − defensible_total`; every euro not positively confirmed landed in it."""
+    old_at_risk = honest_report.claimed_total_eur - honest_report.defensible_total_eur
+    assert old_at_risk == Decimal("50.00")
+
+    # Here the old and new numbers agree, because the stub confirms C as billable. The point is that
+    # they agree for the wrong reason: the old figure was a subtraction that happened to come out
+    # right, and it had no way to distinguish C's 200 € from B's 50 €. The new one says which is
+    # which, and only B is exposure.
+    assert honest_report.confirmed_wrong_eur == Decimal("50.00")
+    assert honest_report.unconfirmed_eur == Decimal("200.00")
+    assert position(honest_report, "C").bucket == "unconfirmed"
+
+
+def test_an_unverified_rule_downgrades_a_position_from_fine_to_unconfirmed(tmp_path, settings):
+    """The other half of the honesty contract, and the reason `advisory_rule_ids` exists.
+
+    Same invoice, but the store also holds an *unverified* rule excluding 8100 whenever 8300 is
+    charged. Under the default `warn` policy that rule suppresses nothing, so the solver still
+    returns 8100 as billable and every check still passes. It must nevertheless stop being green: a
+    machine-extracted rule that would have removed the position is precisely the case where "no
+    finding" must not be read as "the rules confirmed it".
+    """
+    from app.rules.rule_store import ExclusionRule
+
+    rules = _synthetic_rules()
+    advisory = ExclusionRule(
+        rule_id="excl_synthetic_unverified",
+        from_ziffer="8300",
+        to_ziffer="8100",
+        direction="one_way",
+        legal_basis="Automatisch extrahiert, nicht geprüft",
+        verified=False,
+        source="auto_extracted:ist_neben",
+    )
+    # Where `warn` policy puts an unverified rule: loaded and counted, never enforced.
+    rules.suppressed.append(advisory)
+
+    report = audit_delivery(
+        _synthetic_delivery(),
+        catalog=_synthetic_catalog(tmp_path),
+        rules=rules,
+        souffle_run=_synthetic_souffle_run(),
+        settings=settings,
+    )
+
+    row = position(report, "A")
+    assert row.verdict == "chargeable"
+    assert row.accepted_as_claimed is True
+    assert row.advisory_rule_ids == ["excl_synthetic_unverified"]
+    assert row.bucket == "unconfirmed"
+    assert "nicht verifizierte Regel" in row.bucket_reason
+
+    # A's 100 € moves from green to grey. No euro is created or destroyed, and nothing moves to red:
+    # an unverified rule can never make a position wrong, only unconfirmed.
+    assert report.confirmed_fine_eur == Decimal("0.00")
+    assert report.confirmed_wrong_eur == Decimal("50.00")
+    assert report.unconfirmed_eur == Decimal("300.00")
+    assert report.claimed_total_eur == Decimal("350.00")
+
+
+def test_a_second_case_reusing_position_numbers_does_not_inherit_the_first_case_verdict(
+    tmp_path, settings
+):
+    """`positionsnr` is unique within an `abrechnungsfall`, not across a delivery.
+
+    Two cases each numbering a position "B" is legal PADnext. Case one's "B" is removed by the
+    verified exclusion; case two's "B" charges GOÄ 8400, which the solver simply does not confirm —
+    so both carry the verdict `blocked`, and only the first has a rule behind it.
+
+    That is the pair that makes the collision expensive. Keyed on `positionsnr`, case two's "B" would
+    look up case one's verified exclusion, find `verified=True`, and be reported as provably wrong —
+    75 € of refund exposure invented out of a numbering clash, on a position whose only defect is
+    that our rules never confirmed it. Keyed on row identity, it stays `unconfirmed`.
+    """
+    delivery = _synthetic_delivery()
+    delivery.invoices[0].cases.append(
+        PadnextCase(
+            behandlungsart="0",
+            positions=[
+                PadnextPosition(
+                    positionsnr="B",  # the same number the excluded position carries in case one
+                    go="GOÄ",
+                    ziffer="8400",
+                    anzahl=1,
+                    faktor=Decimal("2.0"),
+                    gesamtbetrag=Decimal("150.00"),
+                    text="Zweiter Fall, gleiche Positionsnummer",
+                )
+            ],
+        )
+    )
+
+    report = audit_delivery(
+        delivery,
+        catalog=_synthetic_catalog(tmp_path),
+        rules=_synthetic_rules(),
+        souffle_run=_synthetic_souffle_run(),
+        settings=settings,
+    )
+
+    second = next(p for p in report.positions if p.ziffer == "8400")
+    assert second.positionsnr == "B"  # the collision is real, not hypothetical
+    assert second.verdict == "blocked"  # and both rows share the verdict
+    assert second.verified_rule_ids == []  # but no verified rule bears on 8400
+    assert second.bucket == "unconfirmed"
+
+    # 50 € of exposure, exactly as with one case. The extra 150 € is unconfirmed, not wrong.
+    assert report.claimed_total_eur == Decimal("500.00")
+    assert report.confirmed_wrong_eur == Decimal("50.00")
+    assert report.confirmed_fine_eur == Decimal("100.00")
+    assert report.unconfirmed_eur == Decimal("350.00")

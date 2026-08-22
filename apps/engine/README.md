@@ -84,6 +84,15 @@ Interactive docs at <http://localhost:8000/docs>.
 
 `POST /api/v1/solve` accepts either a bare extraction or `{"extraction": {...}, "setting": ...}`.
 
+`POST /api/v1/padnext/audit` splits the claimed total into three buckets rather than one "at risk"
+figure — `confirmed_wrong_eur` (provable against a verified rule, the versioned catalog or the § 5
+arithmetic), `confirmed_fine_eur` (all applicable checks passed and a verified rule actually bore on
+the position) and `unconfirmed_eur` (no verified rule maps to the Ziffer, or only advisory ones do).
+They sum to `claimed_total_eur` exactly, and `coverage_ratio` says what share was audited at all.
+**`unconfirmed` is our missing rule coverage, not a finding against the practice** — see
+[`docs/architecture/ENGINE.md`](../../docs/architecture/ENGINE.md) for why the single figure was
+removed.
+
 ## Database
 
 Proposals and the approval record are persisted; an approval survives a restart and every decision
@@ -333,5 +342,5 @@ app/
   padnext/             reader + audit
 alembic/               migration history; alembic.ini reads DATABASE_URL, never a committed URL
 scripts/               engine_cli, migrate, export_openapi, import_goae, fetch_goae, …
-tests/                 631 tests — see tests/README.md
+tests/                 649 tests — see tests/README.md
 ```

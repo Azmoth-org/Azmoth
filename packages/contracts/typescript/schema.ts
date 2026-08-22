@@ -1102,11 +1102,6 @@ export interface components {
              */
             arithmetic_delta_eur: string;
             /**
-             * At Risk Eur
-             * @default 0.00
-             */
-            at_risk_eur: string;
-            /**
              * Catalog Sha256
              * @default
              */
@@ -1126,6 +1121,21 @@ export interface components {
              * @default 0.00
              */
             comparable_claimed_eur: string;
+            /**
+             * Confirmed Fine Eur
+             * @default 0.00
+             */
+            confirmed_fine_eur: string;
+            /**
+             * Confirmed Wrong Eur
+             * @default 0.00
+             */
+            confirmed_wrong_eur: string;
+            /**
+             * Coverage Ratio
+             * @default 0
+             */
+            coverage_ratio: number;
             /**
              * Defensible Total Eur
              * @default 0.00
@@ -1190,6 +1200,11 @@ export interface components {
              */
             suppressed_unverified_rule_count: number;
             /**
+             * Unconfirmed Eur
+             * @default 0.00
+             */
+            unconfirmed_eur: string;
+            /**
              * Unpriceable Claimed Eur
              * @default 0.00
              */
@@ -1205,10 +1220,23 @@ export interface components {
              * @default false
              */
             accepted_as_claimed: boolean;
+            /** Advisory Rule Ids */
+            advisory_rule_ids?: string[];
             /** Amount Delta Eur */
             amount_delta_eur?: string | null;
             /** Blocked By */
             blocked_by?: string | null;
+            /**
+             * Bucket
+             * @default unconfirmed
+             * @enum {string}
+             */
+            bucket: "confirmed_fine" | "confirmed_wrong" | "unconfirmed";
+            /**
+             * Bucket Reason
+             * @default
+             */
+            bucket_reason: string;
             /** Claimed Amount Eur */
             claimed_amount_eur?: string | null;
             /** Claimed Faktor */
@@ -1266,6 +1294,8 @@ export interface components {
              * @enum {string}
              */
             verdict: "chargeable" | "blocked" | "out_of_scope" | "unknown_ziffer";
+            /** Verified Rule Ids */
+            verified_rule_ids?: string[];
             /** Ziffer */
             ziffer: string;
         };

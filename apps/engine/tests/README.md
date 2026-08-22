@@ -1,6 +1,6 @@
 # `apps/engine/tests`
 
-631 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
+649 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
 behaviour the POC did not have. **None was weakened to make the migration pass** — where a
 migrated test failed only because a path moved, the path was fixed; where it asserted on an
 artefact this monorepo does not contain (the POC's static UI), the assertion moved to the contract
@@ -32,7 +32,7 @@ count, or run in the image where the binary is always there.
 
 ```
 $ .venv/bin/python -m pytest -q
-627 passed, 4 skipped in 23.4s    # the 4 skips are the Postgres parametrisations; see below
+645 passed, 4 skipped in 24.5s    # the 4 skips are the Postgres parametrisations; see below
 ```
 
 ## What each file is for
@@ -45,7 +45,7 @@ $ .venv/bin/python -m pytest -q
 | `test_clingo.py` | 34 | **legal posture** — arbitration, the factor ladder, Analogansatz, brute-force differential |
 | `test_property.py` | 84 | **property-based** — invariants over randomly generated candidate sets |
 | `test_production_fixes.py` | 64 | the seven P0 fixes: config, timeout, cache, proposals, coverage, documentation gaps, receipts |
-| `test_padnext.py` | 57 | reading a delivery and auditing it; one deliberate defect per position |
+| `test_padnext.py` | 75 | reading a delivery and auditing it; one deliberate defect per position, and the three honest money buckets |
 | `test_validation.py` | 28 | independent re-check, exact money, § 6a Minderung, blocked-reason reconciliation |
 | `test_souffle.py` | 36 | the Datalog layers: specificity, Zielleistung, exclusions, mutual clusters |
 | `test_bridge_and_data.py` | 54 | the deterministic bridge, the catalog loader, the rule store |

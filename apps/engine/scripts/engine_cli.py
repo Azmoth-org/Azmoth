@@ -363,23 +363,42 @@ def cmd_padnext(args: argparse.Namespace) -> int:
     print()
     print(
         f"{'Pos':>4}  {'GO':<4} {'Ziffer':>7}  {'Faktor':>6}  {'berechnet':>10}  "
-        f"{'nachgerechnet':>13}  Urteil"
+        f"{'nachgerechnet':>13}  Bewertung / Urteil"
     )
+    #: Red / green / grey, in the one form a terminal can be relied on to render.
+    bucket_mark = {"confirmed_wrong": "!! ", "confirmed_fine": "OK ", "unconfirmed": "?? "}
     for row in report.positions:
-        mark = "OK " if row.accepted_as_claimed else "!! "
         print(
             f"{row.positionsnr:>4}  {row.go:<4} {row.ziffer:>7}  "
             f"{str(row.claimed_faktor or '-'):>6}  "
             f"{str(row.claimed_amount_eur or '-'):>10}  "
-            f"{str(row.recomputed_amount_eur or '-'):>13}  {mark}{row.verdict}"
+            f"{str(row.recomputed_amount_eur or '-'):>13}  "
+            f"{bucket_mark[row.bucket]}{row.bucket:<16} {row.verdict}"
         )
     print()
+    buckets = report.bucket_summary()
     print(f"  berechnet insgesamt   {report.claimed_total_eur:>10} EUR")
     print(
-        f"  davon belegbar        {report.defensible_total_eur:>10} EUR  "
-        f"({counts['chargeable']} von {len(report.positions)} Positionen regelkonform)"
+        f"  bestätigt korrekt     {report.confirmed_fine_eur:>10} EUR  "
+        f"({buckets['confirmed_fine']} von {len(report.positions)} Positionen, gegen "
+        "verifizierte Regeln geprüft)"
     )
-    print(f"  strittig              {report.at_risk_eur:>10} EUR")
+    print(
+        f"  nachweislich falsch   {report.confirmed_wrong_eur:>10} EUR  "
+        f"({buckets['confirmed_wrong']} Positionen — verifizierte Regel verletzt)"
+    )
+    print(
+        f"  unbestätigt           {report.unconfirmed_eur:>10} EUR  "
+        f"({buckets['unconfirmed']} Positionen — keine verifizierte Regel, KEIN Befund)"
+    )
+    print(
+        f"  Prüfabdeckung         {report.coverage_ratio * 100:>9.1f} %  "
+        "(Anteil der berechneten Summe, zu dem eine Aussage möglich war)"
+    )
+    print(
+        f"  davon belegbar        {report.defensible_total_eur:>10} EUR  "
+        f"(nachgerechnet, {counts['chargeable']} Positionen regelkonform)"
+    )
     if report.arithmetic_delta_eur:
         print(
             f"  Rechenfehler          {report.arithmetic_delta_eur:>10} EUR  "
