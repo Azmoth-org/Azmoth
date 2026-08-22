@@ -24,9 +24,20 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@works
  * The approval boundary.
  *
  * `approved_by` is required by the engine and required here: an approval nobody signed is not an
- * approval. The dialog says plainly that the record is held in memory and does not survive a
- * restart — a reviewer must not believe they have created a durable, demonstrable approval, because
- * they have not. Durable audit logging is the prerequisite for that, and for export.
+ * approval.
+ *
+ * The dialog used to carry a destructive alert saying the record lived only in the engine's memory
+ * and would not survive a restart. That warning is gone because the statement is no longer true:
+ * the engine persists the proposal and the approval to Postgres and writes an append-only audit
+ * event in the same transaction, so an approval made here is a durable record of who took
+ * responsibility and when. Leaving the warning in place would now be the misleading option — a
+ * reviewer who does not trust the record will re-approve, and two approvals of one proposal is
+ * exactly what the status lifecycle exists to prevent.
+ *
+ * What the dialog still does NOT claim is that the approver's identity was *verified*. The engine
+ * takes `approved_by` as a string; there is no authentication in front of it yet. So the copy below
+ * says what the approval means — responsibility, recorded permanently — and says the name is
+ * recorded, not proven.
  */
 export function ApproveDialog({
   disabled,
@@ -98,13 +109,13 @@ export function ApproveDialog({
               />
             </div>
 
-            <Alert variant="destructive">
-              <AlertTitle>Freigabe ist nicht revisionssicher</AlertTitle>
+            <Alert>
+              <AlertTitle>Die Freigabe wird dauerhaft protokolliert</AlertTitle>
               <AlertDescription>
-                Der Vorschlag und diese Freigabe liegen ausschließlich im Arbeitsspeicher der Engine.
-                Sie überleben keinen Neustart, werden nicht zwischen Prozessen geteilt und es gibt
-                kein Protokoll. Für einen echten Einsatz sind persistente Speicherung und
-                revisionssichere Protokollierung Voraussetzung.
+                Vorschlag und Freigabe werden dauerhaft gespeichert und im Protokoll festgehalten —
+                mit Name, Zeitpunkt und Receipt-Hash. Die Freigabe ist endgültig: sie kann nicht
+                zurückgenommen werden. Der Name wird protokolliert, aber technisch nicht überprüft;
+                eine Authentifizierung ist noch nicht eingerichtet.
               </AlertDescription>
             </Alert>
           </div>
@@ -213,11 +224,17 @@ export function RejectDialog({
 }
 
 /**
- * Export is deliberately absent, not merely unbuilt.
+ * Export stays disabled — but for a different reason than before, and only for one more step.
  *
- * A report carrying a receipt hash and an "approved by" line, produced from a store that dies on
- * restart, would outlive the record of its own approval. The receipt hash proves what the engine
- * computed; it proves nothing about who accepted it. So export waits for durable audit logging.
+ * The old reason was that a report carrying a receipt hash and an "approved by" line, produced from
+ * a store that died on restart, would outlive the record of its own approval. That reason is gone:
+ * the record is durable and the approval is logged. What remains is that the export endpoint's
+ * behaviour has not been exercised against the database yet, so the button is deliberately held
+ * back to the next step rather than enabled on the strength of the migration alone. The tooltip
+ * says that, and nothing more — a disabled control that does not explain itself reads as broken.
+ *
+ * German, like every other string in this UI. The reviewer reading it is the same person reading
+ * "Freigeben" next to it.
  */
 export function ExportButtonPlaceholder() {
   return (
@@ -234,7 +251,7 @@ export function ExportButtonPlaceholder() {
           }
         />
         <TooltipContent className="max-w-xs">
-          Der Export setzt eine revisionssichere Protokollierung voraus und ist noch nicht verfügbar.
+          Der Export wird mit dem nächsten Update aktiviert.
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

@@ -23,8 +23,11 @@ const HINTS: Record<string, string> = {
     "Die Eingabe entspricht nicht dem Extraktionsschema. Das betroffene Feld steht in den Details.",
   illegal_transition:
     "Dieser Statuswechsel ist nicht erlaubt. Ein abgelehnter oder exportierter Vorschlag wird nicht erneut entschieden.",
+  // Was: "Vorschläge liegen nur im Speicher der Engine und überleben keinen Neustart." That was the
+  // right explanation while the store was in-memory and is now simply false — and it pointed the
+  // reviewer at the wrong fix, since re-running the case does not help with a mistyped id.
   proposal_not_found:
-    "Vorschläge liegen nur im Speicher der Engine und überleben keinen Neustart. Fall erneut ausführen.",
+    "Unter dieser ID ist kein Vorschlag gespeichert. Vorschläge werden dauerhaft gespeichert — ID prüfen, oder den Fall neu ausführen.",
   unexpected_response_shape:
     "Engine und UI verwenden möglicherweise verschiedene Contract-Versionen. In apps/engine: python scripts/export_openapi.py, dann pnpm generate:contracts.",
   empty_response: "Die Engine hat einen leeren Body geliefert. Engine-Logs prüfen.",

@@ -1,8 +1,9 @@
 /**
  * `GET /api/engine/proposals/{id}` → `GET {ENGINE_BASE_URL}/api/v1/proposals/{id}`
  *
- * Proposals live in the engine's memory and do not survive a restart, so a `404` here is expected
- * rather than exceptional — the UI says so instead of implying the proposal was deleted.
+ * Proposals are persisted by the engine, so a `404` here now means what it says: no proposal was
+ * ever stored under this id. It used to be the routine consequence of an engine restart, which is
+ * why the UI's hint for `proposal_not_found` changed with it.
  */
 
 import { callEngine, proxyResponse } from "@/lib/engine"
