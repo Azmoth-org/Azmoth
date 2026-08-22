@@ -66,7 +66,7 @@ Or locally — see [`apps/engine/README.md`](apps/engine/README.md#install):
 cd apps/engine
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python scripts/engine_cli.py check     # engines, data, logic, end-to-end probe
-.venv/bin/python -m pytest -q                    # 631 tests, against in-memory SQLite
+.venv/bin/python -m pytest -q                    # 649 tests, against in-memory SQLite
 .venv/bin/uvicorn app.main:app --reload
 ```
 

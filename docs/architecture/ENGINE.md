@@ -257,6 +257,19 @@ record now, rather than instead of one. Schema and migration commands:
   own catalog and reports the difference to the cent.
 - **It does not read patient identity.** The PADnext models have no field that could hold a name, an
   address or a date of birth, and a test asserts it. A delivery flagged `echtdaten="1"` is refused.
+- **It does not call a gap in its own rules a defect in someone's invoice.** A PADnext audit splits
+  the claimed total into `confirmed_wrong_eur` (a verified rule, the versioned catalog or the § 5
+  arithmetic shows the position is not chargeable), `confirmed_fine_eur` (every applicable check
+  passed *and* at least one verified rule actually bore on it), and `unconfirmed_eur` (no verified
+  rule maps to the Ziffer, or the only ones that do are advisory). The three sum to
+  `claimed_total_eur` exactly, and `coverage_ratio` publishes the audited share.
+
+  This replaced a single `at_risk_eur = claimed_total − defensible_total`. That subtraction merged
+  proof with ignorance, and because 837 of the 869 exclusion rules are machine-extracted and
+  unenforced under the default policy, ignorance was the larger part: on the bundled nine-line
+  example it reported 200.48 € of 251.54 € as at risk, where only 88.49 € is demonstrable. A
+  practice told that 80 % of its revenue is disputed — when most of that is our own missing rule
+  coverage — stops believing the audit. `unconfirmed` is not a finding against the practice.
 - **It does not maximise revenue.** See `@1`.
 
 ## Where things live

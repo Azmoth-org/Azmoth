@@ -1574,11 +1574,6 @@
             "title": "Arithmetic Delta Eur",
             "type": "string"
           },
-          "at_risk_eur": {
-            "default": "0.00",
-            "title": "At Risk Eur",
-            "type": "string"
-          },
           "catalog_sha256": {
             "default": "",
             "title": "Catalog Sha256",
@@ -1598,6 +1593,21 @@
             "default": "0.00",
             "title": "Comparable Claimed Eur",
             "type": "string"
+          },
+          "confirmed_fine_eur": {
+            "default": "0.00",
+            "title": "Confirmed Fine Eur",
+            "type": "string"
+          },
+          "confirmed_wrong_eur": {
+            "default": "0.00",
+            "title": "Confirmed Wrong Eur",
+            "type": "string"
+          },
+          "coverage_ratio": {
+            "default": 0.0,
+            "title": "Coverage Ratio",
+            "type": "number"
           },
           "defensible_total_eur": {
             "default": "0.00",
@@ -1694,6 +1704,11 @@
             "title": "Suppressed Unverified Rule Count",
             "type": "integer"
           },
+          "unconfirmed_eur": {
+            "default": "0.00",
+            "title": "Unconfirmed Eur",
+            "type": "string"
+          },
           "unpriceable_claimed_eur": {
             "default": "0.00",
             "title": "Unpriceable Claimed Eur",
@@ -1711,6 +1726,13 @@
             "default": false,
             "title": "Accepted As Claimed",
             "type": "boolean"
+          },
+          "advisory_rule_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Advisory Rule Ids",
+            "type": "array"
           },
           "amount_delta_eur": {
             "anyOf": [
@@ -1733,6 +1755,21 @@
               }
             ],
             "title": "Blocked By"
+          },
+          "bucket": {
+            "default": "unconfirmed",
+            "enum": [
+              "confirmed_fine",
+              "confirmed_wrong",
+              "unconfirmed"
+            ],
+            "title": "Bucket",
+            "type": "string"
+          },
+          "bucket_reason": {
+            "default": "",
+            "title": "Bucket Reason",
+            "type": "string"
           },
           "claimed_amount_eur": {
             "anyOf": [
@@ -1849,6 +1886,13 @@
             ],
             "title": "Verdict",
             "type": "string"
+          },
+          "verified_rule_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Verified Rule Ids",
+            "type": "array"
           },
           "ziffer": {
             "title": "Ziffer",

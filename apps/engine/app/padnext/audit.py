@@ -19,6 +19,15 @@ checking them is the intended use, not an imposition.
 
 **It never silently drops a position.** Every claimed line comes back with a verdict, and every
 verdict that is not `chargeable` carries a reason.
+
+**It does not call a gap in its own rules a defect in someone's invoice.** The claimed total is
+split into `confirmed_fine` / `confirmed_wrong` / `unconfirmed`, and the split turns on whether a
+*verified* rule bore on the position — `rules_bearing_on` and `classify_position` below. A position
+the solver did not confirm is `blocked` in the verdict but only `unconfirmed` in the money, because
+"no verified rule kept it" is the absence of evidence. Getting this wrong is not a rounding problem:
+837 of the 869 exclusion rules are machine-extracted and unenforced under the default policy, so a
+single "at risk" figure computed by subtraction reports most of a practice's revenue as disputed
+when almost all of it was simply never checked.
 """
 
 from __future__ import annotations
@@ -46,8 +55,16 @@ from app.schemas.padnext import (
     PadnextDelivery,
     PadnextFinding,
     PadnextPosition,
+    PositionBucket,
 )
-from app.rules.rule_store import RuleStore
+from app.rules.rule_store import (
+    ExclusionRule,
+    FactorCapRule,
+    Rule,
+    RuleStore,
+    SpecificityRule,
+    ZielleistungRule,
+)
 from app.services import rule_coverage as rule_coverage_service
 from app.services.receipt import receipt_hash
 from app.validation.validator import cent_to_eur, line_amount_cent
@@ -64,6 +81,37 @@ SETTING_MINDERUNG_PERCENT: dict[Setting, Decimal] = {
 #: attached. Keeping both would show a reviewer one defect twice under two different names.
 ENGINE_WARNINGS_REPORTED_PER_POSITION = frozenset(
     {"unknown_ziffer", "factor_above_hoechstsatz", "inactive_ziffer"}
+)
+
+#: Finding types that put a position in `confirmed_wrong` — the defects whose basis is something a
+#: human has actually verified, so the conclusion survives a payer's challenge.
+#:
+#: What qualifies, and why each one is not merely advisory:
+#:
+#:   padnext_amount_mismatch        arithmetic. Punkte × Faktor × Punktwert, all three from the
+#:                                 versioned, SHA-256-pinned catalog. No rule judgement involved.
+#:   padnext_factor_above_maximum   § 5 Abs. 1 GOÄ. The bands in `factor_bands.csv` are verified.
+#:   padnext_justification_missing  § 12 Abs. 3 GOÄ requires a written reason above the verified
+#:                                 threshold factor, and the `begruendung` field is empty. The
+#:                                 statute is the basis; nothing was inferred.
+#:   padnext_inactive_ziffer        the catalog carries the Ziffer as not active. Catalog identity
+#:                                 is pinned in the receipt, so this is checkable after the fact.
+#:
+#: What is deliberately absent is as important. `padnext_not_confirmed` is not here: "the rules did
+#: not confirm this" is the *absence* of a verified rule, which is the definition of unconfirmed.
+#: `padnext_unknown_ziffer` is not here either — a Ziffer missing from a catalog whose own coverage
+#: is `partial` is a gap in our data, not proof the practice invented a service.
+#: `padnext_no_faktor_or_einzelbetrag` is absent because an unpriceable line is one we could not
+#: check, not one we checked and rejected. And the `*_mismatch` control-field findings are warnings
+#: about inconsistent metadata, not about money — position 6 of the bundled example claims the wrong
+#: `punktzahl` while its euros recompute to the cent.
+VERIFIED_DEFECT_FINDINGS = frozenset(
+    {
+        "padnext_amount_mismatch",
+        "padnext_factor_above_maximum",
+        "padnext_justification_missing",
+        "padnext_inactive_ziffer",
+    }
 )
 
 
@@ -256,6 +304,169 @@ def _recompute(
     return per_unit * position.anzahl, entry.punkte
 
 
+# ------------------------------------------------------------------------------------------
+# rule relevance — which rules actually bore on THIS invoice, and had a human checked them
+# ------------------------------------------------------------------------------------------
+
+
+def _rule_endpoints(rule: Rule) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """A rule's `(all Ziffern it names, the Ziffern it could suppress)`.
+
+    Suppression direction follows `logic/datalog/goae_rules.dl` exactly, because a bucket that
+    disagreed with the solver about which side of a rule loses would be worse than no bucket:
+
+        exclusion(A, B)          if A is charged, B is not chargeable  → B loses
+                                 (mutual: either could lose, so both do)
+        zielleistung(P, C)       C is a component of P                → C loses
+        specificity(S, G)        S displaces the more general G        → G loses
+        factor_cap(Z, max)       caps Z's Steigerungsfaktor           → Z is constrained
+
+    Analog candidates are absent by construction: § 6 Abs. 2 GOÄ makes them offers, never
+    constraints, so one can neither confirm a position nor cast doubt on it.
+    """
+    if isinstance(rule, ExclusionRule):
+        both = (rule.from_ziffer, rule.to_ziffer)
+        return both, (both if rule.is_mutual else (rule.to_ziffer,))
+    if isinstance(rule, ZielleistungRule):
+        return (rule.parent_ziffer, rule.child_ziffer), (rule.child_ziffer,)
+    if isinstance(rule, SpecificityRule):
+        return (rule.specific_ziffer, rule.general_ziffer), (rule.general_ziffer,)
+    if isinstance(rule, FactorCapRule):
+        return (rule.ziffer,), (rule.ziffer,)
+    return (), ()
+
+
+def _constraint_rules(rules: RuleStore) -> list[Rule]:
+    """Every rule that could constrain an invoice, enforced or held back by policy.
+
+    `suppressed` has to be included and cannot be inferred from the others: under the default
+    `warn` policy an unverified rule never reaches `exclusions`/`zielleistung`/… at all, so reading
+    only the enforcement lists would find zero advisory rules and report every position as fully
+    audited. That is precisely the overclaim these buckets exist to prevent.
+    """
+    return [
+        *rules.exclusions,
+        *rules.zielleistung,
+        *rules.specificity,
+        *rules.factor_caps,
+        *rules.suppressed,
+    ]
+
+
+def rules_bearing_on(
+    rules: RuleStore, claimed_ziffern: set[str]
+) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+    """Split the rules that bear on this invoice into verified and advisory, keyed by Ziffer.
+
+    Returns `(verified_by_ziffer, advisory_by_ziffer)`.
+
+    Two filters, and both are load-bearing.
+
+    **Relevance.** A rule bears on an invoice only if *every* Ziffer it names is claimed. An
+    exclusion saying "Nr. 4 is not chargeable beside Nr. 30" tells us nothing about an invoice that
+    charges neither, and counting it as coverage would inflate the audited share with rules that
+    never ran. This is the same restriction `RuleStore.restrict_to` applies before grounding, so the
+    buckets and the solver agree on what was in scope.
+
+    **Attribution.** A *verified* rule is credited to both of its endpoints, because the solver
+    evaluated it against both and each side got an answer — for `ziel_man_301_200`, that GOÄ 200 is
+    a component and that GOÄ 301 is the Zielleistung that carries it. An *advisory* rule is charged
+    only against the side it would have suppressed: an unenforced rule that would have removed
+    GOÄ 200 leaves GOÄ 301's status untouched, and blaming both would make the unconfirmed bucket
+    swallow positions nothing actually threatens.
+    """
+    verified: dict[str, list[str]] = {}
+    advisory: dict[str, list[str]] = {}
+
+    for rule in _constraint_rules(rules):
+        named, loses = _rule_endpoints(rule)
+        if not named or not set(named) <= claimed_ziffern:
+            continue
+        target, ziffern = (verified, named) if rule.verified else (advisory, loses)
+        for ziffer in ziffern:
+            bucket = target.setdefault(ziffer, [])
+            if rule.rule_id and rule.rule_id not in bucket:
+                bucket.append(rule.rule_id)
+
+    return (
+        {z: sorted(ids) for z, ids in verified.items()},
+        {z: sorted(ids) for z, ids in advisory.items()},
+    )
+
+
+def classify_position(
+    row: PadnextAuditedPosition,
+    *,
+    verified_defects: set[str],
+    blocking_rule_verified: bool | None,
+) -> tuple[PositionBucket, str]:
+    """Put one audited position into one of the three buckets, and say why.
+
+    `verified_defects` are the `VERIFIED_DEFECT_FINDINGS` raised against this position, and
+    `blocking_rule_verified` is whether the rule that suppressed it has been human-verified —
+    `None` when nothing suppressed it, or when the solver simply failed to confirm it and there is
+    no rule to point at.
+
+    The order of the tests is the argument. Proof that a position is wrong comes first and is not
+    softened by advisory noise. Everything that follows is a reason we *cannot* speak, and only a
+    position that survives all of them is called safe.
+    """
+    if verified_defects:
+        return "confirmed_wrong", (
+            "Verifizierte Prüfung fehlgeschlagen: " + ", ".join(sorted(verified_defects)) + "."
+        )
+
+    if row.verdict == "blocked" and blocking_rule_verified:
+        return "confirmed_wrong", (
+            f"Durch die verifizierte Regel '{row.blocked_by or 'Ausschluss'}' nicht "
+            "berechnungsfähig."
+        )
+
+    if row.verdict == "out_of_scope":
+        return "unconfirmed", (
+            f"Gebührenordnung '{row.go}' wird nicht geprüft — keine Aussage möglich, kein Befund."
+        )
+
+    if row.verdict == "unknown_ziffer":
+        return "unconfirmed", (
+            "Ziffer ist in unserem Katalog nicht enthalten. Nicht nachrechenbar und nicht "
+            "beurteilbar — das ist eine Lücke in unseren Daten, kein Nachweis eines Fehlers."
+        )
+
+    if row.verdict == "blocked":
+        # The dishonest case this refactor exists for: the solver did not return the Ziffer as
+        # billable and no rule says why. "Not confirmed" is the absence of evidence, so it must not
+        # be counted as evidence of a defect.
+        return "unconfirmed", (
+            "Die Regelprüfung hat diese Ziffer nicht bestätigt, aber auch keine verifizierte Regel "
+            "verletzt. Erfordert menschliche Prüfung."
+        )
+
+    if row.advisory_rule_ids:
+        return "unconfirmed", (
+            f"{len(row.advisory_rule_ids)} nicht verifizierte Regel(n) betreffen diese Ziffer und "
+            "werden nach aktueller Policy nicht durchgesetzt: "
+            f"{', '.join(row.advisory_rule_ids)}. Ob die Position zulässig ist, ist damit offen."
+        )
+
+    if not row.accepted_as_claimed:
+        return "unconfirmed", (
+            "Die Position hat eine Prüfung nicht bestanden, für die keine verifizierte Grundlage "
+            "vorliegt. Erfordert menschliche Prüfung."
+        )
+
+    if not row.verified_rule_ids:
+        return "unconfirmed", (
+            "Keine verifizierte Regel bildet diese Ziffer ab. Die Position ist unauffällig, aber "
+            "unbestätigt — das ist keine Freigabe."
+        )
+
+    return "confirmed_fine", (
+        "Alle anwendbaren Prüfungen bestanden; geprüft gegen verifizierte Regel(n) "
+        f"{', '.join(row.verified_rule_ids)}."
+    )
+
+
 def audit_delivery(
     delivery: PadnextDelivery,
     *,
@@ -344,6 +555,17 @@ def audit_delivery(
     recomputed_total = Decimal("0.00")
     comparable_claimed = Decimal("0.00")
     unpriceable_claimed = Decimal("0.00")
+    #: Rule id of whatever suppressed a position, keyed by `id()` of the audited row.
+    #:
+    #: Keyed by object identity rather than by `positionsnr`, which is only unique *within* an
+    #: `abrechnungsfall` — a delivery with two cases can carry two positions numbered "1", and
+    #: keying on that would let one case's verified exclusion push the other case's position into
+    #: `confirmed_wrong`. The rows outlive this dict, so their ids are stable and distinct.
+    #:
+    #: Absent when nothing suppressed the position, and absent when the solver merely failed to
+    #: confirm the Ziffer — that case has no rule to name, which is exactly what keeps it out of
+    #: `confirmed_wrong`.
+    blocking_rule_id: dict[int, str] = {}
 
     for position in claimed:
         entry = catalog.get(position.ziffer)
@@ -418,6 +640,7 @@ def audit_delivery(
             row.reason = blocked.explanation or blocked.detail or blocked.reason
             row.blocked_by = blocked.blocked_by
             row.legal_basis = blocked.legal_basis
+            blocking_rule_id[id(row)] = blocked.rule_id
             findings.append(
                 PadnextFinding(
                     type=f"padnext_blocked_{blocked.reason}",
@@ -444,6 +667,7 @@ def audit_delivery(
             )
             row.verdict = "blocked"
             row.blocked_by = other
+            blocking_rule_id[id(row)] = in_conflict.rule_id
             row.reason = (
                 f"GOÄ {position.ziffer} und GOÄ {other} schließen sich gegenseitig aus. Die "
                 "Rechnung enthält beide; nur eine davon ist berechnungsfähig."
@@ -618,11 +842,25 @@ def audit_delivery(
     # after its verdict is set (an illegal factor, an amount that does not recompute), and a
     # single-pass version silently counted those euros as defensible.
     errors_per_position: dict[str, int] = {}
+    #: positionsnr → the VERIFIED_DEFECT_FINDINGS raised against it. Collected in the same pass, so
+    #: a defect can never be counted for `accepted_as_claimed` but missed for the buckets.
+    #:
+    #: Keyed by `positionsnr`, and therefore carrying the same pre-existing limitation as
+    #: `errors_per_position` above: a `PadnextFinding` identifies its position only by that number,
+    #: which is unique within an `abrechnungsfall` but not across a multi-case delivery. Two cases
+    #: each numbering a position "1" would share both maps. De-colliding it means giving findings a
+    #: delivery-unique position key, which is an API change and out of scope here — noted rather
+    #: than silently inherited.
+    verified_defects_per_position: dict[str, set[str]] = {}
     for finding in findings:
-        if finding.severity == "error" and finding.positionsnr:
+        if not finding.positionsnr:
+            continue
+        if finding.severity == "error":
             errors_per_position[finding.positionsnr] = (
                 errors_per_position.get(finding.positionsnr, 0) + 1
             )
+        if finding.type in VERIFIED_DEFECT_FINDINGS:
+            verified_defects_per_position.setdefault(finding.positionsnr, set()).add(finding.type)
 
     defensible_total = Decimal("0.00")
     for row in audited:
@@ -631,6 +869,48 @@ def audit_delivery(
         )
         if row.accepted_as_claimed and row.recomputed_amount_eur is not None:
             defensible_total += row.recomputed_amount_eur
+
+    # -- the three honest buckets ----------------------------------------------------------
+    #
+    # Claimed euros, not recomputed ones, so the three add up to `claimed_total` exactly and the
+    # reconciliation check on the report can be an equality rather than an estimate. Every position
+    # contributes to exactly one bucket; a position with no `gesamtbetrag` contributes nothing to
+    # any of them, and nothing to `claimed_total` either, so the identity still holds.
+    verified_by_ziffer, advisory_by_ziffer = rules_bearing_on(
+        rules, {p.ziffer for p in goae}
+    )
+
+    bucket_totals: dict[PositionBucket, Decimal] = {
+        "confirmed_fine": Decimal("0.00"),
+        "confirmed_wrong": Decimal("0.00"),
+        "unconfirmed": Decimal("0.00"),
+    }
+    for row in audited:
+        # Out-of-scope positions carry a Ziffer from another fee schedule, whose numbers collide
+        # with GOÄ ones — GOZ 2020 is not GOÄ 2020. Looking up rules for them would attribute GOÄ
+        # rules to a dental position, so they get no rules and fall through to `unconfirmed`.
+        if row.verdict != "out_of_scope":
+            row.verified_rule_ids = verified_by_ziffer.get(row.ziffer, [])
+            row.advisory_rule_ids = advisory_by_ziffer.get(row.ziffer, [])
+
+        blocked_rule = blocking_rule_id.get(id(row))
+        rule = rules.rule_by_id(blocked_rule) if blocked_rule else None
+        # Under the default `warn` policy an unverified rule never reaches the enforcement path, so
+        # anything that actually blocked is verified. Under `block` it can be unverified, and then
+        # the suppression is real but the basis is not — `None` keeps it out of `confirmed_wrong`.
+        blocking_rule_verified = rule.verified if rule is not None else None
+
+        row.bucket, row.bucket_reason = classify_position(
+            row,
+            verified_defects=verified_defects_per_position.get(row.positionsnr, set()),
+            blocking_rule_verified=blocking_rule_verified,
+        )
+        bucket_totals[row.bucket] += row.claimed_amount_eur or Decimal("0.00")
+
+    judged = bucket_totals["confirmed_fine"] + bucket_totals["confirmed_wrong"]
+    # An invoice claiming nothing was not "0 % audited" in any meaningful sense, but reporting 1.0
+    # would let an empty delivery render as fully verified. Zero is the reading that cannot mislead.
+    coverage_ratio = float(judged / claimed_total) if claimed_total else 0.0
 
     coverage = rule_coverage_service.build(
         rules,
@@ -667,8 +947,11 @@ def audit_delivery(
         comparable_claimed_eur=comparable_claimed,
         arithmetic_delta_eur=comparable_claimed - recomputed_total,
         defensible_total_eur=defensible_total,
-        at_risk_eur=claimed_total - defensible_total,
         unpriceable_claimed_eur=unpriceable_claimed,
+        confirmed_fine_eur=bucket_totals["confirmed_fine"],
+        confirmed_wrong_eur=bucket_totals["confirmed_wrong"],
+        unconfirmed_eur=bucket_totals["unconfirmed"],
+        coverage_ratio=coverage_ratio,
         catalog_version=catalog.catalog_version,
         catalog_sha256=catalog.sha256(),  # a method, unlike its neighbours, which are properties
         rules_version=catalog.rules_version,

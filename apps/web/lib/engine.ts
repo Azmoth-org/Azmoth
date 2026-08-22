@@ -100,6 +100,83 @@ export async function callEngine(
   return { ok: true, status: response.status, body }
 }
 
+/**
+ * Forward one request whose body is a *file* rather than JSON.
+ *
+ * `POST /api/v1/padnext/audit` takes the PADnext delivery itself as raw bytes — a `.padx` container
+ * or a bare `*_padx.xml` payload — so it cannot go through `callEngine`, which JSON-encodes. The
+ * bytes are passed through untouched; re-encoding them would break the container's ZIP magic and
+ * change the receipt hash the engine computes over the file.
+ *
+ * `filename` travels in `x-padnext-filename` because the engine uses it only for the audit trail,
+ * and a filename is not a place to put a patient's name: the engine parses no identity out of it,
+ * and the upload is synthetic data only.
+ */
+export async function callEngineBytes(
+  path: string,
+  { body, filename, contentType }: { body: ArrayBuffer; filename?: string; contentType?: string },
+): Promise<EngineProxyResult> {
+  const url = `${engineBaseUrl()}${path}`
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": contentType ?? "application/octet-stream",
+        ...(filename ? { "x-padnext-filename": filename } : {}),
+      },
+      body,
+      cache: "no-store",
+      signal: AbortSignal.timeout(ENGINE_TIMEOUT_MS),
+    })
+  } catch (cause) {
+    const timedOut = cause instanceof Error && cause.name === "TimeoutError"
+    return {
+      ok: false,
+      failure: {
+        error: timedOut ? "engine_unreachable_timeout" : "engine_unreachable",
+        message: timedOut
+          ? `Die Engine hat innerhalb von ${ENGINE_TIMEOUT_MS / 1000} s nicht geantwortet.`
+          : "Die Engine ist nicht erreichbar. Läuft sie auf ENGINE_BASE_URL?",
+        status: 503,
+        details: { url, method: "POST", cause: cause instanceof Error ? cause.message : String(cause) },
+      },
+    }
+  }
+
+  const raw = await response.text()
+
+  if (raw.length === 0) {
+    return {
+      ok: false,
+      failure: {
+        error: "empty_response",
+        message: `Die Engine hat mit HTTP ${response.status} und leerem Body geantwortet.`,
+        status: 502,
+        details: { url, method: "POST", status: response.status },
+      },
+    }
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return {
+      ok: false,
+      failure: {
+        error: "unparsable_response",
+        message: "Die Antwort der Engine ist kein gültiges JSON.",
+        status: 502,
+        details: { url, method: "POST", status: response.status, raw: raw.slice(0, 4000) },
+      },
+    }
+  }
+
+  return { ok: true, status: response.status, body: parsed }
+}
+
 /** Turn an `EngineProxyResult` into the route handler's response. */
 export function proxyResponse(result: EngineProxyResult): Response {
   if (result.ok) {

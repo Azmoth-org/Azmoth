@@ -55,6 +55,7 @@ from app.schemas.padnext import (
     PadnextFinding,
     PadnextInvoice,
     PadnextPosition,
+    PositionBucket,
 )
 from app.schemas.proposal import (
     ApprovalRequest,
@@ -116,6 +117,7 @@ __all__ = [
     "PadnextFinding",
     "PadnextInvoice",
     "PadnextPosition",
+    "PositionBucket",
     "Patient",
     "Procedure",
     "Proposal",
