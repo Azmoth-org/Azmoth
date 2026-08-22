@@ -1,9 +1,21 @@
 # The database
 
-Two tables. One holds a proposal and the decision taken on it; the other is the append-only log of
-what happened to it. That is the entire schema — everything else the engine reads (the catalog, the
-rule tables, the logic programs) is versioned input, and the result cache is content-addressed and
-disposable.
+Four tables, in two unrelated pairs.
+
+`proposals` / `audit_events` is the approval record: one holds a proposal and the decision taken on
+it, the other is the append-only log of what happened to it. `batch_jobs` / `batch_files` is the
+batch PADnext audit: one upload of many deliveries, and one row per delivery in it.
+
+Everything else the engine reads (the catalog, the rule tables, the logic programs) is versioned
+input, and the result cache is content-addressed and disposable.
+
+The two pairs are deliberately unalike, and the difference is worth stating before the column
+listings. A proposal records that a **human took responsibility** for a billing draft, so what it
+holds is written once and every decision on it is logged. A batch job records a **computation the
+engine ran on its own**: its status moves as work proceeds, each file's verdict is written when it
+lands, and re-uploading the same files simply produces another batch. There is nothing there for an
+audit log to protect and no approval boundary to enforce — which is exactly why `batch_jobs` and
+`batch_files` are plain mutable rows and `proposals` is not.
 
 Before this, the proposal store was a Python dictionary. The module that held it argued the case
 against a database: inventing a schema would mean inventing the retention policy, the access-control
@@ -166,6 +178,92 @@ DRAFT ──approve──▶ APPROVED ──export──▶ EXPORTED
 There is no `delete_proposal` and no eviction. The old dictionary dropped its oldest entry past 512
 to bound memory; a durable store that silently discarded approvals would be worse than one that ran
 out of disk, because only one of those is noticed.
+
+---
+
+## `batch_jobs`
+
+One batch upload: many PADnext deliveries audited in the background, and the roll-up across them.
+Written by `app/services/batch_audit.py`, behind `POST /api/v1/padnext/batch`.
+
+| column | type | notes |
+| --- | --- | --- |
+| `id` | `uuid` PK | surrogate key; `batch_files` references this |
+| `batch_id` | `varchar(64)`, **unique**, indexed | the public handle, `batch_<16 hex>` |
+| `status` | `varchar(16)`, indexed | `PENDING` \| `PROCESSING` \| `COMPLETED` \| `FAILED` |
+| `created_at` | `timestamptz` | |
+| `completed_at` | `timestamptz`, nullable | set when the job reaches a terminal status |
+| `aggregate_summary_json` | `jsonb`, nullable | the serialised `BatchAggregateSummary` |
+| `error_message` | `text`, nullable | why the *batch* failed — not why a file did |
+
+Plus a composite `(status, created_at)`, the same shape as the one on `proposals` and for the same
+query: "the most recent batches, optionally in this status".
+
+`id` and `batch_id` are both present for the same reason `proposals` carries both — see
+[Why `id` and `proposal_id` are both there](#why-id-and-proposal_id-are-both-there).
+
+### `FAILED` is narrower than it looks
+
+A run in which every single file was unreadable is `COMPLETED`, not `FAILED`. The useful output of
+such a run is a hundred per-file error messages a user needs to read, and a status that says
+"nothing to see" would hide them. `FAILED` means the batch *machinery* broke — the background task
+raised before it could finish, or a write would not land — and it is the one case where
+`aggregate_summary_json` stays null on a finished job, because a total computed over rows that may
+never have been written is worse than no total at all.
+
+### The roll-up is stored, not recomputed
+
+`aggregate_summary_json` holds the answer the batch reached, so a later change to how aggregation
+works cannot silently restate a finished job. It carries `failed_file_count` inside itself, not only
+on the row around it: the summary covers the files that were audited, and read on its own six months
+later it still has to say what it is missing.
+
+It also keeps the three honest buckets separate rather than reducing them to one figure, and at
+batch scale that matters more than it does for a single invoice — `unconfirmed_eur` summed over a
+year of billing is a six-figure number that describes *this engine's rule coverage*, not the
+practice. See [`app/schemas/batch.py`](../../apps/engine/app/schemas/batch.py).
+
+---
+
+## `batch_files`
+
+One uploaded delivery inside a batch, and the report it produced.
+
+| column | type | notes |
+| --- | --- | --- |
+| `id` | `uuid` PK | |
+| `batch_job_id` | `uuid`, indexed, FK → `batch_jobs.id` `ON DELETE CASCADE` | |
+| `filename` | `varchar(512)` | as uploaded. **Not** unique within a batch |
+| `status` | `varchar(16)`, indexed | `PENDING` \| `COMPLETED` \| `FAILED` |
+| `report_json` | `jsonb`, nullable | the full `PadnextAuditReport`, as `/padnext/audit` would return it |
+| `error_message` | `text`, nullable | why this delivery could not be audited |
+
+Plus a composite `(batch_job_id, filename)` — the background task walks one job's files, and the API
+reads them all back.
+
+The uploaded **bytes are not stored**. They live in the accepting process's memory for the length of
+the job and nowhere else; nothing here writes a billing document to disk. `filename` is display and
+audit-trail only and never touches the filesystem, so a `../` in it is a curiosity rather than a
+traversal.
+
+`report_json` is stored whole for the same reason `proposals.solver_result_json` is: a normalised
+copy re-serialised by later code is a different document, and the report carries its own
+`receipt_hash` over the catalog, rules, policy and verdicts that produced it.
+
+### There is no `PROCESSING` for a file
+
+Files are audited one after another, and the move out of `PENDING` is a single write at the end of
+each file's audit. A per-file in-progress state would be a second write per file bought for nothing:
+the job's own `PROCESSING` already says work is happening, and the count still `PENDING` already
+says how much is left.
+
+### `BackgroundTasks` is not durable, and the schema shows it
+
+A batch is processed in the same process that accepted it, so a restart mid-run leaves a row on
+`PROCESSING` with some files still `PENDING` and nothing to resume it. That is the price of the
+MVP's no-Celery, no-Redis constraint, and it is stated rather than hidden: `GET` reports the real
+state, the web app stops polling after fifteen minutes and says why, and re-uploading the files
+produces a fresh batch. A durable queue is the fix when one is wanted.
 
 ---
 

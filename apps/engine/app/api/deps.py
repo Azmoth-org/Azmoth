@@ -4,22 +4,28 @@ The pipeline loads a 1 MB catalog, 260 kB of rule CSVs and hashes both, so it is
 process and not per request. It is built lazily rather than at import time so that `import app.main`
 works — for an OpenAPI export, say — on a machine with no Soufflé binary and no database.
 
-The store is a singleton for a different reason. It is stateless: the state is in Postgres, and a
-new `ProposalStore` per request would be free. What must not be rebuilt is the connection pool
-underneath it (`app.db.session.Database`), and the store holds none of its own — it asks
-`get_database()` each time — so the singleton here is only about not allocating an object per
-request. `reset()` therefore leaves the database alone; disposing an engine is async and belongs to
-the lifespan, which is where `reset_async()` does it.
+The two service objects are singletons for a different reason. They are stateless: the state is in
+Postgres, and a new `ProposalStore` or `BatchAuditService` per request would be free. What must not
+be rebuilt is the connection pool underneath them (`app.db.session.Database`), and neither holds
+one of its own — both ask `get_database()` each time — so the singletons here are only about not
+allocating an object per request. `reset()` therefore leaves the database alone; disposing an
+engine is async and belongs to the lifespan, which is where `reset_async()` does it.
+
+`BatchAuditService` is the one that has to outlive its request: a `BackgroundTask` runs after the
+response, and it holds the bound method it was handed. Keeping the instance process-wide means the
+task cannot be running against an object the router has already discarded.
 """
 
 from __future__ import annotations
 
 from app.db.session import reset_database
+from app.services.batch_audit import BatchAuditService
 from app.services.pipeline import Pipeline
 from app.services.proposal_store import ProposalStore
 
 _pipeline: Pipeline | None = None
 _proposals: ProposalStore | None = None
+_batches: BatchAuditService | None = None
 
 
 def pipeline() -> Pipeline:
@@ -36,15 +42,26 @@ def proposals() -> ProposalStore:
     return _proposals
 
 
+def batches() -> BatchAuditService:
+    global _batches
+    if _batches is None:
+        # `pipeline` is passed rather than imported inside the service so the two singletons stay
+        # the same objects: a batch must audit against the catalog and rule store the rest of the
+        # process is using, not against a second copy it built for itself.
+        _batches = BatchAuditService(pipeline_factory=pipeline)
+    return _batches
+
+
 def reset() -> None:
     """Drop the in-process singletons. For tests that change settings between cases.
 
     Does not touch the database: the engine has to be disposed with an `await`, and a sync helper
     that quietly left a connection pool open would leak one per test. Use `reset_async`.
     """
-    global _pipeline, _proposals
+    global _pipeline, _proposals, _batches
     _pipeline = None
     _proposals = None
+    _batches = None
 
 
 async def reset_async() -> None:

@@ -1,10 +1,18 @@
 """Every schema the engine speaks, re-exported as one namespace.
 
 The modules are split by concern — `case` (the frozen clinical input contract), `facts` (the
-symbolic layer), `solver`, `result`, `proposal`, `padnext`, `meta` — but callers import from here,
-so moving a model between them is not a breaking change.
+symbolic layer), `solver`, `result`, `proposal`, `padnext`, `batch`, `meta` — but callers import
+from here, so moving a model between them is not a breaking change.
 """
 
+from app.schemas.batch import (
+    BatchAggregateSummary,
+    BatchAuditAccepted,
+    BatchAuditJob,
+    BatchFileResult,
+    BatchFileStatus,
+    BatchJobStatus,
+)
 from app.schemas.case import (
     ClinicalExtraction,
     Consultation,
@@ -86,6 +94,12 @@ __all__ = [
     "ApprovalRequest",
     "AuditTrail",
     "AuditTrailEntry",
+    "BatchAggregateSummary",
+    "BatchAuditAccepted",
+    "BatchAuditJob",
+    "BatchFileResult",
+    "BatchFileStatus",
+    "BatchJobStatus",
     "BilingualOption",
     "BlockedCode",
     "CatalogResponse",
