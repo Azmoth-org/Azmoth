@@ -7,6 +7,11 @@ they suppress nothing and only warn. A response that did not say so would let a 
 
 So every solve and every audit carries the three counts and, when the advisory set is non-empty, a
 warning saying that unverified rules are NOT enforced.
+
+The counts are computed from the rule store the pipeline is holding, which since the review
+workflow means *after* database review overrides are merged in. Nothing here reads the database —
+it reads the merged store — so a rule a billing expert verified this morning is reflected wherever
+this is called, and a coverage figure can never disagree with the rules that actually ran.
 """
 
 from __future__ import annotations
@@ -36,6 +41,9 @@ def build(rules: RuleStore, *, rule_coverage: str = "partial", rules_version: st
         analog_candidate_count=summary["analog_candidates"],
         unverified_rule_count=summary["unverified_constraint_rules"],
         suppressed_unverified_rule_count=summary["unverified_rules_not_enforced"],
+        review_verified_rule_count=summary["review_verified_rules"],
+        rejected_rule_count=summary["rejected_rules"],
+        total_constraint_rule_count=summary["total_constraint_rules"],
         rule_coverage=rule_coverage,
         rules_version=rules_version,
         verified_share=summary["verified_share"],

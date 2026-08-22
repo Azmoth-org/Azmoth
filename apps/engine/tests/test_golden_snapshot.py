@@ -49,6 +49,14 @@ FIELDS_ADDED_SINCE_POC = {
     # `rule_summary` is the rule store's own dict, passed through untyped; it gained the
     # policy-independent unverified count that backs RuleCoverage.unverified_rule_count
     "/audit_trail/rule_summary/unverified_constraint_rules",
+    # the rule verification workflow. A result produced under 40 reviewer-verified rules is not the
+    # same result as one produced under none, so what the reviews did belongs in the record of what
+    # produced it. `total_constraint_rules` is the denominator, so the other two can be read without
+    # a client hardcoding 894. No existing value moved — `test_no_value_changed` has no allow-list
+    # and still passes, which is the assertion that matters here.
+    "/audit_trail/rule_summary/rejected_rules",
+    "/audit_trail/rule_summary/review_verified_rules",
+    "/audit_trail/rule_summary/total_constraint_rules",
 }
 
 

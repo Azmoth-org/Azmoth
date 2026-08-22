@@ -27,6 +27,7 @@ from fastapi import (
     File,
     HTTPException,
     Request,
+    Response,
     UploadFile,
     status,
 )
@@ -34,7 +35,8 @@ from fastapi import (
 from app.api.deps import batches, pipeline
 from app.padnext import PadnextError, RealDataRefused, audit_delivery, read_delivery
 from app.schemas import BatchAuditAccepted, BatchAuditJob, PadnextAuditReport
-from app.services.batch_audit import BatchNotFound, EmptyBatch
+from app.services.batch_audit import BatchNotExportable, BatchNotFound, EmptyBatch
+from app.services.export import attachment_headers, batch_export_filename
 from app.solvers.souffle_engine import SouffleError
 
 log = logging.getLogger(__name__)
@@ -245,3 +247,56 @@ async def padnext_batch_status(batch_id: str) -> BatchAuditJob:
         return await batches().load_batch(batch_id)
     except BatchNotFound as exc:
         raise _batch_not_found(batch_id) from exc
+
+
+@router.post(
+    "/batch/{batch_id}/export",
+    response_class=Response,
+    responses={
+        200: {
+            "description": (
+                "A ZIP archive named `{batch_id}_export.zip` holding `batch_summary.csv`, "
+                "`batch_line_items.csv`, `batch_files.csv` and a `README.txt` that defines the "
+                "three buckets."
+            ),
+            "content": {"application/zip": {"schema": {"type": "string", "format": "binary"}}},
+        },
+        409: {"description": "The batch has not completed, so there is no roll-up to export."},
+    },
+)
+async def padnext_batch_export(batch_id: str) -> Response:
+    """Download a completed batch as CSVs, for a billing centre.
+
+    Only a `COMPLETED` batch can be exported. A running one would produce totals that are a
+    snapshot of an unidentifiable moment, and a `FAILED` one has no roll-up at all — both are
+    `409` rather than a file with a caveat attached, because a caveat does not survive being
+    opened in a spreadsheet three weeks later.
+
+    Read-only: unlike the proposal export this changes no status and writes no audit row, so the
+    same archive can be downloaded repeatedly and is byte-identical each time. See
+    `app.services.batch_audit.export_batch` for why the two exports differ on that.
+
+    CSV rather than JSON because the reader is a Rechnungsprüfer with a spreadsheet. The archive
+    carries a `README.txt` stating that `unconfirmed` is the boundary of this engine's rule
+    coverage and not a finding against the practice — a CSV outlives the screen it came from, and
+    that sentence has to travel with the numbers.
+    """
+    try:
+        archive = await batches().export_batch(batch_id)
+    except BatchNotFound as exc:
+        raise _batch_not_found(batch_id) from exc
+    except BatchNotExportable as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "batch_not_completed",
+                "message": str(exc),
+                "current_status": str(exc.status),
+            },
+        ) from exc
+
+    return Response(
+        content=archive,
+        media_type="application/zip",
+        headers=attachment_headers(batch_export_filename(batch_id)),
+    )

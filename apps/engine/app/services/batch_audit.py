@@ -59,6 +59,7 @@ from app.schemas.batch import (
     BatchJobStatus,
 )
 from app.schemas.padnext import PadnextAuditReport
+from app.services.export import build_batch_zip
 
 log = logging.getLogger(__name__)
 
@@ -81,6 +82,23 @@ class BatchNotFound(KeyError):
 
 class EmptyBatch(ValueError):
     """A batch was submitted with no files. Refused rather than stored as an empty job."""
+
+
+class BatchNotExportable(RuntimeError):
+    """An export was asked for on a batch that has not finished.
+
+    A running batch has an aggregate of "as far as we have got", and a `FAILED` one has none at
+    all. Either would leave a billing centre holding a CSV whose totals are a snapshot of a moment
+    nobody can identify, so both are refused rather than served with a caveat.
+    """
+
+    def __init__(self, batch_id: str, status: BatchJobStatus) -> None:
+        super().__init__(
+            f"Batch {batch_id} is {status}, not COMPLETED. Only a completed batch can be "
+            "exported: a partial roll-up is not a document anyone should reconcile against."
+        )
+        self.batch_id = batch_id
+        self.status = status
 
 
 #: One upload as it reaches this layer: the client's filename and the bytes themselves.
@@ -461,6 +479,49 @@ class BatchAuditService:
         except Exception:  # noqa: BLE001 - see docstring
             log.exception("batch %s: could not record the failure either", batch_id)
 
+    # -- export ----------------------------------------------------------------------------
+
+    async def export_batch(self, batch_id: str) -> bytes:
+        """The finished batch as a ZIP of CSVs, built from the rows.
+
+        Read-only and idempotent: it changes no status and writes no row, so a billing centre can
+        re-download the same archive as often as it likes and get byte-identical output. That is
+        deliberately unlike the proposal export, and the difference is not an inconsistency — a
+        proposal export is a *decision* a named person takes, once, and the lifecycle records it. A
+        batch export is a rendering of a computation that already finished; there is nothing for a
+        second one to contradict.
+
+        No audit event is written either, for the plain reason that `audit_events` is keyed to a
+        proposal and a batch is not one. If batch access ever needs logging it needs its own table,
+        not a foreign key bent to fit.
+        """
+        statement = (
+            select(BatchJobRecord)
+            .where(BatchJobRecord.batch_id == batch_id)
+            .options(selectinload(BatchJobRecord.files))
+        )
+        async with self.database.session() as session:
+            job = (await session.execute(statement)).scalar_one_or_none()
+            if job is None:
+                raise BatchNotFound(batch_id)
+
+            status = BatchJobStatus(job.status)
+            if status is not BatchJobStatus.COMPLETED:
+                raise BatchNotExportable(batch_id, status)
+
+            summary = (
+                BatchAggregateSummary.model_validate(job.aggregate_summary_json)
+                if job.aggregate_summary_json is not None
+                else None
+            )
+            # Sorted the same way `load_batch` sorts, so the CSV and the screen agree on what
+            # "riskiest first" means. A reconciler comparing the two must not have to re-sort.
+            files = sorted(
+                job.files,
+                key=lambda record: risk_sort_key(_to_file_result(record, include_report=True)),
+            )
+            return build_batch_zip(job, files, summary)
+
     @staticmethod
     async def _require(session, batch_id: str) -> BatchJobRecord:
         statement = select(BatchJobRecord).where(BatchJobRecord.batch_id == batch_id)
@@ -472,6 +533,7 @@ class BatchAuditService:
 
 __all__ = [
     "BatchAuditService",
+    "BatchNotExportable",
     "BatchNotFound",
     "EmptyBatch",
     "Upload",

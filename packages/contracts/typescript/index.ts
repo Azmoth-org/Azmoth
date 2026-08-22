@@ -47,6 +47,25 @@ export type ProposalStatus = Schemas["ProposalStatus"];
 export type ApprovalRequest = Schemas["ApprovalRequest"];
 export type RejectionRequest = Schemas["RejectionRequest"];
 
+/**
+ * Body of `POST /api/v1/proposals/{id}/export`. `exported_by` is required, for the same reason
+ * `approved_by` is on an approval: it is recorded in the audit log. It is not authenticated.
+ */
+export type ExportRequest = Schemas["ExportRequest"];
+
+/**
+ * The downloadable record of one exported proposal — served as an attachment, not rendered.
+ *
+ * Carries what the `Proposal` response cannot: `input_hash`, the decision record, and the full
+ * append-only audit log including the `EXPORTED` event the export itself wrote. A client that
+ * needs to *display* a proposal should read `Proposal`; this type exists so a caller that
+ * post-processes the downloaded file is typed against the same document the engine wrote.
+ */
+export type ProposalExport = Schemas["ProposalExport"];
+export type ProposalExportDecision = Schemas["DecisionRecord"];
+export type ProposalExportEngineIdentity = Schemas["EngineIdentity"];
+export type ProposalExportAuditEvent = Schemas["AuditEventRecord"];
+
 export type CodingResponse = Schemas["CodingResponse"];
 export type Coding = Schemas["Coding"];
 export type InvoiceLine = Schemas["InvoiceLine"];
@@ -124,6 +143,32 @@ export type BatchFileResult = Schemas["BatchFileResult"];
  */
 export type BatchAggregateSummary = Schemas["BatchAggregateSummary"];
 
+/* -- the rule verification workflow --------------------------------------------------------- */
+
+/**
+ * One unverified rule as the review queue presents it, with the GOÄ sentence it was extracted
+ * from. The quote is the evidence a reviewer decides on — never render a truncated one.
+ */
+export type ReviewableRule = Schemas["ReviewableRule"];
+
+/** Which rule table a reviewable rule came from. Closed union: every value needs a label. */
+export type RuleKind = ReviewableRule["kind"];
+
+/** `VERIFIED` | `REJECTED` | `PENDING`. `PENDING` decides nothing and leaves the rule queued. */
+export type RuleReviewStatus = NonNullable<ReviewableRule["review_status"]>;
+
+/** What `GET /api/v1/rules/review-queue` returns: the page, plus the real backlog behind it. */
+export type RuleReviewQueue = Schemas["RuleReviewQueue"];
+
+/**
+ * Body of `POST /api/v1/rules/{rule_id}/review`. `reviewed_by` is required for a decision:
+ * verifying a rule changes what every future audit concludes about somebody's invoice.
+ */
+export type RuleReviewRequest = Schemas["RuleReviewRequest"];
+
+/** The reviewed rule and the coverage it moved, so a progress bar updates from one response. */
+export type RuleReviewResult = Schemas["RuleReviewResult"];
+
 /* -- catalog and vocabulary ---------------------------------------------------------------- */
 
 export type HealthResponse = Schemas["HealthResponse"];
@@ -152,6 +197,10 @@ export const ENGINE_ROUTES = {
   proposals: "/api/v1/proposals",
   padnextAudit: "/api/v1/padnext/audit",
   padnextBatch: "/api/v1/padnext/batch",
+  padnextBatchExport: "/api/v1/padnext/batch/{batch_id}/export",
+  proposalExport: "/api/v1/proposals/{proposal_id}/export",
   catalog: "/api/v1/catalog",
+  ruleCoverage: "/api/v1/rules/coverage",
+  ruleReviewQueue: "/api/v1/rules/review-queue",
   vocabulary: "/api/v1/vocabulary",
 } as const satisfies Record<string, EnginePath>;

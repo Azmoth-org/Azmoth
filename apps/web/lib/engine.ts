@@ -255,6 +255,67 @@ export async function callEngineFormData(
   return { ok: true, status: response.status, body: parsed }
 }
 
+/**
+ * Forward a request whose *successful* response is a file, and hand the bytes straight back.
+ *
+ * The two export endpoints answer with an attachment — a JSON document or a ZIP — and with a JSON
+ * error body when they refuse. So this returns a `Response` rather than an `EngineProxyResult`:
+ * there is nothing useful for the proxy to parse on the happy path, and re-encoding the bytes
+ * would break the ZIP.
+ *
+ * `Content-Disposition` is forwarded because it carries the filename the engine chose, and the
+ * browser needs it to save the file under a name that means something. `Content-Type` is forwarded
+ * for the same reason. Nothing else is: response headers from an upstream service are not something
+ * to relay wholesale.
+ *
+ * A refusal (409, 404, 422) comes back as its own JSON body with its own status, untouched, so the
+ * screen renders the engine's actual reason rather than a generic "download failed".
+ */
+export async function proxyEngineDownload(
+  path: string,
+  init?: { method?: "GET" | "POST"; body?: unknown },
+): Promise<Response> {
+  const url = `${engineBaseUrl()}${path}`
+  const method = init?.method ?? "POST"
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method,
+      headers: init?.body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: init?.body === undefined ? undefined : JSON.stringify(init.body),
+      cache: "no-store",
+      // Above `ENGINE_TIMEOUT_MS`: a batch export renders every position of every file in the
+      // batch into CSV, which for a few hundred invoices is real work.
+      signal: AbortSignal.timeout(60_000),
+    })
+  } catch (cause) {
+    const timedOut = cause instanceof Error && cause.name === "TimeoutError"
+    return Response.json(
+      {
+        error: timedOut ? "engine_unreachable_timeout" : "engine_unreachable",
+        message: timedOut
+          ? "Die Engine hat den Export nicht innerhalb von 60 s geliefert."
+          : "Die Engine ist nicht erreichbar. Läuft sie auf ENGINE_BASE_URL?",
+        details: { url, method, cause: cause instanceof Error ? cause.message : String(cause) },
+      },
+      { status: 503 },
+    )
+  }
+
+  const body = await response.arrayBuffer()
+  const headers = new Headers()
+  for (const name of ["content-type", "content-disposition"]) {
+    const value = response.headers.get(name)
+    if (value) headers.set(name, value)
+  }
+  // A download must never be served from a cache the UI does not control — and an export is a
+  // one-shot record, so a cached copy would be a second file claiming to be the first.
+  headers.set("Cache-Control", "no-store")
+
+  return new Response(body, { status: response.status, headers })
+}
+
 /** Turn an `EngineProxyResult` into the route handler's response. */
 export function proxyResponse(result: EngineProxyResult): Response {
   if (result.ok) {

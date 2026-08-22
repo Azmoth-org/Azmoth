@@ -91,13 +91,43 @@ class Pipeline:
         )
         #: Hashed once per process: the rule CSVs do not change under a running service, and
         #: hashing 260 kB of CSV on every request would dominate a 30 ms solve.
-        self._rules_hash = rule_coverage_service.rules_hash(self.settings.rules_data_dir)
+        self._csv_rules_hash = rule_coverage_service.rules_hash(self.settings.rules_data_dir)
+        #: What `rules_hash` actually reports. Equal to the CSV digest until a review is applied;
+        #: see `apply_rule_reviews` for why it must move when one is.
+        self._rules_hash = self._csv_rules_hash
 
     # -- identity ---------------------------------------------------------------------------
 
     @property
     def rules_hash(self) -> str:
         return self._rules_hash
+
+    def apply_rule_reviews(self, statuses: dict[str, str]) -> None:
+        """Re-merge the rule store from the CSVs plus the reviewer decisions in `statuses`.
+
+        Rebuilds the three engines as well, and that is the whole reason this is a method rather
+        than an assignment to `self.rules`. Soufflé, Clingo and the validator are each handed the
+        store at construction; replacing only `self.rules` would leave three components enforcing
+        yesterday's rules while the coverage endpoint reported today's — the kind of disagreement
+        that produces a proposal nobody can explain.
+
+        `rules_hash` moves with it. That is not bookkeeping: the hash feeds the receipt and the
+        result-cache key, so a review that changed what is enforced without moving it would make
+        two proposals with one receipt hash describe different rule sets, and would let the cache
+        serve an answer computed before the rule was verified. With no decided reviews the hash is
+        byte-identical to the CSV digest, so a deployment that never uses the review queue is
+        unaffected — including every golden receipt.
+        """
+        from app.services.rule_reviews import effective_rules_hash
+
+        base = load_rules(
+            self.settings.rules_data_dir, policy=self.settings.unverified_rule_policy
+        )
+        self.rules = base.with_reviews(statuses) if statuses else base
+        self.souffle = SouffleEngine(self.settings, self.catalog, self.rules)
+        self.clingo = ClingoSolver(self.settings, self.catalog, self.rules)
+        self.validator = Validator(self.settings, self.catalog, self.rules)
+        self._rules_hash = effective_rules_hash(self._csv_rules_hash, statuses)
 
     def rule_coverage(self) -> RuleCoverage:
         return rule_coverage_service.build(

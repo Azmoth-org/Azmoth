@@ -1,10 +1,13 @@
 # The database
 
-Four tables, in two unrelated pairs.
+Five tables: two unrelated pairs, and one standalone.
 
 `proposals` / `audit_events` is the approval record: one holds a proposal and the decision taken on
 it, the other is the append-only log of what happened to it. `batch_jobs` / `batch_files` is the
 batch PADnext audit: one upload of many deliveries, and one row per delivery in it.
+
+`rule_reviews` stands alone: one row per GOÄ rule a billing expert has decided about, merged onto
+the versioned CSVs at load time.
 
 Everything else the engine reads (the catalog, the rule tables, the logic programs) is versioned
 input, and the result cache is content-addressed and disposable.
@@ -74,15 +77,20 @@ the receipt, never the versions, never the solver output. That is what makes *"t
 what was approved"* a checkable statement instead of a hopeful one, and there is a test that
 snapshots every identity column across an approve-then-export and asserts it did not move.
 
-### Four columns the API does not return
+### Four columns the `Proposal` response does not return
 
 `input_hash`, `rejected_at`, `rejected_by` and `exported_at` are written and queryable but absent
-from the `Proposal` response model. Adding them would change the OpenAPI document, and the contract
-for this migration was that the document does not move — the frontend must not be able to tell that
-the backend changed. `rejected_by` in particular is not lost: it is the actor on the `REJECTED`
-audit event, which is where "who rejected this" belongs anyway. (It used to be *genuinely* lost —
-the old in-memory `transition()` accepted a `reason` but no `by` for a rejection, so the API
-validated a required `rejected_by` and then dropped it.)
+from the `Proposal` response model. Adding them would have changed the OpenAPI document, and the
+contract for the persistence migration was that the document does not move — the frontend must not
+be able to tell that the backend changed. `rejected_by` in particular is not lost: it is the actor
+on the `REJECTED` audit event, which is where "who rejected this" belongs anyway. (It used to be
+*genuinely* lost — the old in-memory `transition()` accepted a `reason` but no `by` for a
+rejection, so the API validated a required `rejected_by` and then dropped it.)
+
+All four do appear in the **export** document, and that is the right place for them: an export is
+read on its own, detached from this database, so a field that a live client can look up by other
+means is a field an archived file has no way to recover. `input_hash` especially — comparing two
+exports for "same case, different engine state" is impossible from the API responses alone.
 
 ### `receipt_hash` vs `input_hash`
 
@@ -140,10 +148,43 @@ There is no authentication in this service. `approved_by` is a string the caller
 read cannot be attributed at all — so a `VIEWED` event carries `anonymous`, and a `CREATED` event
 carries `system` because a solve is not a person.
 
+`EXPORTED` carries whatever `exported_by` the export request supplied, and that field is required
+for the same reason `approved_by` is: an export is a thing a person or a named integration did, and
+the log has to be able to say which. It used to default to `system`, which was right while the only
+caller was `ProposalStore.export_proposal` and wrong the moment a human could press a button.
+
 `anonymous` is deliberately conspicuous. An audit log full of it is a visible statement that access
 control is still missing, which is exactly the gap
 [`../compliance/PRIVATE_DATA_WARNING.md`](../compliance/PRIVATE_DATA_WARNING.md) lists. Writing a
 plausible-looking name there instead would be the one genuinely dangerous option.
+
+### The export is built inside the transaction that records it
+
+`POST /api/v1/proposals/{id}/export` does three things in one unit of work: it moves the row to
+`EXPORTED`, writes the `EXPORTED` audit event, and assembles the downloadable JSON document from
+that same row — all before the commit. The obvious alternative, transition and then read the row
+back, is wrong in two ways. The file could disagree with the record it claims to describe, and a
+read that failed *after* a successful transition would leave a proposal permanently `EXPORTED` with
+no file ever delivered — unrecoverable, because `EXPORTED` is terminal and there is no second
+attempt.
+
+That is what `_transition`'s `project` parameter exists for, and it has exactly one caller. The
+lifecycle check and the row lock are the part that must not be duplicated: a second write path that
+forgot either would let two people export one proposal.
+
+The document carries `input_hash`, which no API response returns, and the full audit log *including
+the `EXPORTED` row the export itself just wrote*. Self-describing on purpose — a document whose log
+stops at `APPROVED` cannot show that it is the export it claims to be.
+
+### A batch export is not a decision, and is not logged
+
+`POST /api/v1/padnext/batch/{id}/export` changes no status and writes no audit row. It renders a
+computation that already finished, so the same ZIP can be downloaded repeatedly and is byte-identical
+each time; there is nothing for a second export to contradict. `audit_events` is keyed to a proposal
+anyway — if batch access ever needs logging it needs its own table, not a foreign key bent to fit.
+
+Only a `COMPLETED` batch can be exported. A running one would produce totals that are a snapshot of
+an unidentifiable moment and a `FAILED` one has no roll-up at all; both are `409`.
 
 ### `VIEWED` is opt-in
 
@@ -264,6 +305,72 @@ A batch is processed in the same process that accepted it, so a restart mid-run 
 MVP's no-Celery, no-Redis constraint, and it is stated rather than hidden: `GET` reports the real
 state, the web app stops polling after fifteen minutes and says why, and re-uploading the files
 produces a fresh batch. A durable queue is the fix when one is wanted.
+
+---
+
+## `rule_reviews`
+
+One rule, and what a billing expert concluded about it. Behind `GET /api/v1/rules/review-queue` and
+`POST /api/v1/rules/{rule_id}/review`; merged by `RuleStore.with_reviews`.
+
+| column | type | notes |
+| --- | --- | --- |
+| `id` | `uuid` PK | |
+| `rule_id` | `varchar(128)`, **unique**, indexed | names a row in `data/rules/*.csv` |
+| `status` | `varchar(16)`, indexed | `VERIFIED` \| `REJECTED` \| `PENDING` |
+| `reviewed_by` | `varchar(256)`, nullable | required by the API for a decision; null for `PENDING` |
+| `reviewed_at` | `timestamptz`, nullable | stamped on a decision, cleared on `PENDING` |
+| `review_notes` | `text`, nullable | why. The most valuable column in the table |
+| `created_at` / `updated_at` | `timestamptz` | `updated_at` says when the *current* answer was reached |
+
+Plus a composite `(status, rule_id)` — "everything decided one way" is what the merge reads.
+
+### It is an overlay, not a copy
+
+859 of the engine's 894 constraint rules were extracted from the GOÄ's prose automatically and
+enforce nothing until a human checks them. This table is where that check is recorded. The CSVs are
+**never written**: they are versioned source data, a change to them is a reviewed PR needing a
+second approver (`CONTRIBUTING.md`), and an API that edited them would route around exactly that
+control.
+
+    data/rules/*.csv  ─┐
+                       ├─►  RuleStore.with_reviews(…)  ─►  the store the pipeline holds
+    rule_reviews      ─┘
+
+The merge deliberately does **not** live in `RuleStore.load()`. That function is synchronous and
+`lru_cache`d, the driver is async, and `import app.main` has to work with no Postgres — for an
+OpenAPI export, in CI, on a laptop. So the rules layer takes a plain `rule_id -> status` mapping and
+knows nothing about a database; `app/services/rule_reviews.py` is the only module that does.
+
+### No foreign key, and that is the right failure
+
+`rule_id` names a row in a CSV, which no database constraint can reach. A review can therefore
+outlive the rule it refers to: if a data change deletes `excl_auto_30_4`, its row here becomes inert
+rather than invalid, the merge simply never finds it, and nobody's recorded decision is destroyed by
+an import.
+
+### Not append-only, unlike `audit_events`
+
+A reviewer changing their mind about a machine-extracted exclusion is a normal event, not a
+falsification. Nobody's liability attaches to it the way it attaches to an approval, and the rule set
+is a working document. The endpoint upserts. If the *history* of a rule's verdict ever matters, that
+is a second table, not a reinterpretation of this one.
+
+### `REJECTED` outranks the policy
+
+`UNVERIFIED_RULE_POLICY=block` enforces rules nobody has looked at. A rule somebody looked at and
+refused is the opposite, so it is never enforced under any policy — and it is deliberately not
+counted in `unverified_rule_count` either. A refusal is a decision, not a gap; counting it as a gap
+would mean the review queue could never empty.
+
+### A review moves `rules_hash`
+
+`rules_hash` feeds the **receipt hash** and the **result-cache key**. If a review changed what is
+enforced without moving it, two proposals with one receipt hash could describe different rule sets —
+the receipt would be lying — and the cache would serve an answer computed before the rule was
+verified. `effective_rules_hash` folds the decided reviews in, and returns the CSV digest **byte for
+byte unchanged** when there are none, so a deployment that never uses the queue hashes exactly as it
+did before the feature existed. Every existing golden receipt stays valid.
 
 ---
 

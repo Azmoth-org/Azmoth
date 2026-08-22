@@ -21,6 +21,12 @@ What this layer is responsible for:
 * **Every decision writes an audit row in the same transaction as the decision.** Not afterwards and
   not in a background task: a status that changed without a matching event, or an event without the
   status change, would each be a record nobody can defend.
+* **An export is built inside the transaction that records it.** `export_proposal_document` marks
+  the row `EXPORTED`, writes the audit event and assembles the downloadable document from that same
+  row, before the commit. Reading the row back afterwards would be simpler and subtly wrong in two
+  ways: the file could disagree with the record it claims to be, and a read that failed after a
+  successful transition would leave a proposal permanently `EXPORTED` with no file ever delivered —
+  unrecoverable, because `EXPORTED` is terminal.
 
 What it deliberately does not do: delete. There is no `delete_proposal` and no eviction. The old
 dictionary dropped its oldest entry past 512 to bound memory; a durable store that silently discarded
@@ -30,7 +36,8 @@ approvals would be worse than one that ran out of disk, because only one of thos
 from __future__ import annotations
 
 import logging
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,6 +46,11 @@ from app.core.canonical import sha256_of
 from app.db.models import AuditEvent, AuditEventType, ProposalRecord, as_utc, utcnow
 from app.db.session import Database, get_database
 from app.schemas import Proposal, ProposalStatus, RuleCoverage
+from app.schemas.export import ProposalExport
+from app.services.export import build_proposal_export
+
+#: What a transition's projector returns. See `_transition`.
+T = TypeVar("T")
 
 log = logging.getLogger(__name__)
 
@@ -263,23 +275,34 @@ class ProposalStore:
         """
         async with self.database.session() as session:
             record = await self._require(session, proposal_id)
-            statement = (
-                select(AuditEvent)
-                .where(AuditEvent.proposal_id == record.id)
-                .order_by(AuditEvent.timestamp, AuditEvent.id)
-            )
-            events = (await session.execute(statement)).scalars().all()
-            return [
-                {
-                    "id": str(event.id),
-                    "proposal_id": record.proposal_id,
-                    "event_type": event.event_type,
-                    "actor": event.actor,
-                    "timestamp": as_utc(event.timestamp),
-                    "metadata": event.metadata_json,
-                }
-                for event in events
-            ]
+            return await self._events_for(session, record)
+
+    @staticmethod
+    async def _events_for(
+        session: AsyncSession, record: ProposalRecord
+    ) -> list[dict[str, Any]]:
+        """The log for one proposal, oldest first, read on a session the caller already holds.
+
+        Split out so the export can read the log inside its own transaction — including the
+        `EXPORTED` row it just wrote, which a separate session would not see until after the commit.
+        """
+        statement = (
+            select(AuditEvent)
+            .where(AuditEvent.proposal_id == record.id)
+            .order_by(AuditEvent.timestamp, AuditEvent.id)
+        )
+        events = (await session.execute(statement)).scalars().all()
+        return [
+            {
+                "id": str(event.id),
+                "proposal_id": record.proposal_id,
+                "event_type": event.event_type,
+                "actor": event.actor,
+                "timestamp": as_utc(event.timestamp),
+                "metadata": event.metadata_json,
+            }
+            for event in events
+        ]
 
     async def count(self, *, status: ProposalStatus | None = None) -> int:
         statement = select(func.count()).select_from(ProposalRecord)
@@ -346,9 +369,54 @@ class ProposalStore:
     async def export_proposal(
         self, proposal_id: str, *, actor: str = SYSTEM_ACTOR
     ) -> Proposal:
-        """Record that an APPROVED proposal left the system. Only reachable from APPROVED."""
+        """Record that an APPROVED proposal left the system. Only reachable from APPROVED.
+
+        Returns the updated proposal and no document. Kept for callers that only need the status
+        change; the endpoint uses `export_proposal_document`, which does the same transition and
+        additionally builds the file.
+        """
         return await self._transition(
             proposal_id, ProposalStatus.EXPORTED, actor=actor or SYSTEM_ACTOR
+        )
+
+    async def export_proposal_document(
+        self, proposal_id: str, *, exported_by: str, note: str = ""
+    ) -> ProposalExport:
+        """Mark an APPROVED proposal `EXPORTED` and return the file, from one transaction.
+
+        `exported_by` is required for the same reason `approved_by` is: an export is something a
+        person did, and the audit log has to be able to say who. It is recorded, not authenticated
+        — there is no login in front of this service.
+
+        The audit events are read *after* the `EXPORTED` row has been flushed and *before* the
+        commit, so the document contains the event describing its own creation. That is not a trick
+        for its own sake: an exported file whose log stops at `APPROVED` cannot prove it is the
+        export it claims to be.
+        """
+        if not exported_by or not exported_by.strip():
+            raise ValueError(
+                "exported_by is required: an export nobody is recorded as having taken cannot be "
+                "accounted for later"
+            )
+        actor = exported_by.strip()
+
+        async def project(session: AsyncSession, record: ProposalRecord) -> ProposalExport:
+            # `record.exported_at` was set by the transition a few lines up, so the document's
+            # timestamp is the one in the row rather than a second `utcnow()` that would differ
+            # from it by however long the flush took.
+            return build_proposal_export(
+                record,
+                events=await self._events_for(session, record),
+                exported_by=actor,
+                exported_at=as_utc(record.exported_at),
+            )
+
+        return await self._transition(
+            proposal_id,
+            ProposalStatus.EXPORTED,
+            actor=actor,
+            metadata={"note": note.strip()} if note and note.strip() else None,
+            project=project,
         )
 
     # -- internals -------------------------------------------------------------------------
@@ -361,12 +429,20 @@ class ProposalStore:
         actor: str,
         reason: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> Proposal:
+        project: Callable[[AsyncSession, ProposalRecord], Awaitable[T]] | None = None,
+    ) -> T | Proposal:
         """Read-check-write plus the audit row, in one transaction, under a row lock.
 
         The lock is what makes the check meaningful. Without it, two approvals arriving together
         both read `DRAFT`, both pass, and both write — leaving one proposal with two approvers and
         an audit log that records both as having taken responsibility.
+
+        `project` turns the written row into whatever the caller needs *before* the commit, and
+        exists for exactly one caller: the export, which has to produce a document that cannot
+        disagree with the record. Everything else takes the default and gets a `Proposal`. It is a
+        parameter rather than a second copy of this method because the lifecycle check and the lock
+        are the part that must not be duplicated — a second write path that forgot either would be
+        a bug nobody notices until two people export the same proposal.
         """
         async with self.database.session() as session:
             record = await self._require(session, proposal_id, for_update=True)
@@ -404,6 +480,8 @@ class ProposalStore:
             )
             await session.flush()
             log.info("proposal %s %s by %s", proposal_id, to, actor)
+            if project is not None:
+                return await project(session, record)
             return _to_proposal(record)
 
     async def _require(
@@ -453,6 +531,7 @@ __all__ = [
     "SYSTEM_ACTOR",
     "IllegalTransition",
     "IllegalTransitionError",
+    "ProposalExport",
     "ProposalNotFound",
     "ProposalStore",
     "input_hash_of",
