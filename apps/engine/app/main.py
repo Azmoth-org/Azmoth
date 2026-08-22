@@ -4,9 +4,14 @@ Five routers, one prefix (`/api/v1`), no UI. The engine serves an API and nothin
 static pages, its demo endpoints and its experimental free-text path are deliberately absent — see
 `docs/migration/MIGRATION_PLAN.md` §2.
 
-Every path function that reaches a solver is a plain `def`. Soufflé is a subprocess and Clingo runs
-in-process; both block. FastAPI dispatches sync path functions to its threadpool, so the event loop
-stays free. Declaring them `async def` would serialise the whole service behind one solve.
+No solver ever runs on the event loop. Soufflé is a subprocess and Clingo runs in-process; both
+block, so a solve either sits in a plain `def` path function (which FastAPI dispatches to its
+threadpool) or is handed to that same pool explicitly with `run_in_threadpool` — which is what
+`/solve` does now that it also has to await a database write. Either way the loop stays free;
+running a solve directly in an `async def` would serialise the whole service behind it.
+
+The database is opened and closed by the lifespan, not on first use, so a bad `DATABASE_URL` fails
+at startup rather than on somebody's first approval.
 """
 
 from __future__ import annotations
@@ -17,9 +22,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api import catalog, health, padnext, proposals, solve
-from app.api.deps import pipeline
+from app.api.deps import pipeline, reset_async
 from app.config import get_settings
 from app.core.limits import RequestSizeLimitMiddleware
+from app.db.session import get_database, init_models
 
 settings = get_settings()
 
@@ -35,6 +41,21 @@ API_PREFIX = "/api/v1"
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     p = pipeline()
+
+    # Before anything else: a service that cannot record an approval must not accept one. The
+    # connection is opened here rather than lazily so that a wrong DATABASE_URL, a missing
+    # migration or an unreachable Postgres is a startup failure with a stack trace, instead of a
+    # 500 on the first reviewer who presses Freigeben.
+    database = get_database()
+    await init_models(database)
+    if not settings.database_is_durable:
+        log.warning(
+            "database is %s (%s) — a single-file store with one writer and no encryption at rest. "
+            "Fine for development and the test suite; set DATABASE_URL to Postgres for anything "
+            "an approval has to survive in.",
+            settings.database_backend,
+            database.url,
+        )
 
     if not p.souffle.available():
         log.error(
@@ -72,7 +93,13 @@ async def lifespan(_app: FastAPI):
         "on" if p.cache.enabled else "off",
         settings.solver_timeout_seconds,
     )
-    yield
+    log.info("database: %s (durable=%s)", database.url, settings.database_is_durable)
+    try:
+        yield
+    finally:
+        # Dispose the pool on the way out. Without this, `TestClient` in a suite of hundreds of
+        # cases accumulates one engine — and on SQLite one open file handle — per app instance.
+        await reset_async()
 
 
 app = FastAPI(

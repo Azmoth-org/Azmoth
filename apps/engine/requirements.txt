@@ -14,6 +14,21 @@ clingo==5.8.0
 
 httpx==0.28.1
 
+# -- persistence -------------------------------------------------------------------------------
+# Proposals and the audit log live in Postgres in production. Pinned for the same reason as the
+# solvers: a schema this service migrates must not move under it between environments.
+#
+# `sqlalchemy[asyncio]` pulls in greenlet, which is what lets the sync ORM internals run under an
+# async driver. asyncpg is the production driver; aiosqlite is the local/test one and is NOT
+# optional — DATABASE_URL defaults to sqlite+aiosqlite, so the suite needs it.
+sqlalchemy[asyncio]==2.0.52
+asyncpg==0.31.0
+aiosqlite==0.22.1
+
+# Schema migrations. The container runs `alembic upgrade head` before uvicorn, so alembic is a
+# runtime dependency of the image, not a dev tool.
+alembic==1.19.1
+
 # -- development / test ------------------------------------------------------------------------
 pytest==9.1.1
 pytest-asyncio==1.4.0

@@ -67,3 +67,11 @@ data/licensed/*
 # Raw downloads are large and reproducible from data/raw/manifest.json; the XML the committed
 # catalog was actually built from is the one exception and is tracked deliberately.
 data/raw/*.zip
+
+# Local SQLite databases. DATABASE_URL defaults to `sqlite+aiosqlite:///./test.db`, so a plain
+# `uvicorn app.main:app` in apps/engine leaves one behind — it holds proposals and must never be
+# committed or baked into an image.
+**/test.db
+**/*.sqlite
+**/*.sqlite3
+apps/engine/*.db

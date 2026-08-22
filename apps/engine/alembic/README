@@ -1,0 +1,27 @@
+Migrations for the engine's two tables (`proposals`, `audit_events`).
+
+Run them from `apps/engine`, which is where `alembic.ini` lives:
+
+    alembic upgrade head        apply everything
+    alembic current             what revision this database is at
+    alembic history --verbose   the full history
+    alembic downgrade -1        undo the last migration
+
+The database URL is NOT in `alembic.ini`. It comes from `DATABASE_URL` via `app.config.Settings`, so
+these commands act on exactly the database the service would use:
+
+    DATABASE_URL=postgresql+asyncpg://govatax:govatax@localhost:5432/govatax alembic upgrade head
+
+The container runs `alembic upgrade head` before uvicorn (see the Dockerfile's entrypoint), so a
+deploy migrates itself. Local development does not need any of this: `DATABASE_AUTO_CREATE=true` is
+the default and creates the tables directly — but note that a database built that way has no
+revision stamp, so `alembic upgrade head` against it will try to create tables that already exist.
+Delete the SQLite file, or `alembic stamp head`, before switching a dev database over.
+
+To add a migration after changing `app/db/models.py`:
+
+    alembic revision --autogenerate -m "what changed"
+
+Then READ the generated file. Autogenerate does not see a rename (it emits a drop plus an add,
+which loses the data), and it cannot know that `audit_events` is append-only — a migration that
+rewrites audit rows is a compliance event, not a schema change.
