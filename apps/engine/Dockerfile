@@ -53,8 +53,15 @@ COPY apps/engine/app ./app
 COPY apps/engine/scripts ./scripts
 COPY apps/engine/tests ./tests
 COPY apps/engine/pytest.ini ./pytest.ini
+# The migration history and its Alembic configuration are part of the image, not a dev-only
+# artefact: the container migrates itself on start (see the entrypoint), so `alembic upgrade head`
+# has to be runnable inside it.
+COPY apps/engine/alembic ./alembic
+COPY apps/engine/alembic.ini ./alembic.ini
 COPY logic ./logic
 COPY data ./data
+
+RUN chmod +x /srv/scripts/docker-entrypoint.sh
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -69,7 +76,18 @@ ENV PYTHONUNBUFFERED=1 \
     BASE_FACTOR_POLICY=schwellenwert \
     SOLVER_TIMEOUT_SECONDS=5 \
     CACHE_ENABLED=true \
-    PADNEXT_ALLOW_REAL_DATA=false
+    PADNEXT_ALLOW_REAL_DATA=false \
+    DATABASE_AUTO_CREATE=false
+# Two things about the database are set above, and one deliberately is not.
+#
+# DATABASE_AUTO_CREATE=false: the schema comes from `alembic upgrade head` in the entrypoint, never
+# from `create_all`. A schema that appeared without a migration has no rollback and no history, and
+# app/db/session.py refuses create_all under APP_ENV=production for exactly that reason.
+#
+# There is NO DATABASE_URL default. Any default would be wrong: a SQLite path is refused by the
+# production guard and unwritable anyway (/srv is root-owned and the runtime user is 10001), and a
+# hostname is something only the deployment knows. Without it the container fails at startup naming
+# the variable — the right outcome for a service whose job is to keep a record it cannot keep.
 
 # Fail the build if the shipped data cannot actually drive a coding run. Catching a broken catalog
 # or a missing logic program here is much cheaper than catching it in front of a user.
@@ -90,4 +108,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 d=json.load(urllib.request.urlopen('http://localhost:8000/api/v1/health')); \
 sys.exit(0 if d['souffle_available'] and d['status']=='ok' else 1)"
 
+# Migrations run in the entrypoint, so they happen whatever `command:` a compose file or an
+# orchestrator supplies. See scripts/docker-entrypoint.sh for why this is not a chained CMD.
+ENTRYPOINT ["/srv/scripts/docker-entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

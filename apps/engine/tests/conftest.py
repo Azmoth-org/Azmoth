@@ -7,6 +7,20 @@ architectural claim, and the tests exercise it directly.
 Cases and golden snapshots come from the monorepo's `logic/tests/` directory, resolved through
 `app.config` rather than a path relative to this file, so the suite does not depend on which
 directory pytest was invoked from or on where `LOGIC_DIR` points.
+
+**The database.** `DATABASE_URL` is forced to in-memory SQLite here, at import time — before
+`app.main` is imported and before `get_settings()` is first called — so a developer's `.env` or a
+`DATABASE_URL` exported for a psql session can never point the suite at a real database and write
+test proposals into it. In-memory rather than a file for a reason that is also the isolation
+mechanism: for SQLite, the connection *is* the database, so every new engine gets an empty one and
+a test cannot see the proposals of the test before it. `tests/test_db_persistence.py` is the
+exception — it needs a store that outlives its connection, so it builds a file-backed one in
+`tmp_path` and reopens it.
+
+This means the suite does not exercise Postgres. `POSTGRES_TEST_URL` is honoured by
+`tests/test_db_persistence.py`, which runs the same assertions against a real server when one is
+pointed at — see that module for the command. CI runs SQLite; the dialect-specific behaviour
+(JSONB, `FOR UPDATE`, timezone-aware timestamps) is what that variable is for.
 """
 
 from __future__ import annotations
@@ -16,6 +30,21 @@ import os
 from decimal import Decimal
 
 import pytest
+
+# Set before any `app.*` import below, because `Settings` reads the environment once and
+# `get_settings()` caches it. Assignment rather than `setdefault`: an inherited DATABASE_URL must be
+# overridden, not respected — a suite that wrote test proposals into a real database because the
+# shell happened to export one would be a serious accident.
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+os.environ["DATABASE_AUTO_CREATE"] = "true"
+
+# The container image sets APP_ENV=production, and CI runs this suite inside it. Two production
+# guards would fire on that: `create_all` is refused in production (the schema must come from a
+# migration) and so is a non-Postgres DATABASE_URL. Both are correct for a running service and both
+# are wrong for a test run, which is not a deployment — so the suite says what it is. It is also why
+# `test_the_required_settings_all_exist_with_the_mandated_defaults` asserts on field defaults rather
+# than on `Settings()`: the environment here belongs to the harness, not to the product.
+os.environ["APP_ENV"] = "development"
 
 from app.api import deps
 from app.bridge.entity_to_ziffer import BridgeResult
@@ -29,9 +58,11 @@ from app.config import (
     Settings,
     UnverifiedRulePolicy,
 )
+from app.db.session import Database
 from app.rules.rule_store import RuleStore
 from app.schemas import ClinicalAct, ClinicalExtraction, CodeCandidate
 from app.services.pipeline import Pipeline
+from app.services.proposal_store import ProposalStore
 from app.solvers.clingo_solver import ClingoSolver
 from app.solvers.souffle_engine import SouffleEngine
 from app.validation.validator import Validator
@@ -83,6 +114,8 @@ def settings() -> Settings:
         base_factor_policy=BaseFactorPolicy.SCHWELLENWERT,
         solver_timeout_seconds=5.0,
         cache_enabled=True,
+        database_url="sqlite+aiosqlite:///:memory:",
+        database_auto_create=True,
     )
 
 
@@ -123,12 +156,38 @@ def pipeline(settings, catalog, rules):
 
 
 @pytest.fixture
+async def database(settings) -> Database:
+    """An isolated in-memory database with both tables created, disposed afterwards.
+
+    For the tests that drive the store directly rather than through HTTP. It is not the singleton:
+    it is handed to `ProposalStore(database)` explicitly, so nothing global is touched and a
+    failure here cannot leak into a test that uses `client`.
+    """
+    db = Database(settings)
+    await db.create_all()
+    try:
+        yield db
+    finally:
+        await db.dispose()
+
+
+@pytest.fixture
+async def store(database) -> ProposalStore:
+    return ProposalStore(database)
+
+
+@pytest.fixture
 def client():
     """A TestClient over the real app, with the shared singletons rebuilt for each test.
 
-    Resetting is what keeps the proposal-store tests independent of each other: the store is a
-    process-wide singleton by design, so a test that approved something would otherwise be visible
-    to the next one.
+    Resetting is what keeps the proposal-store tests independent of each other. It used to be about
+    a process-wide dictionary; it is now about the connection pool. `TestClient.__enter__` runs the
+    lifespan, which builds a `Database` and creates the schema, and `__exit__` disposes it — and
+    because `DATABASE_URL` is in-memory SQLite, disposing the engine destroys the database. Each
+    test therefore starts from an empty `proposals` table without anything having to delete rows.
+
+    The pre-emptive `deps.reset()` is belt and braces: the lifespan's own teardown already ran it,
+    but a test that raised inside the `with` block must not hand its pipeline to the next one.
     """
     from fastapi.testclient import TestClient
 
@@ -140,6 +199,15 @@ def client():
             _require_or_skip(deps.pipeline().settings)
         yield test_client
     deps.reset()
+
+
+def approve(client, proposal_id: str, by: str = "Dr. Beispiel", note: str = "") -> dict:
+    """POST an approval and return the updated proposal, failing loudly if it was refused."""
+    response = client.post(
+        f"/api/v1/proposals/{proposal_id}/approve", json={"approved_by": by, "note": note}
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
 
 
 @pytest.fixture(scope="session")

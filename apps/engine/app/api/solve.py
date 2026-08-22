@@ -1,9 +1,14 @@
 """`POST /api/v1/solve` — clinical entities in, a receipted DRAFT proposal out.
 
-Declared `def`, not `async def`, deliberately: the pipeline shells out to Soufflé and runs Clingo
-in-process, both CPU-bound and both blocking. FastAPI runs a sync path function in its threadpool,
-so the event loop keeps serving while a solve is in flight. Making this `async def` would block
-every other request for the duration of the solve.
+The handler is `async def` and the *solve* is not. The pipeline shells out to Soufflé and runs
+Clingo in-process, both CPU-bound and both blocking, so running it on the event loop would stall
+every other request for its duration — it goes to the threadpool via `run_in_threadpool`, which is
+the same pool FastAPI would have used for a plain `def` handler. What changed is that persisting the
+result is now a database write, and awaiting it directly is much better than the alternative: a sync
+handler would have to bridge back to the loop from a worker thread to reach the async driver, which
+works but hides a foot-gun for the next person to touch this file.
+
+So: the CPU-bound part still runs off the loop, and the I/O-bound part is awaited on it.
 """
 
 from __future__ import annotations
@@ -11,6 +16,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, HTTPException
+from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import pipeline, proposals
 from app.schemas import Proposal, SolveRequest
@@ -24,7 +30,7 @@ router = APIRouter(tags=["solve"])
 
 
 @router.post("/solve", response_model=Proposal)
-def solve(request: SolveRequest) -> Proposal:
+async def solve(request: SolveRequest) -> Proposal:
     """Run the deterministic pipeline and store the result as a DRAFT proposal.
 
     The response is a proposal, never an invoice: `status` is `DRAFT` and stays there until a
@@ -32,8 +38,11 @@ def solve(request: SolveRequest) -> Proposal:
     the catalog, rule tables, logic programs, solver versions, policy and input that produced it.
     """
     try:
-        proposal = pipeline().propose(
-            request.extraction, setting=request.setting, case_id=request.case_id
+        proposal = await run_in_threadpool(
+            pipeline().propose,
+            request.extraction,
+            setting=request.setting,
+            case_id=request.case_id,
         )
     except ValidationFailed as exc:
         # Independent validation contradicted the solver. Never returned as a valid invoice.
@@ -73,4 +82,7 @@ def solve(request: SolveRequest) -> Proposal:
             detail={"error": "optimizer_failed", "message": str(exc), "program": exc.program},
         ) from exc
 
-    return proposals().put(proposal)
+    # Read back off the row that was written, not echoed from the object in hand: if persisting
+    # ever lost or mangled a field, the first request would say so instead of the first restart.
+    # The `CREATED` audit event is written in the same transaction.
+    return await proposals().create_proposal(proposal)

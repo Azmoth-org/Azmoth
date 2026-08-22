@@ -232,10 +232,18 @@ billed. Approval requires `approved_by`: an approval nobody signed is not an app
 computation is still returned as a fresh `DRAFT` with a new id, because the *result* is reusable and
 the *responsibility* for it is not.
 
-The store is in-memory, and that is a deliberate non-decision rather than an oversight. A real
-approval record is a retention policy, an access-control model and an audit log before it is a
-database schema, and all three are legal questions first. See
-[`../compliance/PRIVATE_DATA_WARNING.md`](../compliance/PRIVATE_DATA_WARNING.md).
+The store is Postgres, and the decision is written down where it was made: the module used to
+argue that a real approval record is a retention policy, an access-control model and an audit log
+before it is a database schema. Two of those three are still open — but the audit log was never a
+reason to postpone a database, it is what one is *for*, and an approval that died with the process
+could not answer the only question that matters about it: who accepted this, and when.
+
+So: `proposals` and an append-only `audit_events`, every decision and its event in one transaction,
+the lifecycle enforced under a row lock, and a refusal to start in production on anything but
+Postgres. Retention and access control remain open and are tracked as open in
+[`../compliance/PRIVATE_DATA_WARNING.md`](../compliance/PRIVATE_DATA_WARNING.md) — above a durable
+record now, rather than instead of one. Schema and migration commands:
+[`DATABASE.md`](DATABASE.md).
 
 ## What the engine deliberately does not do
 

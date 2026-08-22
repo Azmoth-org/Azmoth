@@ -9,8 +9,14 @@ found — which resolves correctly from a checkout (`apps/engine/app/config.py` 
 from the container image (`/srv/app/config.py` → `/srv`). Either can be overridden by an
 environment variable, which is how the Docker image and any future deployment point at them.
 
-**Manual mode is the default and needs no configuration.** Nothing here requires an API key, a
-network call, or a secret of any kind. `.env.example` is a complete description of the knobs.
+**Manual mode is the default and needs no configuration.** No API key, no model, no network call
+is required to code a case: `DATABASE_URL` is the only setting that names an external service, and
+it defaults to a local SQLite file so the suite and a bare `uvicorn` run with nothing configured.
+It is also the only setting that can carry a credential in production — `.env.example` documents
+it without one, and nothing here logs its value.
+
+`.env.example` is a complete description of the knobs; `tests/test_production_fixes.py` asserts
+that, so a new setting that is not documented there fails the suite.
 """
 
 from __future__ import annotations
@@ -126,6 +132,34 @@ class Settings(BaseSettings):
     cache_enabled: bool = True
     cache_max_entries: int = Field(default=256, ge=1)
 
+    # -- database -----------------------------------------------------------------------
+    #: Where proposals and the audit log live. A SQLAlchemy async URL, so the driver is part of
+    #: the value: `postgresql+asyncpg://…` in production, `sqlite+aiosqlite://…` locally.
+    #:
+    #: The default is SQLite so that `pytest` and a bare `uvicorn` need no server — but SQLite is
+    #: NOT a deployment target: it has one writer, no concurrent workers and no encryption at
+    #: rest, and `docker-compose.yml` therefore sets `DATABASE_URL` to the Postgres service.
+    #: `database_is_durable` is what the startup log warns on, so running on the wrong one is
+    #: visible in the first ten lines of a container's output rather than assumed.
+    #:
+    #: Deliberately NOT reported by `GET /api/v1/health`: that would add a field to `HealthResponse`
+    #: and therefore to the OpenAPI document, and this migration's contract with the frontend is
+    #: that the document does not move. Surfacing it is a separate, deliberate API change.
+    database_url: str = "sqlite+aiosqlite:///./test.db"
+
+    #: Echo every statement. Separate from `debug` because SQL echo is far noisier than the rest
+    #: of debug logging and, on a service that holds patient data, is a log-leak risk.
+    database_echo: bool = False
+
+    #: Connections held open per worker. Ignored by SQLite, which has no pool worth sizing.
+    database_pool_size: int = Field(default=5, ge=1)
+    database_max_overflow: int = Field(default=10, ge=0)
+
+    #: Run `Base.metadata.create_all()` at startup instead of requiring Alembic. True is right for
+    #: the SQLite default and for the test suite; it is refused in production (see
+    #: `app.db.session.init_models`), where the schema must arrive through a reviewed migration.
+    database_auto_create: bool = True
+
     # -- paths --------------------------------------------------------------------------
     logic_dir: Path = LOGIC_DIR
     data_dir: Path = DATA_DIR
@@ -186,6 +220,22 @@ class Settings(BaseSettings):
     @property
     def golden_dir(self) -> Path:
         return self.logic_dir / "tests" / "golden"
+
+    @property
+    def database_backend(self) -> str:
+        """`postgresql`, `sqlite`, … — the dialect name, without the driver."""
+        scheme = self.database_url.split("://", 1)[0]
+        return scheme.split("+", 1)[0]
+
+    @property
+    def database_is_durable(self) -> bool:
+        """Whether the configured database is one an approval may be trusted to survive in.
+
+        SQLite is a real database and it does survive a restart, so this is not about persistence
+        — it is about the deployment claim: one writer, one file, no replication, no encryption at
+        rest. An approval that a Rechnungsprüfer may be shown must not live there.
+        """
+        return self.database_backend == "postgresql"
 
     # -- versions -----------------------------------------------------------------------
 

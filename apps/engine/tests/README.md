@@ -1,6 +1,6 @@
 # `apps/engine/tests`
 
-570 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
+631 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
 behaviour the POC did not have. **None was weakened to make the migration pass** — where a
 migrated test failed only because a path moved, the path was fixed; where it asserted on an
 artefact this monorepo does not contain (the POC's static UI), the assertion moved to the contract
@@ -32,7 +32,7 @@ count, or run in the image where the binary is always there.
 
 ```
 $ .venv/bin/python -m pytest -q
-570 passed in 20.43s        # no skips: the engines were present
+627 passed, 4 skipped in 23.4s    # the 4 skips are the Postgres parametrisations; see below
 ```
 
 ## What each file is for
@@ -55,6 +55,43 @@ $ .venv/bin/python -m pytest -q
 | `test_api_envelope.py` | 10 | both accepted request shapes, and that tolerating the bare one did not weaken typo detection |
 | `test_import_goae.py` | 29 | the importer's parsing decisions — whether the catalog is trustworthy |
 | `test_request_limits.py` | 7 | oversized bodies refused at the perimeter, before they are buffered |
+| `test_db_persistence.py` | 27 | **durability** — an approval survives a real restart; the lifecycle under a row lock; the migration matches the models |
+| `test_audit_log.py` | 15 | the audit log records what happened, in order, with an actor — and cannot be rewritten |
+
+## The database, and why the suite does not use yours
+
+`DATABASE_URL` is forced to `sqlite+aiosqlite:///:memory:` in `conftest.py`, at import time, before
+`app.main` is imported. Two reasons, and the first is the important one:
+
+1. **Safety.** An inherited `DATABASE_URL` — exported for a `psql` session, or sitting in a `.env` —
+   must not be able to make the suite write test proposals into a real database.
+2. **Isolation.** For SQLite the connection *is* the database, so every new engine gets an empty one
+   and a test cannot see the rows of the test before it. Nothing has to truncate anything.
+
+`APP_ENV` is forced to `development` for the same kind of reason: the container image sets
+`APP_ENV=production`, CI runs this suite inside it, and two production guards would fire on that
+(`create_all` is refused in production, and so is a non-Postgres URL). Both are correct for a running
+service and wrong for a test run, which is not a deployment.
+
+**`test_db_persistence.py` is the exception.** Durability cannot be tested against an in-memory
+database — closing the connection *is* the restart, and it takes the data with it — so those tests
+build a file-backed database in `tmp_path`, dispose the engine completely, open a second one against
+the same file and read the record back.
+
+Every test in that module is parametrised over both supported dialects. The Postgres half runs only
+when pointed at a scratch server, and skips with a message naming the variable when it is not — CI's
+`engine-database` job is what sets it:
+
+```bash
+docker run --rm -d -p 5433:5432 -e POSTGRES_PASSWORD=test --name goae-test-db postgres:15-alpine
+POSTGRES_TEST_URL=postgresql+asyncpg://postgres:test@localhost:5433/postgres \
+  .venv/bin/python -m pytest tests/test_db_persistence.py -v
+```
+
+Also here: `test_the_migration_and_the_models_describe_the_same_schema` runs `alembic upgrade head`
+and `Base.metadata.create_all` into two scratch databases and compares them. It catches the ordinary
+drift — a column added to the models, a suite that passes because it uses `create_all`, and a deploy
+that migrates into a schema without it.
 
 ## The golden tests
 
@@ -112,8 +149,14 @@ needs legal and domain review — see [`logic/README.md`](../../../logic/README.
 Shared fixtures are in `conftest.py`. The important ones:
 
 - `settings` — explicit defaults, so a developer's `.env` can never change what the suite asserts.
-- `client` — a `TestClient` with the process-wide singletons rebuilt per test, which is what keeps
-  the proposal-store tests independent of each other.
+- `client` — a `TestClient` with the process-wide singletons rebuilt per test. That used to be about
+  a dictionary and is now about the connection pool: `__enter__` runs the lifespan (which builds a
+  `Database` and creates the schema) and `__exit__` disposes it, and because `DATABASE_URL` is
+  in-memory SQLite, disposing the engine destroys the database. Each test therefore starts from an
+  empty `proposals` table without anything having to delete rows.
+- `database` / `store` — an isolated in-memory database with both tables created, and a
+  `ProposalStore` bound to it. For the tests that drive the store below HTTP. Not the singleton, so
+  nothing global is touched.
 - `solve_payload(client, extraction)` / `solve_proposal(...)` — POST `/api/v1/solve` and return the
   invoice draft, or the whole proposal envelope.
 - `make_bridge` / `one_act_per_ziffer` / `make_extraction` — drive one symbolic layer with synthetic

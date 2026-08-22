@@ -1,11 +1,52 @@
-# Run the engine from the monorepo root:
+# Run the engine and its database from the monorepo root:
 #
-#     docker compose -f infra/docker/docker-compose.yml up --build engine
+#     docker compose -f infra/docker/docker-compose.yml up --build
 #
 # The build context is the repo root, because the image needs `logic/` and `data/`, which live
 # outside `apps/engine` by design.
+#
+# Two services. `postgres` holds the proposals and the immutable audit log; `engine` migrates it on
+# start (`alembic upgrade head`, in the image's entrypoint) and then serves the API. There is no
+# in-memory fallback: the engine refuses to start under APP_ENV=production without a Postgres
+# DATABASE_URL, which is the point of this stack existing rather than a bare `uvicorn`.
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    # No `container_name`, for the same reason the engine has none: a fixed name collides with
+    # `docker compose run`.
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-govatax}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-govatax}"
+      POSTGRES_DB: "${POSTGRES_DB:-govatax}"
+      # Deterministic collation and encoding for a fresh cluster. Not cosmetic: `ORDER BY` on a
+      # Ziffer or a name is locale-dependent, and a database initialised under a different locale
+      # sorts differently — which would make a listing's order depend on the machine it was created
+      # on rather than on the data.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      # Published on 5432 so `psql` and `alembic` on the host can reach it. Override with
+      # POSTGRES_PORT if 5432 is already taken locally.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # A named volume, NOT a bind mount into the repo: this holds approval records, and a
+      # `git clean` must not be able to delete them. `docker compose down -v` is the deliberate way.
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # `pg_isready` against the real user and database, not the defaults: the postgres image
+      # accepts TCP connections during initdb, before it will accept a login, and a healthcheck
+      # that only proved the port was open would let the engine start and fail its first query.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-govatax} -d ${POSTGRES_DB:-govatax}",
+        ]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 10
+    restart: unless-stopped
+
   engine:
     build:
       context: ../..
@@ -14,6 +55,13 @@ services:
     # Deliberately no `container_name`: a fixed name makes `docker compose run` collide with the
     # already-running service and shut it down, which breaks running the tests in a second shell
     # while the API is up.
+    depends_on:
+      postgres:
+        # `service_healthy`, not `service_started`. The engine's first act is to migrate, and a
+        # migration against a cluster still running initdb fails. The entrypoint also retries for
+        # MIGRATION_WAIT_SECONDS, so the two together survive a slow first boot as well as a
+        # healthcheck that is momentarily wrong.
+        condition: service_healthy
     ports:
       - "8000:8000"
     environment:
@@ -27,6 +75,23 @@ services:
       SOUFFLE_BIN: souffle
       LOGIC_DIR: /srv/logic
       DATA_DIR: /srv/data
+
+      # -- database --------------------------------------------------------------------------
+      # `postgres` is the compose service name, resolved on the default network. The async driver
+      # is part of the URL: SQLAlchemy picks asyncpg from the `+asyncpg` suffix.
+      #
+      # The credentials here are the compose defaults and are development credentials. A real
+      # deployment supplies DATABASE_URL from its secret store; nothing in this repository should
+      # ever hold a production one, and CI fails the build if a credential-shaped string appears.
+      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-govatax}:${POSTGRES_PASSWORD:-govatax}@postgres:5432/${POSTGRES_DB:-govatax}}"
+      # The schema comes from `alembic upgrade head`, run by the entrypoint. Never create_all.
+      DATABASE_AUTO_CREATE: "false"
+      DATABASE_ECHO: "${DATABASE_ECHO:-false}"
+      # How long the entrypoint waits for Postgres to accept a login before giving up. Belt and
+      # braces alongside `depends_on: service_healthy`, which does not help when the database is
+      # behind a proxy that is up before the database is.
+      MIGRATION_WAIT_SECONDS: "${MIGRATION_WAIT_SECONDS:-60}"
+
       # Refusing production data is the default and should stay that way. See
       # docs/compliance/PRIVATE_DATA_WARNING.md before changing it.
       PADNEXT_ALLOW_REAL_DATA: "false"
@@ -39,6 +104,12 @@ services:
       - ../../apps/engine/app:/srv/app:ro
       - ../../apps/engine/tests:/srv/tests:ro
       - ../../apps/engine/scripts:/srv/scripts:ro
+      # Mounted too, so a migration added while the stack is up is picked up by a restart rather
+      # than needing a rebuild. Read-only: a container must not be able to rewrite its own history.
+      - ../../apps/engine/alembic:/srv/alembic:ro
+      - ../../apps/engine/alembic.ini:/srv/alembic.ini:ro
+    # Only the server command. The entrypoint runs the migration first whatever this says — which is
+    # why it is an ENTRYPOINT and not part of the CMD (see scripts/docker-entrypoint.sh).
     command:
       ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     healthcheck:
@@ -53,3 +124,10 @@ services:
       timeout: 10s
       start_period: 15s
       retries: 3
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+    # Named so it survives `docker compose down` and is removed only by `down -v`. It holds
+    # approvals; deleting it is a decision, not a side effect of stopping the stack.
+    name: govatax-postgres-data

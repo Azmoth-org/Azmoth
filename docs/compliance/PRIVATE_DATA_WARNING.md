@@ -8,18 +8,22 @@ being surprised.
 
 ## What the system is today
 
-A deterministic GOÄ coding engine plus a PADnext auditor, with a test suite, a receipt hash and an
-approval boundary. All of its bundled data is synthetic: three hand-written clinical cases and one
+A deterministic GOÄ coding engine plus a PADnext auditor, with a test suite, a receipt hash, an
+approval boundary, and — since the Postgres migration — a durable proposal record and an append-only
+audit log. All of its bundled data is synthetic: three hand-written clinical cases and one
 hand-written PADnext delivery, each stating in its own text that it is synthetic, with a test that
 fails if a fixture starts to look like a real record.
+
+**The database changes what is missing, not whether real data may be processed.** Two items below
+moved; every other one is untouched, and the answer to "can we try one real invoice" is still no.
 
 ## What is NOT implemented
 
 | Missing | Consequence |
 | --- | --- |
-| **Access control** | every endpoint answers unauthenticated. There is no user, no role, no tenant, no session |
-| **Audit logging** | nothing records who read or solved what. The approval record is in memory and dies with the process |
-| **Encryption at rest** | no database, therefore no encrypted one. Cached results live in process memory |
+| **Access control** | every endpoint answers unauthenticated. There is no user, no role, no tenant, no session. `approved_by` is a string the caller supplies, not an identity the service verified, and the audit log therefore records reads as `anonymous` |
+| **Audit logging** | **partially closed.** `audit_events` is an append-only log of every create, read, approval, rejection and export, with an actor and a timestamp, written in the same transaction as the change it records. What is still missing is the part that depends on access control — the actor is self-declared, not authenticated — and a defined retention period. `REVOKE UPDATE, DELETE` for the application role is documented in the migration and belongs to the deployment's grants |
+| **Encryption at rest** | none. There is a database now (Postgres), and nothing encrypts it — not the volume, not a column, and there is no key management. Cached results still live in process memory |
 | **Encryption in transit** | the service speaks plain HTTP; TLS is the deployment's job and no deployment exists |
 | **Pseudonymisation / anonymisation** | none. The input contract happens to carry no identifiers, which is not the same as a pseudonymisation scheme |
 | **Retention and deletion** | no policy, no mechanism, no way to answer an erasure request |
@@ -83,12 +87,19 @@ not a name is attached, and re-identification from a small clinical record is of
    valid mechanism.
 5. **Authentication and authorisation** — per-practice tenancy, per-user roles, least privilege.
 6. **Tamper-evident audit logging** of every read, solve, approval and export, with a defined
-   retention period.
+   retention period. *Partly built:* the log exists and is append-only (enforced in the ORM, and to
+   be enforced again by `REVOKE UPDATE, DELETE` on the application role). "Tamper-evident" in the
+   full sense — a hash chain or an external witness, so that a database owner cannot rewrite it
+   undetectably — is not built, and neither is the retention period.
 7. **Pseudonymisation at the boundary**, with the re-identification key held by the practice.
 8. **Encryption** at rest and in transit, with a key-management story.
 9. **Retention and deletion**, including a working answer to an Art. 17 erasure request.
-10. **A durable approval record.** The current in-memory store cannot demonstrate who approved what,
-    and an approval that cannot be demonstrated is not one.
+10. ~~**A durable approval record.**~~ **Done.** Proposals and approvals are in Postgres, every
+    decision writes an audit event in the same transaction, and the engine refuses to start in
+    production on anything but Postgres. See
+    [`../architecture/DATABASE.md`](../architecture/DATABASE.md). What this does *not* yet
+    demonstrate is *who* approved — that needs item 5, because a name the service never verified
+    identifies nobody.
 11. **Breach detection and notification** capable of the Art. 33 72-hour window.
 12. **Penetration test and security review** of the whole deployment.
 

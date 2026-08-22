@@ -14,3 +14,11 @@ apps/engine/facts
 data/licensed/*
 !data/licensed/README.md
 data/raw/*.zip
+
+# Local SQLite databases. DATABASE_URL defaults to `sqlite+aiosqlite:///./test.db`, so a plain
+# `uvicorn app.main:app` in apps/engine leaves one behind — it holds proposals and must never be
+# committed or baked into an image.
+**/test.db
+**/*.sqlite
+**/*.sqlite3
+apps/engine/*.db

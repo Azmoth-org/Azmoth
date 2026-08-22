@@ -187,15 +187,36 @@ def test_a_normal_solve_reports_how_long_it_took_and_that_it_was_not_cut_short(
     assert result.solver_status and result.solver_status != "TIMEOUT_PARTIAL"
 
 
-def test_the_solve_route_is_synchronous_so_it_cannot_block_the_event_loop():
-    """A CPU-bound `async def` path function would serialise the whole service behind one solve.
-    FastAPI dispatches a plain `def` to its threadpool instead."""
+def test_no_solve_ever_runs_on_the_event_loop():
+    """The invariant: a CPU-bound solve must never execute on the event loop, because it would
+    serialise the whole service behind one request.
+
+    There are two ways to honour that and both are in use, so this test checks the property rather
+    than one spelling of it. `/padnext/audit` is a plain `def`, which FastAPI dispatches to its
+    threadpool. `/solve` became `async def` when it gained a database write to await — so it has to
+    hand the solve to that same threadpool explicitly, and this asserts it does: the handler is a
+    coroutine AND it calls `run_in_threadpool`, never `pipeline().propose(...)` directly.
+
+    An earlier version of this test asserted `not iscoroutinefunction(solve.solve)`. That was a
+    check on the mechanism, and it passed for the wrong reason the moment the mechanism changed —
+    which is exactly what a regression test must not do.
+    """
     import inspect
 
     from app.api import padnext, solve
 
-    assert not inspect.iscoroutinefunction(solve.solve)
-    assert not inspect.iscoroutinefunction(padnext.padnext_audit)
+    assert not inspect.iscoroutinefunction(padnext.padnext_audit), (
+        "the PADnext audit runs Soufflé; a plain def keeps it in the threadpool"
+    )
+
+    assert inspect.iscoroutinefunction(solve.solve)
+    source = inspect.getsource(solve.solve)
+    assert "run_in_threadpool" in source, (
+        "an async /solve MUST dispatch the solve to the threadpool explicitly"
+    )
+    assert "pipeline().propose(" not in source, (
+        "calling propose() directly from an async handler blocks the event loop for the whole solve"
+    )
 
 
 # ==========================================================================================
@@ -416,31 +437,44 @@ def test_export_is_reachable_only_from_approved(client, manual_case):
 
 
 def test_an_unknown_proposal_is_404_and_says_why(client):
+    """The message changed with the store, and had to.
+
+    It used to say proposals "do not survive a restart", which was the honest explanation while the
+    store was a dictionary: the likeliest cause of a 404 was that the process had been restarted.
+    It is now a durable record, so that sentence would be a false explanation for a real 404 — and
+    the wrong instruction, because re-running the case is no longer the obvious fix for an id that
+    was simply mistyped.
+    """
     response = client.post("/api/v1/proposals/prop_nope/approve", json={"approved_by": "x"})
 
     assert response.status_code == 404
-    assert response.json()["detail"]["error"] == "proposal_not_found"
-    assert "do not survive a restart" in response.json()["detail"]["message"]
+    detail = response.json()["detail"]
+    assert detail["error"] == "proposal_not_found"
+    assert "prop_nope" in detail["message"], "the message must name the id that was not found"
+    assert "restart" not in detail["message"], (
+        "proposals now survive a restart; the API must not tell a reviewer otherwise"
+    )
 
 
-def test_the_store_refuses_every_transition_the_lifecycle_forbids(client, manual_case):
-    from app.schemas import ProposalStatus
+async def test_the_store_refuses_every_transition_the_lifecycle_forbids(store, client, manual_case):
+    """Driven against the store directly, below HTTP, so the refusal is the store's and not the
+    router's. `store` is bound to its own isolated database (see conftest)."""
+    from app.schemas import Proposal, ProposalStatus
 
-    store = ProposalStore()
     draft = client.post(
         "/api/v1/solve", json={"extraction": manual_case("case_001_knee")}
     ).json()
 
-    from app.schemas import Proposal
-
-    stored = store.put(Proposal.model_validate(draft))
-    approved = store.transition(stored.proposal_id, ProposalStatus.APPROVED, by="Dr. B")
+    stored = await store.create_proposal(Proposal.model_validate(draft))
+    approved = await store.approve_proposal(stored.proposal_id, approved_by="Dr. B")
 
     assert approved.status is ProposalStatus.APPROVED
     with pytest.raises(IllegalTransition):
-        store.transition(stored.proposal_id, ProposalStatus.REJECTED, reason="too late")
+        await store.reject_proposal(
+            stored.proposal_id, rejected_by="Dr. B", reason="too late"
+        )
     with pytest.raises(ProposalNotFound):
-        store.get("prop_missing")
+        await store.get_proposal("prop_missing")
 
 
 def test_proposals_can_be_listed_and_filtered_by_status(client, manual_case):

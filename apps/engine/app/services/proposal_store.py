@@ -1,22 +1,58 @@
 """Where proposals live between being produced and being approved.
 
-Deliberately in-memory: the brief is explicit that no database is to be built yet, and inventing a
-schema now would be inventing the retention policy, the access control and the audit log with it —
-all three of which are legal questions before they are engineering ones (see
-`docs/compliance/PRIVATE_DATA_WARNING.md`).
+**This used to be a dictionary, and the module argued for it.** The argument was that inventing a
+schema would mean inventing the retention policy, the access control and the audit log with it, and
+that all three are legal questions before they are engineering ones. Half of that was right and half
+of it was backwards. The audit log is not a reason to postpone a database — it is the thing a
+database is for, and an approval that dies with the process cannot answer the one question a billing
+system must always be able to answer: *who accepted this, and when.* So the record is now durable and
+the log is now written; retention and access control remain open, and are tracked as open in
+`docs/compliance/PRIVATE_DATA_WARNING.md` rather than used as a reason not to persist anything.
 
-What that costs is stated rather than hidden: proposals do not survive a restart, and they are not
-shared between workers. `ProposalStore` is the seam a real repository implements — four methods,
-no SQL leaking upward.
+What this layer is responsible for:
+
+* **Nothing above it holds a session.** Every method opens one unit of work, converts rows into
+  Pydantic models *inside* it, and returns those. No ORM object escapes, so no lazy load can fire
+  from a closed session — which under an async driver surfaces as `MissingGreenlet` in production
+  and nowhere else.
+* **The lifecycle is enforced here, not in the router.** `ALLOWED` is the whole state machine, the
+  row is locked before it is read (`SELECT … FOR UPDATE`, a no-op on SQLite), and the check and the
+  write happen in one transaction. Two simultaneous approvals cannot both win.
+* **Every decision writes an audit row in the same transaction as the decision.** Not afterwards and
+  not in a background task: a status that changed without a matching event, or an event without the
+  status change, would each be a record nobody can defend.
+
+What it deliberately does not do: delete. There is no `delete_proposal` and no eviction. The old
+dictionary dropped its oldest entry past 512 to bound memory; a durable store that silently discarded
+approvals would be worse than one that ran out of disk, because only one of those is noticed.
 """
 
 from __future__ import annotations
 
-import threading
-from collections import OrderedDict
-from datetime import datetime, timezone
+import logging
+from typing import Any
 
-from app.schemas import Proposal, ProposalStatus
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.canonical import sha256_of
+from app.db.models import AuditEvent, AuditEventType, ProposalRecord, as_utc, utcnow
+from app.db.session import Database, get_database
+from app.schemas import Proposal, ProposalStatus, RuleCoverage
+
+log = logging.getLogger(__name__)
+
+#: The actor recorded for an action no authenticated identity was attached to.
+#:
+#: There is no authentication in this service, so a read cannot be attributed and this is what a
+#: `VIEWED` event carries. It is a deliberately conspicuous value: an audit log full of
+#: `anonymous` is a visible statement that access control is still missing, which is exactly the
+#: gap `docs/compliance/PRIVATE_DATA_WARNING.md` lists. Writing a plausible-looking name here
+#: instead would be the one genuinely dangerous option.
+ANONYMOUS_ACTOR = "anonymous"
+
+#: The actor for events the engine itself causes — a `CREATED` row follows a solve, not a person.
+SYSTEM_ACTOR = "system"
 
 
 class ProposalNotFound(KeyError):
@@ -25,7 +61,7 @@ class ProposalNotFound(KeyError):
         self.proposal_id = proposal_id
 
 
-class IllegalTransition(RuntimeError):
+class IllegalTransitionError(RuntimeError):
     """A status change the lifecycle does not allow. Refused, never silently applied."""
 
     def __init__(self, current: ProposalStatus, requested: ProposalStatus) -> None:
@@ -35,6 +71,12 @@ class IllegalTransition(RuntimeError):
         )
         self.current = current
         self.requested = requested
+
+
+#: Kept under its original name because `tests/` and any external caller import it. The `…Error`
+#: spelling is the one the class now carries; both names are the same object, so `except
+#: IllegalTransition` still catches it.
+IllegalTransition = IllegalTransitionError
 
 
 #: DRAFT is the only state a decision can be made in, and an APPROVED proposal can only go on to
@@ -47,57 +89,371 @@ ALLOWED: dict[ProposalStatus, tuple[ProposalStatus, ...]] = {
     ProposalStatus.EXPORTED: (),
 }
 
+#: Which audit event a transition writes. Derived from the target status rather than passed in, so
+#: a new transition cannot be added without deciding what it records.
+EVENT_FOR_STATUS: dict[ProposalStatus, AuditEventType] = {
+    ProposalStatus.APPROVED: AuditEventType.APPROVED,
+    ProposalStatus.REJECTED: AuditEventType.REJECTED,
+    ProposalStatus.EXPORTED: AuditEventType.EXPORTED,
+}
+
+
+def input_hash_of(proposal: Proposal) -> str:
+    """SHA-256 over the canonical clinical input alone.
+
+    Computed here rather than threaded through the pipeline because it is a property of the stored
+    record, not of the response — adding it to the `Proposal` schema would change the API contract
+    for a value no client asked for.
+
+    It is the same digest the receipt hash takes over its `facts` component (`canonical()` of the
+    extraction), which is what makes the pair useful together: two rows with one `input_hash` and
+    two `receipt_hash` values are the same case coded by two different engine states. Nothing about
+    the receipt's own computation is touched — see `app/services/receipt.py`.
+    """
+    return sha256_of(proposal.solver_result.extraction)
+
+
+def _to_record(proposal: Proposal) -> ProposalRecord:
+    """Pydantic → row. Called once, by `create_proposal`; everything after that is an UPDATE."""
+    return ProposalRecord(
+        proposal_id=proposal.proposal_id,
+        case_id=proposal.case_id,
+        status=str(proposal.status),
+        receipt_hash=proposal.receipt_hash,
+        input_hash=input_hash_of(proposal),
+        catalog_version=proposal.catalog_version,
+        catalog_sha256=proposal.catalog_sha256,
+        rules_version=proposal.rules_version,
+        rules_hash=proposal.rules_hash,
+        logic_version=proposal.logic_version,
+        solver_version=proposal.solver_version,
+        rules_engine_version=proposal.rules_engine_version,
+        solver_result_json=proposal.solver_result.model_dump(mode="json"),
+        warnings_json=[w.model_dump(mode="json") for w in proposal.warnings],
+        missing_documentation_json=[
+            m.model_dump(mode="json") for m in proposal.missing_documentation
+        ],
+        rule_coverage_json=(
+            proposal.rule_coverage.model_dump(mode="json") if proposal.rule_coverage else None
+        ),
+        cached=proposal.cached,
+        created_at=proposal.created_at,
+        approved_at=proposal.approved_at,
+        approved_by=proposal.approved_by,
+        rejected_reason=proposal.rejected_reason,
+    )
+
+
+def _to_proposal(record: ProposalRecord) -> Proposal:
+    """Row → Pydantic, reproducing the response the API served when the proposal was created.
+
+    The five rule-coverage counts and `solver_status` are *derived*, not stored twice: the counts
+    come out of `rule_coverage_json` and the status out of the solver result's own audit trail.
+    Storing them again in their own columns would create two places for one fact, and the API
+    flattens them precisely so a client cannot render a proposal without seeing them — a flattened
+    copy that disagreed with its source would defeat the point.
+    """
+    coverage = (
+        RuleCoverage.model_validate(record.rule_coverage_json) if record.rule_coverage_json else None
+    )
+    audit_trail = (record.solver_result_json or {}).get("audit_trail") or {}
+    solver_status = audit_trail.get("solver_status", "") or ""
+
+    return Proposal(
+        proposal_id=record.proposal_id,
+        case_id=record.case_id,
+        status=ProposalStatus(record.status),
+        created_at=as_utc(record.created_at),
+        approved_at=as_utc(record.approved_at),
+        approved_by=record.approved_by,
+        rejected_reason=record.rejected_reason,
+        receipt_hash=record.receipt_hash,
+        catalog_version=record.catalog_version,
+        catalog_sha256=record.catalog_sha256,
+        rules_version=record.rules_version,
+        rules_hash=record.rules_hash,
+        solver_version=record.solver_version,
+        rules_engine_version=record.rules_engine_version,
+        logic_version=record.logic_version,
+        solver_result=record.solver_result_json,
+        warnings=record.warnings_json or [],
+        missing_documentation=record.missing_documentation_json or [],
+        solver_status=solver_status,
+        solver_timed_out=solver_status == "TIMEOUT_PARTIAL",
+        enforced_rule_count=coverage.enforced_rule_count if coverage else 0,
+        advisory_rule_count=coverage.advisory_rule_count if coverage else 0,
+        unverified_rule_count=coverage.unverified_rule_count if coverage else 0,
+        analog_candidate_count=coverage.analog_candidate_count if coverage else 0,
+        suppressed_unverified_rule_count=(
+            coverage.suppressed_unverified_rule_count if coverage else 0
+        ),
+        rule_coverage=coverage,
+        cached=record.cached,
+    )
+
 
 class ProposalStore:
-    def __init__(self, max_entries: int = 512) -> None:
-        self._max = max(1, max_entries)
-        self._data: OrderedDict[str, Proposal] = OrderedDict()
-        self._lock = threading.Lock()
+    """The repository. Async because the driver is; no SQL leaks upward.
 
-    def put(self, proposal: Proposal) -> Proposal:
-        with self._lock:
-            self._data[proposal.proposal_id] = proposal
-            self._data.move_to_end(proposal.proposal_id)
-            while len(self._data) > self._max:
-                self._data.popitem(last=False)
-        return proposal
+    Constructed with a `Database` or with none, in which case the process-wide one is used. Passing
+    one explicitly is how a test points the store at its own schema without touching global state.
+    """
 
-    def get(self, proposal_id: str) -> Proposal:
-        with self._lock:
-            proposal = self._data.get(proposal_id)
-        if proposal is None:
-            raise ProposalNotFound(proposal_id)
-        return proposal
+    def __init__(self, database: Database | None = None) -> None:
+        self._database = database
 
-    def list(self, *, status: ProposalStatus | None = None) -> list[Proposal]:
-        with self._lock:
-            values = list(self._data.values())
-        return [p for p in values if status is None or p.status is status]
+    @property
+    def database(self) -> Database:
+        return self._database if self._database is not None else get_database()
 
-    def transition(
+    # -- reads -----------------------------------------------------------------------------
+
+    async def get_proposal(
+        self,
+        proposal_id: str,
+        *,
+        record_view: bool = False,
+        actor: str = ANONYMOUS_ACTOR,
+    ) -> Proposal:
+        """One proposal, or `ProposalNotFound`.
+
+        `record_view` is off by default and on for exactly one caller: `GET /proposals/{id}`. Every
+        approval and rejection also has to read the row first, and a `VIEWED` row in front of every
+        `APPROVED` row would be noise in the log a reviewer actually reads — the approval already
+        records that somebody looked.
+        """
+        async with self.database.session() as session:
+            record = await self._require(session, proposal_id)
+            if record_view:
+                self._add_event(
+                    session,
+                    record,
+                    AuditEventType.VIEWED,
+                    actor=actor,
+                    metadata={"status": record.status},
+                )
+            return _to_proposal(record)
+
+    async def list_proposals(
+        self, *, status: ProposalStatus | None = None, limit: int = 500
+    ) -> list[Proposal]:
+        """The most recent proposals, oldest-first, optionally in one status.
+
+        The ordering is the in-memory store's, preserved on purpose: it returned insertion order and
+        dropped its oldest entry past 512, so "the newest `limit`, in ascending order" is what a
+        client already sees. The newest are selected and *then* re-sorted ascending — selecting the
+        oldest 500 of a table that only grows would show a durable store's first week forever.
+        """
+        statement = select(ProposalRecord).order_by(
+            ProposalRecord.created_at.desc(), ProposalRecord.id.desc()
+        )
+        if status is not None:
+            statement = statement.where(ProposalRecord.status == str(status))
+
+        async with self.database.session() as session:
+            records = (await session.execute(statement.limit(limit))).scalars().all()
+            return [_to_proposal(record) for record in reversed(records)]
+
+    async def audit_events(self, proposal_id: str) -> list[dict[str, Any]]:
+        """The append-only log for one proposal, oldest first.
+
+        Returned as plain dicts rather than as ORM rows or a new Pydantic model: this is not on the
+        API surface — adding an endpoint for it would change the OpenAPI document — and it exists so
+        the suite and an operator can read the log without a SQL client.
+        """
+        async with self.database.session() as session:
+            record = await self._require(session, proposal_id)
+            statement = (
+                select(AuditEvent)
+                .where(AuditEvent.proposal_id == record.id)
+                .order_by(AuditEvent.timestamp, AuditEvent.id)
+            )
+            events = (await session.execute(statement)).scalars().all()
+            return [
+                {
+                    "id": str(event.id),
+                    "proposal_id": record.proposal_id,
+                    "event_type": event.event_type,
+                    "actor": event.actor,
+                    "timestamp": as_utc(event.timestamp),
+                    "metadata": event.metadata_json,
+                }
+                for event in events
+            ]
+
+    async def count(self, *, status: ProposalStatus | None = None) -> int:
+        statement = select(func.count()).select_from(ProposalRecord)
+        if status is not None:
+            statement = statement.where(ProposalRecord.status == str(status))
+        async with self.database.session() as session:
+            return int((await session.execute(statement)).scalar_one())
+
+    # -- writes ----------------------------------------------------------------------------
+
+    async def create_proposal(self, proposal: Proposal, *, actor: str = SYSTEM_ACTOR) -> Proposal:
+        """Persist a fresh DRAFT and its `CREATED` event, in one transaction.
+
+        The returned value is read back off the row rather than echoed from the argument, so the
+        response a caller gets is the record that was actually written. A serialisation that lost a
+        field would then fail the first request instead of the first restart.
+        """
+        record = _to_record(proposal)
+        async with self.database.session() as session:
+            session.add(record)
+            self._add_event(
+                session,
+                record,
+                AuditEventType.CREATED,
+                actor=actor,
+                metadata={
+                    "receipt_hash": proposal.receipt_hash,
+                    "case_id": proposal.case_id,
+                    "cached": proposal.cached,
+                },
+            )
+            await session.flush()
+            await session.refresh(record)
+            return _to_proposal(record)
+
+    async def approve_proposal(
+        self, proposal_id: str, *, approved_by: str, note: str = ""
+    ) -> Proposal:
+        """Accept a DRAFT. `approved_by` is required — an unattributed approval is not one."""
+        if not approved_by or not approved_by.strip():
+            raise ValueError("approved_by is required: an approval nobody signed is not an approval")
+        return await self._transition(
+            proposal_id,
+            ProposalStatus.APPROVED,
+            actor=approved_by.strip(),
+            metadata={"note": note} if note else None,
+        )
+
+    async def reject_proposal(
+        self, proposal_id: str, *, rejected_by: str, reason: str
+    ) -> Proposal:
+        """Refuse a DRAFT, attributed and with a reason. Terminal."""
+        if not rejected_by or not rejected_by.strip():
+            raise ValueError("rejected_by is required")
+        if not reason or not reason.strip():
+            raise ValueError("reason is required: a rejection without one cannot be acted on")
+        return await self._transition(
+            proposal_id,
+            ProposalStatus.REJECTED,
+            actor=rejected_by.strip(),
+            reason=reason.strip(),
+        )
+
+    async def export_proposal(
+        self, proposal_id: str, *, actor: str = SYSTEM_ACTOR
+    ) -> Proposal:
+        """Record that an APPROVED proposal left the system. Only reachable from APPROVED."""
+        return await self._transition(
+            proposal_id, ProposalStatus.EXPORTED, actor=actor or SYSTEM_ACTOR
+        )
+
+    # -- internals -------------------------------------------------------------------------
+
+    async def _transition(
         self,
         proposal_id: str,
         to: ProposalStatus,
         *,
-        by: str | None = None,
+        actor: str,
         reason: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Proposal:
-        proposal = self.get(proposal_id)
-        if to not in ALLOWED[proposal.status]:
-            raise IllegalTransition(proposal.status, to)
+        """Read-check-write plus the audit row, in one transaction, under a row lock.
 
-        updated = proposal.model_copy(update={"status": to})
-        if to is ProposalStatus.APPROVED:
-            updated.approved_at = datetime.now(timezone.utc)
-            updated.approved_by = by
-        elif to is ProposalStatus.REJECTED:
-            updated.rejected_reason = reason
-        return self.put(updated)
+        The lock is what makes the check meaningful. Without it, two approvals arriving together
+        both read `DRAFT`, both pass, and both write — leaving one proposal with two approvers and
+        an audit log that records both as having taken responsibility.
+        """
+        async with self.database.session() as session:
+            record = await self._require(session, proposal_id, for_update=True)
+            current = ProposalStatus(record.status)
+            if to not in ALLOWED[current]:
+                raise IllegalTransitionError(current, to)
 
-    def clear(self) -> None:
-        with self._lock:
-            self._data.clear()
+            now = utcnow()
+            record.status = str(to)
+            if to is ProposalStatus.APPROVED:
+                record.approved_at = now
+                record.approved_by = actor
+            elif to is ProposalStatus.REJECTED:
+                record.rejected_at = now
+                record.rejected_by = actor
+                record.rejected_reason = reason
+            elif to is ProposalStatus.EXPORTED:
+                record.exported_at = now
 
-    def __len__(self) -> int:
-        with self._lock:
-            return len(self._data)
+            # Always the status it came from — the log has to say what was re-decided, not only
+            # what it became. The reason and any note are folded in when present, and omitted
+            # rather than stored empty: `{"note": ""}` reads as "a note was left and it was blank".
+            context: dict[str, Any] = {"from_status": str(current)}
+            if reason:
+                context["reason"] = reason
+            context.update(metadata or {})
+
+            self._add_event(
+                session,
+                record,
+                EVENT_FOR_STATUS[to],
+                actor=actor,
+                timestamp=now,
+                metadata=context,
+            )
+            await session.flush()
+            log.info("proposal %s %s by %s", proposal_id, to, actor)
+            return _to_proposal(record)
+
+    async def _require(
+        self, session: AsyncSession, proposal_id: str, *, for_update: bool = False
+    ) -> ProposalRecord:
+        statement = select(ProposalRecord).where(ProposalRecord.proposal_id == proposal_id)
+        if for_update:
+            # Emitted as `FOR UPDATE` on Postgres and omitted by the SQLite dialect, which has no
+            # row locks and does not need them: one writer at a time is a property of the file.
+            statement = statement.with_for_update()
+        record = (await session.execute(statement)).scalar_one_or_none()
+        if record is None:
+            raise ProposalNotFound(proposal_id)
+        return record
+
+    @staticmethod
+    def _add_event(
+        session: AsyncSession,
+        record: ProposalRecord,
+        event_type: AuditEventType,
+        *,
+        actor: str,
+        timestamp: Any = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> AuditEvent:
+        """Append one event to the same session — and therefore the same commit — as the change.
+
+        `session.add` rather than `record.events.append`: the relationship is `selectin`-loaded, and
+        appending would trigger a load of every prior event on a row whose log only grows. Attaching
+        the event to the parent object is what makes the FK resolve without a flush order problem.
+        """
+        event = AuditEvent(
+            proposal=record,
+            event_type=str(event_type),
+            actor=actor or SYSTEM_ACTOR,
+            timestamp=timestamp or utcnow(),
+            metadata_json=metadata or None,
+        )
+        session.add(event)
+        return event
+
+
+__all__ = [
+    "ALLOWED",
+    "ANONYMOUS_ACTOR",
+    "EVENT_FOR_STATUS",
+    "SYSTEM_ACTOR",
+    "IllegalTransition",
+    "IllegalTransitionError",
+    "ProposalNotFound",
+    "ProposalStore",
+    "input_hash_of",
+]
