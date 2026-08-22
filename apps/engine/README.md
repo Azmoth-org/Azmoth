@@ -84,6 +84,43 @@ Interactive docs at <http://localhost:8000/docs>.
 
 `POST /api/v1/solve` accepts either a bare extraction or `{"extraction": {...}, "setting": ...}`.
 
+## Database
+
+Proposals and the approval record are persisted; an approval survives a restart and every decision
+writes a row in an append-only audit log. Schema, the reasoning behind it, and the full set of
+migration commands: [`../../docs/architecture/DATABASE.md`](../../docs/architecture/DATABASE.md).
+
+**Locally there is nothing to set up.** `DATABASE_URL` defaults to a SQLite file and the tables are
+created on first start:
+
+```bash
+.venv/bin/uvicorn app.main:app --reload --port 8000   # creates ./test.db
+.venv/bin/python -m pytest                            # in-memory, per test, nothing left behind
+```
+
+**Against Postgres**, which is what production runs and what `docker compose` brings up:
+
+```bash
+docker compose -f ../../infra/docker/docker-compose.yml up -d postgres
+
+export DATABASE_URL=postgresql+asyncpg://govatax:govatax@localhost:5432/govatax
+.venv/bin/python scripts/migrate.py           # waits for the server, then upgrades to head
+.venv/bin/python scripts/migrate.py --check   # report the revision; exit 1 if behind
+.venv/bin/alembic upgrade head                # the same thing, via alembic directly
+```
+
+`alembic.ini` has no `sqlalchemy.url`: `alembic/env.py` reads `DATABASE_URL` through the same
+`Settings` object the service uses, so a migration cannot land in a database the engine will not then
+talk to, and no connection string is ever committed.
+
+In a container the image migrates itself — `scripts/docker-entrypoint.sh` runs
+`alembic upgrade head` before uvicorn, whatever `command:` it is given. `docker compose up` is the
+whole story.
+
+SQLite persists, but it is not a deployment target: one writer, one file inside a container that is
+replaced on every deploy, no replication, no encryption at rest. Under `APP_ENV=production` the
+engine **refuses to start** on anything but Postgres.
+
 ## CLI
 
 ```bash
@@ -107,9 +144,26 @@ Provenance tooling — how the committed catalog was built, and how to rebuild i
 
 ```bash
 cd apps/engine
-.venv/bin/python -m pytest -q          # everything
+.venv/bin/python -m pytest -q          # everything, against in-memory SQLite
 .venv/bin/python -m pytest -q tests/test_golden_snapshot.py   # the migration check
 ```
+
+The suite forces `DATABASE_URL=sqlite+aiosqlite:///:memory:` at conftest import time. That is both a
+safety measure — an inherited `DATABASE_URL` cannot make the suite write test proposals into a real
+database — and the isolation mechanism: for SQLite the connection *is* the database, so every test
+gets an empty one.
+
+To also exercise the Postgres dialect (JSONB, `SELECT … FOR UPDATE`, timezone-aware timestamps),
+which CI does in the `engine-database` job:
+
+```bash
+docker run --rm -d -p 5433:5432 -e POSTGRES_PASSWORD=test --name goae-test-db postgres:15-alpine
+POSTGRES_TEST_URL=postgresql+asyncpg://postgres:test@localhost:5433/postgres \
+  .venv/bin/python -m pytest tests/test_db_persistence.py -v
+```
+
+Without that variable those parametrisations skip and say so. It has no default because the tables
+are dropped and recreated around each test, so it must be a scratch database.
 
 See [`tests/README.md`](tests/README.md) for which tests are golden, which pin determinism and
 which pin the legal posture.
@@ -129,25 +183,53 @@ pnpm --filter @workspace/contracts generate           # → packages/contracts/t
 ```bash
 # from the MONOREPO ROOT — the image needs logic/ and data/, which live outside apps/engine
 docker build -f apps/engine/Dockerfile -t govatax-engine:0.3.0 .
-docker run --rm -p 8000:8000 govatax-engine:0.3.0
 
-# or, with the rules mounted read-write-nothing for live editing:
-docker compose -f infra/docker/docker-compose.yml up --build engine
+# the whole stack: Postgres, then the engine, which migrates it and serves the API.
+# The rules and the catalog are mounted read-only, so editing a .dl / .lp / CSV needs no rebuild.
+docker compose -f infra/docker/docker-compose.yml up --build
 ```
 
 The image runs as a non-root user (uid 10001), installs Soufflé 2.5 and `clingo==5.8.0`, copies
-`logic/` and `data/` to `/srv`, exposes 8000, and has a healthcheck that fails when the rules engine
-is unavailable — not merely when the process is down. `scripts/engine_cli.py check` runs at build
-time, so a broken catalog fails the build rather than the first request.
+`logic/`, `data/` and the Alembic history to `/srv`, exposes 8000, and has a healthcheck that fails
+when the rules engine is unavailable — not merely when the process is down.
+`scripts/engine_cli.py check` runs at build time, so a broken catalog fails the build rather than the
+first request.
+
+`ENTRYPOINT` is `scripts/docker-entrypoint.sh`, which runs `alembic upgrade head` and then `exec`s
+whatever command it was given — so migrations happen even though `docker-compose.yml` overrides
+`command:` to add `--reload`. `RUN_MIGRATIONS=false` skips that step for a pipeline that migrates in
+its own job.
+
+The image sets **no** `DATABASE_URL`, deliberately, so a bare
+`docker run -p 8000:8000 govatax-engine:0.3.0` refuses to start rather than quietly running on a
+store it cannot keep records in — the image sets `APP_ENV=production`, and production requires
+Postgres. To run the container against a database directly:
+
+```bash
+docker run --rm -p 8000:8000 \
+  -e DATABASE_URL=postgresql+asyncpg://govatax:govatax@host.docker.internal:5432/govatax \
+  govatax-engine:0.3.0
+```
+
+One-off commands need no database and skip the migration on their own:
+
+```bash
+docker run --rm govatax-engine:0.3.0 python scripts/engine_cli.py check
+docker run --rm -e REQUIRE_ENGINES=1 govatax-engine:0.3.0 python -m pytest -rs
+```
 
 ## Environment variables
 
 Everything is optional; the defaults are the safe ones. Full annotated list in
-[`.env.example`](.env.example). There are **no secrets** and the engine needs none.
+[`.env.example`](.env.example).
+
+`DATABASE_URL` is the only setting that names an external service or can carry a credential, and it
+defaults to a local SQLite file — so a checkout runs with nothing configured. There are **no
+secrets in this repository** and the engine needs no API key or token of any kind.
 
 | Variable | Default | Effect |
 | --- | --- | --- |
-| `APP_ENV` | `development` | label only; does not change behaviour |
+| `APP_ENV` | `development` | mostly a label — but `production` refuses a non-Postgres `DATABASE_URL` and refuses `DATABASE_AUTO_CREATE` |
 | `DEBUG` | `false` | debug-level logging |
 | `EXTRACTION_MODE` | `manual` | the only supported value — see the input boundary below |
 | `UNVERIFIED_RULE_POLICY` | `warn` | what machine-extracted rules may do: `warn` / `block` / `ignore` |
@@ -155,6 +237,10 @@ Everything is optional; the defaults are the safe ones. Full annotated list in
 | `SOLVER_TIMEOUT_SECONDS` | `5` | hard ceiling on one Clingo solve |
 | `SOUFFLE_BIN` / `SOUFFLE_TIMEOUT_S` | `souffle` / `60` | the Datalog engine |
 | `CACHE_ENABLED` / `CACHE_MAX_ENTRIES` | `true` / `256` | content-addressed result cache |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./test.db` | where proposals and the audit log live. Postgres in production — refused otherwise under `APP_ENV=production` |
+| `DATABASE_AUTO_CREATE` | `true` | create the tables at startup instead of requiring `alembic upgrade head`. Refused in production |
+| `DATABASE_ECHO` | `false` | log every SQL statement. Separate from `DEBUG`: statement logs on clinical data are a leak risk |
+| `DATABASE_POOL_SIZE` / `DATABASE_MAX_OVERFLOW` | `5` / `10` | connection pool per worker; ignored by SQLite |
 | `LOGIC_DIR` / `DATA_DIR` | repo `logic/` and `data/` | where the programs and the catalog are |
 | `CATALOG_VERSION` | *(empty)* | set it to assert an expected snapshot; a mismatch fails at startup |
 | `MAX_REQUEST_BYTES` | `33554432` | refused at the perimeter, before the body is buffered |
@@ -237,6 +323,7 @@ app/
   api/                 health, solve, proposals, padnext, catalog, deps
   core/                canonicalisation, request-size limit, frozen prompt contract
   schemas/             every contract, split by concern, re-exported as one namespace
+  db/                  SQLAlchemy models (proposals, audit_events), engine and session factory
   services/            pipeline, cache, receipt, rule_coverage, proposal_store
   solvers/             clingo_solver, souffle_engine, souffle_facts
   rules/               rule_store — provenance and the unverified-rule policy
@@ -244,6 +331,7 @@ app/
   bridge/              clinical entities → candidate Ziffern (CSV lookup, never a model)
   validation/          independent re-check, exact money, audit trail
   padnext/             reader + audit
-scripts/               engine_cli, export_openapi, import_goae, fetch_goae, generate_facts, …
-tests/                 570 tests — see tests/README.md
+alembic/               migration history; alembic.ini reads DATABASE_URL, never a committed URL
+scripts/               engine_cli, migrate, export_openapi, import_goae, fetch_goae, …
+tests/                 631 tests — see tests/README.md
 ```

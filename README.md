@@ -29,11 +29,14 @@ hard timeout, an independent validation pass re-checks the result, and every lin
 tree with rule ids and paragraph references. No model runs anywhere in it.
 
 The output is a **DRAFT proposal**, not an invoice. It leaves `DRAFT` only when a named person
-approves it.
+approves it — and that approval is durable: proposals live in Postgres, every decision writes a row
+in an append-only audit log, and re-deciding a decided proposal is refused with HTTP 409.
 
 - [`apps/engine/README.md`](apps/engine/README.md) — install, run, test, Docker, every env var
 - [`docs/architecture/ENGINE.md`](docs/architecture/ENGINE.md) — the layers and why each decision is
   made where it is
+- [`docs/architecture/DATABASE.md`](docs/architecture/DATABASE.md) — the two tables, the audit log,
+  and how to run migrations
 - [`logic/README.md`](logic/README.md) — **read before changing a rule or an objective**
 - [`apps/engine/tests/README.md`](apps/engine/tests/README.md) — which tests are golden, which pin
   determinism, which pin the legal posture
@@ -52,7 +55,8 @@ pnpm dev
 Needs Python 3.11 and the Soufflé 2.5 binary. Easiest path is Docker, from the repo root:
 
 ```bash
-docker compose -f infra/docker/docker-compose.yml up --build engine
+# Postgres, then the engine — which migrates it (`alembic upgrade head`) and serves the API.
+docker compose -f infra/docker/docker-compose.yml up --build
 curl -s localhost:8000/api/v1/health
 ```
 
@@ -62,7 +66,7 @@ Or locally — see [`apps/engine/README.md`](apps/engine/README.md#install):
 cd apps/engine
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python scripts/engine_cli.py check     # engines, data, logic, end-to-end probe
-.venv/bin/python -m pytest -q                    # 570 tests
+.venv/bin/python -m pytest -q                    # 631 tests, against in-memory SQLite
 .venv/bin/uvicorn app.main:app --reload
 ```
 

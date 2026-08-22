@@ -51,7 +51,7 @@ Everything below must pass before you open a pull request. CI runs the same comm
 # Engine (Python 3.11 + the souffle binary — see apps/engine/README.md)
 cd apps/engine
 .venv/bin/python scripts/engine_cli.py check     # engines, data, logic, end-to-end probe
-.venv/bin/python -m pytest                       # 570 tests
+.venv/bin/python -m pytest                       # 631 tests, against in-memory SQLite
 
 # Whole workspace
 pnpm turbo typecheck lint build
@@ -76,6 +76,32 @@ tested almost nothing. Check the skip count, or run inside the engine image:
 ```bash
 docker compose -f infra/docker/docker-compose.yml run --rm engine python -m pytest -q
 ```
+
+### The four remaining skips are the Postgres dialect
+
+The suite runs against in-memory SQLite, so the parametrisations in `tests/test_db_persistence.py`
+that exercise Postgres (JSONB, `SELECT … FOR UPDATE`, timezone-aware timestamps) skip and say so.
+CI's `engine-database` job runs them. Locally:
+
+```bash
+docker run --rm -d -p 5433:5432 -e POSTGRES_PASSWORD=test --name goae-test-db postgres:15-alpine
+POSTGRES_TEST_URL=postgresql+asyncpg://postgres:test@localhost:5433/postgres \
+  .venv/bin/python -m pytest tests/test_db_persistence.py -v
+```
+
+### If you changed `app/db/models.py`
+
+Generate a migration and read it — autogenerate cannot see a rename, and it emits
+`postgresql.JSONB(astext_type=Text())` with `Text` not imported:
+
+```bash
+cd apps/engine
+alembic revision --autogenerate -m "what changed"
+```
+
+`tests/test_db_persistence.py::test_the_migration_and_the_models_describe_the_same_schema` fails if
+you forget. Full detail in
+[`docs/architecture/DATABASE.md`](docs/architecture/DATABASE.md#adding-a-migration).
 
 ## Hard rules
 
@@ -117,7 +143,7 @@ Never type a field into TypeScript that the OpenAPI document does not have.
 ## Pull requests
 
 - Target `main`. Keep PRs small; stack them when work genuinely depends on earlier work.
-- Say what you verified, not just what you wrote. Paste the test line (`570 passed`).
+- Say what you verified, not just what you wrote. Paste the test line (`627 passed, 4 skipped`).
 - Call out anything touching money, a rule, the solver objective, or the compliance posture in the
   PR title so it gets the right reviewer.
 - A PR that changes `logic/` or `data/` needs a second approver.
@@ -132,7 +158,7 @@ packages/ui/      shadcn/ui components shared by the apps
 logic/            Clingo ASP + Soufflé Datalog programs, golden cases  ← see logic/README.md
 data/             GOÄ catalog, rule tables, mappings, raw snapshot + provenance
 docs/             architecture, compliance, migration record
-infra/docker/     compose file for the engine
+infra/docker/     compose file: Postgres + the engine
 ```
 
 Add a shadcn component with the CLI from the repo root, so it lands in `packages/ui`:
