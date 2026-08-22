@@ -2816,7 +2816,7 @@
       },
       "ProposalExport": {
         "additionalProperties": false,
-        "description": "The downloadable record of one approved proposal.\n\nServed as `proposal_{proposal_id}.json` with a `Content-Disposition: attachment` header. The\nJSON is the contract; the filename is a convenience.",
+        "description": "The downloadable record of one approved proposal.\n\nServed as `{proposal_id}.json` with a `Content-Disposition: attachment` header. The\nJSON is the contract; the filename is a convenience.",
         "properties": {
           "audit_events": {
             "items": {
@@ -2939,6 +2939,126 @@
         "title": "RejectionRequest",
         "type": "object"
       },
+      "ReviewableRule": {
+        "additionalProperties": false,
+        "description": "One rule as the review queue presents it — everything needed to decide, and nothing else.",
+        "properties": {
+          "csv_verified": {
+            "default": false,
+            "title": "Csv Verified",
+            "type": "boolean"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "kind": {
+            "enum": [
+              "exclusion",
+              "zielleistung",
+              "specificity",
+              "factor_cap"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "legal_basis": {
+            "default": "",
+            "title": "Legal Basis",
+            "type": "string"
+          },
+          "quote": {
+            "default": "",
+            "title": "Quote",
+            "type": "string"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes"
+          },
+          "review_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "VERIFIED",
+                  "REJECTED",
+                  "PENDING"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Status"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "source": {
+            "default": "",
+            "title": "Source",
+            "type": "string"
+          },
+          "verified": {
+            "default": false,
+            "title": "Verified",
+            "type": "boolean"
+          },
+          "ziffer_roles": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Ziffer Roles",
+            "type": "object"
+          },
+          "ziffern": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ziffern",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rule_id",
+          "kind"
+        ],
+        "title": "ReviewableRule",
+        "type": "object"
+      },
       "RuleCoverage": {
         "description": "How much of the rule set is actually being enforced, on every response that has one.\n\nThe API must never imply that unverified rules are enforced. ``enforced_rule_count`` is what\ncan suppress a position; ``advisory_rule_count`` is what only warns. Under the default\n``UNVERIFIED_RULE_POLICY=warn`` the advisory set is the automatically extracted majority, and\na response carrying a non-zero advisory count also carries a warning saying so.",
         "properties": {
@@ -2961,6 +3081,16 @@
             "title": "Policy For Unverified Rules",
             "type": "string"
           },
+          "rejected_rule_count": {
+            "default": 0,
+            "title": "Rejected Rule Count",
+            "type": "integer"
+          },
+          "review_verified_rule_count": {
+            "default": 0,
+            "title": "Review Verified Rule Count",
+            "type": "integer"
+          },
           "rule_coverage": {
             "default": "partial",
             "title": "Rule Coverage",
@@ -2974,6 +3104,11 @@
           "suppressed_unverified_rule_count": {
             "default": 0,
             "title": "Suppressed Unverified Rule Count",
+            "type": "integer"
+          },
+          "total_constraint_rule_count": {
+            "default": 0,
+            "title": "Total Constraint Rule Count",
             "type": "integer"
           },
           "unverified_rule_count": {
@@ -2991,6 +3126,99 @@
           "policy_for_unverified_rules"
         ],
         "title": "RuleCoverage",
+        "type": "object"
+      },
+      "RuleReviewQueue": {
+        "additionalProperties": false,
+        "description": "The rules still awaiting a decision, with enough context to show progress.",
+        "properties": {
+          "pending_rule_count": {
+            "default": 0,
+            "title": "Pending Rule Count",
+            "type": "integer"
+          },
+          "rejected_rule_count": {
+            "default": 0,
+            "title": "Rejected Rule Count",
+            "type": "integer"
+          },
+          "review_verified_rule_count": {
+            "default": 0,
+            "title": "Review Verified Rule Count",
+            "type": "integer"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewableRule"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "total_constraint_rules": {
+            "default": 0,
+            "title": "Total Constraint Rules",
+            "type": "integer"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "verified_rule_count": {
+            "default": 0,
+            "title": "Verified Rule Count",
+            "type": "integer"
+          }
+        },
+        "title": "RuleReviewQueue",
+        "type": "object"
+      },
+      "RuleReviewRequest": {
+        "additionalProperties": false,
+        "description": "A reviewer's verdict on one rule.",
+        "properties": {
+          "review_notes": {
+            "default": "",
+            "title": "Review Notes",
+            "type": "string"
+          },
+          "reviewed_by": {
+            "default": "",
+            "title": "Reviewed By",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "VERIFIED",
+              "REJECTED",
+              "PENDING"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "RuleReviewRequest",
+        "type": "object"
+      },
+      "RuleReviewResult": {
+        "additionalProperties": false,
+        "description": "The rule after the review was applied, plus the coverage it moved.",
+        "properties": {
+          "coverage": {
+            "$ref": "#/components/schemas/RuleCoverage"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/ReviewableRule"
+          }
+        },
+        "required": [
+          "rule",
+          "coverage"
+        ],
+        "title": "RuleReviewResult",
         "type": "object"
       },
       "SolveRequest": {
@@ -3597,7 +3825,7 @@
                 }
               }
             },
-            "description": "A ZIP archive named `batch_{batch_id}_export.zip` holding `batch_summary.csv`, `batch_line_items.csv`, `batch_files.csv` and a `README.txt` that defines the three buckets."
+            "description": "A ZIP archive named `{batch_id}_export.zip` holding `batch_summary.csv`, `batch_line_items.csv`, `batch_files.csv` and a `README.txt` that defines the three buckets."
           },
           "409": {
             "description": "The batch has not completed, so there is no roll-up to export."
@@ -3801,7 +4029,7 @@
                 }
               }
             },
-            "description": "The export document, as a downloadable attachment named `proposal_{proposal_id}.json`."
+            "description": "The export document, as a downloadable attachment named `{proposal_id}.json`."
           },
           "409": {
             "description": "The proposal is not APPROVED, so there is nothing to export."
@@ -3873,6 +4101,151 @@
         "summary": "Reject",
         "tags": [
           "proposals"
+        ]
+      }
+    },
+    "/api/v1/rules/coverage": {
+      "get": {
+        "description": "How much of the rule set is verified, right now, reviews included.\n\nThe same object every solve and audit carries, computed from the store the engine is actually\nholding — so a progress bar built from it cannot disagree with what the next audit enforces.",
+        "operationId": "rule_coverage_api_v1_rules_coverage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleCoverage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rule Coverage",
+        "tags": [
+          "rules"
+        ]
+      }
+    },
+    "/api/v1/rules/review-queue": {
+      "get": {
+        "description": "Rules that are unverified in the CSVs and that nobody has decided about yet.\n\nA rule leaves this queue when a review marks it `VERIFIED` or `REJECTED`. `PENDING` does not\nremove it, deliberately: a reviewer parking a rule they could not decide has not made it any\nsafer, and a queue that hid parked rules would let the backlog quietly stop being the backlog.\n\nSorted by rule type and then by id, so the list is stable across polls — a queue that reordered\nunder a reviewer between reading a rule and clicking Verify would be worse than a slow one.",
+        "operationId": "review_queue_api_v1_rules_review_queue_get",
+        "parameters": [
+          {
+            "description": "Show one rule type only. `zielleistung` first is the usual order of work: a wrong Zielleistung rule removes a position a practice was entitled to charge.",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "exclusion",
+                    "zielleistung",
+                    "specificity",
+                    "factor_cap"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Show one rule type only. `zielleistung` first is the usual order of work: a wrong Zielleistung rule removes a position a practice was entitled to charge.",
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleReviewQueue"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Queue",
+        "tags": [
+          "rules"
+        ]
+      }
+    },
+    "/api/v1/rules/{rule_id}/review": {
+      "post": {
+        "description": "Record a verdict on one rule and merge it into the running engine.\n\n`VERIFIED` makes the rule enforce exactly like a hand-curated one, which moves euros out of\n`unconfirmed` in every subsequent audit. `REJECTED` means a human read the machine-extracted\nrule and refused it: it never enforces again, not even under `UNVERIFIED_RULE_POLICY=block`,\nwhich does enforce merely-unverified rules. `PENDING` decides nothing and is a bookmark.\n\n`reviewed_by` is required for a decision, for the same reason `approved_by` is on an approval:\nthis changes what every future audit concludes about somebody's invoice. It is recorded, not\nauthenticated.\n\nThe response carries the recomputed coverage, so a dashboard can update its progress bar from\nthe same response rather than issuing a second request that could see a different world.",
+        "operationId": "review_rule_api_v1_rules__rule_id__review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleReviewResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Rule",
+        "tags": [
+          "rules"
         ]
       }
     },
@@ -3961,6 +4334,10 @@
     {
       "description": "Catalog provenance and the mappable vocabulary.",
       "name": "catalog"
+    },
+    {
+      "description": "The rule verification workflow. 859 of 894 constraint rules were extracted from the GOÄ's prose automatically and enforce nothing until a billing expert verifies them; verifying one shrinks the `unconfirmed` bucket of every later audit. Decisions are stored in Postgres and merged onto the versioned CSVs at load time — the CSVs themselves are never written by this API.",
+      "name": "rules"
     }
   ]
 }

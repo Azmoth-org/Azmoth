@@ -124,7 +124,7 @@ class AuditEventRecord(BaseModel):
 class ProposalExport(BaseModel):
     """The downloadable record of one approved proposal.
 
-    Served as `proposal_{proposal_id}.json` with a `Content-Disposition: attachment` header. The
+    Served as `{proposal_id}.json` with a `Content-Disposition: attachment` header. The
     JSON is the contract; the filename is a convenience.
     """
 

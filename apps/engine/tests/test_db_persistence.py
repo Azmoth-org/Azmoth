@@ -490,7 +490,13 @@ def test_the_migration_and_the_models_describe_the_same_schema(tmp_path):
         migrated_engine.dispose()
         declared_engine.dispose()
 
-    assert set(migrated) == {"proposals", "audit_events", "batch_jobs", "batch_files"}
+    assert set(migrated) == {
+        "proposals",
+        "audit_events",
+        "batch_jobs",
+        "batch_files",
+        "rule_reviews",
+    }
     assert migrated == declared, (
         "alembic/versions/ has drifted from app/db/models.py — run "
         "`alembic revision --autogenerate -m '…'` and review the result"

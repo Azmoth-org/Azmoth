@@ -290,6 +290,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rules/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rule Coverage
+         * @description How much of the rule set is verified, right now, reviews included.
+         *
+         *     The same object every solve and audit carries, computed from the store the engine is actually
+         *     holding — so a progress bar built from it cannot disagree with what the next audit enforces.
+         */
+        get: operations["rule_coverage_api_v1_rules_coverage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rules/review-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review Queue
+         * @description Rules that are unverified in the CSVs and that nobody has decided about yet.
+         *
+         *     A rule leaves this queue when a review marks it `VERIFIED` or `REJECTED`. `PENDING` does not
+         *     remove it, deliberately: a reviewer parking a rule they could not decide has not made it any
+         *     safer, and a queue that hid parked rules would let the backlog quietly stop being the backlog.
+         *
+         *     Sorted by rule type and then by id, so the list is stable across polls — a queue that reordered
+         *     under a reviewer between reading a rule and clicking Verify would be worse than a slow one.
+         */
+        get: operations["review_queue_api_v1_rules_review_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rules/{rule_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Rule
+         * @description Record a verdict on one rule and merge it into the running engine.
+         *
+         *     `VERIFIED` makes the rule enforce exactly like a hand-curated one, which moves euros out of
+         *     `unconfirmed` in every subsequent audit. `REJECTED` means a human read the machine-extracted
+         *     rule and refused it: it never enforces again, not even under `UNVERIFIED_RULE_POLICY=block`,
+         *     which does enforce merely-unverified rules. `PENDING` decides nothing and is a bookmark.
+         *
+         *     `reviewed_by` is required for a decision, for the same reason `approved_by` is on an approval:
+         *     this changes what every future audit concludes about somebody's invoice. It is recorded, not
+         *     authenticated.
+         *
+         *     The response carries the recomputed coverage, so a dashboard can update its progress bar from
+         *     the same response rather than issuing a second request that could see a different world.
+         */
+        post: operations["review_rule_api_v1_rules__rule_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/solve": {
         parameters: {
             query?: never;
@@ -1918,7 +2000,7 @@ export interface components {
          * ProposalExport
          * @description The downloadable record of one approved proposal.
          *
-         *     Served as `proposal_{proposal_id}.json` with a `Content-Disposition: attachment` header. The
+         *     Served as `{proposal_id}.json` with a `Content-Disposition: attachment` header. The
          *     JSON is the contract; the filename is a convenience.
          */
         ProposalExport: {
@@ -1966,6 +2048,62 @@ export interface components {
             rejected_by: string;
         };
         /**
+         * ReviewableRule
+         * @description One rule as the review queue presents it — everything needed to decide, and nothing else.
+         */
+        ReviewableRule: {
+            /**
+             * Csv Verified
+             * @default false
+             */
+            csv_verified: boolean;
+            /** Detail */
+            detail?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "exclusion" | "zielleistung" | "specificity" | "factor_cap";
+            /**
+             * Legal Basis
+             * @default
+             */
+            legal_basis: string;
+            /**
+             * Quote
+             * @default
+             */
+            quote: string;
+            /** Review Notes */
+            review_notes?: string | null;
+            /** Review Status */
+            review_status?: ("VERIFIED" | "REJECTED" | "PENDING") | null;
+            /** Reviewed At */
+            reviewed_at?: string | null;
+            /** Reviewed By */
+            reviewed_by?: string | null;
+            /** Rule Id */
+            rule_id: string;
+            /**
+             * Source
+             * @default
+             */
+            source: string;
+            /**
+             * Verified
+             * @default false
+             */
+            verified: boolean;
+            /** Ziffer Roles */
+            ziffer_roles?: {
+                [key: string]: string;
+            };
+            /** Ziffern */
+            ziffern?: string[];
+        };
+        /**
          * RuleCoverage
          * @description How much of the rule set is actually being enforced, on every response that has one.
          *
@@ -1993,6 +2131,16 @@ export interface components {
             /** Policy For Unverified Rules */
             policy_for_unverified_rules: string;
             /**
+             * Rejected Rule Count
+             * @default 0
+             */
+            rejected_rule_count: number;
+            /**
+             * Review Verified Rule Count
+             * @default 0
+             */
+            review_verified_rule_count: number;
+            /**
              * Rule Coverage
              * @default partial
              */
@@ -2008,6 +2156,11 @@ export interface components {
              */
             suppressed_unverified_rule_count: number;
             /**
+             * Total Constraint Rule Count
+             * @default 0
+             */
+            total_constraint_rule_count: number;
+            /**
              * Unverified Rule Count
              * @default 0
              */
@@ -2017,6 +2170,73 @@ export interface components {
              * @default 0/0
              */
             verified_share: string;
+        };
+        /**
+         * RuleReviewQueue
+         * @description The rules still awaiting a decision, with enough context to show progress.
+         */
+        RuleReviewQueue: {
+            /**
+             * Pending Rule Count
+             * @default 0
+             */
+            pending_rule_count: number;
+            /**
+             * Rejected Rule Count
+             * @default 0
+             */
+            rejected_rule_count: number;
+            /**
+             * Review Verified Rule Count
+             * @default 0
+             */
+            review_verified_rule_count: number;
+            /** Rules */
+            rules?: components["schemas"]["ReviewableRule"][];
+            /**
+             * Total Constraint Rules
+             * @default 0
+             */
+            total_constraint_rules: number;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+            /**
+             * Verified Rule Count
+             * @default 0
+             */
+            verified_rule_count: number;
+        };
+        /**
+         * RuleReviewRequest
+         * @description A reviewer's verdict on one rule.
+         */
+        RuleReviewRequest: {
+            /**
+             * Review Notes
+             * @default
+             */
+            review_notes: string;
+            /**
+             * Reviewed By
+             * @default
+             */
+            reviewed_by: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "VERIFIED" | "REJECTED" | "PENDING";
+        };
+        /**
+         * RuleReviewResult
+         * @description The rule after the review was applied, plus the coverage it moved.
+         */
+        RuleReviewResult: {
+            coverage: components["schemas"]["RuleCoverage"];
+            rule: components["schemas"]["ReviewableRule"];
         };
         /**
          * SolveRequest
@@ -2405,7 +2625,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description A ZIP archive named `batch_{batch_id}_export.zip` holding `batch_summary.csv`, `batch_line_items.csv`, `batch_files.csv` and a `README.txt` that defines the three buckets. */
+            /** @description A ZIP archive named `{batch_id}_export.zip` holding `batch_summary.csv`, `batch_line_items.csv`, `batch_files.csv` and a `README.txt` that defines the three buckets. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2544,7 +2764,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The export document, as a downloadable attachment named `proposal_{proposal_id}.json`. */
+            /** @description The export document, as a downloadable attachment named `{proposal_id}.json`. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2593,6 +2813,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Proposal"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rule_coverage_api_v1_rules_coverage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleCoverage"];
+                };
+            };
+        };
+    };
+    review_queue_api_v1_rules_review_queue_get: {
+        parameters: {
+            query?: {
+                /** @description Show one rule type only. `zielleistung` first is the usual order of work: a wrong Zielleistung rule removes a position a practice was entitled to charge. */
+                kind?: ("exclusion" | "zielleistung" | "specificity" | "factor_cap") | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleReviewQueue"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_rule_api_v1_rules__rule_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleReviewResult"];
                 };
             };
             /** @description Validation Error */

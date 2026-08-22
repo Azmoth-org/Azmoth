@@ -1,7 +1,7 @@
 """Every schema the engine speaks, re-exported as one namespace.
 
 The modules are split by concern — `case` (the frozen clinical input contract), `facts` (the
-symbolic layer), `solver`, `result`, `proposal`, `padnext`, `batch`, `export`, `meta` — but callers
+symbolic layer), `solver`, `result`, `proposal`, `padnext`, `batch`, `export`, `rules`, `meta` — but callers
 import from here, so moving a model between them is not a breaking change.
 """
 
@@ -87,6 +87,14 @@ from app.schemas.result import (
     InvoiceLine,
     Totals,
 )
+from app.schemas.rules import (
+    ReviewableRule,
+    ReviewStatus,
+    RuleKind,
+    RuleReviewQueue,
+    RuleReviewRequest,
+    RuleReviewResult,
+)
 from app.schemas.solver import (
     AnalogDecision,
     FactorDecision,
@@ -152,7 +160,13 @@ __all__ = [
     "ProposalStatus",
     "ProofStep",
     "RejectionRequest",
+    "ReviewStatus",
+    "ReviewableRule",
     "RuleCoverage",
+    "RuleKind",
+    "RuleReviewQueue",
+    "RuleReviewRequest",
+    "RuleReviewResult",
     "RulesResult",
     "Setting",
     "Severity",

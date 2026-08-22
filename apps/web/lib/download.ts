@@ -119,13 +119,13 @@ export function downloadProposalExport(
 ): Promise<DownloadResult> {
   return downloadPost(`/api/engine/proposals/${encodeURIComponent(proposalId)}/export`, {
     body: payload,
-    fallbackFilename: `proposal_${proposalId}.json`,
+    fallbackFilename: `${proposalId}.json`,
   })
 }
 
 /** `POST /api/engine/padnext/batch/{id}/export` — the completed batch, as a ZIP of CSVs. */
 export function downloadBatchExport(batchId: string): Promise<DownloadResult> {
   return downloadPost(`/api/engine/padnext/batch/${encodeURIComponent(batchId)}/export`, {
-    fallbackFilename: `batch_${batchId}_export.zip`,
+    fallbackFilename: `${batchId}_export.zip`,
   })
 }

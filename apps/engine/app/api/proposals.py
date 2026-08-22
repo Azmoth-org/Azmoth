@@ -120,7 +120,7 @@ async def reject(proposal_id: str, request: RejectionRequest) -> Proposal:
         200: {
             "description": (
                 "The export document, as a downloadable attachment named "
-                "`proposal_{proposal_id}.json`."
+                "`{proposal_id}.json`."
             ),
             "content": {"application/json": {}},
         },

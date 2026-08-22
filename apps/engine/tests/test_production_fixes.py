@@ -438,7 +438,7 @@ def test_export_is_reachable_only_from_approved(client, manual_case):
     # The endpoint now answers with the export document itself, not with the proposal. The status
     # is inside it, and is always EXPORTED — the transition happened in the same transaction.
     assert exported.json()["status"] == "EXPORTED"
-    assert exported.headers["content-disposition"] == f'attachment; filename="proposal_{pid}.json"' 
+    assert exported.headers["content-disposition"] == f'attachment; filename="{pid}.json"' 
 
 
 def test_an_unknown_proposal_is_404_and_says_why(client):

@@ -4,8 +4,8 @@ Two exports live here because they share one rule and nothing else: **the bytes 
 database row, never from an object a caller handed in.** Everything below takes either an ORM
 record or a model that was just read back out of one.
 
-    proposal  →  proposal_{id}.json      one approved draft, with its proof and its audit log
-    batch     →  batch_{id}_export.zip   three CSVs and a README, for a billing centre
+    proposal  →  prop_<hex>.json           one approved draft, with its proof and its audit log
+    batch     →  batch_<hex>_export.zip    three CSVs and a README, for a billing centre
 
 The two formats are different on purpose and it is worth saying why, because "be consistent" would
 be the wrong instinct here. A proposal export is read by a system — a PVS importer, or a person
@@ -73,11 +73,17 @@ def attachment_headers(filename: str) -> dict[str, str]:
 
 
 def proposal_export_filename(proposal_id: str) -> str:
-    return f"proposal_{proposal_id}.json"
+    """`prop_5f3a1b….json`.
+
+    The id already carries its own prefix, so a `proposal_` in front of it would read
+    `proposal_prop_5f3a1b….json`. The id alone is what a reader greps for anyway.
+    """
+    return f"{proposal_id}.json"
 
 
 def batch_export_filename(batch_id: str) -> str:
-    return f"batch_{batch_id}_export.zip"
+    """`batch_4d980f…_export.zip`. Same reason as above — `batch_id` starts with `batch_`."""
+    return f"{batch_id}_export.zip"
 
 
 # ------------------------------------------------------------------------------------------

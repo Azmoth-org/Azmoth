@@ -1,10 +1,13 @@
 # The database
 
-Four tables, in two unrelated pairs.
+Five tables: two unrelated pairs, and one standalone.
 
 `proposals` / `audit_events` is the approval record: one holds a proposal and the decision taken on
 it, the other is the append-only log of what happened to it. `batch_jobs` / `batch_files` is the
 batch PADnext audit: one upload of many deliveries, and one row per delivery in it.
+
+`rule_reviews` stands alone: one row per GOÄ rule a billing expert has decided about, merged onto
+the versioned CSVs at load time.
 
 Everything else the engine reads (the catalog, the rule tables, the logic programs) is versioned
 input, and the result cache is content-addressed and disposable.
@@ -302,6 +305,72 @@ A batch is processed in the same process that accepted it, so a restart mid-run 
 MVP's no-Celery, no-Redis constraint, and it is stated rather than hidden: `GET` reports the real
 state, the web app stops polling after fifteen minutes and says why, and re-uploading the files
 produces a fresh batch. A durable queue is the fix when one is wanted.
+
+---
+
+## `rule_reviews`
+
+One rule, and what a billing expert concluded about it. Behind `GET /api/v1/rules/review-queue` and
+`POST /api/v1/rules/{rule_id}/review`; merged by `RuleStore.with_reviews`.
+
+| column | type | notes |
+| --- | --- | --- |
+| `id` | `uuid` PK | |
+| `rule_id` | `varchar(128)`, **unique**, indexed | names a row in `data/rules/*.csv` |
+| `status` | `varchar(16)`, indexed | `VERIFIED` \| `REJECTED` \| `PENDING` |
+| `reviewed_by` | `varchar(256)`, nullable | required by the API for a decision; null for `PENDING` |
+| `reviewed_at` | `timestamptz`, nullable | stamped on a decision, cleared on `PENDING` |
+| `review_notes` | `text`, nullable | why. The most valuable column in the table |
+| `created_at` / `updated_at` | `timestamptz` | `updated_at` says when the *current* answer was reached |
+
+Plus a composite `(status, rule_id)` — "everything decided one way" is what the merge reads.
+
+### It is an overlay, not a copy
+
+859 of the engine's 894 constraint rules were extracted from the GOÄ's prose automatically and
+enforce nothing until a human checks them. This table is where that check is recorded. The CSVs are
+**never written**: they are versioned source data, a change to them is a reviewed PR needing a
+second approver (`CONTRIBUTING.md`), and an API that edited them would route around exactly that
+control.
+
+    data/rules/*.csv  ─┐
+                       ├─►  RuleStore.with_reviews(…)  ─►  the store the pipeline holds
+    rule_reviews      ─┘
+
+The merge deliberately does **not** live in `RuleStore.load()`. That function is synchronous and
+`lru_cache`d, the driver is async, and `import app.main` has to work with no Postgres — for an
+OpenAPI export, in CI, on a laptop. So the rules layer takes a plain `rule_id -> status` mapping and
+knows nothing about a database; `app/services/rule_reviews.py` is the only module that does.
+
+### No foreign key, and that is the right failure
+
+`rule_id` names a row in a CSV, which no database constraint can reach. A review can therefore
+outlive the rule it refers to: if a data change deletes `excl_auto_30_4`, its row here becomes inert
+rather than invalid, the merge simply never finds it, and nobody's recorded decision is destroyed by
+an import.
+
+### Not append-only, unlike `audit_events`
+
+A reviewer changing their mind about a machine-extracted exclusion is a normal event, not a
+falsification. Nobody's liability attaches to it the way it attaches to an approval, and the rule set
+is a working document. The endpoint upserts. If the *history* of a rule's verdict ever matters, that
+is a second table, not a reinterpretation of this one.
+
+### `REJECTED` outranks the policy
+
+`UNVERIFIED_RULE_POLICY=block` enforces rules nobody has looked at. A rule somebody looked at and
+refused is the opposite, so it is never enforced under any policy — and it is deliberately not
+counted in `unverified_rule_count` either. A refusal is a decision, not a gap; counting it as a gap
+would mean the review queue could never empty.
+
+### A review moves `rules_hash`
+
+`rules_hash` feeds the **receipt hash** and the **result-cache key**. If a review changed what is
+enforced without moving it, two proposals with one receipt hash could describe different rule sets —
+the receipt would be lying — and the cache would serve an answer computed before the rule was
+verified. `effective_rules_hash` folds the decided reviews in, and returns the CSV digest **byte for
+byte unchanged** when there are none, so a deployment that never uses the queue hashes exactly as it
+did before the feature existed. Every existing golden receipt stays valid.
 
 ---
 

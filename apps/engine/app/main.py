@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import catalog, health, padnext, proposals, solve
+from app.api import catalog, health, padnext, proposals, rules, solve
 from app.api.deps import pipeline, reset_async
 from app.config import get_settings
 from app.core.limits import RequestSizeLimitMiddleware
@@ -56,6 +56,14 @@ async def lifespan(_app: FastAPI):
             settings.database_backend,
             database.url,
         )
+
+    # Merge the stored rule reviews into the rule store before anything can solve against it. At
+    # startup rather than lazily: a first request that raced the merge would be answered under the
+    # CSVs' own verification state, and "the first invoice after a restart was audited against
+    # different rules" is not a sentence anyone wants to have to explain.
+    from app.services.rule_reviews import refresh_pipeline_rules
+
+    await refresh_pipeline_rules(p)
 
     if not p.souffle.available():
         log.error(
@@ -127,6 +135,16 @@ app = FastAPI(
         {"name": "proposals", "description": "The human approval boundary."},
         {"name": "padnext", "description": "Audit an already-coded PADnext delivery."},
         {"name": "catalog", "description": "Catalog provenance and the mappable vocabulary."},
+        {
+            "name": "rules",
+            "description": (
+                "The rule verification workflow. 859 of 894 constraint rules were extracted from "
+                "the GOÄ's prose automatically and enforce nothing until a billing expert verifies "
+                "them; verifying one shrinks the `unconfirmed` bucket of every later audit. "
+                "Decisions are stored in Postgres and merged onto the versioned CSVs at load "
+                "time — the CSVs themselves are never written by this API."
+            ),
+        },
     ],
 )
 
@@ -139,3 +157,4 @@ app.include_router(solve.router, prefix=API_PREFIX)
 app.include_router(proposals.router, prefix=API_PREFIX)
 app.include_router(padnext.router, prefix=API_PREFIX)
 app.include_router(catalog.router, prefix=API_PREFIX)
+app.include_router(rules.router, prefix=API_PREFIX)

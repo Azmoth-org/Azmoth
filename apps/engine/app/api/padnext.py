@@ -255,7 +255,7 @@ async def padnext_batch_status(batch_id: str) -> BatchAuditJob:
     responses={
         200: {
             "description": (
-                "A ZIP archive named `batch_{batch_id}_export.zip` holding `batch_summary.csv`, "
+                "A ZIP archive named `{batch_id}_export.zip` holding `batch_summary.csv`, "
                 "`batch_line_items.csv`, `batch_files.csv` and a `README.txt` that defines the "
                 "three buckets."
             ),

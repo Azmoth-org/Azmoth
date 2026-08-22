@@ -28,6 +28,16 @@ status moves PENDING → PROCESSING → COMPLETED, each file's verdict is writte
 re-running the same files would simply produce another batch. There is nothing here for an audit
 log to protect, and no approval boundary to enforce — which is exactly why these two tables are
 plain and `proposals` is not.
+
+And one standalone table:
+
+    rule_reviews        one row per rule a billing expert has decided about
+
+It has no foreign key because the thing it points at is not in this database: `rule_id` names a row
+in `data/rules/*.csv`, which is versioned source data the API must never write. The reviews are an
+*overlay* merged onto the CSVs at load time (`RuleStore.with_reviews`), which is what lets a
+reviewer promote a machine-extracted rule to verified without anyone editing a file that git tracks
+and a second approver has to sign off.
 """
 
 from __future__ import annotations
@@ -317,6 +327,61 @@ class BatchFileRecord(Base):
         return f"<BatchFileRecord {self.filename} {self.status}>"
 
 
+class RuleReviewRecord(Base):
+    """One rule, and what a billing expert decided about it.
+
+    Deliberately **not** append-only, unlike `audit_events`. A reviewer changing their mind about a
+    machine-extracted exclusion is a normal event, not a falsification of a record — nobody's
+    liability attaches to it the way it attaches to an approval, and the rule set is a working
+    document rather than a decision that was taken once. `updated_at` says when the current answer
+    was reached; if the *history* of a rule's verdict ever matters, that is a second table, not a
+    reinterpretation of this one.
+
+    There is no foreign key. `rule_id` identifies a row in `data/rules/*.csv`, and those files are
+    versioned source data outside this database — see the module docstring.
+    """
+
+    __tablename__ = "rule_reviews"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The rule this decision is about — `excl_auto_30_4`, `ziel_man_301_200`, and so on.
+    #:
+    #: Unique, because the merge resolves `rule_id -> status` and two rows answering to one id
+    #: would make the effective verification state depend on row order. The endpoint upserts.
+    rule_id: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+
+    #: VERIFIED | REJECTED | PENDING — one of `app.rules.rule_store.RuleReviewStatus`.
+    #:
+    #: `PENDING` is a real, storable state: a reviewer who has read a rule and cannot decide should
+    #: be able to say so. It merges exactly like no row at all, because an undecided rule is still
+    #: an unchecked one.
+    status: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+
+    #: Who decided. Nullable only because a `PENDING` row can precede a decision; the API requires
+    #: it for VERIFIED and REJECTED. Recorded, never authenticated — this service has no login.
+    reviewed_by: Mapped[str | None] = mapped_column(String(256), default=None)
+    reviewed_at: Mapped[datetime | None] = mapped_column(TimestampVariant, default=None)
+
+    #: Why. The most valuable column in the table and the reason it is `Text`: a reviewer's
+    #: reasoning about a GOÄ Anmerkung is the thing a second reviewer needs, and truncating it to a
+    #: column width would be a poor trade.
+    review_notes: Mapped[str | None] = mapped_column(Text, default=None)
+
+    created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        TimestampVariant, nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+    __table_args__ = (
+        # "Everything decided one way", which is what the merge reads and what the dashboard counts.
+        Index("ix_rule_reviews_status_rule_id", "status", "rule_id"),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return f"<RuleReviewRecord {self.rule_id} {self.status}>"
+
+
 class AuditLogIsAppendOnly(RuntimeError):
     """Raised when something tries to change or remove an audit row.
 
@@ -349,6 +414,7 @@ __all__ = [
     "BatchFileRecord",
     "BatchJobRecord",
     "ProposalRecord",
+    "RuleReviewRecord",
     "as_utc",
     "utcnow",
 ]

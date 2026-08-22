@@ -22,10 +22,12 @@ from app.db.session import reset_database
 from app.services.batch_audit import BatchAuditService
 from app.services.pipeline import Pipeline
 from app.services.proposal_store import ProposalStore
+from app.services.rule_reviews import RuleReviewStore
 
 _pipeline: Pipeline | None = None
 _proposals: ProposalStore | None = None
 _batches: BatchAuditService | None = None
+_rule_reviews: RuleReviewStore | None = None
 
 
 def pipeline() -> Pipeline:
@@ -52,16 +54,24 @@ def batches() -> BatchAuditService:
     return _batches
 
 
+def rule_reviews() -> RuleReviewStore:
+    global _rule_reviews
+    if _rule_reviews is None:
+        _rule_reviews = RuleReviewStore()
+    return _rule_reviews
+
+
 def reset() -> None:
     """Drop the in-process singletons. For tests that change settings between cases.
 
     Does not touch the database: the engine has to be disposed with an `await`, and a sync helper
     that quietly left a connection pool open would leak one per test. Use `reset_async`.
     """
-    global _pipeline, _proposals, _batches
+    global _pipeline, _proposals, _batches, _rule_reviews
     _pipeline = None
     _proposals = None
     _batches = None
+    _rule_reviews = None
 
 
 async def reset_async() -> None:

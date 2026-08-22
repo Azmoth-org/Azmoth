@@ -88,6 +88,23 @@ class RuleCoverage(BaseModel):
     #: enforcement path. Equal to `unverified_rule_count` under `warn`/`ignore`, zero under `block`.
     suppressed_unverified_rule_count: int = 0
 
+    # -- what the review workflow changed ---------------------------------------------------
+    #
+    # These three exist because a reviewer verifying a machine-extracted rule moves euros between
+    # the honest buckets of every subsequent audit, and a reader has to be able to see that the
+    # rule set is no longer just what the CSVs shipped.
+
+    #: Enforced rules that a reviewer promoted, rather than ones the CSV already marked verified.
+    #: `enforced_rule_count` counts both; this says how much of it the review queue produced.
+    review_verified_rule_count: int = 0
+    #: Rules a reviewer explicitly refused. Never enforced — not even under `policy=block`, which
+    #: enforces merely-unverified rules — and deliberately NOT counted in `unverified_rule_count`:
+    #: a refusal is a decision, not a gap in coverage.
+    rejected_rule_count: int = 0
+    #: Every constraint rule the engine loaded, enforced or not. The denominator for
+    #: "X of 894 verified"; excludes Analogansatz candidates, which can never constrain anything.
+    total_constraint_rule_count: int = 0
+
     rule_coverage: str = "partial"
     rules_version: str = ""
     verified_share: str = "0/0"

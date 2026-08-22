@@ -248,7 +248,7 @@ def test_the_document_is_served_as_a_named_attachment(client, manual_case):
     response = export(client, pid)
 
     assert response.headers["content-type"].startswith("application/json")
-    assert response.headers["content-disposition"] == f'attachment; filename="proposal_{pid}.json"'
+    assert response.headers["content-disposition"] == f'attachment; filename="{pid}.json"'
     # Pretty-printed and not ASCII-escaped: somebody will open this in an editor.
     assert response.text.startswith("{\n")
     assert json.loads(response.text)["proposal_id"] == pid
@@ -372,7 +372,7 @@ def test_the_batch_export_is_a_named_zip_with_the_four_members(client, completed
     assert response.headers["content-type"] == "application/zip"
     assert (
         response.headers["content-disposition"]
-        == f'attachment; filename="batch_{batch_id}_export.zip"'
+        == f'attachment; filename="{batch_id}_export.zip"'
     )
 
     members = read_zip(response.content)
