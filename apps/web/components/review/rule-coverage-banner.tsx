@@ -36,20 +36,24 @@ function Count({
  * Rule coverage, stated rather than implied.
  *
  * The distinction this banner exists to protect: **only `enforced_rule_count` can suppress a
- * position.** `advisory_rule_count` cannot — it contains the unverified rules the policy holds out
- * of enforcement *and* the Analogansatz candidates, which are offers rather than constraints. A
- * reader who took the advisory number for "rules that were applied" would believe the invoice had
- * been checked against 862 rules when it was checked against 35.
+ * position.** A reader who took the advisory number for "rules that were applied" would believe the
+ * invoice had been checked against 862 rules when it was checked against 35.
  *
- * The counts are therefore never summed, and the advisory figure is never described as blocking.
- * The engine does not expose a further breakdown of the advisory set, so none is invented here.
+ * The advisory set is now published as its two components, so this no longer has to hedge about
+ * what is in it. They are advisory for different reasons and the banner says which:
+ * `suppressed_unverified_rule_count` rules *could* suppress a position and the current policy is
+ * not letting them, while `analog_candidate_count` offers under § 6 Abs. 2 GOÄ never could.
+ *
+ * The counts are never summed here — the engine publishes the total.
  */
 export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
   const coverage = proposal.rule_coverage
   const enforced = coverage?.enforced_rule_count ?? proposal.enforced_rule_count ?? 0
   const advisory = coverage?.advisory_rule_count ?? proposal.advisory_rule_count ?? 0
-  const unverified =
+  const suppressed =
     coverage?.suppressed_unverified_rule_count ?? proposal.suppressed_unverified_rule_count ?? 0
+  const analogCandidates =
+    coverage?.analog_candidate_count ?? proposal.analog_candidate_count ?? 0
   const policy = coverage?.policy_for_unverified_rules
   const ruleCoverage = coverage?.rule_coverage ?? proposal.solver_result.audit_trail.rule_coverage
   const verifiedShare = coverage?.verified_share
@@ -76,7 +80,7 @@ export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
         ) : null}
       </AlertTitle>
       <AlertDescription className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Count
             value={enforced}
             label="durchgesetzt"
@@ -86,28 +90,33 @@ export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
           <Count
             value={advisory}
             label="nur beratend"
-            hint="Unterdrücken keine Position. Sie erzeugen ausschließlich Hinweise."
+            hint="Unterdrücken keine Position. Summe der beiden folgenden Gruppen."
             tone="advisory"
           />
           <Count
-            value={unverified}
+            value={suppressed}
             label="nicht verifiziert"
             hint={
               policy
-                ? `Teilmenge der beratenden Regeln: nicht menschlich geprüft und unter Policy „${policy}“ bewusst nicht blockierend.`
-                : "Teilmenge der beratenden Regeln: nicht menschlich geprüft und bewusst nicht blockierend."
+                ? `Könnten eine Position unterdrücken, tun es unter Policy „${policy}“ aber bewusst nicht: kein Mensch hat sie geprüft.`
+                : "Könnten eine Position unterdrücken, tun es aber bewusst nicht: kein Mensch hat sie geprüft."
             }
             tone="unverified"
+          />
+          <Count
+            value={analogCandidates}
+            label="Analogkandidaten"
+            hint="Angebote nach § 6 Abs. 2 GOÄ. Könnten eine Position nie unterdrücken — unabhängig von der Policy."
+            tone="advisory"
           />
         </div>
 
         <div className="text-foreground/80 space-y-2">
           <p>
             <strong>Die Regelabdeckung ist unvollständig.</strong> Die Engine setzt eine Teilmenge der
-            GOÄ durch. Beratende Regeln enthalten sowohl die nicht verifizierten, automatisch aus dem
-            Verordnungstext extrahierten Regeln als auch Analogkandidaten nach § 6 Abs. 2 GOÄ, die als
-            Angebot und nie als Einschränkung wirken. Ein fehlender Befund bedeutet daher{" "}
-            <strong>nicht</strong>, dass eine Position geprüft und bestätigt wurde.
+            GOÄ durch. Die nicht verifizierten Regeln wurden automatisch aus dem Verordnungstext
+            extrahiert und sind ungeprüft; sie blockieren daher nicht. Ein fehlender Befund bedeutet
+            somit <strong>nicht</strong>, dass eine Position geprüft und bestätigt wurde.
           </p>
           <p>
             <strong>Die ärztliche Prüfung ist zwingend erforderlich.</strong> Insbesondere das

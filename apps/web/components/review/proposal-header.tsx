@@ -50,7 +50,10 @@ function Field({
  */
 export function ProposalHeader({ proposal }: { proposal: Proposal }) {
   const status = proposal.status ?? "DRAFT"
-  const solverStatus = proposal.solver_result.audit_trail.solver_status
+  // Read from the proposal, not from solver_result.audit_trail two levels down. The engine promotes
+  // it because it qualifies the whole proposal; the audit trail keeps its own copy as the record.
+  const solverStatus = proposal.solver_status
+  const timedOut = proposal.solver_timed_out === true
 
   return (
     <Card>
@@ -64,7 +67,7 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
               aus Cache
             </Badge>
           ) : null}
-          {solverStatus === "TIMEOUT_PARTIAL" ? (
+          {timedOut ? (
             <Badge variant="destructive">Solver abgebrochen — Optimalität nicht bewiesen</Badge>
           ) : null}
         </CardTitle>

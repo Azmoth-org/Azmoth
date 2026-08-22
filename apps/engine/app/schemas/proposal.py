@@ -50,9 +50,23 @@ class Proposal(BaseModel):
     warnings: list[Warning_] = Field(default_factory=list)
     missing_documentation: list[MissingDocumentation] = Field(default_factory=list)
 
-    #: Rule-coverage transparency, flattened onto the proposal so it cannot be missed.
+    #: How the solve ended: a Clingo result string, or `TIMEOUT_PARTIAL` when the hard timeout cut
+    #: the search short and the returned model is the best found rather than a proven optimum.
+    #:
+    #: Promoted to the top level because it qualifies the whole proposal — a reviewer needs it in
+    #: the header, next to the status and the receipt, not two levels down in the audit trail. The
+    #: audit trail keeps its own copy: that is the immutable record of the run.
+    solver_status: str = ""
+    #: True when the solve was cancelled by `SOLVER_TIMEOUT_SECONDS`. Every hard rule still held.
+    solver_timed_out: bool = False
+
+    #: Rule-coverage transparency, flattened onto the proposal so it cannot be missed. The same
+    #: numbers are in `rule_coverage`; these exist so a client cannot render a proposal without
+    #: having seen them.
     enforced_rule_count: int = 0
     advisory_rule_count: int = 0
+    unverified_rule_count: int = 0
+    analog_candidate_count: int = 0
     suppressed_unverified_rule_count: int = 0
     rule_coverage: RuleCoverage | None = None
 

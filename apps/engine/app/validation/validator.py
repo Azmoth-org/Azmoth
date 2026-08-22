@@ -429,7 +429,17 @@ class Validator:
         )
         warnings.extend(reconciliation_warnings)
 
+        # Attach each blocked position's own proof. Derived from the same two relations the audit
+        # trail's `per_code` is built from, immediately below, so the two can never disagree — a
+        # client reading `blocked_codes[].proof` and one reading `per_code` see the same steps.
+        def proof_for(ziffer: str) -> list[ProofStep]:
+            steps = [s for s in rules_result.proof if s.ziffer == ziffer]
+            if not steps and verification is not None:
+                steps = [s for s in verification.proof if s.ziffer == ziffer]
+            return steps
+
         for entry in blocked_codes:
+            entry.proof = proof_for(entry.ziffer)
             if not entry.explanation:
                 fail("blocked_without_reason", f"GOÄ {entry.ziffer} ist ohne Begründung gesperrt.")
         if violations:
@@ -467,10 +477,7 @@ class Validator:
         per_code: list[AuditTrailEntry] = []
         relevant = charged_set | {b.ziffer for b in blocked_codes}
         for ziffer in sorted(relevant):
-            steps = [s for s in rules_result.proof if s.ziffer == ziffer]
-            if not steps and verification is not None:
-                steps = [s for s in verification.proof if s.ziffer == ziffer]
-            per_code.append(AuditTrailEntry(ziffer=ziffer, steps=steps))
+            per_code.append(AuditTrailEntry(ziffer=ziffer, steps=proof_for(ziffer)))
 
         audit = AuditTrail(
             extraction_mode=extraction_mode,

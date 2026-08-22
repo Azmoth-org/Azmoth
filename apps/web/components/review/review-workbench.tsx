@@ -186,7 +186,7 @@ export function ReviewWorkbench() {
               <AcceptedPositionsTable coding={coding} />
             </TabsContent>
             <TabsContent value="blocked" className="pt-4">
-              <BlockedPositionsTable coding={coding} auditTrail={auditTrail} />
+              <BlockedPositionsTable coding={coding} />
             </TabsContent>
             <TabsContent value="documentation" className="pt-4">
               <MissingDocumentationPanel entries={missing} />

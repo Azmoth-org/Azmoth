@@ -8,6 +8,19 @@ falsifiable statement rather than an assurance.
 What goes in is deliberately narrow: identity of the data and logic, the canonical input, and the
 canonical output. What stays out is anything measured — timings, wall-clock stamps, ids — because a
 receipt that changed every run would identify nothing.
+
+**The guarantee is one-directional, and the direction matters.** Same hash implies same catalog,
+rules, logic, solver, policy and input. The converse does not hold across engine versions: the hash
+covers the canonical *response*, so adding a field to the response changes it even when the billing
+decision is identical. That happened when `BlockedCode.proof` was introduced — the totals for all
+three golden cases were unchanged, and two of the three receipts moved because their blocked
+positions now carry proof inside the hashed output.
+
+So a receipt is comparable *within* an engine version, not across one. If cross-version stability is
+ever required — a practice storing a receipt and re-verifying it after an upgrade — the fix is to
+hash a narrow projection of the billing decision (charged Ziffern, factors, amounts, totals, blocked
+Ziffern and reasons) instead of the whole response, which is a deliberate change to what a receipt
+attests to and therefore a decision for legal review, not a refactor.
 """
 
 from __future__ import annotations

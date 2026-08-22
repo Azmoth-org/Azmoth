@@ -21,6 +21,23 @@ Severity = Literal["leicht", "mittel", "schwer"]
 
 Severity_ = Literal["info", "warning", "error"]
 
+#: Why a charged position carries the Steigerungsfaktor it does. Closed, and shared by
+#: `FactorDecision.basis` and `InvoiceLine.factor_basis` so the two can never drift: they are the
+#: same decision, reported once by the solver and once on the invoice line.
+#:
+#:   einfachsatz          1.0 — the § 5 Abs. 1 base rate
+#:   schwellenwert        the threshold factor, lawful without a written justification (§ 5 Abs. 2)
+#:   ueber_schwellenwert  above the threshold; requires a written reason (§ 12 Abs. 3)
+#:   hoechstsatz          at the ceiling of the § 5 band
+#:   capped               a Leistungslegende cap overrode the band
+FactorBasis = Literal[
+    "einfachsatz",
+    "schwellenwert",
+    "ueber_schwellenwert",
+    "hoechstsatz",
+    "capped",
+]
+
 
 class Warning_(BaseModel):
     """A non-fatal finding. Named with a trailing underscore to avoid the builtin."""
@@ -50,9 +67,27 @@ class RuleCoverage(BaseModel):
     """
 
     policy_for_unverified_rules: str
+
+    #: Rules that CAN suppress a position. This is the only number that describes enforcement.
     enforced_rule_count: int = 0
+
+    #: The sum of the two components below, kept so a caller can show one "advisory" figure
+    #: without adding numbers itself. It is NOT a count of rules that blocked anything.
     advisory_rule_count: int = 0
+
+    #: Constraint rules (exclusion, Zielleistung, specificity, factor cap) that no human has
+    #: verified. Policy-independent: under `block` these are enforced, under `warn`/`ignore` they
+    #: are not. Compare with `suppressed_unverified_rule_count`.
+    unverified_rule_count: int = 0
+
+    #: Analogansatz candidates (§ 6 Abs. 2 GOÄ). Offers, never constraints — one of these can
+    #: never suppress a position, verified or not, under any policy.
+    analog_candidate_count: int = 0
+
+    #: The subset of `unverified_rule_count` that the current policy is holding out of the
+    #: enforcement path. Equal to `unverified_rule_count` under `warn`/`ignore`, zero under `block`.
     suppressed_unverified_rule_count: int = 0
+
     rule_coverage: str = "partial"
     rules_version: str = ""
     verified_share: str = "0/0"

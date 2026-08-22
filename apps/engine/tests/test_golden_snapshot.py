@@ -30,13 +30,25 @@ from tests.conftest import solve_payload
 CASES = sorted(p.name for p in CASES_DIR.iterdir() if (p / "input.json").exists())
 GOLDEN = GOLDEN_DIR / "case_001_knee.golden.normalized.json"
 
-#: Fields this migration added to the response. Anything else appearing is a change nobody
-#: declared, and `test_no_undeclared_field_was_added` fails on it.
-ADDED_BY_MIGRATION = {
+#: Response fields added since the POC produced the frozen snapshots. Every entry is a deliberate
+#: contract decision; anything else appearing is a change nobody declared, and
+#: `test_no_undeclared_field_was_added` fails on it. A declared entry covers its whole subtree.
+#:
+#: Adding a line here is not a formality — it is the moment to ask whether the field belongs in the
+#: contract at all. It must never be used to wave through a *changed* value: that is the other
+#: test, and it has no allow-list.
+FIELDS_ADDED_SINCE_POC = {
+    # the migration's seven production fixes
     "/coding/missing_documentation",
     "/audit_trail/logic_version",
     "/audit_trail/rule_coverage_detail",
     "/audit_trail/solver_status",
+    # contract polish, from frontend feedback: a blocked position now carries its own proof
+    # instead of the client joining it out of audit_trail.per_code
+    "/coding/blocked_codes/proof",
+    # `rule_summary` is the rule store's own dict, passed through untyped; it gained the
+    # policy-independent unverified count that backs RuleCoverage.unverified_rule_count
+    "/audit_trail/rule_summary/unverified_constraint_rules",
 }
 
 
@@ -183,10 +195,10 @@ def test_no_undeclared_field_was_added(client, manual_case, golden_case, name):
     added = {
         path
         for path in keys(live) - keys(frozen)
-        if not any(path.startswith(f"{declared}/") for declared in ADDED_BY_MIGRATION)
+        if not any(path.startswith(f"{declared}/") for declared in FIELDS_ADDED_SINCE_POC)
     }
 
-    assert added <= ADDED_BY_MIGRATION, (
-        f"{name}: undeclared new response fields {sorted(added - ADDED_BY_MIGRATION)}. "
-        "Add them to ADDED_BY_MIGRATION only after deciding they belong in the contract."
+    assert added <= FIELDS_ADDED_SINCE_POC, (
+        f"{name}: undeclared new response fields {sorted(added - FIELDS_ADDED_SINCE_POC)}. "
+        "Add them to FIELDS_ADDED_SINCE_POC only after deciding they belong in the contract."
     )

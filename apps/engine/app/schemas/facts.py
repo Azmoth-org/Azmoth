@@ -69,6 +69,14 @@ class BlockedCode(BaseModel):
     explanation: str = ""
     reconciled_with_final_invoice: bool = True
 
+    #: Why this position is not on the invoice, as Datalog derived it.
+    #:
+    #: The same steps also appear in `audit_trail.per_code`, which covers charged and blocked
+    #: positions alike. They are repeated here because a client should not have to know that join
+    #: exists: a blocked position and its reason belong together. The validator fills this in
+    #: alongside the per-position audit entry, from the same source, so the two cannot disagree.
+    proof: list[ProofStep] = Field(default_factory=list)
+
 
 class Conflict(BaseModel):
     ziffer_a: str

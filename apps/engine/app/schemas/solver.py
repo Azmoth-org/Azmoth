@@ -9,20 +9,21 @@ for the objective ordering and why revenue is last.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.schemas.common import Dec, Warning_
+from app.schemas.common import Dec, FactorBasis, Warning_
 from app.schemas.facts import BlockedCode
 
-SolverStatus = Literal["SAT", "OPTIMUM FOUND", "UNKNOWN", "TIMEOUT_PARTIAL", ""]
+# There is deliberately no closed union for `solver_status`: it is `str(clingo.SolveResult)` plus
+# the engine's own TIMEOUT_PARTIAL, and a Clingo upgrade may add a spelling. Typing it shut would
+# turn a new status into a validation error instead of a value the caller can display.
 
 
 class FactorDecision(BaseModel):
     ziffer: str
     factor: Dec
-    basis: Literal["einfachsatz", "schwellenwert", "ueber_schwellenwert", "hoechstsatz", "capped"]
+    basis: FactorBasis
     threshold: Dec
     max_factor: Dec
     justification_required: bool = False

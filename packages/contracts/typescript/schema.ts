@@ -424,6 +424,8 @@ export interface components {
              * @default
              */
             official_text: string;
+            /** Proof */
+            proof?: components["schemas"]["ProofStep"][];
             /**
              * Reason
              * @enum {string}
@@ -909,8 +911,11 @@ export interface components {
             confidence: string;
             /** Factor */
             factor: string;
-            /** Factor Basis */
-            factor_basis: string;
+            /**
+             * Factor Basis
+             * @enum {string}
+             */
+            factor_basis: "einfachsatz" | "schwellenwert" | "ueber_schwellenwert" | "hoechstsatz" | "capped";
             /**
              * Factor Legal Basis
              * @default
@@ -1399,6 +1404,11 @@ export interface components {
              * @default 0
              */
             advisory_rule_count: number;
+            /**
+             * Analog Candidate Count
+             * @default 0
+             */
+            analog_candidate_count: number;
             /** Approved At */
             approved_at?: string | null;
             /** Approved By */
@@ -1454,6 +1464,16 @@ export interface components {
             /** Rules Version */
             rules_version: string;
             solver_result: components["schemas"]["CodingResponse"];
+            /**
+             * Solver Status
+             * @default
+             */
+            solver_status: string;
+            /**
+             * Solver Timed Out
+             * @default false
+             */
+            solver_timed_out: boolean;
             /** Solver Version */
             solver_version: string;
             /** @default DRAFT */
@@ -1463,6 +1483,11 @@ export interface components {
              * @default 0
              */
             suppressed_unverified_rule_count: number;
+            /**
+             * Unverified Rule Count
+             * @default 0
+             */
+            unverified_rule_count: number;
             /** Warnings */
             warnings?: components["schemas"]["Warning_"][];
         };
@@ -1494,6 +1519,11 @@ export interface components {
              */
             advisory_rule_count: number;
             /**
+             * Analog Candidate Count
+             * @default 0
+             */
+            analog_candidate_count: number;
+            /**
              * Enforced Rule Count
              * @default 0
              */
@@ -1515,6 +1545,11 @@ export interface components {
              * @default 0
              */
             suppressed_unverified_rule_count: number;
+            /**
+             * Unverified Rule Count
+             * @default 0
+             */
+            unverified_rule_count: number;
             /**
              * Verified Share
              * @default 0/0

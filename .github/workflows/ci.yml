@@ -5,25 +5,27 @@ on:
     branches: [main]
   pull_request:
 
-# A new push to the same branch cancels the previous run. The engine job builds a Docker image, so
-# duplicated runs are expensive.
+# A new push to the same ref cancels the previous run. Two jobs build a Docker image, so duplicated
+# runs are expensive.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ---------------------------------------------------------------------------------------------
-  # The engine runs inside its own image, deliberately.
+  # ===========================================================================================
+  # JOB 1 — the engine, tested inside its own image.
   #
-  # Rules-engine tests SKIP when the `souffle` binary is absent, and a green run that skipped them
-  # tested almost nothing. Installing Soufflé on a bare runner would duplicate the Dockerfile and
-  # could drift from it; building the image is the only way to be sure CI tested what ships.
-  # Expect 566 passed + 4 skipped. The 4 are repo-hygiene checks with nothing to assert inside an
-  # image (no .git, no .env.example) and each says so; REQUIRE_ENGINES ensures they are the ONLY
-  # skips, because any engine-related skip becomes a failure.
-  # ---------------------------------------------------------------------------------------------
-  engine:
-    name: engine (in image)
+  # Not on a bare runner, deliberately. Every test that drives the rules engine depends on the
+  # `souffle` binary, and those tests SKIP when it is absent: a run on a runner without Soufflé
+  # would go green having tested almost nothing, and would look identical to a real pass.
+  # Installing Soufflé on the runner would duplicate the Dockerfile and could drift from it, so the
+  # image is the only way to be sure CI tested what ships.
+  #
+  # REQUIRE_ENGINES=1 turns the remaining risk into a failure: with it set, a missing solver binary
+  # makes the fixtures fail instead of skip (tests/conftest.py::_engines_required).
+  # ===========================================================================================
+  engine-tests:
+    name: engine-tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -34,50 +36,19 @@ jobs:
         run: docker build -f apps/engine/Dockerfile -t govatax-engine:ci .
 
       - name: Stack check (engines, catalog, logic, end-to-end probe)
+        # Fails the job if the shipped catalog, rule tables or logic programs cannot drive a run.
         run: docker run --rm govatax-engine:ci python scripts/engine_cli.py check
 
-      - name: Test suite (engines required)
-        # REQUIRE_ENGINES makes a missing solver binary FAIL rather than skip. Without it, a run
-        # that silently skipped every rules-engine test would look identical to one that passed
-        # them — see tests/conftest.py::_engines_required.
-        #
-        # No extra `-q` here: pytest.ini already passes it, and a second one means `-qq`, at which
-        # pytest prints no summary line at all.
+      - name: pytest (inside the container, engines required)
+        # No extra `-q`: pytest.ini already passes it, and a second one means `-qq`, at which pytest
+        # prints no summary line at all. `-rs` lists the reason for every skip.
         run: docker run --rm -e REQUIRE_ENGINES=1 govatax-engine:ci python -m pytest -rs
 
-  # ---------------------------------------------------------------------------------------------
-  # The committed contract must match what the engine actually publishes. Generated inside the
-  # image and diffed on the host, so the check needs no mounted volume and prints a real diff.
-  # ---------------------------------------------------------------------------------------------
-  contract:
-    name: contract in sync
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build the engine image
-        run: docker build -f apps/engine/Dockerfile -t govatax-engine:ci .
-
-      - name: Export the OpenAPI document from the running app
-        run: |
-          docker run --rm govatax-engine:ci sh -c \
-            'python scripts/export_openapi.py -o /tmp/openapi.json >/dev/null && cat /tmp/openapi.json' \
-            > /tmp/generated.json
-
-      - name: Diff against the committed document
-        run: |
-          if ! diff -u packages/contracts/openapi/openapi.json /tmp/generated.json; then
-            echo "::error::packages/contracts/openapi/openapi.json is stale. Run, in this order: (cd apps/engine && python scripts/export_openapi.py) && pnpm generate:contracts"
-            exit 1
-          fi
-          echo "contract is in sync"
-
-  # ---------------------------------------------------------------------------------------------
-  # The JS/TS workspace.
-  # ---------------------------------------------------------------------------------------------
-  web:
-    name: web + packages
+  # ===========================================================================================
+  # JOB 2 — the JS/TS workspace.
+  # ===========================================================================================
+  web-checks:
+    name: web-checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -91,13 +62,17 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - name: pnpm install
+        # --frozen-lockfile so a pull request cannot silently change the dependency graph.
+        run: pnpm install --frozen-lockfile
 
-      - run: pnpm turbo typecheck lint build
+      - name: turbo lint typecheck build
+        run: pnpm turbo lint typecheck build
 
-      - name: Fail on a stale generated contract
-        # `pnpm generate:contracts` must have been run and committed. This catches a hand-edited or
-        # forgotten schema.ts, which the `contract` job above cannot see (it only checks the JSON).
+      - name: The generated TypeScript contract is not stale
+        # The gate job checks the OpenAPI JSON. This checks the other half: that
+        # `pnpm generate:contracts` was run after it and committed, and that schema.ts was not
+        # hand-edited.
         run: |
           pnpm generate:contracts
           if ! git diff --quiet -- packages/contracts/typescript; then
@@ -107,43 +82,100 @@ jobs:
           fi
           echo "generated TypeScript is in sync"
 
-  # ---------------------------------------------------------------------------------------------
-  # Legal artefacts. This job never fails a build — CODEOWNERS does the blocking. It exists so the
-  # change is impossible to miss in the PR conversation, and so the reviewer is told what to look at.
-  # ---------------------------------------------------------------------------------------------
-  legal-artefacts:
-    name: legal-artefact guard
-    if: github.event_name == 'pull_request'
+  # ===========================================================================================
+  # JOB 3 — the contract and the legal posture. The one that matters most.
+  #
+  # No Docker here: `export_openapi.py --check` only builds the FastAPI app object and serialises
+  # its schema. It never solves, so it needs clingo (a wheel) but not the Soufflé binary — which
+  # makes this job fast enough to be the first thing a contributor sees fail.
+  # ===========================================================================================
+  contract-and-logic-gate:
+    name: contract-and-logic-gate
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
+          # The logic guard diffs against the base branch, which needs full history.
           fetch-depth: 0
 
-      - name: Report changes to logic/, data/ and the golden snapshots
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install the engine's pinned dependencies
+        run: pip install --no-cache-dir -r apps/engine/requirements.txt
+
+      # ---------------------------------------------------------------------------------------
+      # STEP 1 — the committed OpenAPI document must match the FastAPI code.
+      # ---------------------------------------------------------------------------------------
+      - name: OpenAPI contract is in sync with the code
+        working-directory: apps/engine
         run: |
-          base="origin/${{ github.base_ref }}"
-          changed=$(git diff --name-only "$base"...HEAD)
-
-          logic=$(echo "$changed" | grep -E '^(logic|data)/' || true)
-          golden=$(echo "$changed" | grep -E '^logic/tests/golden/' || true)
-          asp=$(echo "$changed" | grep -E '^logic/asp/' || true)
-
-          if [ -n "$golden" ]; then
-            echo "::warning title=Golden snapshot changed::A frozen record of what the engine billed has moved. This is a behaviour change, not a fixture update — the PR must say which number changed and why the new value is correct. Files: $(echo $golden | tr '\n' ' ')"
-          fi
-          if [ -n "$asp" ]; then
-            echo "::warning title=Solver objective touched::logic/asp/ changed. Confirm the objective ordering (@5/@4/@3/@2/@1, revenue LAST) is intact and that no hard constraint became a weighted term. See logic/README.md."
-          fi
-          if [ -n "$logic" ]; then
-            echo "::warning title=Legal artefacts changed::This PR touches logic/ or data/ and needs a second approver with domain competence. Files:"
-            echo "$logic" | sed 's/^/  /'
-          else
-            echo "No changes under logic/ or data/."
+          if ! python scripts/export_openapi.py --check; then
+            echo "::error::The committed OpenAPI document does not match the FastAPI app. Run, in this order: (cd apps/engine && python scripts/export_openapi.py) && pnpm generate:contracts"
+            exit 1
           fi
 
-      - name: Refuse committed secrets and real .env files
+      # ---------------------------------------------------------------------------------------
+      # STEP 2 — the logic guard.
+      #
+      # Changing the solver logic or the catalog changes what this product is willing to bill for.
+      # The golden snapshots are the only evidence that the billing behaviour is still correct, so a
+      # change to one without a look at the other is refused.
+      #
+      # This does not judge WHETHER the new behaviour is right — a human does that. It refuses the
+      # case where nobody looked.
+      # ---------------------------------------------------------------------------------------
+      - name: Logic guard — legal artefacts require a golden-snapshot review
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          git fetch --no-tags origin "$BASE_REF"
+          changed=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+
+          echo "Files changed in this pull request:"
+          printf '%s\n' "$changed" | sed 's/^/  /'
+          echo
+
+          # The legal artefacts: the solver programs, and the versioned official data they run on.
+          legal=$(printf '%s\n' "$changed" \
+            | grep -E '^(logic/asp/|logic/datalog/|data/catalogs/|data/rules/)' || true)
+
+          # The evidence that billing behaviour was re-examined.
+          evidence=$(printf '%s\n' "$changed" \
+            | grep -E '^logic/tests/(golden|cases)/' || true)
+
+          if [ -z "$legal" ]; then
+            echo "No changes under logic/asp/, logic/datalog/, data/catalogs/ or data/rules/."
+            echo "Logic guard: not applicable."
+            exit 0
+          fi
+
+          echo "Legal artefacts changed:"
+          printf '%s\n' "$legal" | sed 's/^/  /'
+          echo
+
+          if [ -n "$evidence" ]; then
+            echo "Golden snapshots / cases also changed:"
+            printf '%s\n' "$evidence" | sed 's/^/  /'
+            echo
+            echo "::warning title=Legal artefacts changed::This pull request modifies the legal reasoning or the catalog. The golden snapshots were touched, so the billing behaviour was re-examined — the reviewer must confirm that every changed number is correct and intended. See logic/README.md."
+            echo "Logic guard: satisfied."
+            exit 0
+          fi
+
+          echo "🚨 LOGIC OR DATA CHANGED WITHOUT GOLDEN SNAPSHOT UPDATE. You modified the legal reasoning or catalog. You must review and update the golden snapshots in logic/tests/ to prove the billing behavior is still correct."
+          echo "::error title=Logic guard failed::🚨 LOGIC OR DATA CHANGED WITHOUT GOLDEN SNAPSHOT UPDATE. You modified the legal reasoning or catalog. You must review and update the golden snapshots in logic/tests/ to prove the billing behavior is still correct."
+          exit 1
+
+      # ---------------------------------------------------------------------------------------
+      # STEP 3 — nothing that looks like a credential, and no real .env, may be committed.
+      # ---------------------------------------------------------------------------------------
+      - name: No committed secrets
         run: |
           if git ls-files | grep -E '(^|/)\.env$'; then
             echo "::error::A .env file is tracked. Only .env.example belongs in the repository."

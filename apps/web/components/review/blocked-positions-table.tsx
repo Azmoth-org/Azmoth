@@ -10,7 +10,7 @@ import {
 
 import { ProofDialog } from "@/components/review/proof-dialog"
 import { BLOCKED_REASON_LABEL } from "@/lib/review/format"
-import type { AuditTrail, Coding } from "@/lib/review/types"
+import type { Coding } from "@/lib/review/types"
 
 /**
  * Positions the rules removed, and why.
@@ -20,20 +20,12 @@ import type { AuditTrail, Coding } from "@/lib/review/types"
  * may well be chargeable after all. The engine reports it instead of silently reinstating it, and a
  * reviewer is exactly who should decide.
  *
- * A blocked position's proof comes from the audit trail's `per_code` entries, which cover charged
- * *and* blocked Ziffern — `blocked_codes` itself carries no proof array.
+ * Each blocked position carries its own `proof`. It used to require joining `audit_trail.per_code`
+ * by Ziffer, which meant a client had to know that relationship existed; the engine now publishes
+ * the steps on the position itself, built from the same source as the audit entry.
  */
-export function BlockedPositionsTable({
-  coding,
-  auditTrail,
-}: {
-  coding: Coding
-  auditTrail: AuditTrail
-}) {
+export function BlockedPositionsTable({ coding }: { coding: Coding }) {
   const blocked = coding.blocked_codes ?? []
-  const proofByZiffer = new Map(
-    (auditTrail.per_code ?? []).map((entry) => [entry.ziffer, entry.steps ?? []]),
-  )
 
   if (blocked.length === 0) {
     return (
@@ -93,7 +85,7 @@ export function BlockedPositionsTable({
                 <ProofDialog
                   ziffer={entry.ziffer}
                   officialText={entry.official_text}
-                  steps={proofByZiffer.get(entry.ziffer) ?? []}
+                  steps={entry.proof ?? []}
                 />
               </TableCell>
             </TableRow>

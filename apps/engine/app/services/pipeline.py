@@ -270,6 +270,7 @@ class Pipeline:
         cached: bool,
     ) -> Proposal:
         coverage = self.rule_coverage()
+        audit = result.audit_trail
         return Proposal(
             proposal_id=proposal_id or f"prop_{uuid.uuid4().hex[:16]}",
             case_id=case_id,
@@ -286,8 +287,14 @@ class Pipeline:
             solver_result=result,
             warnings=list(result.coding.warnings),
             missing_documentation=list(result.coding.missing_documentation),
+            # Read off the audit trail rather than threaded through as another argument, so the
+            # cached path and the fresh path cannot report different statuses for one result.
+            solver_status=audit.solver_status,
+            solver_timed_out=audit.solver_status == "TIMEOUT_PARTIAL",
             enforced_rule_count=coverage.enforced_rule_count,
             advisory_rule_count=coverage.advisory_rule_count,
+            unverified_rule_count=coverage.unverified_rule_count,
+            analog_candidate_count=coverage.analog_candidate_count,
             suppressed_unverified_rule_count=coverage.suppressed_unverified_rule_count,
             rule_coverage=coverage,
             cached=cached,

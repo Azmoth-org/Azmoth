@@ -285,6 +285,24 @@ class RuleStore:
             files_loaded=list(self.files_loaded),
         )
 
+    def unverified_constraint_rule_count(self) -> int:
+        """Rules that *could* constrain an invoice and have not been human-verified.
+
+        Independent of policy on purpose. Under `warn` and `ignore` these sit in `suppressed`;
+        under `block` they sit in the enforcement lists. The count is the same either way — what
+        the policy changes is whether they may suppress a position, which is what
+        `unverified_rules_not_enforced` reports.
+
+        Analog candidates are excluded: they are offers under § 6 Abs. 2 GOÄ, never constraints,
+        and they are counted separately.
+        """
+        return len(self.suppressed) + sum(
+            1
+            for group in (self.exclusions, self.zielleistung, self.specificity, self.factor_caps)
+            for rule in group
+            if not rule.verified
+        )
+
     def summary(self) -> dict:
         return {
             "policy_for_unverified_rules": str(self.policy),
@@ -296,6 +314,7 @@ class RuleStore:
             "factor_caps_enforced": len(self.factor_caps),
             "analog_candidates": len(self.analog_candidates),
             "unverified_rules_not_enforced": len(self.suppressed),
+            "unverified_constraint_rules": self.unverified_constraint_rule_count(),
             "verified_share": (
                 f"{sum(1 for r in self.exclusions if r.verified)}/{len(self.exclusions)}"
                 if self.exclusions

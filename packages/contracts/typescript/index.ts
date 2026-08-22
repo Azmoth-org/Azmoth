@@ -56,6 +56,12 @@ export type AnalogDecision = Schemas["AnalogDecision"];
 export type ProofStep = Schemas["ProofStep"];
 export type AuditTrail = Schemas["AuditTrail"];
 
+/**
+ * Why a line carries the Steigerungsfaktor it does. A closed union, so a client can label every
+ * value exhaustively — it was an open `string` until the engine's contract was tightened.
+ */
+export type FactorBasis = InvoiceLine["factor_basis"];
+
 /** A gap in the record, never a suggestion to charge more. See the engine docs. */
 export type MissingDocumentation = Schemas["MissingDocumentation"];
 
