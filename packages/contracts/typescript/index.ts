@@ -93,6 +93,37 @@ export type PadnextVerdict = PadnextAuditedPosition["verdict"];
  */
 export type PadnextPositionBucket = PadnextAuditedPosition["bucket"];
 
+/* -- PADnext, in batch --------------------------------------------------------------------- */
+
+/**
+ * The `202` body of `POST /api/v1/padnext/batch`: a handle to poll, and nothing more.
+ *
+ * The audit has not started when this is returned. Do not render a dashboard from it.
+ */
+export type BatchAuditAccepted = Schemas["BatchAuditAccepted"];
+
+/** What `GET /api/v1/padnext/batch/{batch_id}` returns: progress, then the roll-up and the files. */
+export type BatchAuditJob = Schemas["BatchAuditJob"];
+export type BatchJobStatus = Schemas["BatchJobStatus"];
+export type BatchFileStatus = Schemas["BatchFileStatus"];
+
+/** One uploaded delivery and what became of it. `report` is null until the job is terminal. */
+export type BatchFileResult = Schemas["BatchFileResult"];
+
+/**
+ * The three honest buckets, summed across every file that could be audited.
+ *
+ * It carries the same three fields as `PadnextAuditReport` and the same prohibition: they must
+ * never be added back together into a single "at risk" headline. At batch scale `unconfirmed_eur`
+ * is the engine's own rule-coverage gap summed over a year of invoices, and presenting it as
+ * exposure would be a six-figure false statement about a practice. `confirmed_wrong_eur` is the
+ * only figure here that may be shown as a defect.
+ *
+ * `failed_file_count` is part of the summary, not only of the job, because the roll-up covers the
+ * completed files alone — a reader has to be able to see what it is missing.
+ */
+export type BatchAggregateSummary = Schemas["BatchAggregateSummary"];
+
 /* -- catalog and vocabulary ---------------------------------------------------------------- */
 
 export type HealthResponse = Schemas["HealthResponse"];
@@ -120,6 +151,7 @@ export const ENGINE_ROUTES = {
   solve: "/api/v1/solve",
   proposals: "/api/v1/proposals",
   padnextAudit: "/api/v1/padnext/audit",
+  padnextBatch: "/api/v1/padnext/batch",
   catalog: "/api/v1/catalog",
   vocabulary: "/api/v1/vocabulary",
 } as const satisfies Record<string, EnginePath>;

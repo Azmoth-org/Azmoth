@@ -11,6 +11,7 @@ import {
   eur,
   percent,
   segmentWidths,
+  type BucketFigures,
 } from "@/lib/padnext/format"
 import type { PadnextAuditReport, PadnextPositionBucket } from "@/lib/padnext/types"
 
@@ -35,21 +36,28 @@ export function countBuckets(report: PadnextAuditReport): BucketCounts {
  *
  * It keeps the three field names visible to a reader and to `tsc`, so renaming one in the contract
  * breaks this build instead of quietly rendering an em dash where a five-figure sum belongs.
+ *
+ * Takes `BucketFigures` rather than a report so the batch dashboard can hand it the aggregate. The
+ * two shapes carry the same four field names on purpose — that is what makes one set of cards able
+ * to state a single invoice's position and a whole practice's without a second implementation that
+ * could word the amber bucket differently.
  */
-function amountFor(report: PadnextAuditReport, bucket: PadnextPositionBucket): string {
-  if (bucket === "confirmed_wrong") return report.confirmed_wrong_eur
-  if (bucket === "confirmed_fine") return report.confirmed_fine_eur
-  return report.unconfirmed_eur
+function amountFor(figures: BucketFigures, bucket: PadnextPositionBucket): string {
+  if (bucket === "confirmed_wrong") return figures.confirmed_wrong_eur
+  if (bucket === "confirmed_fine") return figures.confirmed_fine_eur
+  return figures.unconfirmed_eur
 }
 
 function BucketCard({
-  report,
+  figures,
   bucket,
   count,
+  unit,
 }: {
-  report: PadnextAuditReport
+  figures: BucketFigures
   bucket: PadnextPositionBucket
   count: number
+  unit: readonly [string, string]
 }) {
   const presentation = BUCKET[bucket]
   const tone = BUCKET_TONE_CLASS[presentation.tone]
@@ -65,10 +73,10 @@ function BucketCard({
       </CardHeader>
       <CardContent className="space-y-2">
         <div className={`text-3xl font-semibold tabular-nums ${tone.text}`}>
-          {eur(amountFor(report, bucket))}
+          {eur(amountFor(figures, bucket))}
         </div>
         <div className="text-muted-foreground text-xs">
-          {count} {count === 1 ? "Position" : "Positionen"} · {presentation.headline}
+          {count} {count === 1 ? unit[0] : unit[1]} · {presentation.headline}
         </div>
         <p className="text-foreground/80 text-xs">{presentation.action}</p>
       </CardContent>
@@ -77,23 +85,29 @@ function BucketCard({
 }
 
 /**
- * How much of this invoice the audit could actually reach a verdict on.
+ * How much of the claim the audit could actually reach a verdict on.
  *
- * Deliberately not a pie chart of the three buckets. A pie invites the reader to compare red against
- * green and draw a conclusion about the *invoice*. This bar puts the two verdicts next to the gap
- * and says something about the *audit* — which is the honest comparison, because the amber segment
- * is our missing rule coverage, not the practice's billing.
+ * Deliberately not a pie chart of the three buckets. A pie invites the reader to compare red
+ * against green and draw a conclusion about the *invoice*. This bar puts the two verdicts next to
+ * the gap and says something about the *audit* — which is the honest comparison, because the amber
+ * segment is our missing rule coverage, not the practice's billing.
  */
-function CoverageBar({ report }: { report: PadnextAuditReport }) {
-  const amounts = BUCKET_ORDER.map((bucket) => amountFor(report, bucket))
+export function CoverageBar({
+  figures,
+  totalLabel = "berechnet insgesamt",
+}: {
+  figures: BucketFigures
+  totalLabel?: string
+}) {
+  const amounts = BUCKET_ORDER.map((bucket) => amountFor(figures, bucket))
   const widths = segmentWidths(amounts)
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm font-medium">Prüfabdeckung {percent(report.coverage_ratio)}</span>
+        <span className="text-sm font-medium">Prüfabdeckung {percent(figures.coverage_ratio)}</span>
         <span className="text-muted-foreground text-xs tabular-nums">
-          berechnet insgesamt {eur(report.claimed_total_eur)}
+          {totalLabel} {eur(figures.claimed_total_eur)}
         </span>
       </div>
 
@@ -101,10 +115,10 @@ function CoverageBar({ report }: { report: PadnextAuditReport }) {
         className="bg-muted flex h-2.5 w-full overflow-hidden rounded-full"
         role="img"
         aria-label={
-          `Prüfabdeckung ${percent(report.coverage_ratio)} der berechneten Summe. ` +
-          BUCKET_ORDER.map((bucket) => `${BUCKET[bucket].label}: ${eur(amountFor(report, bucket))}`).join(
-            ". ",
-          )
+          `Prüfabdeckung ${percent(figures.coverage_ratio)} der berechneten Summe. ` +
+          BUCKET_ORDER.map(
+            (bucket) => `${BUCKET[bucket].label}: ${eur(amountFor(figures, bucket))}`,
+          ).join(". ")
         }
       >
         {BUCKET_ORDER.map((bucket, index) =>
@@ -126,51 +140,91 @@ function CoverageBar({ report }: { report: PadnextAuditReport }) {
   )
 }
 
-/**
- * The financial summary, split three ways.
- *
- * This component is the reason the engine's schema changed, so it is worth stating what it must
- * never do: it must not add the three buckets back together into a single "at risk" figure, and it
- * must not colour `unconfirmed` as a defect. `unconfirmed` is the engine admitting the limit of its
- * own rule coverage — 837 of 869 exclusion rules are machine-extracted and unenforced under the
- * default policy — and presenting that as the practice's problem is the overclaim the split exists
- * to prevent.
- */
-export function BucketSummary({ report }: { report: PadnextAuditReport }) {
-  const counts = countBuckets(report)
-
+/** The disclaimer that must accompany any presentation of the three buckets, single or aggregate. */
+export function UnconfirmedNotice() {
   return (
-    <section className="space-y-4" aria-labelledby="padnext-buckets-heading">
-      <h2 id="padnext-buckets-heading" className="text-lg font-semibold tracking-tight">
-        Finanzielle Bewertung
+    <Alert>
+      <InfoIcon />
+      <AlertTitle>Unbestätigt ist kein Befund</AlertTitle>
+      <AlertDescription className="space-y-2">
+        <p>{UNCONFIRMED_DISCLAIMER}</p>
+        <p className="text-foreground/80">
+          Nur <strong>nachweislich falsch</strong> beruht auf verifizierten Regeln, dem versionierten
+          Katalog oder der Nachrechnung nach § 5 Abs. 1 GOÄ und ist damit gegenüber einem
+          Kostenträger belastbar. <strong>Unbestätigt</strong> bedeutet, dass für diese Ziffer keine
+          von einem Menschen geprüfte Regel vorliegt — die Position ist damit weder bestätigt noch
+          beanstandet.
+        </p>
+      </AlertDescription>
+    </Alert>
+  )
+}
+
+/**
+ * The three cards, the coverage bar and the disclaimer — the whole financial statement.
+ *
+ * Shared by the single-file audit and the batch dashboard, and that sharing is a safeguard rather
+ * than a convenience. This block is the reason the engine's schema changed, so it is worth stating
+ * what it must never do: it must not add the three buckets back together into a single "at risk"
+ * figure, and it must not colour `unconfirmed` as a defect. `unconfirmed` is the engine admitting
+ * the limit of its own rule coverage — 837 of 869 exclusion rules are machine-extracted and
+ * unenforced under the default policy — and presenting that as the practice's problem is the
+ * overclaim the split exists to prevent. One implementation means that prohibition cannot be
+ * honoured on one screen and quietly dropped on the other.
+ */
+export function BucketBoard({
+  figures,
+  counts,
+  heading,
+  headingId,
+  unit = ["Position", "Positionen"],
+  totalLabel,
+}: {
+  figures: BucketFigures
+  counts: BucketCounts
+  heading: string
+  headingId: string
+  /** Singular and plural of whatever the counts are counting — positions here, positions there. */
+  unit?: readonly [string, string]
+  totalLabel?: string
+}) {
+  return (
+    <section className="space-y-4" aria-labelledby={headingId}>
+      <h2 id={headingId} className="text-lg font-semibold tracking-tight">
+        {heading}
       </h2>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {BUCKET_ORDER.map((bucket) => (
-          <BucketCard key={bucket} report={report} bucket={bucket} count={counts[bucket]} />
+          <BucketCard
+            key={bucket}
+            figures={figures}
+            bucket={bucket}
+            count={counts[bucket]}
+            unit={unit}
+          />
         ))}
       </div>
 
       <Card>
         <CardContent className="pt-6">
-          <CoverageBar report={report} />
+          <CoverageBar figures={figures} totalLabel={totalLabel} />
         </CardContent>
       </Card>
 
-      <Alert>
-        <InfoIcon />
-        <AlertTitle>Unbestätigt ist kein Befund</AlertTitle>
-        <AlertDescription className="space-y-2">
-          <p>{UNCONFIRMED_DISCLAIMER}</p>
-          <p className="text-foreground/80">
-            Nur <strong>nachweislich falsch</strong> beruht auf verifizierten Regeln, dem
-            versionierten Katalog oder der Nachrechnung nach § 5 Abs. 1 GOÄ und ist damit gegenüber
-            einem Kostenträger belastbar. <strong>Unbestätigt</strong> bedeutet, dass für diese Ziffer
-            keine von einem Menschen geprüfte Regel vorliegt — die Position ist damit weder bestätigt
-            noch beanstandet.
-          </p>
-        </AlertDescription>
-      </Alert>
+      <UnconfirmedNotice />
     </section>
+  )
+}
+
+/** The single-file audit's financial summary. Unchanged in what it renders. */
+export function BucketSummary({ report }: { report: PadnextAuditReport }) {
+  return (
+    <BucketBoard
+      figures={report}
+      counts={countBuckets(report)}
+      heading="Finanzielle Bewertung"
+      headingId="padnext-buckets-heading"
+    />
   )
 }

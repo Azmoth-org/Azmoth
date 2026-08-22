@@ -16,6 +16,18 @@ belongs in the deployment's grants rather than in a migration this service runs 
 The cascade is on the foreign key because the alternative is worse: an audit row pointing at a
 proposal that no longer exists is a record nobody can interpret. Deleting a proposal at all is a
 retention decision that no code path here performs — there is no `delete_proposal`.
+
+Two more tables were added for the batch PADnext audit:
+
+    batch_jobs 1 ─── n batch_files        ON DELETE CASCADE
+
+They are ordinary mutable rows, unlike the two above, and the difference is deliberate. A proposal
+records that a human took responsibility for a billing draft, so what it holds is written once. A
+batch job records the progress and the result of a computation the engine ran on its own: the
+status moves PENDING → PROCESSING → COMPLETED, each file's verdict is written as it lands, and
+re-running the same files would simply produce another batch. There is nothing here for an audit
+log to protect, and no approval boundary to enforce — which is exactly why these two tables are
+plain and `proposals` is not.
 """
 
 from __future__ import annotations
@@ -25,7 +37,7 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import Boolean, ForeignKey, Index, String, event
+from sqlalchemy import Boolean, ForeignKey, Index, String, Text, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, JSONVariant, TimestampVariant, UUIDVariant
@@ -210,6 +222,101 @@ class AuditEvent(Base):
         return f"<AuditEvent {self.event_type} by {self.actor} at {self.timestamp}>"
 
 
+class BatchJobRecord(Base):
+    """One batch upload: what was asked for, how far it got, and the roll-up when it is done."""
+
+    __tablename__ = "batch_jobs"
+
+    #: Surrogate UUID key. `batch_files` references this, not the public id, for the same reason
+    #: `audit_events` references `proposals.id`: the join must survive a change to the wire format.
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The identifier the API returns and the frontend polls — `batch_<hex>`. Same shape and same
+    #: reasoning as `ProposalRecord.proposal_id`: an opaque public handle, not the surrogate key.
+    batch_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+
+    #: One of `BatchJobStatus`. Indexed because "which batches are still running" is the query an
+    #: operator asks after a restart — see the note on orphaned jobs in `app.services.batch_audit`.
+    status: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(TimestampVariant, default=None)
+
+    #: The serialised `BatchAggregateSummary`. Stored rather than recomputed on every read: it is
+    #: the answer to "what did this batch conclude", and recomputing it from the per-file reports
+    #: each time would mean a later change to the aggregation silently restating a finished job.
+    aggregate_summary_json: Mapped[dict[str, Any] | None] = mapped_column(JSONVariant, default=None)
+
+    #: Why the batch itself failed. A file that could not be read does NOT populate this — that is
+    #: `BatchFileRecord.error_message`, and the two must not be conflated: one is a broken run, the
+    #: other is a result.
+    error_message: Mapped[str | None] = mapped_column(Text, default=None)
+
+    #: Eagerly usable via the relationship because a batch is always read whole — the API returns
+    #: every file's status with the job, and there is no "just the header" read of a batch.
+    files: Mapped[list[BatchFileRecord]] = relationship(
+        back_populates="job",
+        cascade="all, delete-orphan",
+        order_by="BatchFileRecord.filename",
+    )
+
+    __table_args__ = (
+        # "The most recent batches, optionally in this status" — the same list query shape as
+        # `proposals`, and the same reason for the composite index.
+        Index("ix_batch_jobs_status_created_at", "status", "created_at"),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return f"<BatchJobRecord {self.batch_id} {self.status}>"
+
+
+class BatchFileRecord(Base):
+    """One uploaded delivery inside a batch, and the report it produced."""
+
+    __tablename__ = "batch_files"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    batch_job_id: Mapped[uuid.UUID] = mapped_column(
+        UUIDVariant,
+        ForeignKey("batch_jobs.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+
+    #: The name the client uploaded, used for display and for the audit trail. Not unique within a
+    #: batch: uploading two files of the same name is a thing a file picker will happily do, and
+    #: refusing the batch over it would be worse than showing the name twice.
+    #:
+    #: It is not treated as a path and never touches the filesystem — nothing here writes an
+    #: uploaded file to disk, so a `../` in this column is a display curiosity, not a traversal.
+    filename: Mapped[str] = mapped_column(String(512), nullable=False)
+
+    #: One of `BatchFileStatus`.
+    status: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+
+    #: The serialised `PadnextAuditReport`, exactly as `POST /padnext/audit` would have returned it
+    #: for this file. Stored whole for the same reason `proposals.solver_result_json` is: a
+    #: normalised copy re-serialised by later code is a different document, and the report carries
+    #: its own `receipt_hash` over the data and policy that produced it.
+    report_json: Mapped[dict[str, Any] | None] = mapped_column(JSONVariant, default=None)
+
+    #: Why this file could not be audited — an unreadable container, a delivery flagged as
+    #: production data, a rules engine that was not available. `Text`, not `String(n)`: truncating
+    #: the one explanation a user gets to a column width would be a poor trade.
+    error_message: Mapped[str | None] = mapped_column(Text, default=None)
+
+    job: Mapped[BatchJobRecord] = relationship(back_populates="files")
+
+    __table_args__ = (
+        # The background task walks one job's files in order, and the API reads them all back.
+        Index("ix_batch_files_batch_job_id_filename", "batch_job_id", "filename"),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return f"<BatchFileRecord {self.filename} {self.status}>"
+
+
 class AuditLogIsAppendOnly(RuntimeError):
     """Raised when something tries to change or remove an audit row.
 
@@ -239,6 +346,8 @@ __all__ = [
     "AuditEvent",
     "AuditEventType",
     "AuditLogIsAppendOnly",
+    "BatchFileRecord",
+    "BatchJobRecord",
     "ProposalRecord",
     "as_utc",
     "utcnow",

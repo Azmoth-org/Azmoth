@@ -14,6 +14,11 @@ clingo==5.8.0
 
 httpx==0.28.1
 
+# Multipart form parsing, required by Starlette to decode `UploadFile`. Added for
+# `POST /api/v1/padnext/batch`, which takes many files in one request — the single-file
+# `/padnext/audit` endpoint takes raw bytes and deliberately still needs none of this.
+python-multipart==0.0.20
+
 # -- persistence -------------------------------------------------------------------------------
 # Proposals and the audit log live in Postgres in production. Pinned for the same reason as the
 # solvers: a schema this service migrates must not move under it between environments.

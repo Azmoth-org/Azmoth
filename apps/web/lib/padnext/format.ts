@@ -35,6 +35,27 @@ export function percent(ratio: number | null | undefined): string {
  */
 export type BucketTone = "wrong" | "fine" | "unknown"
 
+/**
+ * The five fields any presentation of the three buckets needs, and nothing else.
+ *
+ * `PadnextAuditReport` (one invoice) and `BatchAggregateSummary` (a whole upload) both satisfy it
+ * structurally, which is the point: the batch dashboard renders the *same* cards as the single-file
+ * view rather than a second set that could word the amber bucket more aggressively. Written as a
+ * standalone type rather than as `Pick<PadnextAuditReport, …>` so it is obvious that the aggregate
+ * is not a report and is not being treated as one.
+ *
+ * The four amounts are exact decimal strings from the engine and stay strings. Only
+ * `coverage_ratio` is a number, because the engine publishes it as one precisely so a client never
+ * has to divide money.
+ */
+export type BucketFigures = {
+  claimed_total_eur: string
+  confirmed_fine_eur: string
+  confirmed_wrong_eur: string
+  unconfirmed_eur: string
+  coverage_ratio: number
+}
+
 export type BucketPresentation = {
   /** The short label on a badge. */
   label: string

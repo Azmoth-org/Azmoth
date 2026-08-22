@@ -177,6 +177,84 @@ export async function callEngineBytes(
   return { ok: true, status: response.status, body: parsed }
 }
 
+/**
+ * Forward one `multipart/form-data` request, body and boundary untouched.
+ *
+ * `POST /api/v1/padnext/batch` takes many files in one request, which is what multipart is for and
+ * the reason the engine now depends on `python-multipart`. The body is streamed through as the
+ * `FormData` the route handler parsed: re-encoding the parts would generate a new boundary and, on
+ * a `.padx` container, risk mangling the ZIP bytes the engine sniffs by magic number.
+ *
+ * `BATCH_TIMEOUT_MS` is longer than `ENGINE_TIMEOUT_MS` and is NOT the batch's own budget. It
+ * covers the *upload* only: a hundred deliveries is a lot of bytes to push, but the endpoint
+ * answers `202` as soon as the rows are written, because the audit happens in a background task
+ * the client polls for. Nothing here waits for a batch to finish.
+ */
+const BATCH_TIMEOUT_MS = 120_000
+
+export async function callEngineFormData(
+  path: string,
+  form: FormData,
+): Promise<EngineProxyResult> {
+  const url = `${engineBaseUrl()}${path}`
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      // No Content-Type header: `fetch` sets it from the FormData, including the boundary. Setting
+      // it by hand is the classic way to send a multipart body the far end cannot split.
+      body: form,
+      cache: "no-store",
+      signal: AbortSignal.timeout(BATCH_TIMEOUT_MS),
+    })
+  } catch (cause) {
+    const timedOut = cause instanceof Error && cause.name === "TimeoutError"
+    return {
+      ok: false,
+      failure: {
+        error: timedOut ? "engine_unreachable_timeout" : "engine_unreachable",
+        message: timedOut
+          ? `Die Engine hat den Upload innerhalb von ${BATCH_TIMEOUT_MS / 1000} s nicht angenommen.`
+          : "Die Engine ist nicht erreichbar. Läuft sie auf ENGINE_BASE_URL?",
+        status: 503,
+        details: { url, method: "POST", cause: cause instanceof Error ? cause.message : String(cause) },
+      },
+    }
+  }
+
+  const raw = await response.text()
+
+  if (raw.length === 0) {
+    return {
+      ok: false,
+      failure: {
+        error: "empty_response",
+        message: `Die Engine hat mit HTTP ${response.status} und leerem Body geantwortet.`,
+        status: 502,
+        details: { url, method: "POST", status: response.status },
+      },
+    }
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return {
+      ok: false,
+      failure: {
+        error: "unparsable_response",
+        message: "Die Antwort der Engine ist kein gültiges JSON.",
+        status: 502,
+        details: { url, method: "POST", status: response.status, raw: raw.slice(0, 4000) },
+      },
+    }
+  }
+
+  return { ok: true, status: response.status, body: parsed }
+}
+
 /** Turn an `EngineProxyResult` into the route handler's response. */
 export function proxyResponse(result: EngineProxyResult): Response {
   if (result.ok) {

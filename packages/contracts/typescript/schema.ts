@@ -89,6 +89,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/padnext/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Padnext Batch
+         * @description Accept many PADnext deliveries and audit them in the background.
+         *
+         *     Returns `202` with a `batch_id` immediately; the audit itself has not started. Poll
+         *     `GET /api/v1/padnext/batch/{batch_id}` for progress, and read `aggregate_summary` once the
+         *     status is `COMPLETED`.
+         *
+         *     Multipart rather than raw bytes, unlike the single-file endpoint: many files in one request is
+         *     what multipart is for, and there is no way to delimit them in a raw body. That is why the
+         *     engine now depends on `python-multipart`.
+         *
+         *     A delivery flagged as production data is refused per file, not per batch — the file is marked
+         *     `FAILED` with the reason and the rest of the batch proceeds. See
+         *     `docs/compliance/PRIVATE_DATA_WARNING.md`.
+         */
+        post: operations["padnext_batch_api_v1_padnext_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/padnext/batch/{batch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Padnext Batch Status
+         * @description The batch's progress, and its result once it is done.
+         *
+         *     While the job runs, `files` carries each delivery's status and no report — a two-second poll
+         *     over a hundred files must not ship a hundred full audit reports per tick. Once the status is
+         *     terminal, every completed file's `report` is the same `PadnextAuditReport` the single-file
+         *     endpoint would have returned, and `aggregate_summary` holds the roll-up.
+         *
+         *     `files` arrives sorted by `confirmed_wrong_eur` descending — riskiest first. Sorted here rather
+         *     than in the client because the amounts are exact decimal strings that a JavaScript client must
+         *     not parse back into numbers.
+         */
+        get: operations["padnext_batch_status_api_v1_padnext_batch__batch_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/proposals": {
         parameters: {
             query?: never;
@@ -389,6 +450,177 @@ export interface components {
             ziffer: string;
         };
         /**
+         * BatchAggregateSummary
+         * @description The honest buckets, rolled up across every file that could be audited.
+         *
+         *     Every euro figure here is a sum of the identically-named field on the per-file
+         *     `PadnextAuditReport`s, over files in status `COMPLETED`. Failed files are excluded from the
+         *     money entirely — a file we could not read is not evidence of anything — and counted separately
+         *     so the reader can see what the roll-up is missing.
+         */
+        BatchAggregateSummary: {
+            /**
+             * Claimed Total Eur
+             * @default 0.00
+             */
+            claimed_total_eur: string;
+            /**
+             * Completed File Count
+             * @default 0
+             */
+            completed_file_count: number;
+            /**
+             * Confirmed Fine Eur
+             * @default 0.00
+             */
+            confirmed_fine_eur: string;
+            /**
+             * Confirmed Fine Positions
+             * @default 0
+             */
+            confirmed_fine_positions: number;
+            /**
+             * Confirmed Wrong Eur
+             * @default 0.00
+             */
+            confirmed_wrong_eur: string;
+            /**
+             * Confirmed Wrong Positions
+             * @default 0
+             */
+            confirmed_wrong_positions: number;
+            /**
+             * Coverage Ratio
+             * @default 0
+             */
+            coverage_ratio: number;
+            /**
+             * Failed File Count
+             * @default 0
+             */
+            failed_file_count: number;
+            /**
+             * File Count
+             * @default 0
+             */
+            file_count: number;
+            /**
+             * Position Count
+             * @default 0
+             */
+            position_count: number;
+            /**
+             * Unconfirmed Eur
+             * @default 0.00
+             */
+            unconfirmed_eur: string;
+            /**
+             * Unconfirmed Positions
+             * @default 0
+             */
+            unconfirmed_positions: number;
+        };
+        /**
+         * BatchAuditAccepted
+         * @description The `202` body: the handle to poll, and nothing that is not known yet.
+         *
+         *     Deliberately not a `BatchAuditJob` with empty fields. A response that carried a zeroed
+         *     `aggregate_summary` would invite a client to render €0.00 across the dashboard for the second
+         *     before its first poll returns.
+         */
+        BatchAuditAccepted: {
+            /** Batch Id */
+            batch_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * File Count
+             * @default 0
+             */
+            file_count: number;
+            /** @default PENDING */
+            status: components["schemas"]["BatchJobStatus"];
+        };
+        /**
+         * BatchAuditJob
+         * @description A batch, its progress, and — once it is done — the roll-up and every file's report.
+         */
+        BatchAuditJob: {
+            aggregate_summary?: components["schemas"]["BatchAggregateSummary"] | null;
+            /** Batch Id */
+            batch_id: string;
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Completed File Count
+             * @default 0
+             */
+            completed_file_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Message */
+            error_message?: string | null;
+            /**
+             * Failed File Count
+             * @default 0
+             */
+            failed_file_count: number;
+            /**
+             * File Count
+             * @default 0
+             */
+            file_count: number;
+            /** Files */
+            files?: components["schemas"]["BatchFileResult"][];
+            /**
+             * Processed File Count
+             * @default 0
+             */
+            processed_file_count: number;
+            status: components["schemas"]["BatchJobStatus"];
+        };
+        /**
+         * BatchFileResult
+         * @description One uploaded file and what became of it.
+         */
+        BatchFileResult: {
+            /** Error Message */
+            error_message?: string | null;
+            /** Filename */
+            filename: string;
+            report?: components["schemas"]["PadnextAuditReport"] | null;
+            status: components["schemas"]["BatchFileStatus"];
+        };
+        /**
+         * BatchFileStatus
+         * @description Where one file in a batch is.
+         *
+         *     No `PROCESSING`: files are audited one after another and the transition out of `PENDING` is a
+         *     single write at the end of the file's audit. A per-file in-progress state would be a second
+         *     write per file bought for nothing — the job's own `PROCESSING` already says work is happening,
+         *     and the count of files still `PENDING` already says how much is left.
+         * @enum {string}
+         */
+        BatchFileStatus: "PENDING" | "COMPLETED" | "FAILED";
+        /**
+         * BatchJobStatus
+         * @description Where a batch is in its life.
+         *
+         *     `FAILED` is deliberately narrow: it means the *batch itself* broke — the background task raised
+         *     before it could finish, or the store refused a write — and there is no roll-up to show. A run in
+         *     which every file failed to parse is `COMPLETED`, because the run did complete and its output is
+         *     a hundred per-file error messages a user needs to read. Marking that `FAILED` would hide them
+         *     behind a status that says "nothing to see".
+         * @enum {string}
+         */
+        BatchJobStatus: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+        /**
          * BilingualOption
          * @description An option whose label is interface text, so it exists in both languages.
          */
@@ -443,6 +675,14 @@ export interface components {
             rule_id: string;
             /** Ziffer */
             ziffer: string;
+        };
+        /** Body_padnext_batch_api_v1_padnext_batch_post */
+        Body_padnext_batch_api_v1_padnext_batch_post: {
+            /**
+             * Files
+             * @description The PADnext deliveries to audit — .padx containers or *_padx.xml payloads. Synthetic data only.
+             */
+            files: string[];
         };
         /**
          * CatalogResponse
@@ -1885,6 +2125,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PadnextAuditReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    padnext_batch_api_v1_padnext_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_padnext_batch_api_v1_padnext_batch_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchAuditAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    padnext_batch_status_api_v1_padnext_batch__batch_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchAuditJob"];
                 };
             };
             /** @description Validation Error */
