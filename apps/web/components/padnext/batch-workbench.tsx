@@ -1,9 +1,10 @@
 "use client"
 
-import { LayersIcon } from "lucide-react"
+import { DownloadIcon, LayersIcon, Loader2Icon } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
 
 import { BatchDropzone } from "@/components/padnext/batch-dropzone"
@@ -11,6 +12,7 @@ import { BatchFilesTable } from "@/components/padnext/batch-files-table"
 import { BatchProgress, FailedFilesNotice } from "@/components/padnext/batch-progress"
 import { BucketBoard, type BucketCounts } from "@/components/padnext/bucket-summary"
 import { ErrorPanel } from "@/components/review/error-panel"
+import { downloadBatchExport } from "@/lib/download"
 import {
   POLL_INTERVAL_MS,
   POLL_TIMEOUT_MS,
@@ -40,6 +42,75 @@ function aggregateCounts(summary: {
     confirmed_fine: summary.confirmed_fine_positions ?? 0,
     unconfirmed: summary.unconfirmed_positions ?? 0,
   }
+}
+
+/**
+ * Download the finished batch as CSVs.
+ *
+ * Read-only, unlike the single-proposal export: it changes no status and can be taken as often as
+ * the reader likes, so there is no dialog and no name to collect. The reason for the difference is
+ * that a proposal export records a decision a person took, while this renders a computation that
+ * already finished — see the engine route.
+ *
+ * The reassurance below the button matters more than it looks. A browser download is silent, and
+ * the archive contains four files whose relationship is not obvious from a filename, so the button
+ * says what will land before it is pressed and which file arrived afterwards.
+ */
+function BatchExport({ job }: { job: BatchAuditJob }) {
+  const [pending, setPending] = useState(false)
+  const [saved, setSaved] = useState<string | null>(null)
+  const [failure, setFailure] = useState<ReviewError | null>(null)
+
+  async function download() {
+    setPending(true)
+    setFailure(null)
+    const result = await downloadBatchExport(job.batch_id)
+    if (result.kind === "error") {
+      setFailure(result.error)
+    } else {
+      setSaved(result.filename)
+    }
+    setPending(false)
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-4 pt-6">
+          <Button variant="outline" onClick={() => void download()} disabled={pending}>
+            {pending ? (
+              <>
+                <Loader2Icon className="animate-spin" aria-hidden />
+                Export wird erstellt…
+              </>
+            ) : (
+              <>
+                <DownloadIcon aria-hidden />
+                Als CSV exportieren
+              </>
+            )}
+          </Button>
+          <div className="text-muted-foreground min-w-0 text-xs">
+            {saved ? (
+              <span>
+                Heruntergeladen: <span className="font-mono break-all">{saved}</span>
+              </span>
+            ) : (
+              <span>
+                ZIP mit <span className="font-mono">batch_summary.csv</span>,{" "}
+                <span className="font-mono">batch_line_items.csv</span>,{" "}
+                <span className="font-mono">batch_files.csv</span> und einer{" "}
+                <span className="font-mono">README.txt</span>, die die drei Bewertungsgruppen
+                erklärt.
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {failure ? <ErrorPanel error={failure} /> : null}
+    </div>
+  )
 }
 
 function Provenance({ job }: { job: BatchAuditJob }) {
@@ -216,6 +287,7 @@ export function BatchWorkbench() {
           )}
 
           <Provenance job={job} />
+          <BatchExport job={job} />
           <BatchFilesTable job={job} />
         </>
       ) : null}

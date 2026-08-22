@@ -427,13 +427,18 @@ def test_rejecting_requires_a_reason_and_is_terminal(client, manual_case):
 def test_export_is_reachable_only_from_approved(client, manual_case):
     draft = solve_proposal(client, manual_case("case_001_knee"))
     pid = draft["proposal_id"]
+    body = {"exported_by": "PVS-Anbindung"}
 
-    assert client.post(f"/api/v1/proposals/{pid}/export").status_code == 409
+    assert client.post(f"/api/v1/proposals/{pid}/export", json=body).status_code == 409
 
     client.post(f"/api/v1/proposals/{pid}/approve", json={"approved_by": "Dr. Beispiel"})
-    exported = client.post(f"/api/v1/proposals/{pid}/export").json()
+    exported = client.post(f"/api/v1/proposals/{pid}/export", json=body)
 
-    assert exported["status"] == "EXPORTED"
+    assert exported.status_code == 200, exported.text
+    # The endpoint now answers with the export document itself, not with the proposal. The status
+    # is inside it, and is always EXPORTED — the transition happened in the same transaction.
+    assert exported.json()["status"] == "EXPORTED"
+    assert exported.headers["content-disposition"] == f'attachment; filename="proposal_{pid}.json"' 
 
 
 def test_an_unknown_proposal_is_404_and_says_why(client):

@@ -69,6 +69,44 @@
         "title": "ApprovalRequest",
         "type": "object"
       },
+      "AuditEventRecord": {
+        "additionalProperties": false,
+        "description": "One row of the append-only log, as it is written in the database.",
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_type",
+          "actor",
+          "timestamp"
+        ],
+        "title": "AuditEventRecord",
+        "type": "object"
+      },
       "AuditTrail": {
         "properties": {
           "base_factor_policy": {
@@ -1050,6 +1088,84 @@
         "title": "Consultation",
         "type": "object"
       },
+      "DecisionRecord": {
+        "additionalProperties": false,
+        "description": "Who decided what, and when. The half of the document a dispute actually turns on.",
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "exported_at": {
+            "format": "date-time",
+            "title": "Exported At",
+            "type": "string"
+          },
+          "exported_by": {
+            "title": "Exported By",
+            "type": "string"
+          },
+          "rejected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected At"
+          },
+          "rejected_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected By"
+          },
+          "rejected_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected Reason"
+          }
+        },
+        "required": [
+          "exported_by",
+          "exported_at"
+        ],
+        "title": "DecisionRecord",
+        "type": "object"
+      },
       "Diagnosis-Input": {
         "additionalProperties": false,
         "properties": {
@@ -1120,6 +1236,49 @@
           "text"
         ],
         "title": "Diagnosis",
+        "type": "object"
+      },
+      "EngineIdentity": {
+        "additionalProperties": false,
+        "description": "Everything that decides what the engine would answer, named and pinned.\n\nFlattened out of the proposal rather than referenced, because an export is read on its own: a\nfield that said \"see the proposal\" would be useless in a document whose whole purpose is to be\nseparable from this database.",
+        "properties": {
+          "catalog_sha256": {
+            "default": "",
+            "title": "Catalog Sha256",
+            "type": "string"
+          },
+          "catalog_version": {
+            "default": "",
+            "title": "Catalog Version",
+            "type": "string"
+          },
+          "logic_version": {
+            "default": "",
+            "title": "Logic Version",
+            "type": "string"
+          },
+          "rules_engine_version": {
+            "default": "",
+            "title": "Rules Engine Version",
+            "type": "string"
+          },
+          "rules_hash": {
+            "default": "",
+            "title": "Rules Hash",
+            "type": "string"
+          },
+          "rules_version": {
+            "default": "",
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "solver_version": {
+            "default": "",
+            "title": "Solver Version",
+            "type": "string"
+          }
+        },
+        "title": "EngineIdentity",
         "type": "object"
       },
       "EntityTypeOption": {
@@ -1336,6 +1495,28 @@
           "type"
         ],
         "title": "Examination",
+        "type": "object"
+      },
+      "ExportRequest": {
+        "additionalProperties": false,
+        "description": "Who is taking the export.\n\nRequired for the same reason `approved_by` is required on an approval: an export is a thing a\nperson did, and an unattributed one is indistinguishable from one nobody can account for. It is\nrecorded, not verified — see the module docstring.",
+        "properties": {
+          "exported_by": {
+            "description": "Who is taking this export. Recorded in the audit log; not authenticated.",
+            "minLength": 1,
+            "title": "Exported By",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exported_by"
+        ],
+        "title": "ExportRequest",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -2633,6 +2814,101 @@
         "title": "Proposal",
         "type": "object"
       },
+      "ProposalExport": {
+        "additionalProperties": false,
+        "description": "The downloadable record of one approved proposal.\n\nServed as `proposal_{proposal_id}.json` with a `Content-Disposition: attachment` header. The\nJSON is the contract; the filename is a convenience.",
+        "properties": {
+          "audit_events": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRecord"
+            },
+            "title": "Audit Events",
+            "type": "array"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/DecisionRecord"
+          },
+          "engine": {
+            "$ref": "#/components/schemas/EngineIdentity"
+          },
+          "export_format_version": {
+            "default": "1.0",
+            "title": "Export Format Version",
+            "type": "string"
+          },
+          "input_hash": {
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "missing_documentation": {
+            "items": {
+              "$ref": "#/components/schemas/MissingDocumentation"
+            },
+            "title": "Missing Documentation",
+            "type": "array"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "string"
+          },
+          "receipt_hash": {
+            "title": "Receipt Hash",
+            "type": "string"
+          },
+          "rule_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleCoverage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "solver_result": {
+            "$ref": "#/components/schemas/CodingResponse"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/Warning_"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "status",
+          "created_at",
+          "receipt_hash",
+          "input_hash",
+          "engine",
+          "decision",
+          "solver_result"
+        ],
+        "title": "ProposalExport",
+        "type": "object"
+      },
       "ProposalStatus": {
         "enum": [
           "DRAFT",
@@ -3296,6 +3572,53 @@
         ]
       }
     },
+    "/api/v1/padnext/batch/{batch_id}/export": {
+      "post": {
+        "description": "Download a completed batch as CSVs, for a billing centre.\n\nOnly a `COMPLETED` batch can be exported. A running one would produce totals that are a\nsnapshot of an unidentifiable moment, and a `FAILED` one has no roll-up at all — both are\n`409` rather than a file with a caveat attached, because a caveat does not survive being\nopened in a spreadsheet three weeks later.\n\nRead-only: unlike the proposal export this changes no status and writes no audit row, so the\nsame archive can be downloaded repeatedly and is byte-identical each time. See\n`app.services.batch_audit.export_batch` for why the two exports differ on that.\n\nCSV rather than JSON because the reader is a Rechnungsprüfer with a spreadsheet. The archive\ncarries a `README.txt` stating that `unconfirmed` is the boundary of this engine's rule\ncoverage and not a finding against the practice — a CSV outlives the screen it came from, and\nthat sentence has to travel with the numbers.",
+        "operationId": "padnext_batch_export_api_v1_padnext_batch__batch_id__export_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "A ZIP archive named `batch_{batch_id}_export.zip` holding `batch_summary.csv`, `batch_line_items.csv`, `batch_files.csv` and a `README.txt` that defines the three buckets."
+          },
+          "409": {
+            "description": "The batch has not completed, so there is no roll-up to export."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Padnext Batch Export",
+        "tags": [
+          "padnext"
+        ]
+      }
+    },
     "/api/v1/proposals": {
       "get": {
         "operationId": "list_proposals_api_v1_proposals_get",
@@ -3446,8 +3769,8 @@
     },
     "/api/v1/proposals/{proposal_id}/export": {
       "post": {
-        "description": "Record that an approved proposal left the system. Only reachable from APPROVED.",
-        "operationId": "mark_exported_api_v1_proposals__proposal_id__export_post",
+        "description": "Export an approved proposal, and record that it left the system.\n\nOnly reachable from `APPROVED`; anything else is a `409`. The transition to `EXPORTED` is\nterminal, so a proposal can be exported exactly once — which is the point, since the export is\nthe record of a decision rather than a report that can be regenerated on a whim.\n\n`exported_by` is required. It is written to the `EXPORTED` audit event and into the document\nitself, and it is recorded rather than verified: this service authenticates nobody.\n\nThe response body is the `ProposalExport` document with a `Content-Disposition: attachment`\nheader. It is served as a `Response` rather than returned as a model so the header and the\nexact bytes are ours — a browser must be able to save this file, and the JSON is\npretty-printed because a human opening it in an editor is a first-class use.",
+        "operationId": "export_proposal_api_v1_proposals__proposal_id__export_post",
         "parameters": [
           {
             "in": "path",
@@ -3459,16 +3782,29 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Proposal"
+                  "$ref": "#/components/schemas/ProposalExport"
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "The export document, as a downloadable attachment named `proposal_{proposal_id}.json`."
+          },
+          "409": {
+            "description": "The proposal is not APPROVED, so there is nothing to export."
           },
           "422": {
             "content": {
@@ -3481,7 +3817,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Mark Exported",
+        "summary": "Export Proposal",
         "tags": [
           "proposals"
         ]

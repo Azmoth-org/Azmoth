@@ -20,6 +20,8 @@ import { Label } from "@workspace/ui/components/label"
 import { Textarea } from "@workspace/ui/components/textarea"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@workspace/ui/components/tooltip"
 
+import type { Proposal } from "@/lib/review/types"
+
 /**
  * The approval boundary.
  *
@@ -224,36 +226,138 @@ export function RejectDialog({
 }
 
 /**
- * Export stays disabled — but for a different reason than before, and only for one more step.
+ * Export. Enabled only on an `APPROVED` proposal, and it asks who is taking the file.
  *
- * The old reason was that a report carrying a receipt hash and an "approved by" line, produced from
- * a store that died on restart, would outlive the record of its own approval. That reason is gone:
- * the record is durable and the approval is logged. What remains is that the export endpoint's
- * behaviour has not been exercised against the database yet, so the button is deliberately held
- * back to the next step rather than enabled on the strength of the migration alone. The tooltip
- * says that, and nothing more — a disabled control that does not explain itself reads as broken.
+ * This button was disabled for two releases and the reasons are worth keeping, because they are
+ * the reasons it may be enabled now. The first was that a report carrying a receipt hash and an
+ * "approved by" line, produced from a store that died on restart, would outlive the record of its
+ * own approval. The second was that the endpoint had not been exercised against the database. Both
+ * are gone: the proposal, the approval and the export are all rows in Postgres, and the export
+ * document is assembled inside the transaction that writes the `EXPORTED` audit event.
  *
- * German, like every other string in this UI. The reviewer reading it is the same person reading
- * "Freigeben" next to it.
+ * `exported_by` is required for the same reason `approved_by` is — the export is a thing a person
+ * did, and the log has to be able to say who. The copy below says the name is *recorded*, not
+ * verified, because there is still no authentication in front of any of this.
+ *
+ * The export is also **once**. `EXPORTED` is terminal, so a second attempt is refused with a 409,
+ * and the dialog says so before the user commits rather than after.
  */
-export function ExportButtonPlaceholder() {
+export function ExportDialog({
+  status,
+  pending,
+  onExport,
+}: {
+  status: Proposal["status"]
+  pending: boolean
+  onExport: (exportedBy: string, note: string) => Promise<void>
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [exportedBy, setExportedBy] = React.useState("")
+  const [note, setNote] = React.useState("")
+
+  const approved = status === "APPROVED"
+  const alreadyExported = status === "EXPORTED"
+  const canSubmit = exportedBy.trim().length > 0 && !pending
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    if (!canSubmit) return
+    await onExport(exportedBy.trim(), note.trim())
+    setOpen(false)
+  }
+
+  // A disabled control that does not explain itself reads as broken, so the reason is always
+  // attached — and the reason differs by status, which is the useful part.
+  const hint = approved
+    ? null
+    : alreadyExported
+      ? "Dieser Vorschlag wurde bereits exportiert. Ein Export ist endgültig und nur einmal möglich."
+      : "Export ist erst nach der Freigabe möglich. Ein Entwurf, den niemand freigegeben hat, ist kein Dokument."
+
+  const button = (
+    <Button variant="outline" disabled={!approved || pending}>
+      <DownloadIcon />
+      Exportieren
+    </Button>
+  )
+
+  if (!approved) {
+    // The `span` is what lets a *disabled* button still explain itself: a disabled control fires no
+    // pointer or focus events, so the tooltip would never open if it wrapped the button directly.
+    // It is deliberately absent from the enabled branch below — `DialogTrigger` needs a real
+    // `<button>` to keep native button semantics, and giving it a span breaks both forms and
+    // accessibility.
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger render={<span tabIndex={0}>{button}</span>} />
+          <TooltipContent className="max-w-xs">{hint}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <span tabIndex={0}>
-              <Button variant="outline" disabled>
-                <DownloadIcon />
-                Exportieren
-              </Button>
-            </span>
-          }
-        />
-        <TooltipContent className="max-w-xs">
-          Der Export wird mit dem nächsten Update aktiviert.
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={button} />
+      <DialogContent className="max-w-lg">
+        <form onSubmit={submit}>
+          <DialogHeader>
+            <DialogTitle>Vorschlag exportieren</DialogTitle>
+            <DialogDescription>
+              Der Export enthält den vollständigen Abrechnungsvorschlag mit Receipt-Hash,
+              Katalog- und Regelversionen, allen Beweisketten und dem Freigabeprotokoll.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="exported-by">
+                Exportiert von <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="exported-by"
+                value={exportedBy}
+                onChange={(event) => setExportedBy(event.target.value)}
+                placeholder="Name oder Zielsystem, z. B. PVS-Anbindung"
+                autoComplete="off"
+                required
+              />
+              <p className="text-muted-foreground text-xs">
+                Pflichtfeld. Die Engine lehnt einen Export ohne Namen ab.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="export-note">Notiz (optional)</Label>
+              <Textarea
+                id="export-note"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                rows={2}
+                placeholder="z. B. Ticket-Nummer oder Empfänger"
+              />
+            </div>
+
+            <Alert>
+              <AlertTitle>Der Export ist endgültig und wird protokolliert</AlertTitle>
+              <AlertDescription>
+                Der Vorschlag wechselt dauerhaft in den Status <strong>Exportiert</strong> und kann
+                danach nicht erneut exportiert werden. Name, Zeitpunkt und Notiz werden im
+                Protokoll festgehalten — der Name wird protokolliert, aber technisch nicht
+                überprüft.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter>
+            <DialogClose render={<Button type="button" variant="ghost">Abbrechen</Button>} />
+            <Button type="submit" disabled={!canSubmit}>
+              {pending ? "Wird exportiert…" : "Export herunterladen"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

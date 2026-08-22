@@ -14,14 +14,29 @@ verified — and a **retention policy**. Both are tracked in
 
 These path functions are `async def`, unlike `/solve`. They do database I/O and nothing else, so
 awaiting is exactly right; dispatching them to the threadpool would only add a hop.
+
+`POST /{id}/export` is the one that returns a file rather than a model. It answers with the JSON
+export document as an attachment, assembled inside the same transaction that marks the proposal
+`EXPORTED` and writes the audit event — see `app.services.proposal_store.export_proposal_document`
+for why that has to be one transaction rather than a transition followed by a read.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+import json
+
+from fastapi import APIRouter, HTTPException, Query, Response
 
 from app.api.deps import proposals
-from app.schemas import ApprovalRequest, Proposal, ProposalStatus, RejectionRequest
+from app.schemas import (
+    ApprovalRequest,
+    ExportRequest,
+    Proposal,
+    ProposalExport,
+    ProposalStatus,
+    RejectionRequest,
+)
+from app.services.export import attachment_headers, proposal_export_filename
 from app.services.proposal_store import IllegalTransitionError, ProposalNotFound
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
@@ -98,12 +113,52 @@ async def reject(proposal_id: str, request: RejectionRequest) -> Proposal:
         raise _conflict(exc) from exc
 
 
-@router.post("/{proposal_id}/export", response_model=Proposal)
-async def mark_exported(proposal_id: str) -> Proposal:
-    """Record that an approved proposal left the system. Only reachable from APPROVED."""
+@router.post(
+    "/{proposal_id}/export",
+    response_model=ProposalExport,
+    responses={
+        200: {
+            "description": (
+                "The export document, as a downloadable attachment named "
+                "`proposal_{proposal_id}.json`."
+            ),
+            "content": {"application/json": {}},
+        },
+        409: {"description": "The proposal is not APPROVED, so there is nothing to export."},
+    },
+)
+async def export_proposal(proposal_id: str, request: ExportRequest) -> Response:
+    """Export an approved proposal, and record that it left the system.
+
+    Only reachable from `APPROVED`; anything else is a `409`. The transition to `EXPORTED` is
+    terminal, so a proposal can be exported exactly once — which is the point, since the export is
+    the record of a decision rather than a report that can be regenerated on a whim.
+
+    `exported_by` is required. It is written to the `EXPORTED` audit event and into the document
+    itself, and it is recorded rather than verified: this service authenticates nobody.
+
+    The response body is the `ProposalExport` document with a `Content-Disposition: attachment`
+    header. It is served as a `Response` rather than returned as a model so the header and the
+    exact bytes are ours — a browser must be able to save this file, and the JSON is
+    pretty-printed because a human opening it in an editor is a first-class use.
+    """
     try:
-        return await proposals().export_proposal(proposal_id)
+        document = await proposals().export_proposal_document(
+            proposal_id, exported_by=request.exported_by, note=request.note
+        )
     except ProposalNotFound as exc:
         raise _not_found(proposal_id) from exc
     except IllegalTransitionError as exc:
         raise _conflict(exc) from exc
+
+    # `mode="json"` so every Decimal becomes its exact string and every datetime an ISO-8601
+    # instant — the same serialisation the API uses everywhere else. `ensure_ascii=False` because
+    # a Leistungstext contains umlauts and an escaped one is unreadable in the saved file.
+    body = json.dumps(
+        document.model_dump(mode="json"), indent=2, ensure_ascii=False, sort_keys=False
+    )
+    return Response(
+        content=body,
+        media_type="application/json",
+        headers=attachment_headers(proposal_export_filename(document.proposal_id)),
+    )

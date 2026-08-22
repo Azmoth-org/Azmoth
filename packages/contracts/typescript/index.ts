@@ -47,6 +47,25 @@ export type ProposalStatus = Schemas["ProposalStatus"];
 export type ApprovalRequest = Schemas["ApprovalRequest"];
 export type RejectionRequest = Schemas["RejectionRequest"];
 
+/**
+ * Body of `POST /api/v1/proposals/{id}/export`. `exported_by` is required, for the same reason
+ * `approved_by` is on an approval: it is recorded in the audit log. It is not authenticated.
+ */
+export type ExportRequest = Schemas["ExportRequest"];
+
+/**
+ * The downloadable record of one exported proposal — served as an attachment, not rendered.
+ *
+ * Carries what the `Proposal` response cannot: `input_hash`, the decision record, and the full
+ * append-only audit log including the `EXPORTED` event the export itself wrote. A client that
+ * needs to *display* a proposal should read `Proposal`; this type exists so a caller that
+ * post-processes the downloaded file is typed against the same document the engine wrote.
+ */
+export type ProposalExport = Schemas["ProposalExport"];
+export type ProposalExportDecision = Schemas["DecisionRecord"];
+export type ProposalExportEngineIdentity = Schemas["EngineIdentity"];
+export type ProposalExportAuditEvent = Schemas["AuditEventRecord"];
+
 export type CodingResponse = Schemas["CodingResponse"];
 export type Coding = Schemas["Coding"];
 export type InvoiceLine = Schemas["InvoiceLine"];
@@ -152,6 +171,8 @@ export const ENGINE_ROUTES = {
   proposals: "/api/v1/proposals",
   padnextAudit: "/api/v1/padnext/audit",
   padnextBatch: "/api/v1/padnext/batch",
+  padnextBatchExport: "/api/v1/padnext/batch/{batch_id}/export",
+  proposalExport: "/api/v1/proposals/{proposal_id}/export",
   catalog: "/api/v1/catalog",
   vocabulary: "/api/v1/vocabulary",
 } as const satisfies Record<string, EnginePath>;

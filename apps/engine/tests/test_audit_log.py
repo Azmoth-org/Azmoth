@@ -249,7 +249,10 @@ async def test_the_api_writes_the_audit_trail_for_a_real_solve(client, manual_ca
         ).status_code
         == 200
     )
-    assert client.post(f"/api/v1/proposals/{proposal_id}/export").status_code == 200
+    exported = client.post(
+        f"/api/v1/proposals/{proposal_id}/export", json={"exported_by": "PVS-Anbindung"}
+    )
+    assert exported.status_code == 200, exported.text
 
     from app.api import deps
 
@@ -262,6 +265,9 @@ async def test_the_api_writes_the_audit_trail_for_a_real_solve(client, manual_ca
     )
     assert events[2]["actor"] == "Dr. Beispiel"
     assert events[2]["metadata"]["note"] == "geprüft"
+    # The export is attributed too: `exported_by` is required by the endpoint and is what the
+    # EXPORTED row records. An export nobody is named for cannot be accounted for later.
+    assert events[3]["actor"] == "PVS-Anbindung"
 
 
 async def test_a_rejection_through_the_api_records_the_rejecter_not_just_the_reason(

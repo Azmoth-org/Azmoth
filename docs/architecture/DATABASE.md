@@ -74,15 +74,20 @@ the receipt, never the versions, never the solver output. That is what makes *"t
 what was approved"* a checkable statement instead of a hopeful one, and there is a test that
 snapshots every identity column across an approve-then-export and asserts it did not move.
 
-### Four columns the API does not return
+### Four columns the `Proposal` response does not return
 
 `input_hash`, `rejected_at`, `rejected_by` and `exported_at` are written and queryable but absent
-from the `Proposal` response model. Adding them would change the OpenAPI document, and the contract
-for this migration was that the document does not move — the frontend must not be able to tell that
-the backend changed. `rejected_by` in particular is not lost: it is the actor on the `REJECTED`
-audit event, which is where "who rejected this" belongs anyway. (It used to be *genuinely* lost —
-the old in-memory `transition()` accepted a `reason` but no `by` for a rejection, so the API
-validated a required `rejected_by` and then dropped it.)
+from the `Proposal` response model. Adding them would have changed the OpenAPI document, and the
+contract for the persistence migration was that the document does not move — the frontend must not
+be able to tell that the backend changed. `rejected_by` in particular is not lost: it is the actor
+on the `REJECTED` audit event, which is where "who rejected this" belongs anyway. (It used to be
+*genuinely* lost — the old in-memory `transition()` accepted a `reason` but no `by` for a
+rejection, so the API validated a required `rejected_by` and then dropped it.)
+
+All four do appear in the **export** document, and that is the right place for them: an export is
+read on its own, detached from this database, so a field that a live client can look up by other
+means is a field an archived file has no way to recover. `input_hash` especially — comparing two
+exports for "same case, different engine state" is impossible from the API responses alone.
 
 ### `receipt_hash` vs `input_hash`
 
@@ -140,10 +145,43 @@ There is no authentication in this service. `approved_by` is a string the caller
 read cannot be attributed at all — so a `VIEWED` event carries `anonymous`, and a `CREATED` event
 carries `system` because a solve is not a person.
 
+`EXPORTED` carries whatever `exported_by` the export request supplied, and that field is required
+for the same reason `approved_by` is: an export is a thing a person or a named integration did, and
+the log has to be able to say which. It used to default to `system`, which was right while the only
+caller was `ProposalStore.export_proposal` and wrong the moment a human could press a button.
+
 `anonymous` is deliberately conspicuous. An audit log full of it is a visible statement that access
 control is still missing, which is exactly the gap
 [`../compliance/PRIVATE_DATA_WARNING.md`](../compliance/PRIVATE_DATA_WARNING.md) lists. Writing a
 plausible-looking name there instead would be the one genuinely dangerous option.
+
+### The export is built inside the transaction that records it
+
+`POST /api/v1/proposals/{id}/export` does three things in one unit of work: it moves the row to
+`EXPORTED`, writes the `EXPORTED` audit event, and assembles the downloadable JSON document from
+that same row — all before the commit. The obvious alternative, transition and then read the row
+back, is wrong in two ways. The file could disagree with the record it claims to describe, and a
+read that failed *after* a successful transition would leave a proposal permanently `EXPORTED` with
+no file ever delivered — unrecoverable, because `EXPORTED` is terminal and there is no second
+attempt.
+
+That is what `_transition`'s `project` parameter exists for, and it has exactly one caller. The
+lifecycle check and the row lock are the part that must not be duplicated: a second write path that
+forgot either would let two people export one proposal.
+
+The document carries `input_hash`, which no API response returns, and the full audit log *including
+the `EXPORTED` row the export itself just wrote*. Self-describing on purpose — a document whose log
+stops at `APPROVED` cannot show that it is the export it claims to be.
+
+### A batch export is not a decision, and is not logged
+
+`POST /api/v1/padnext/batch/{id}/export` changes no status and writes no audit row. It renders a
+computation that already finished, so the same ZIP can be downloaded repeatedly and is byte-identical
+each time; there is nothing for a second export to contradict. `audit_events` is keyed to a proposal
+anyway — if batch access ever needs logging it needs its own table, not a foreign key bent to fit.
+
+Only a `COMPLETED` batch can be exported. A running one would produce totals that are a snapshot of
+an unidentifiable moment and a `FAILED` one has no roll-up at all; both are `409`.
 
 ### `VIEWED` is opt-in
 

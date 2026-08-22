@@ -1,8 +1,8 @@
 """Every schema the engine speaks, re-exported as one namespace.
 
 The modules are split by concern — `case` (the frozen clinical input contract), `facts` (the
-symbolic layer), `solver`, `result`, `proposal`, `padnext`, `batch`, `meta` — but callers import
-from here, so moving a model between them is not a breaking change.
+symbolic layer), `solver`, `result`, `proposal`, `padnext`, `batch`, `export`, `meta` — but callers
+import from here, so moving a model between them is not a breaking change.
 """
 
 from app.schemas.batch import (
@@ -33,6 +33,14 @@ from app.schemas.common import (
     Sex,
     ValidationViolation,
     Warning_,
+)
+from app.schemas.export import (
+    EXPORT_FORMAT_VERSION,
+    AuditEventRecord,
+    DecisionRecord,
+    EngineIdentity,
+    ExportRequest,
+    ProposalExport,
 )
 from app.schemas.facts import (
     AnalogRequest,
@@ -89,9 +97,11 @@ from app.schemas.solver import (
 __all__ = [
     "BEHANDLUNGSART_LABEL",
     "BEHANDLUNGSART_TO_SETTING",
+    "EXPORT_FORMAT_VERSION",
     "AnalogDecision",
     "AnalogRequest",
     "ApprovalRequest",
+    "AuditEventRecord",
     "AuditTrail",
     "AuditTrailEntry",
     "BatchAggregateSummary",
@@ -113,8 +123,11 @@ __all__ = [
     "Conflict",
     "Consultation",
     "Dec",
+    "DecisionRecord",
     "Diagnosis",
+    "EngineIdentity",
     "EntityTypeOption",
+    "ExportRequest",
     "Examination",
     "FactorDecision",
     "HealthResponse",
@@ -135,6 +148,7 @@ __all__ = [
     "Patient",
     "Procedure",
     "Proposal",
+    "ProposalExport",
     "ProposalStatus",
     "ProofStep",
     "RejectionRequest",

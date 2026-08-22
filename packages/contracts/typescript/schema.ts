@@ -150,6 +150,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/padnext/batch/{batch_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Padnext Batch Export
+         * @description Download a completed batch as CSVs, for a billing centre.
+         *
+         *     Only a `COMPLETED` batch can be exported. A running one would produce totals that are a
+         *     snapshot of an unidentifiable moment, and a `FAILED` one has no roll-up at all — both are
+         *     `409` rather than a file with a caveat attached, because a caveat does not survive being
+         *     opened in a spreadsheet three weeks later.
+         *
+         *     Read-only: unlike the proposal export this changes no status and writes no audit row, so the
+         *     same archive can be downloaded repeatedly and is byte-identical each time. See
+         *     `app.services.batch_audit.export_batch` for why the two exports differ on that.
+         *
+         *     CSV rather than JSON because the reader is a Rechnungsprüfer with a spreadsheet. The archive
+         *     carries a `README.txt` stating that `unconfirmed` is the boundary of this engine's rule
+         *     coverage and not a finding against the practice — a CSV outlives the screen it came from, and
+         *     that sentence has to travel with the numbers.
+         */
+        post: operations["padnext_batch_export_api_v1_padnext_batch__batch_id__export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/proposals": {
         parameters: {
             query?: never;
@@ -214,10 +248,22 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mark Exported
-         * @description Record that an approved proposal left the system. Only reachable from APPROVED.
+         * Export Proposal
+         * @description Export an approved proposal, and record that it left the system.
+         *
+         *     Only reachable from `APPROVED`; anything else is a `409`. The transition to `EXPORTED` is
+         *     terminal, so a proposal can be exported exactly once — which is the point, since the export is
+         *     the record of a decision rather than a report that can be regenerated on a whim.
+         *
+         *     `exported_by` is required. It is written to the `EXPORTED` audit event and into the document
+         *     itself, and it is recorded rather than verified: this service authenticates nobody.
+         *
+         *     The response body is the `ProposalExport` document with a `Content-Disposition: attachment`
+         *     header. It is served as a `Response` rather than returned as a model so the header and the
+         *     exact bytes are ours — a browser must be able to save this file, and the JSON is
+         *     pretty-printed because a human opening it in an editor is a first-class use.
          */
-        post: operations["mark_exported_api_v1_proposals__proposal_id__export_post"];
+        post: operations["export_proposal_api_v1_proposals__proposal_id__export_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -340,6 +386,25 @@ export interface components {
              * @default
              */
             note: string;
+        };
+        /**
+         * AuditEventRecord
+         * @description One row of the append-only log, as it is written in the database.
+         */
+        AuditEventRecord: {
+            /** Actor */
+            actor: string;
+            /** Event Type */
+            event_type: string;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
         };
         /** AuditTrail */
         AuditTrail: {
@@ -923,6 +988,29 @@ export interface components {
             /** Type */
             type: string;
         };
+        /**
+         * DecisionRecord
+         * @description Who decided what, and when. The half of the document a dispute actually turns on.
+         */
+        DecisionRecord: {
+            /** Approved At */
+            approved_at?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /**
+             * Exported At
+             * Format: date-time
+             */
+            exported_at: string;
+            /** Exported By */
+            exported_by: string;
+            /** Rejected At */
+            rejected_at?: string | null;
+            /** Rejected By */
+            rejected_by?: string | null;
+            /** Rejected Reason */
+            rejected_reason?: string | null;
+        };
         /** Diagnosis */
         "Diagnosis-Input": {
             /**
@@ -952,6 +1040,51 @@ export interface components {
             id?: string | null;
             /** Text */
             text: string;
+        };
+        /**
+         * EngineIdentity
+         * @description Everything that decides what the engine would answer, named and pinned.
+         *
+         *     Flattened out of the proposal rather than referenced, because an export is read on its own: a
+         *     field that said "see the proposal" would be useless in a document whose whole purpose is to be
+         *     separable from this database.
+         */
+        EngineIdentity: {
+            /**
+             * Catalog Sha256
+             * @default
+             */
+            catalog_sha256: string;
+            /**
+             * Catalog Version
+             * @default
+             */
+            catalog_version: string;
+            /**
+             * Logic Version
+             * @default
+             */
+            logic_version: string;
+            /**
+             * Rules Engine Version
+             * @default
+             */
+            rules_engine_version: string;
+            /**
+             * Rules Hash
+             * @default
+             */
+            rules_hash: string;
+            /**
+             * Rules Version
+             * @default
+             */
+            rules_version: string;
+            /**
+             * Solver Version
+             * @default
+             */
+            solver_version: string;
         };
         /**
          * EntityTypeOption
@@ -1052,6 +1185,26 @@ export interface components {
             organs?: string[];
             /** Type */
             type: string;
+        };
+        /**
+         * ExportRequest
+         * @description Who is taking the export.
+         *
+         *     Required for the same reason `approved_by` is required on an approval: an export is a thing a
+         *     person did, and an unattributed one is indistinguishable from one nobody can account for. It is
+         *     recorded, not verified — see the module docstring.
+         */
+        ExportRequest: {
+            /**
+             * Exported By
+             * @description Who is taking this export. Recorded in the audit log; not authenticated.
+             */
+            exported_by: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1762,6 +1915,45 @@ export interface components {
             warnings?: components["schemas"]["Warning_"][];
         };
         /**
+         * ProposalExport
+         * @description The downloadable record of one approved proposal.
+         *
+         *     Served as `proposal_{proposal_id}.json` with a `Content-Disposition: attachment` header. The
+         *     JSON is the contract; the filename is a convenience.
+         */
+        ProposalExport: {
+            /** Audit Events */
+            audit_events?: components["schemas"]["AuditEventRecord"][];
+            /** Case Id */
+            case_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            decision: components["schemas"]["DecisionRecord"];
+            engine: components["schemas"]["EngineIdentity"];
+            /**
+             * Export Format Version
+             * @default 1.0
+             */
+            export_format_version: string;
+            /** Input Hash */
+            input_hash: string;
+            /** Missing Documentation */
+            missing_documentation?: components["schemas"]["MissingDocumentation"][];
+            /** Proposal Id */
+            proposal_id: string;
+            /** Receipt Hash */
+            receipt_hash: string;
+            rule_coverage?: components["schemas"]["RuleCoverage"] | null;
+            solver_result: components["schemas"]["CodingResponse"];
+            /** Status */
+            status: string;
+            /** Warnings */
+            warnings?: components["schemas"]["Warning_"][];
+        };
+        /**
          * ProposalStatus
          * @enum {string}
          */
@@ -2202,6 +2394,44 @@ export interface operations {
             };
         };
     };
+    padnext_batch_export_api_v1_padnext_batch__batch_id__export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A ZIP archive named `batch_{batch_id}_export.zip` holding `batch_summary.csv`, `batch_line_items.csv`, `batch_files.csv` and a `README.txt` that defines the three buckets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            /** @description The batch has not completed, so there is no roll-up to export. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_proposals_api_v1_proposals_get: {
         parameters: {
             query?: {
@@ -2299,7 +2529,7 @@ export interface operations {
             };
         };
     };
-    mark_exported_api_v1_proposals__proposal_id__export_post: {
+    export_proposal_api_v1_proposals__proposal_id__export_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2308,16 +2538,27 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportRequest"];
+            };
+        };
         responses: {
-            /** @description Successful Response */
+            /** @description The export document, as a downloadable attachment named `proposal_{proposal_id}.json`. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Proposal"];
+                    "application/json": components["schemas"]["ProposalExport"];
                 };
+            };
+            /** @description The proposal is not APPROVED, so there is nothing to export. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

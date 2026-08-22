@@ -18,7 +18,7 @@ import { BlockedPositionsTable } from "@/components/review/blocked-positions-tab
 import { CaseSelector } from "@/components/review/case-selector"
 import {
   ApproveDialog,
-  ExportButtonPlaceholder,
+  ExportDialog,
   RejectDialog,
 } from "@/components/review/decision-dialogs"
 import { ErrorPanel } from "@/components/review/error-panel"
@@ -26,11 +26,12 @@ import { MissingDocumentationPanel } from "@/components/review/missing-documenta
 import { ProposalHeader } from "@/components/review/proposal-header"
 import { RuleCoverageBanner } from "@/components/review/rule-coverage-banner"
 import { WarningsPanel } from "@/components/review/warnings-panel"
+import { downloadProposalExport } from "@/lib/download"
 import { SYNTHETIC_CASES, findSyntheticCase, type SyntheticCase } from "@/lib/fixtures"
-import { approveProposal, rejectProposal, solveCase } from "@/lib/review/client"
+import { approveProposal, fetchProposal, rejectProposal, solveCase } from "@/lib/review/client"
 import type { Proposal, ReviewError } from "@/lib/review/types"
 
-type Pending = "idle" | "solving" | "approving" | "rejecting"
+type Pending = "idle" | "solving" | "approving" | "rejecting" | "exporting"
 
 function TabLabel({ label, count }: { label: string; count: number }) {
   return (
@@ -57,6 +58,9 @@ export function ReviewWorkbench() {
   const [proposal, setProposal] = React.useState<Proposal | null>(null)
   const [error, setError] = React.useState<ReviewError | null>(null)
   const [pending, setPending] = React.useState<Pending>("idle")
+  // The name of the last file saved, so the screen confirms the download happened. A browser
+  // download is silent — without this a successful export is indistinguishable from a dead button.
+  const [exported, setExported] = React.useState<string | null>(null)
 
   function selectCase(id: string) {
     const next = findSyntheticCase(id)
@@ -64,11 +68,13 @@ export function ReviewWorkbench() {
     setSelected(next)
     setProposal(null)
     setError(null)
+    setExported(null)
   }
 
   async function run() {
     setPending("solving")
     setError(null)
+    setExported(null)
     const result = await solveCase({
       extraction: selected.extraction,
       case_id: selected.id,
@@ -114,6 +120,33 @@ export function ReviewWorkbench() {
     setPending("idle")
   }
 
+  async function exportProposal(exportedBy: string, note: string) {
+    if (!proposal) return
+    setPending("exporting")
+    const result = await downloadProposalExport(proposal.proposal_id, {
+      exported_by: exportedBy,
+      note,
+    })
+
+    if (result.kind === "error") {
+      setError(result.error)
+      setPending("idle")
+      return
+    }
+
+    setError(null)
+    setExported(result.filename)
+
+    // The export moved the proposal to EXPORTED in the engine, and the download response is the
+    // file rather than the proposal, so the screen has to read the record back. Re-fetching rather
+    // than patching local state is the same rule the rest of this component follows: show what the
+    // engine says, not what the click hoped for. It costs a `VIEWED` audit row, which is accurate
+    // — the screen did read the proposal again.
+    const refreshed = await fetchProposal(proposal.proposal_id)
+    if (refreshed.kind === "proposal") setProposal(refreshed.proposal)
+    setPending("idle")
+  }
+
   const coding = proposal?.solver_result.coding
   const auditTrail = proposal?.solver_result.audit_trail
   const accepted = coding?.proposed_codes ?? []
@@ -153,8 +186,16 @@ export function ReviewWorkbench() {
                 onReject={reject}
               />
               <Separator orientation="vertical" className="h-6" />
-              <ExportButtonPlaceholder />
-              {!isDraft ? (
+              <ExportDialog
+                status={proposal.status}
+                pending={pending === "exporting"}
+                onExport={exportProposal}
+              />
+              {exported ? (
+                <p className="text-muted-foreground text-sm">
+                  Heruntergeladen: <span className="font-mono text-xs">{exported}</span>
+                </p>
+              ) : !isDraft ? (
                 <p className="text-muted-foreground text-sm">
                   Dieser Vorschlag ist bereits entschieden. Ein erneuter Statuswechsel wird von der
                   Engine mit HTTP 409 abgelehnt.
