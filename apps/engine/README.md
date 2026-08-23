@@ -349,5 +349,5 @@ app/
   padnext/             reader + audit
 alembic/               migration history; alembic.ini reads DATABASE_URL, never a committed URL
 scripts/               engine_cli, migrate, export_openapi, import_goae, fetch_goae, …
-tests/                 731 tests — see tests/README.md
+tests/                 832 tests — see tests/README.md
 ```

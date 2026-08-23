@@ -120,6 +120,40 @@ def cmd_check(args: argparse.Namespace) -> int:
     except Exception as exc:  # noqa: BLE001
         report("catalog loads", False, str(exc))
 
+    # -- PADnext framing schema ------------------------------------------------------------
+    #
+    # Compiled here, at deploy time, because a schema that does not compile is a deployment fault
+    # that would otherwise surface as a 500 on the first delivery someone uploads. CI runs this
+    # command against the built image, so a broken or missing XSD fails the build instead.
+    try:
+        from app.padnext.schema import load_schema
+        from lxml import etree
+
+        xsd = settings.padnext_xsd_path
+        load_schema(xsd)
+        official = xsd.name != "padx_adl_v2.12.subset.xsd"
+        report(
+            "padnext schema compiles",
+            True,
+            f"{xsd.name} ({'licensed official' if official else 'bundled subset'}), "
+            f"policy={settings.padnext_schema_policy}, libxml2 "
+            f"{'.'.join(map(str, etree.LIBXML_VERSION))}",
+        )
+
+        example = settings.cases_dir / "padnext" / "00004711_20260726_ADL_000001_padx.xml"
+        if example.is_file():
+            from app.padnext.schema import validate_payload
+
+            violations = validate_payload(example.read_bytes())
+            report(
+                "bundled PADnext example validates",
+                not violations,
+                f"{len(violations)} violation(s)"
+                + (f": {violations[0].location}" if violations else ""),
+            )
+    except Exception as exc:  # noqa: BLE001
+        report("padnext schema compiles", False, str(exc))
+
     # -- rules ----------------------------------------------------------------------------
     rules = None
     try:

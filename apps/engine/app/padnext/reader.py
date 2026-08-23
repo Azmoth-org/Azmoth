@@ -19,9 +19,21 @@ Shape, from the PADneXt 2.12 specification (PADline GmbH / PVS-Verband, namespac
               minderungssatz, punktzahl, punktwert, gesamtbetrag
 
 This is a reader for the subset that affects whether a position is chargeable and what it should
-cost. It is **not** a conforming PADnext implementation and does not validate against the official
-XSD, which is not redistributed here. Anything it does not understand becomes a finding rather than
-being dropped — the same rule the GOÄ importer follows.
+cost. It is **not** a conforming PADnext implementation. Anything it does not understand becomes a
+finding rather than being dropped — the same rule the GOÄ importer follows.
+
+**The framing is validated; the positions are not.** Before anything is read out of a payload it is
+checked against `data/schemas/padnext/padx_adl_v2.12.subset.xsd` — our own subset, because the
+official XSD is not redistributable here. That check answers one question: is this an ADL payload at
+all? Wrong root, wrong namespace, no message type, a counter that is not a number, a treatment code
+outside the legal set, an Abrechnungsfall with no positions. Those refuse the delivery
+(`PadnextSchemaError`, HTTP 422) because it cannot be audited or cannot be priced.
+
+Everything below that line stays advisory, and deliberately so: a `goziffer` with no `@ziffer`, a
+`faktor` reading "zwei", an `auslagen` line this engine does not model. The invoices most likely to
+be wrong are the malformed ones, so a validator strict enough to refuse them would refuse exactly
+the files a practice most needs read. `PADNEXT_SCHEMA_POLICY=warn` moves the framing check to the
+same footing for the day a real export is 99 % conforming. See `app/padnext/schema.py`.
 
 Encrypted payloads (`verschluesselung/@verfahren` other than 0 — the spec uses PKCS#7) are reported
 as unsupported rather than half-handled.
@@ -36,6 +48,12 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from xml.etree import ElementTree
 
+from app.config import PadnextSchemaPolicy, get_settings
+from app.padnext.schema import (
+    SchemaViolation,
+    describe_violations,
+    validate_payload,
+)
 from app.schemas import Warning_
 from app.schemas.padnext import (
     PadnextCase,
@@ -60,6 +78,20 @@ PADX_NAME = re.compile(r"^(?P<kunde>[^_]+)_(?P<datum>\d{8})_(?P<typ>[A-Z]+)_(?P<
 
 class PadnextError(RuntimeError):
     """The delivery cannot be read at all. Distinct from a finding, which is a readable problem."""
+
+
+class PadnextSchemaError(PadnextError):
+    """The payload is not an ADL document this engine can audit. Carries every violation.
+
+    A `PadnextError` subclass so that `api/padnext.py`'s existing `except PadnextError` keeps
+    turning it into a 422 with no new handler, and so a caller that only cares "unreadable
+    delivery" needs no change. A caller that wants the detail reads `violations`, each of which
+    carries a line, a column and a readable element path — see `app.padnext.schema`.
+    """
+
+    def __init__(self, violations: list[SchemaViolation]) -> None:
+        self.violations = list(violations)
+        super().__init__(describe_violations(self.violations))
 
 
 def _local(tag: str) -> str:
@@ -346,9 +378,16 @@ def _parse_case(element: ElementTree.Element, findings: list[Warning_]) -> Padne
 
 
 def read_delivery(
-    data: bytes, *, source_name: str = ""
+    data: bytes,
+    *,
+    source_name: str = "",
+    schema_policy: PadnextSchemaPolicy | None = None,
 ) -> tuple[PadnextDelivery, list[Warning_]]:
-    """Read a `.padx` container or a bare payload XML into a delivery plus any findings."""
+    """Read a `.padx` container or a bare payload XML into a delivery plus any findings.
+
+    `schema_policy` overrides `PADNEXT_SCHEMA_POLICY` for one call, which is what lets a test pin
+    a policy without touching process-wide settings. `None` means "whatever is configured".
+    """
     findings: list[Warning_] = []
     order: dict = {}
     members: list[str] = []
@@ -383,6 +422,17 @@ def read_delivery(
             f"unsupported PADnext payload root <{root_name}>. This reader handles <rechnungen> "
             "(message type ADL)."
         )
+
+    # The framing gate. Deliberately here and not earlier: the three checks above own their own
+    # messages — "send the payload, not the order file", "unsupported root" — and each names what
+    # to do instead, which a schema violation cannot. Deliberately here and not later: nothing
+    # below this line should be reading positions out of a document that is not an ADL payload.
+    policy = schema_policy or get_settings().padnext_schema_policy
+    violations = validate_payload(payload, policy=policy)
+    if violations:
+        if policy == PadnextSchemaPolicy.STRICT:
+            raise PadnextSchemaError(violations)
+        findings.extend(v.as_finding() for v in violations)
 
     typ = _child(root, "nachrichtentyp")
     nachrichtentyp = _text(typ) or order.get("nachrichtentyp", "")
@@ -454,8 +504,10 @@ def read_delivery(
     return delivery, findings
 
 
-def read_file(path: str | Path) -> tuple[PadnextDelivery, list[Warning_]]:
+def read_file(
+    path: str | Path, *, schema_policy: PadnextSchemaPolicy | None = None
+) -> tuple[PadnextDelivery, list[Warning_]]:
     p = Path(path)
     if not p.is_file():
         raise PadnextError(f"no such PADnext file: {p}")
-    return read_delivery(p.read_bytes(), source_name=p.name)
+    return read_delivery(p.read_bytes(), source_name=p.name, schema_policy=schema_policy)

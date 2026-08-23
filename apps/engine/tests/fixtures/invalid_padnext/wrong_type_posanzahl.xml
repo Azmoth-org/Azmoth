@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC. No real patient, no real practice, no real invoice.
+
+  VIOLATION: positionen/@posanzahl is "viele", not a number.
+
+  @posanzahl is the specification's own consistency counter and the reader compares it against the
+  positions it actually read (`padnext_position_count_mismatch`). A value that is not a number does
+  not fail that comparison — it cancels it: `_int` returns None, the check is skipped, and an
+  invoice nobody cross-checked looks exactly like one that passed. That is why the counters are
+  typed in the schema while the money leaves are not.
+-->
+<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+
+  <nachrichtentyp version="02.12">ADL</nachrichtentyp>
+
+  <rechnung id="SYNTH-INVALID-0003">
+    <abrechnungsfall>
+      <behandlungsart>0</behandlungsart>
+      <positionen posanzahl="viele">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="1">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <faktor>2.3</faktor>
+          <gesamtbetrag>10.72</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

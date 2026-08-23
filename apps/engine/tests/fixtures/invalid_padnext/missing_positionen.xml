@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC. No real patient, no real practice, no real invoice.
+
+  VIOLATION: the <abrechnungsfall> has no <positionen>.
+
+  This is the one the XSD cannot express — XSD 1.0 has no way to say "this child is required and
+  unknown siblings are still welcome", and closing the content model would reject every real
+  delivery, which carries patient and diagnosis elements this engine never parses. So
+  `app/padnext/schema.py::_missing_positionen` checks it and reports it with the same line number.
+
+  It is worth checking because of how quietly it fails otherwise: the case is read as an invoice
+  claiming nothing. claimed_total 0.00, recomputed_total 0.00, coverage_ratio 0.0, not one finding
+  — a report indistinguishable from a clean audit of an empty invoice.
+-->
+<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+
+  <nachrichtentyp version="02.12">ADL</nachrichtentyp>
+
+  <rechnung id="SYNTH-INVALID-0002">
+    <abrechnungsfall>
+      <behandlungsart>0</behandlungsart>
+      <vertragsart>1</vertragsart>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

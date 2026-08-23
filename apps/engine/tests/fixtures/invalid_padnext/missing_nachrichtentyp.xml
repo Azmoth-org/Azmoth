@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC. No real patient, no real practice, no real invoice.
+
+  VIOLATION: no <nachrichtentyp>. The payload never says which PAD message type it is.
+
+  Without the framing gate this is audited as an ADL delivery anyway: `read_delivery` falls back
+  to the order file's claim, and for a bare payload there is no order file, so `nachrichtentyp`
+  ends up "" and the report states no message type at all. Everything else here is valid, so the
+  only thing wrong is that the document does not identify itself.
+-->
+<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+
+  <rechnungsersteller>
+    <name>Musterpraxis Dr. Beispiel (synthetisch)</name>
+  </rechnungsersteller>
+
+  <rechnung id="SYNTH-INVALID-0001">
+    <abrechnungsfall>
+      <behandlungsart>0</behandlungsart>
+      <vertragsart>1</vertragsart>
+      <positionen posanzahl="1">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="1">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <text>Beratung, auch fernmuendlich</text>
+          <faktor>2.3</faktor>
+          <gesamtbetrag>10.72</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

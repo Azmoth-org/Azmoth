@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A STRICT SUBSET of the PADneXt 2.12 ADL payload schema. NOT the official XSD.
+
+  The official schema (padx_adl_v2.12.xsd, PADline GmbH / PVS-Verband, published at
+  padinfo.de) is not redistributable here the way the GOÄ text is — the GOÄ is an amtliches
+  Werk and public domain under § 5 UrhG, a trade association's interface specification is
+  not. So this file is ours: hand-written, licensed with the repository, and describing only
+  what `app/padnext/reader.py` needs a delivery to be before it is worth auditing. An
+  operator who holds the official schema can drop it in `data/licensed/padnext/` and the
+  validator will prefer it — see `app/padnext/schema.py`.
+
+  ============================================================================================
+  WHAT THIS SCHEMA IS FOR, AND THE ONE RULE THAT SHAPES ALL OF IT
+  ============================================================================================
+
+  This engine audits invoices. The invoices most likely to be WRONG are the malformed ones, so
+  a validator that refuses anything imperfect would refuse exactly the files a practice most
+  needs read. Therefore:
+
+      FRAMING is fatal.       Is this an ADL payload at all? Wrong root, wrong namespace, no
+                              message type, a counter that is not a number, a treatment code
+                              outside the legal set — these mean the document cannot be
+                              audited, or cannot be priced, so the delivery is refused.
+
+      POSITIONS are advisory. A `goziffer` missing its `@ziffer`, a `faktor` reading "zwei",
+                              an `auslagen` line this engine does not model — these are found,
+                              reported per position, and priced as far as they can be. That is
+                              the product: `app/padnext/audit.py` gives every claimed line a
+                              verdict and every verdict a reason.
+
+  Everything below follows from that split, which is why this schema is deliberately CLOSED at
+  the top of the document and deliberately OPEN inside an invoice.
+
+  ============================================================================================
+  DELIBERATE DIVERGENCES FROM THE OFFICIAL SCHEMA — each one is a decision, not an omission
+  ============================================================================================
+
+  1. `goziffer/@ziffer` is OPTIONAL here; the official schema requires it. A position with no
+     Ziffer is reported as `padnext_position_without_ziffer` and excluded from the money.
+     Rejecting the delivery instead would lose the other eight positions on the invoice.
+
+  2. Every leaf carrying a NUMBER is `xs:string`, not `xs:decimal`/`xs:integer`: faktor,
+     einzelbetrag, punktzahl, punktwert, gesamtbetrag, minderungssatz. The reader parses these
+     into `Decimal` and reports what it cannot parse (`padnext_unparsable_number`). An
+     unreadable amount on one line is a finding about that line, not grounds to refuse the
+     invoice. Note the asymmetry with @anzahl/@posanzahl below: those are FRAMING counters the
+     specification puts there for cross-checking, and a cross-check that silently does not run
+     is worse than one that fails.
+
+  3. `rechnung` and `abrechnungsfall` have OPEN content. A real delivery carries elements this
+     engine does not model — patient identity, diagnoses, invoice-level totals — and a closed
+     model would reject every real file. `processContents="lax"` means the children we DO
+     declare globally (`abrechnungsfall`, `positionen`, `behandlungsart`) are still validated
+     wherever they appear, so openness costs no strictness where strictness was the point.
+
+  4. `positionen` has OPEN content, so `gozziffer`, `auslagen`, `entschaedigung`,
+     `sonstigeshonorar` and `text` positions are accepted and reported as
+     `padnext_position_type_not_modelled` rather than refused. Silently dropping them would
+     understate an invoice without saying so.
+
+  5. `goziffer` has OPEN content too, for the same reason: an unmodelled child element inside
+     one position must not cost the whole delivery. Its known children and attributes are
+     listed in the comment on that declaration for documentation, since XSD 1.0 cannot both
+     enumerate them and stay open (`xs:all` admits no `xs:any`).
+
+  6. `rechnungen` is the one CLOSED model, and that is the framing contract: after
+     `nachrichtentyp` a payload may carry only `rechnungsersteller`, `leistungserbringer` and
+     `rechnung`. A foreign element at the top of the document means this is not the message
+     type it claims to be.
+
+  7. There is no `minOccurs="1"` on `rechnung`, on `abrechnungsfall`, or on `positionen` — not
+     because they are optional, but because the reader already refuses their absence with a
+     message that names what to send instead (`read_delivery`, and the
+     `padnext_abrechnungsfall_without_positionen` invariant in `app/padnext/schema.py`). XSD
+     1.0 cannot express "this element is required, and unknown siblings are still welcome":
+     `xs:any` next to a required particle is a non-deterministic content model and libxml2
+     refuses to compile it. Given the choice between rejecting real deliveries and checking
+     one invariant in code with a line number attached, the invariant wins.
+
+  Structure, for orientation (`*` = repeatable, `?` = optional, "…" = open):
+
+      rechnungen @anzahl
+        nachrichtentyp @version
+        rechnungsersteller ? | leistungserbringer * | rechnung *
+          rechnung @id @aisrechnungsnr
+            abrechnungsfall …
+              behandlungsart ? | vertragsart ? | minderungssatz ? | …
+              positionen @posanzahl
+                goziffer @positionsnr @go @ziffer @analog …
+                gozziffer | auslagen | entschaedigung | sonstigeshonorar | text …
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:pad="http://padinfo.de/ns/pad"
+           targetNamespace="http://padinfo.de/ns/pad"
+           elementFormDefault="qualified">
+
+  <!-- ==========================================================================
+       Simple types
+       ========================================================================== -->
+
+  <!--
+    § 6a GOÄ pricing turns on this code, which is why it is the one enumerated value in this
+    schema. The set is the specification's: 0 ambulant, 1 stationär, 2 teilstationär,
+    3 vorstationär, 4 nachstationär, 5 Konsiliarbehandlung.
+
+    3, 4 and 5 are ACCEPTED here and then reported as `padnext_behandlungsart_not_mapped` by
+    `derive_setting`, because they do not map cleanly onto a § 6a reduction and guessing one
+    would misprice a whole invoice. A value outside the set is different in kind: it is not a
+    treatment setting the engine has an opinion about, it is not a treatment setting at all, and
+    falling back to "ambulant" would apply a 0 % reduction to an invoice whose pricing basis is
+    unknown. That is wrong money, so it is fatal.
+  -->
+  <xs:simpleType name="Behandlungsart">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- An element whose content this engine does not model. Mixed, open, and open-attributed:
+       it exists so a real delivery's extra structure passes through instead of being refused. -->
+  <xs:complexType name="Opaque" mixed="true">
+    <xs:sequence>
+      <xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:anyAttribute namespace="##any" processContents="lax"/>
+  </xs:complexType>
+
+  <!-- ==========================================================================
+       Global declarations
+       ========================================================================== -->
+
+  <!--
+    Declared globally on purpose. Everything below `rechnung` is validated with
+    `processContents="lax"`, which validates a child only when a global declaration for its
+    name exists. Making these four global is therefore what keeps the open content models
+    strict about the things that matter: a `behandlungsart` is checked against the enumeration,
+    and a `posanzahl` against its datatype, wherever in the document they turn up.
+  -->
+
+  <xs:element name="behandlungsart" type="pad:Behandlungsart"/>
+
+  <!--
+    A `goziffer` as this engine reads it. Known children, all optional, none type-constrained:
+
+        datum, anzahl, text, zusatztext, faktor | einzelbetrag, begruendung,
+        minderungssatz, punktzahl, punktwert, gesamtbetrag
+
+    The content model is open rather than an `xs:all` over that list, so an unmodelled child
+    inside one position does not cost the delivery — divergence 5 above. The attributes are
+    named for documentation and are all `xs:string`, including `@ziffer` (divergence 1) and
+    `@go`, which must stay free-form: a GOZ or BG position is reported `out_of_scope` by the
+    audit, not refused here.
+  -->
+  <xs:element name="goziffer">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="positionsnr" type="xs:string"/>
+      <xs:attribute name="go" type="xs:string"/>
+      <xs:attribute name="ziffer" type="xs:string"/>
+      <xs:attribute name="analog" type="xs:string"/>
+      <!-- `##any`, not `##other`: an unprefixed attribute belongs to no namespace at all, so
+           `##other` would make `<goziffer sonderfeld="x">` fatal — a position-level surprise
+           refusing the whole delivery, which is the one thing this schema must not do. -->
+      <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!--
+    `@posanzahl` is the specification's own consistency counter, and it is typed for the reason
+    given in divergence 2: the reader compares it against the positions it actually read
+    (`padnext_position_count_mismatch`). A value like "viele" does not fail that comparison — it
+    silently cancels it, leaving an invoice that was never cross-checked looking like one that
+    was.
+  -->
+  <xs:element name="positionen">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any namespace="##targetNamespace" processContents="lax"
+                minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="posanzahl" type="xs:nonNegativeInteger"/>
+      <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Open content: a real Abrechnungsfall carries patient identity, diagnoses and dates that
+       this engine deliberately never parses. `positionen` and `behandlungsart` are still
+       validated inside it, being global. -->
+  <xs:element name="abrechnungsfall">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any namespace="##targetNamespace" processContents="lax"
+                minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ==========================================================================
+       The document
+       ========================================================================== -->
+
+  <!--
+    The framing contract, and the only closed model in this schema.
+
+    `nachrichtentyp` is required and must come first: a payload that does not say what message
+    type it is cannot be audited as an ADL delivery, and the reader would otherwise fall back to
+    the order file's claim about a document that never made one.
+
+    After it, a repeating choice rather than a sequence — `rechnungsersteller`,
+    `leistungserbringer` and `rechnung` in any order and any number. A choice of named elements
+    is a deterministic content model, which a sequence with a trailing wildcard is not, and the
+    order of those three is not something worth refusing a delivery over.
+
+    `@anzahl` is typed for the same reason as `@posanzahl`.
+  -->
+  <xs:element name="rechnungen">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="nachrichtentyp">
+          <xs:complexType>
+            <xs:simpleContent>
+              <xs:extension base="xs:string">
+                <xs:attribute name="version" type="xs:string"/>
+              </xs:extension>
+            </xs:simpleContent>
+          </xs:complexType>
+        </xs:element>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element name="rechnungsersteller" type="pad:Opaque"/>
+          <xs:element name="leistungserbringer" type="pad:Opaque"/>
+          <xs:element name="rechnung">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:any namespace="##targetNamespace" processContents="lax"
+                        minOccurs="0" maxOccurs="unbounded"/>
+              </xs:sequence>
+              <xs:anyAttribute namespace="##any" processContents="lax"/>
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:sequence>
+      <xs:attribute name="anzahl" type="xs:nonNegativeInteger"/>
+      <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

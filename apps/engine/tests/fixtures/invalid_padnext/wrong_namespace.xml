@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC. No real patient, no real practice, no real invoice.
+
+  VIOLATION: the document is in http://example.invalid/ns/pad, not http://padinfo.de/ns/pad.
+
+  Everything about this file looks like an ADL payload, which is the point. `reader._local()`
+  strips namespaces before comparing element names — deliberately, because PADnext files in the
+  wild vary on prefix and on declaring one at all — so the root check passes and every position is
+  read and priced. A different namespace is a different document type, though, and only the schema
+  is in a position to notice.
+-->
+<rechnungen anzahl="1" xmlns="http://example.invalid/ns/pad">
+
+  <nachrichtentyp version="02.12">ADL</nachrichtentyp>
+
+  <rechnung id="SYNTH-INVALID-0005">
+    <abrechnungsfall>
+      <behandlungsart>0</behandlungsart>
+      <positionen posanzahl="1">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="1">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <faktor>2.3</faktor>
+          <gesamtbetrag>10.72</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

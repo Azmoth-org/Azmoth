@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC. No real patient, no real practice, no real invoice.
+
+  VIOLATION: <behandlungsart>9</behandlungsart>. The specification defines 0 to 5.
+
+  This is the one place where an enumeration is worth refusing a whole delivery over, and the
+  reason is § 6a GOÄ: behandlungsart decides the Minderung applied to every position on the
+  invoice. Without the gate, `derive_setting` cannot map 9, warns, and falls back to ambulant —
+  a 0 % reduction on an invoice whose pricing basis is unknown. Wrong money, quietly.
+
+  Note what is NOT here: 3, 4 and 5 (vor-/nachstationär, Konsiliarbehandlung) are legal values and
+  are accepted, then reported as `padnext_behandlungsart_not_mapped`. A value the specification
+  does not define is a different thing from one this engine has no § 6a opinion about.
+-->
+<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+
+  <nachrichtentyp version="02.12">ADL</nachrichtentyp>
+
+  <rechnung id="SYNTH-INVALID-0004">
+    <abrechnungsfall>
+      <behandlungsart>9</behandlungsart>
+      <vertragsart>1</vertragsart>
+      <positionen posanzahl="1">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="1">
+          <datum>2026-07-20</datum>
+          <anzahl>1</anzahl>
+          <faktor>2.3</faktor>
+          <gesamtbetrag>10.72</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>
