@@ -56,14 +56,31 @@ REPO_ROOT = _find_repo_root()
 LOGIC_DIR = Path(os.getenv("LOGIC_DIR") or REPO_ROOT / "logic").resolve()
 DATA_DIR = Path(os.getenv("DATA_DIR") or REPO_ROOT / "data").resolve()
 
-CATALOG_DIR = DATA_DIR / "catalogs" / "goae_current"
+#: Every catalog edition lives in its own directory under here — see `DEFAULT_CATALOG_VERSION`
+#: and `app.catalog.catalog_loader` for how a `catalog_version` string becomes a path.
+CATALOGS_DIR = DATA_DIR / "catalogs"
+
+#: The two files the loader expects beside each other in every catalog directory.
+CATALOG_FILENAME = "goae.official.json"
+OVERRIDES_FILENAME = "overrides.json"
+
+#: The catalog used when a caller names none.
+#:
+#: `goae_current` is the real, official 2192-position snapshot, and it is deliberately the default:
+#: the other directories under `data/catalogs/` are small synthetic fixtures for temporal-routing
+#: tests, and one of those becoming the process-wide default would silently replace the fee
+#: schedule the engine bills with. Point this at a different edition only when that edition is
+#: real data — `DEFAULT_CATALOG_VERSION` in the environment does it per deployment.
+DEFAULT_CATALOG_VERSION = os.getenv("DEFAULT_CATALOG_VERSION") or "goae_current"
+
+CATALOG_DIR = CATALOGS_DIR / DEFAULT_CATALOG_VERSION
 RULES_DATA_DIR = DATA_DIR / "rules"
 MAPPINGS_DIR = DATA_DIR / "mappings"
 RAW_DIR = DATA_DIR / "raw"
 LICENSED_DIR = DATA_DIR / "licensed"
 
-CATALOG_PATH = CATALOG_DIR / "goae.official.json"
-OVERRIDES_PATH = CATALOG_DIR / "overrides.json"
+CATALOG_PATH = CATALOG_DIR / CATALOG_FILENAME
+OVERRIDES_PATH = CATALOG_DIR / OVERRIDES_FILENAME
 MAPPING_PATH = MAPPINGS_DIR / "entity_to_ziffer.csv"
 
 ASP_PATH = LOGIC_DIR / "asp" / "goae_optimize.lp"
@@ -160,6 +177,17 @@ class Settings(BaseSettings):
     #: `app.db.session.init_models`), where the schema must arrive through a reviewed migration.
     database_auto_create: bool = True
 
+    # -- batch --------------------------------------------------------------------------
+    #: Close batches a previous process left mid-flight, at startup, before serving a request.
+    #:
+    #: True is right for the single-process deployment this stack describes: `BackgroundTasks` dies
+    #: with its process, so a `PENDING` or `PROCESSING` row at startup can only be a leftover, and
+    #: leaving it would strand it forever. It is a setting rather than a hard-coded step because the
+    #: assumption fails under more than one worker or a rolling deploy, where a starting process
+    #: would reap a batch still running on a sibling — see
+    #: `app.services.batch_audit.BatchAuditService.reap_interrupted_batches`.
+    reap_interrupted_batches: bool = True
+
     # -- paths --------------------------------------------------------------------------
     logic_dir: Path = LOGIC_DIR
     data_dir: Path = DATA_DIR
@@ -168,6 +196,15 @@ class Settings(BaseSettings):
     #: environment variable and the shipped data is a lie waiting to be believed. Set it only to
     #: assert an expected snapshot — `catalog_version_mismatch` then fails loudly at startup.
     catalog_version: str = ""
+
+    #: Which catalog edition is loaded when a caller names none — a **directory name** under
+    #: `data/catalogs/`, and not to be confused with `catalog_version` above, which is the version
+    #: string the chosen file *declares* and which the receipt records.
+    #:
+    #: `goae_current` holds the official snapshot; the temporal fixtures beside it are synthetic
+    #: (see `data/catalogs/README.md`), so this defaults to the real data and a deployment has to
+    #: say so to route anywhere else.
+    default_catalog_version: str = DEFAULT_CATALOG_VERSION
 
     # -- request limits -----------------------------------------------------------------
     #: Largest request body the API accepts, enforced at the perimeter before the body is read.
@@ -182,8 +219,22 @@ class Settings(BaseSettings):
     # -- derived paths ------------------------------------------------------------------
 
     @property
+    def catalogs_dir(self) -> Path:
+        """The root all catalog editions live under. One directory per edition."""
+        return self.data_dir / "catalogs"
+
+    def catalog_dir_for(self, catalog_version: str | None = None) -> Path:
+        """Resolve one edition's directory — the temporal routing step, as a pure path join.
+
+        Validation of the name (and of whether that edition is actually on disk) belongs to
+        `app.catalog.catalog_loader.resolve_catalog_dir`, which is what callers should use; this
+        stays a path so `app.config` keeps importing with no data present.
+        """
+        return self.catalogs_dir / (catalog_version or self.default_catalog_version)
+
+    @property
     def catalog_dir(self) -> Path:
-        return self.data_dir / "catalogs" / "goae_current"
+        return self.catalog_dir_for()
 
     @property
     def rules_data_dir(self) -> Path:
@@ -195,11 +246,11 @@ class Settings(BaseSettings):
 
     @property
     def catalog_path(self) -> Path:
-        return self.catalog_dir / "goae.official.json"
+        return self.catalog_dir / CATALOG_FILENAME
 
     @property
     def overrides_path(self) -> Path:
-        return self.catalog_dir / "overrides.json"
+        return self.catalog_dir / OVERRIDES_FILENAME
 
     @property
     def mapping_path(self) -> Path:
