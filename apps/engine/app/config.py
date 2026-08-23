@@ -199,6 +199,19 @@ class Settings(BaseSettings):
     database_pool_size: int = Field(default=5, ge=1)
     database_max_overflow: int = Field(default=10, ge=0)
 
+    #: How many times a database call that failed on its *connection* is attempted in total —
+    #: 3 means one call and two retries. Only connection-level failures are retried; a unique
+    #: violation or a missing table is deterministic and leaves on the first attempt. See
+    #: `app.db.retry` for how that line is drawn, and `docs/errors.md` for what a client sees when
+    #: the attempts run out (`TRANSIENT_DB_FAILURE`, 503, with a `Retry-After`).
+    db_retry_attempts: int = Field(default=3, ge=1)
+
+    #: First backoff delay, doubling per retry, with full jitter — so 1.0 means the two retries
+    #: wait a random time in [0,1] s and [0,2] s. Jittered rather than fixed because a Postgres
+    #: failover releases every waiting worker at once, and identical schedules would send them all
+    #: back in the same millisecond.
+    db_retry_base_delay_seconds: float = Field(default=1.0, ge=0)
+
     #: Run `Base.metadata.create_all()` at startup instead of requiring Alembic. True is right for
     #: the SQLite default and for the test suite; it is refused in production (see
     #: `app.db.session.init_models`), where the schema must arrive through a reviewed migration.

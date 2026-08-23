@@ -51,7 +51,10 @@ def test_the_rejection_comes_from_the_perimeter_not_the_reader(client):
     body = response.json()
 
     assert body["error"] == "request_too_large", body
-    assert body["max_bytes"] == LIMIT
+    assert body["error_code"] == "REQUEST_TOO_LARGE"
+    # `max_bytes` moved under `details` when every error gained the standard envelope. The
+    # lowercase `error` asserted above is kept precisely so a client reading it does not break.
+    assert body["details"]["max_bytes"] == LIMIT
     assert "Rejected before reading the body" in body["message"]
     # The reader's wording must NOT appear: its presence would mean the handler ran.
     assert "above the" not in body["message"], "this looks like the in-handler check answering"
@@ -77,7 +80,9 @@ def test_a_body_at_the_limit_is_still_accepted(client):
     )
     # 400 because the body is empty — which proves the middleware let it through to the handler.
     assert response.status_code == 400
-    assert "Empty body" in response.json()["detail"]
+    body = response.json()
+    assert body["error_code"] == "EMPTY_REQUEST_BODY"
+    assert "Empty body" in body["message"]
 
 
 def test_a_malformed_content_length_is_refused_rather_than_guessed(client):

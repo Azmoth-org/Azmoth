@@ -37,6 +37,10 @@ in an append-only audit log, and re-deciding a decided proposal is refused with 
   made where it is
 - [`docs/architecture/DATABASE.md`](docs/architecture/DATABASE.md) — the two tables, the audit log,
   and how to run migrations
+- [`docs/errors.md`](docs/errors.md) — every `error_code` the API can return, what triggers it and
+  what a client should do about it
+- [`docs/performance_baseline.md`](docs/performance_baseline.md) — where a solve actually spends its
+  time, and what counts as slow
 - [`logic/README.md`](logic/README.md) — **read before changing a rule or an objective**
 - [`apps/engine/tests/README.md`](apps/engine/tests/README.md) — which tests are golden, which pin
   determinism, which pin the legal posture

@@ -39,6 +39,7 @@ from decimal import Decimal
 from app.bridge.entity_to_ziffer import BridgeResult
 from app.catalog import Catalog
 from app.config import Settings, get_settings
+from app.errors import EngineError, ErrorCode
 from app.schemas import (
     ClinicalAct,
     ClinicalExtraction,
@@ -116,8 +117,17 @@ VERIFIED_DEFECT_FINDINGS = frozenset(
 )
 
 
-class RealDataRefused(RuntimeError):
-    """The delivery says it holds production data, which this POC will not process."""
+class RealDataRefused(EngineError, RuntimeError):
+    """The delivery says it holds production data, which this POC will not process.
+
+    `422 REAL_DATA_REFUSED`, not `403`: nothing about the caller is being denied, and the file is
+    perfectly readable — it is the *content* this deployment refuses to process. A client that saw
+    a 403 would go looking for a permission to acquire; the fix is a lawful basis and the controls
+    in `docs/compliance/PRIVATE_DATA_WARNING.md`, or a test file.
+    """
+
+    error_code = ErrorCode.REAL_DATA_REFUSED
+    http_status = 422
 
 
 def real_data_allowed(settings: Settings | None = None) -> bool:

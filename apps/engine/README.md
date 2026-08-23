@@ -162,6 +162,14 @@ Provenance tooling — how the committed catalog was built, and how to rebuild i
 .venv/bin/python scripts/make_padnext_example.py                           # rebuild the .padx fixture
 ```
 
+## Errors
+
+Every non-2xx response carries `error_code` (stable, machine-readable), `message`, `details` and —
+only where retrying could work — `retry_after` in seconds plus a `Retry-After` header. The complete
+catalog, including which failures are retried internally and which are deliberately not, is
+[`docs/errors.md`](../../docs/errors.md). The codes live in code as `app/errors.py`, and a code
+without a row in that table fails the suite.
+
 ## Tests
 
 ```bash

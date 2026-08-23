@@ -26,6 +26,7 @@ import clingo
 from app.bridge.entity_to_ziffer import BridgeResult, resolve_justifications
 from app.catalog import Catalog, load_catalog
 from app.config import BaseFactorPolicy, Settings, get_settings
+from app.errors import EngineError, ErrorCode, SolverTimeoutError
 from app.rules.rule_store import RuleStore, load_rules
 from app.schemas import (
     AnalogDecision,
@@ -45,21 +46,52 @@ log = logging.getLogger(__name__)
 SEVERITY_RANK = {"leicht": 1, "mittel": 2, "schwer": 3}
 
 
-class ClingoError(RuntimeError):
-    def __init__(self, message: str, *, program: str = "") -> None:
-        super().__init__(message)
+class ClingoError(EngineError, RuntimeError):
+    """The optimiser could not answer. `500 SOLVER_FAILED` — an engine defect, not a bad request.
+
+    The program text travels on the exception but **not** into `details`: it is the encoding plus
+    every injected fact, which is both large and the most sensitive thing in the process. It goes
+    to the log for whoever debugs it, never to the caller.
+    """
+
+    error_code = ErrorCode.SOLVER_FAILED
+    http_status = 500
+
+    def __init__(self, message: str, *, program: str = "", details: dict | None = None) -> None:
+        super().__init__(message, details=details)
         self.program = program
 
 
-class ClingoTimeout(ClingoError):
-    """The hard timeout expired before any answer set existed. Never returned as an invoice."""
+class ClingoTimeout(ClingoError, SolverTimeoutError):
+    """The hard timeout expired before any answer set existed. Never returned as an invoice.
 
-    def __init__(self, timeout_seconds: float, *, program: str = "") -> None:
+    `504`, inherited from `SolverTimeoutError`, rather than the `500` its other parent carries: the
+    engine did not fail, it ran out of the time it was given. `details` says how long that was and
+    how many models had been found — which for this exception is always zero, because a solve that
+    *did* find one returns a normal 200 with `solver_status="TIMEOUT_PARTIAL"` instead of raising.
+    That is the partial-result path, and it is the reason this exception is narrow.
+    """
+
+    #: Stated rather than inherited. `ClingoError` precedes `SolverTimeoutError` in the MRO, so
+    #: without these two lines a timeout would render as its parent's 500 — which is exactly the
+    #: distinction this class exists to make.
+    error_code = ErrorCode.SOLVER_TIMEOUT
+    http_status = 504
+
+    def __init__(
+        self, timeout_seconds: float, *, program: str = "", positions_in_play: int = 0
+    ) -> None:
         super().__init__(
             f"The optimiser did not produce an answer set within {timeout_seconds}s. No invoice "
             "draft is returned: an empty result here would be indistinguishable from 'nothing is "
             "chargeable', which is a different and much more dangerous statement.",
             program=program,
+            details={
+                "timeout_seconds": timeout_seconds,
+                "models_found": 0,
+                "partial_result_available": False,
+                "positions_in_play": positions_in_play,
+            },
         )
         self.timeout_seconds = timeout_seconds
 
@@ -275,7 +307,13 @@ class ClingoSolver:
         if best is None:
             if timed_out:
                 log.error("clingo timed out after %ss with no answer set", self.timeout_seconds)
-                raise ClingoTimeout(self.timeout_seconds, program=program)
+                raise ClingoTimeout(
+                    self.timeout_seconds,
+                    program=program,
+                    positions_in_play=len(
+                        set(rules_result.billable) | set(rules_result.arbitration_candidates)
+                    ),
+                )
             raise ClingoError(
                 "ASP program has no answer set: the hard constraints are unsatisfiable for this "
                 "input, which means the enforced rule set contradicts itself for the proposed "

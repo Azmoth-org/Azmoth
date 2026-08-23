@@ -40,7 +40,8 @@ from fastapi import (
 )
 
 from app.api.deps import batches, pipeline
-from app.padnext import PadnextError, RealDataRefused, audit_delivery, read_delivery
+from app.errors import EmptyRequestBody, UnknownZifferError
+from app.padnext import audit_delivery, read_delivery
 from app.schemas import (
     BatchAuditAccepted,
     BatchAuditJob,
@@ -55,7 +56,6 @@ from app.services.batch_audit import (
     EmptyBatch,
 )
 from app.services.export import attachment_headers, batch_export_filename
-from app.solvers.souffle_engine import SouffleError
 
 log = logging.getLogger(__name__)
 
@@ -88,36 +88,78 @@ def padnext_audit(request: Request, body: bytes = Body(default=b"")) -> PadnextA
 
     A delivery flagged as production data is refused with 422 — see `app.padnext.audit` and
     `docs/compliance/PRIVATE_DATA_WARNING.md`.
+
+    Failures carry `error_code`: `EMPTY_REQUEST_BODY` (400), `INVALID_XML` (400, with the line and
+    column in `details`), `PADNEXT_SCHEMA_VIOLATION` (422, every violation in `details`),
+    `PADNEXT_UNREADABLE` (422), `UNKNOWN_ZIFFER` (422, when no position is in this catalog at
+    all), `REAL_DATA_REFUSED` (422) and `RULES_ENGINE_UNAVAILABLE` (503, retryable). See
+    `docs/errors.md`.
     """
     if not body:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Empty body. POST the PADnext file itself — a .padx container or a *_padx.xml "
-                "payload — with Content-Type application/xml or application/octet-stream."
-            ),
+        raise EmptyRequestBody(
+            "Empty body. POST the PADnext file itself — a .padx container or a *_padx.xml "
+            "payload — with Content-Type application/xml or application/octet-stream."
         )
 
     source_name = request.headers.get("x-padnext-filename", "")
-    try:
-        delivery, read_findings = read_delivery(body, source_name=source_name)
-    except PadnextError as exc:
-        raise HTTPException(status_code=422, detail=f"Unreadable PADnext delivery: {exc}") from exc
+    # `read_delivery` raises `InvalidXmlError` (400, with the line and column), `PadnextSchemaError`
+    # (422, with every violation) or a bare `PadnextError` (422). All three are in the catalog and
+    # all three are rendered by the handler, so there is nothing to translate here.
+    delivery, read_findings = read_delivery(body, source_name=source_name)
 
     pipe = pipeline()
-    try:
-        return audit_delivery(
-            delivery,
-            catalog=pipe.catalog,
-            rules=pipe.rules,
-            souffle_run=pipe.souffle.run,
-            read_findings=read_findings,
-            settings=pipe.settings,
-        )
-    except RealDataRefused as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except SouffleError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    _refuse_if_no_position_is_in_the_catalog(delivery, pipe.catalog)
+
+    # `RealDataRefused` (422) and `SouffleError` (503, retryable) likewise carry their own status.
+    return audit_delivery(
+        delivery,
+        catalog=pipe.catalog,
+        rules=pipe.rules,
+        souffle_run=pipe.souffle.run,
+        read_findings=read_findings,
+        settings=pipe.settings,
+    )
+
+
+def _refuse_if_no_position_is_in_the_catalog(delivery, catalog) -> None:
+    """Refuse a delivery whose GOÄ positions are, without exception, unknown to this catalog.
+
+    **This is narrow on purpose, and the narrowness is the whole design.** A delivery with *some*
+    unknown Ziffern is audited exactly as before: each unknown position gets the `unknown_ziffer`
+    verdict, lands in the `unconfirmed` bucket and lowers `coverage_ratio`. That is a deliberate
+    product decision — rule coverage here is partial, and telling a practice its position is wrong
+    when the truth is that our catalog does not contain it would be a false statement about their
+    invoice.
+
+    What that reasoning does not cover is the case where *every* GOÄ position is unknown. Then it
+    is not a gap in coverage, it is a mismatch: the delivery was coded against a different edition
+    of the fee schedule (or is not GOÄ at all), and the report we would return says nothing about
+    anything — 0 % coverage, every position unconfirmed, a receipt hash over a verdict-free
+    document. A caller is much better served by `422 UNKNOWN_ZIFFER` listing the codes and naming
+    the catalog they were checked against, which is enough to work out which edition they meant.
+
+    Checked here in the route rather than inside `audit_delivery`, so the library keeps producing a
+    report for any input and only the HTTP contract takes a position on it.
+    """
+    goae = [p for p in delivery.positions() if p.is_goae]
+    if not goae:
+        # Nothing to say: a delivery that charges only other fee schedules is out of scope, and
+        # `audit_delivery` already reports that per position.
+        return
+    unknown = [p.ziffer for p in goae if catalog.get(p.ziffer) is None]
+    if len(unknown) < len(goae):
+        return
+
+    raise UnknownZifferError(
+        f"Keine der {len(goae)} GOÄ-Positionen dieser Lieferung ist im geladenen Katalog "
+        f"{catalog.catalog_version} enthalten. Das ist kein Abdeckungsproblem, sondern ein "
+        "Katalogkonflikt: die Lieferung wurde vermutlich gegen eine andere Fassung der GOÄ "
+        "kodiert. Es wird kein Bericht erstellt, weil er zu jeder Position 'nicht beurteilbar' "
+        "sagen würde.",
+        unknown_ziffern=unknown,
+        catalog_version=catalog.catalog_version,
+        details={"goae_position_count": len(goae)},
+    )
 
 
 # ------------------------------------------------------------------------------------------

@@ -22,9 +22,17 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
 
+from app.errors import ErrorCode, error_envelope
+
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
-    """413 for any request whose declared body size exceeds `max_bytes`."""
+    """413 for any request whose declared body size exceeds `max_bytes`.
+
+    Builds its responses with `error_envelope` rather than raising an `EngineError`: middleware
+    runs outside the exception handlers, so raising here would surface as an unhandled 500. The
+    bodies are byte-identical to what the handlers produce — the `error`/`max_bytes` keys the
+    existing tests read are still there, alongside the new `error_code` and `details`.
+    """
 
     def __init__(self, app: ASGIApp, *, max_bytes: int) -> None:
         super().__init__(app)
@@ -39,21 +47,24 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
                 # A malformed Content-Length is not something to guess about.
                 return JSONResponse(
                     status_code=400,
-                    content={
-                        "error": "malformed_content_length",
-                        "message": f"Content-Length is not an integer: {declared!r}",
-                    },
+                    content=error_envelope(
+                        error_code=ErrorCode.MALFORMED_CONTENT_LENGTH,
+                        message=f"Content-Length is not an integer: {declared!r}",
+                        details={"content_length": declared},
+                        http_status=400,
+                    ),
                 )
             if length > self.max_bytes:
                 return JSONResponse(
                     status_code=413,
-                    content={
-                        "error": "request_too_large",
-                        "message": (
+                    content=error_envelope(
+                        error_code=ErrorCode.REQUEST_TOO_LARGE,
+                        message=(
                             f"Request body is {length} bytes; this API accepts at most "
                             f"{self.max_bytes}. Rejected before reading the body."
                         ),
-                        "max_bytes": self.max_bytes,
-                    },
+                        details={"declared_bytes": length, "max_bytes": self.max_bytes},
+                        http_status=413,
+                    ),
                 )
         return await call_next(request)

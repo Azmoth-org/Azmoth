@@ -15,14 +15,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import pipeline, proposals
 from app.schemas import Proposal, SolveRequest
-from app.solvers.clingo_solver import ClingoError, ClingoTimeout
-from app.solvers.souffle_engine import SouffleError
-from app.validation.validator import ValidationFailed
 
 log = logging.getLogger(__name__)
 
@@ -36,51 +33,28 @@ async def solve(request: SolveRequest) -> Proposal:
     The response is a proposal, never an invoice: `status` is `DRAFT` and stays there until a
     named person approves it via `POST /api/v1/proposals/{id}/approve`. `receipt_hash` identifies
     the catalog, rule tables, logic programs, solver versions, policy and input that produced it.
+
+    Failures carry `error_code`: `VALIDATION_ERROR` (422) if the extraction does not match the
+    schema, `SOLVER_TIMEOUT` (504) if the optimiser found no answer set inside
+    `SOLVER_TIMEOUT_SECONDS`, `RULES_ENGINE_UNAVAILABLE` (503, retryable) if Soufflé could not be
+    run, and `TRANSIENT_DB_FAILURE` (503, retryable) if the draft could not be stored. See
+    `docs/errors.md`.
     """
-    try:
-        proposal = await run_in_threadpool(
-            pipeline().propose,
-            request.extraction,
-            setting=request.setting,
-            case_id=request.case_id,
-        )
-    except ValidationFailed as exc:
-        # Independent validation contradicted the solver. Never returned as a valid invoice.
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "validation_failed",
-                "message": (
-                    "The independent validation pass disagreed with the solver. No draft is "
-                    "returned; this is a defect in the engine, not in the input."
-                ),
-                "violations": [v.model_dump() for v in exc.violations],
-            },
-        ) from exc
-    except ClingoTimeout as exc:
-        raise HTTPException(
-            status_code=504,
-            detail={
-                "error": "solver_timeout",
-                "message": str(exc),
-                "timeout_seconds": exc.timeout_seconds,
-            },
-        ) from exc
-    except SouffleError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "rules_engine_failed",
-                "message": str(exc),
-                "stderr": exc.stderr,
-                "facts": exc.fact_dump,
-            },
-        ) from exc
-    except ClingoError as exc:
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "optimizer_failed", "message": str(exc), "program": exc.program},
-        ) from exc
+    # No `try/except` for the four solver failures any more. `ValidationFailed`, `ClingoTimeout`,
+    # `SouffleError` and `ClingoError` all carry their own status, code and details now, and
+    # `app.api.errors.engine_error_handler` renders them — including when one is raised from
+    # somewhere this function cannot see. What the mapping *is* has not changed: 500, 504, 503,
+    # 500 respectively, and `docs/errors.md` is where it is written down.
+    #
+    # One thing did change, deliberately. The optimiser's program text and the Soufflé fact dump
+    # used to be in the response body; they are in the log now. Both are the injected facts of a
+    # patient encounter, and an error body is the last place they belong.
+    proposal = await run_in_threadpool(
+        pipeline().propose,
+        request.extraction,
+        setting=request.setting,
+        case_id=request.case_id,
+    )
 
     # Read back off the row that was written, not echoed from the object in hand: if persisting
     # ever lost or mangled a field, the first request would say so instead of the first restart.
