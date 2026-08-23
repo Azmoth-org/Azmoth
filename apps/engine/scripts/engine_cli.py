@@ -486,7 +486,12 @@ def cmd_padnext(args: argparse.Namespace) -> int:
     try:
         delivery, read_findings = read_file(args.file)
     except PadnextError as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        # Caught here rather than left to `main`'s catalog handler so the exit code stays 2, which
+        # is what this command has always returned for an unusable file. The code and the location
+        # are printed alongside the message so the CLI says as much as the API does.
+        print(f"error [{exc.error_code}]: {exc}", file=sys.stderr)
+        if exc.details.get("location"):
+            print(f"       at {exc.details['location']}", file=sys.stderr)
         return 2
 
     pipe = Pipeline()
@@ -637,7 +642,19 @@ def main(argv: list[str] | None = None) -> int:
     cat.set_defaults(func=cmd_catalog)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+
+    from app.errors import EngineError
+
+    try:
+        return args.func(args)
+    except EngineError as exc:
+        # The same catalog the API answers with, printed rather than served. A traceback would be
+        # the wrong output for "this delivery is not well-formed XML at line 12" — the operator
+        # running this needs the code, the message and the details, and `docs/errors.md` explains
+        # every one of them. Exit 1 for a client-side problem, 2 for an engine-side one, so a shell
+        # script can tell "fix your file" from "the engine is broken".
+        print(json.dumps(exc.envelope(), indent=2, ensure_ascii=False), file=sys.stderr)
+        return 1 if exc.http_status < 500 else 2
 
 
 if __name__ == "__main__":

@@ -43,6 +43,7 @@ import hashlib
 import json
 import logging
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 from functools import lru_cache
@@ -54,6 +55,7 @@ from app.config import (
     DEFAULT_CATALOG_VERSION,
     OVERRIDES_FILENAME,
 )
+from app.errors import EngineError, ErrorCode
 
 log = logging.getLogger(__name__)
 
@@ -62,13 +64,31 @@ class CatalogError(RuntimeError):
     pass
 
 
-class CatalogNotFoundError(CatalogError, ValueError):
+class CatalogNotFoundError(EngineError, CatalogError, ValueError):
     """The requested edition is not on disk, or its name could not be a directory name.
 
-    Both bases are deliberate: it is a ``CatalogError`` so every existing handler around catalog
-    loading keeps working, and a ``ValueError`` because a caller passing `catalog_version="goae_1800"`
-    passed a bad argument — a route handler can map it to a 400 without importing this module.
+    All three bases are deliberate: it is a ``CatalogError`` so every existing handler around
+    catalog loading keeps working, a ``ValueError`` because a caller passing
+    `catalog_version="goae_1800"` passed a bad argument, and an ``EngineError`` so that if it ever
+    reaches the HTTP layer it renders as `404 CATALOG_NOT_FOUND` with the editions that *do* exist
+    in `details.available` — a list, because the answer to "which era did you mean" is unguessable
+    otherwise.
+
+    404 rather than 400 or 422: an edition is a resource, and the one the caller named is not here.
     """
+
+    error_code = ErrorCode.CATALOG_NOT_FOUND
+    http_status = 404
+
+    def __init__(
+        self, message: str, *, requested: str = "", available: Sequence[str] = ()
+    ) -> None:
+        super().__init__(
+            message,
+            details={"requested_version": requested, "available_versions": list(available)},
+        )
+        self.requested = requested
+        self.available = list(available)
 
 
 #: A catalog edition is a single directory name and nothing else. Anything with a separator, a
@@ -112,7 +132,9 @@ def resolve_catalog_dir(
         raise CatalogNotFoundError(
             f"catalog_version {catalog_version!r} is not a valid catalog edition name. Expected a "
             f"single directory name under {root} such as {DEFAULT_CATALOG_VERSION!r}; "
-            f"available: {list(available_catalog_versions(root))}"
+            f"available: {list(available_catalog_versions(root))}",
+            requested=str(catalog_version or ""),
+            available=available_catalog_versions(root),
         )
 
     directory = root / version
@@ -133,13 +155,17 @@ def resolve_catalog_dir(
             )
         )
         raise CatalogNotFoundError(
-            f"no catalog edition {version!r} in {root}. Available: {available}. {hint}"
+            f"no catalog edition {version!r} in {root}. Available: {available}. {hint}",
+            requested=version,
+            available=available,
         )
     if not (directory / CATALOG_FILENAME).is_file():
         raise CatalogNotFoundError(
             f"catalog edition {version!r} exists at {directory} but holds no {CATALOG_FILENAME}. "
             "Build it (scripts/import_goae.py for the official snapshot, "
-            "scripts/make_temporal_fixtures.py for the synthetic eras) or remove the directory."
+            "scripts/make_temporal_fixtures.py for the synthetic eras) or remove the directory.",
+            requested=version,
+            available=available_catalog_versions(root),
         )
     return directory
 

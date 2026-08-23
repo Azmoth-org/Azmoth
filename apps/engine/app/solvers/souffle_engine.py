@@ -22,6 +22,8 @@ from pathlib import Path
 from app.bridge.entity_to_ziffer import BridgeResult
 from app.catalog import Catalog, load_catalog
 from app.config import Settings, get_settings
+from app.core.retry import retry_transient
+from app.errors import RulesEngineUnavailable
 from app.schemas import (
     BlockedCode,
     ClinicalExtraction,
@@ -53,9 +55,26 @@ BLOCK_EXPLANATIONS = {
 }
 
 
-class SouffleError(RuntimeError):
+#: Attempts at *starting* the process, total. Not attempts at evaluating the program — see
+#: `SouffleEngine._spawn` for why a non-zero exit and a timeout are never retried.
+SPAWN_ATTEMPTS = 3
+SPAWN_RETRY_BASE_DELAY_SECONDS = 0.5
+
+
+class SouffleError(RulesEngineUnavailable, RuntimeError):
+    """The rules engine could not be run, or ran and failed. `503 RULES_ENGINE_UNAVAILABLE`.
+
+    503 with a `Retry-After` rather than 500, because from the caller's side this is the service
+    being unable to answer rather than the request being wrong — and one of the two common causes
+    (the process could not be started under memory pressure) genuinely does clear on its own.
+
+    `stderr` and the fact dump stay on the exception for the log and are deliberately kept out of
+    `details`: the facts are the patient's encounter, and an error body is the last place they
+    should appear.
+    """
+
     def __init__(self, message: str, *, stderr: str = "", fact_dump: str = "") -> None:
-        super().__init__(message)
+        super().__init__(message, details={"engine": "souffle"})
         self.stderr = stderr
         self.fact_dump = fact_dump
 
@@ -96,6 +115,31 @@ class SouffleEngine:
             if line.startswith("Version:"):
                 return line.split(":", 1)[1].strip()
         return ""
+
+    # -- the subprocess --------------------------------------------------------------------
+
+    @retry_transient(
+        transient=(OSError,),
+        attempts=SPAWN_ATTEMPTS,
+        base_delay=SPAWN_RETRY_BASE_DELAY_SECONDS,
+        description="souffle spawn",
+    )
+    def _spawn(self, cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        """Start Soufflé, retrying only the failure that is worth retrying.
+
+        `OSError` from `subprocess.run` is the host refusing to create a process — `ENOMEM`,
+        `EAGAIN` from a full process table, a transiently unavailable filesystem. That clears on
+        its own often enough to be worth two more attempts a second apart.
+
+        Nothing else is retried, and the two exclusions are deliberate. A **non-zero exit** means
+        the program ran and rejected its input: the same facts through the same Datalog will fail
+        the same way, so retrying is three times the work for one answer. A **timeout** is even
+        worse to retry — `SOUFFLE_TIMEOUT_S` is 60 s, so two more attempts would hold the request
+        open for three minutes before failing anyway. Both leave on the first attempt.
+        """
+        return subprocess.run(
+            cmd, capture_output=True, text=True, timeout=self.settings.souffle_timeout_s
+        )
 
     # -- main entry point ------------------------------------------------------------------
 
@@ -142,12 +186,17 @@ class SouffleEngine:
                 str(program),
             ]
             try:
-                proc = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=self.settings.souffle_timeout_s
-                )
+                proc = self._spawn(cmd)
             except subprocess.TimeoutExpired as exc:
                 raise SouffleError(
                     f"Soufflé timed out after {self.settings.souffle_timeout_s}s",
+                    fact_dump=self._dump_facts(fact_dir),
+                ) from exc
+            except OSError as exc:
+                raise SouffleError(
+                    f"Soufflé could not be started after {SPAWN_ATTEMPTS} attempts: {exc}. The "
+                    "binary is present, so this is the process itself failing to launch — most "
+                    "often memory pressure or a process-table limit on the host.",
                     fact_dump=self._dump_facts(fact_dir),
                 ) from exc
 

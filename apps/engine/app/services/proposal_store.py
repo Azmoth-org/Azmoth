@@ -44,6 +44,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.canonical import sha256_of
 from app.db.models import AuditEvent, AuditEventType, ProposalRecord, as_utc, utcnow
+from app.db.retry import retry_database
 from app.db.session import Database, get_database
 from app.schemas import Proposal, ProposalStatus, RuleCoverage
 from app.schemas.export import ProposalExport
@@ -227,6 +228,7 @@ class ProposalStore:
 
     # -- reads -----------------------------------------------------------------------------
 
+    @retry_database("ProposalStore.get_proposal")
     async def get_proposal(
         self,
         proposal_id: str,
@@ -320,6 +322,7 @@ class ProposalStore:
 
     # -- writes ----------------------------------------------------------------------------
 
+    @retry_database("ProposalStore.create_proposal")
     async def create_proposal(self, proposal: Proposal, *, actor: str = SYSTEM_ACTOR) -> Proposal:
         """Persist a fresh DRAFT and its `CREATED` event, in one transaction.
 
@@ -386,6 +389,7 @@ class ProposalStore:
             proposal_id, ProposalStatus.EXPORTED, actor=actor or SYSTEM_ACTOR
         )
 
+    @retry_database("ProposalStore.export_proposal_document")
     async def export_proposal_document(
         self, proposal_id: str, *, exported_by: str, note: str = ""
     ) -> ProposalExport:
@@ -428,6 +432,7 @@ class ProposalStore:
 
     # -- internals -------------------------------------------------------------------------
 
+    @retry_database("ProposalStore._transition")
     async def _transition(
         self,
         proposal_id: str,

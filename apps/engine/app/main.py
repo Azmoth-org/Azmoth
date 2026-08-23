@@ -23,9 +23,11 @@ from fastapi import FastAPI
 
 from app.api import catalog, health, padnext, proposals, rules, solve
 from app.api.deps import batches, pipeline, reset_async
+from app.api.errors import register_error_handlers
 from app.config import get_settings
 from app.core.limits import RequestSizeLimitMiddleware
 from app.db.session import get_database, init_models
+from app.errors import ErrorResponse
 
 settings = get_settings()
 
@@ -141,7 +143,10 @@ app = FastAPI(
         "rule-coverage counts: `enforced_rule_count` is what can suppress a position, "
         "`advisory_rule_count` is what only warns.\n\n"
         "The catalog is imported from the official GOÄ published at gesetze-im-internet.de. "
-        "Rule coverage is **partial** — see `GET /api/v1/catalog`. **Synthetic data only.**"
+        "Rule coverage is **partial** — see `GET /api/v1/catalog`. **Synthetic data only.**\n\n"
+        "**Errors.** Every non-2xx response carries `error_code` (stable, machine-readable), "
+        "`message`, `details` and, where retrying could work, `retry_after` in seconds plus a "
+        "`Retry-After` header. The complete catalog of codes is in `docs/errors.md`."
     ),
     openapi_tags=[
         {"name": "health", "description": "Liveness, versions and engine availability."},
@@ -162,13 +167,22 @@ app = FastAPI(
     ],
 )
 
+# Every failure leaves through one of four handlers, so `error_code` / `message` / `details` /
+# `retry_after` is on the body of every non-2xx response regardless of where it was raised. See
+# app/api/errors.py, and docs/errors.md for the catalog itself.
+register_error_handlers(app)
+
 # Registered before anything else so an oversized body is refused at the perimeter, not after
 # FastAPI has already buffered it. See app/core/limits.py for the Content-Length caveat.
 app.add_middleware(RequestSizeLimitMiddleware, max_bytes=settings.max_request_bytes)
 
-app.include_router(health.router, prefix=API_PREFIX)
-app.include_router(solve.router, prefix=API_PREFIX)
-app.include_router(proposals.router, prefix=API_PREFIX)
-app.include_router(padnext.router, prefix=API_PREFIX)
-app.include_router(catalog.router, prefix=API_PREFIX)
-app.include_router(rules.router, prefix=API_PREFIX)
+#: Declared on every router so `ErrorResponse` is in the OpenAPI document and therefore in the
+#: generated TypeScript. Without this the envelope would be a shape clients discover by hitting it
+#: in production, which is exactly the situation the catalog exists to end.
+ERROR_RESPONSES: dict = {
+    "4XX": {"model": ErrorResponse, "description": "See docs/errors.md for the codes."},
+    "5XX": {"model": ErrorResponse, "description": "See docs/errors.md for the codes."},
+}
+
+for router in (health, solve, proposals, padnext, catalog, rules):
+    app.include_router(router.router, prefix=API_PREFIX, responses=ERROR_RESPONSES)

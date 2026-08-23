@@ -337,8 +337,10 @@ def test_the_endpoint_answers_422_and_says_where(client, name):
     """End to end, because "it subclasses PadnextError" is an implementation detail and "the API
     returns 422 with the line number in it" is the contract a PVS integrator sees.
 
-    No new handler was added for this: `api/padnext.py` already answers 422 for an unreadable
-    delivery, which is why `PadnextSchemaError` subclasses `PadnextError`.
+    The location used to be asserted by looking for the substring `"line "` in a prose `detail`.
+    It is now a number in a named field, because the structured error envelope carries every
+    violation with its own line, column and element path — a strictly stronger assertion, and one
+    an integrator can act on without parsing German. See `docs/errors.md`.
     """
     response = client.post(
         "/api/v1/padnext/audit",
@@ -347,9 +349,17 @@ def test_the_endpoint_answers_422_and_says_where(client, name):
     )
 
     assert response.status_code == 422, response.text
-    detail = response.json()["detail"]
-    assert "does not conform" in detail
-    assert "line " in detail, f"a 422 without a location is not actionable: {detail}"
+    body = response.json()
+    assert body["error_code"] == "PADNEXT_SCHEMA_VIOLATION"
+    assert "does not conform" in body["message"]
+
+    violations = body["details"]["violations"]
+    assert violations, "a 422 with no violation listed says nothing"
+    assert body["details"]["violation_count"] == len(violations)
+    assert all(v["message"] for v in violations)
+    assert any(v["line"] > 0 for v in violations), (
+        f"a 422 without a location is not actionable: {violations}"
+    )
 
 
 def test_a_valid_delivery_still_audits_over_http(client):

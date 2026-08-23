@@ -49,6 +49,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from app.config import PadnextSchemaPolicy, get_settings
+from app.errors import EngineError, ErrorCode
 from app.padnext.schema import (
     SchemaViolation,
     describe_violations,
@@ -76,8 +77,50 @@ ZIP_MAGIC = b"PK\x03\x04"
 PADX_NAME = re.compile(r"^(?P<kunde>[^_]+)_(?P<datum>\d{8})_(?P<typ>[A-Z]+)_(?P<nr>\d+)_padx\.xml$")
 
 
-class PadnextError(RuntimeError):
-    """The delivery cannot be read at all. Distinct from a finding, which is a readable problem."""
+class PadnextError(EngineError, RuntimeError):
+    """The delivery cannot be read at all. Distinct from a finding, which is a readable problem.
+
+    `EngineError` is listed first so its keyword-taking constructor wins the MRO; `RuntimeError`
+    stays a base so that every `except RuntimeError` written before the error catalog existed
+    still catches this.
+
+    `422 PADNEXT_UNREADABLE` by default — the request was well formed, the bytes were not a
+    delivery this engine can process. Subclasses below narrow that where the cause is specific
+    enough to deserve its own code and its own status.
+    """
+
+    error_code = ErrorCode.PADNEXT_UNREADABLE
+    http_status = 422
+
+
+class InvalidXmlError(PadnextError):
+    """The bytes are not well-formed XML. `400`, and it names the line and column.
+
+    Separated from its parent because well-formedness is a different conversation from schema
+    conformance: a document that does not parse cannot be *anything*, so this is a `400` (the
+    request itself is malformed) where a schema violation is a `422` (well formed, wrong content).
+    Whoever has to fix the export needs the position, not the adjective — the parser knows it, and
+    dropping it on the floor is what leaves someone grepping a 3 MB file by hand.
+
+    Still a `PadnextError`, so every existing `except PadnextError` keeps working.
+    """
+
+    error_code = ErrorCode.INVALID_XML
+    http_status = 400
+
+    def __init__(
+        self, message: str, *, line: int | None = None, column: int | None = None
+    ) -> None:
+        super().__init__(
+            message,
+            details={
+                "line": line,
+                "column": column,
+                "location": f"line {line}, column {column}" if line is not None else "",
+            },
+        )
+        self.line = line
+        self.column = column
 
 
 class PadnextSchemaError(PadnextError):
@@ -89,9 +132,27 @@ class PadnextSchemaError(PadnextError):
     carries a line, a column and a readable element path — see `app.padnext.schema`.
     """
 
+    error_code = ErrorCode.PADNEXT_SCHEMA_VIOLATION
+    http_status = 422
+
     def __init__(self, violations: list[SchemaViolation]) -> None:
         self.violations = list(violations)
-        super().__init__(describe_violations(self.violations))
+        super().__init__(
+            describe_violations(self.violations),
+            details={
+                "violation_count": len(self.violations),
+                "violations": [
+                    {
+                        "message": v.message,
+                        "line": v.line,
+                        "column": v.column,
+                        "path": v.path,
+                        "location": v.location,
+                    }
+                    for v in self.violations
+                ],
+            },
+        )
 
 
 def _local(tag: str) -> str:
@@ -171,7 +232,12 @@ def parse_xml(data: bytes) -> ElementTree.Element:
     try:
         return ElementTree.fromstring(data)
     except ElementTree.ParseError as exc:
-        raise PadnextError(f"XML is not well formed: {exc}") from exc
+        # `position` is (line, column), 1-based, and is the whole reason this is not just a
+        # re-raise: "not well formed" without a position is unactionable on a real export.
+        line, column = getattr(exc, "position", (None, None))
+        raise InvalidXmlError(
+            f"XML is not well formed: {exc}", line=line, column=column
+        ) from exc
 
 
 def _unpack_container(data: bytes, findings: list[Warning_]) -> tuple[bytes | None, list[str]]:

@@ -25,6 +25,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from app.bridge.entity_to_ziffer import BridgeResult, resolve_justifications
 from app.catalog import Catalog, load_catalog
 from app.config import Settings, get_settings
+from app.errors import EngineValidationDisagreement
 from app.schemas import (
     AuditTrail,
     AuditTrailEntry,
@@ -47,12 +48,18 @@ LOW_CONFIDENCE_THRESHOLD = Decimal("0.7")
 CENT = Decimal("0.01")
 
 
-class ValidationFailed(RuntimeError):
-    """Independent validation contradicted the solver. Never swallowed."""
+class ValidationFailed(EngineValidationDisagreement, RuntimeError):
+    """Independent validation contradicted the solver. Never swallowed.
+
+    `500`, and the status is the point: this is a defect in the engine, not in the input, so a
+    4xx would send the caller editing a case that was fine. The violations travel in `details`
+    because they are exactly what a bug report needs.
+    """
 
     def __init__(self, violations: list[ValidationViolation]) -> None:
         super().__init__(
-            "validation_failed: " + "; ".join(f"{v.code}({v.ziffer or '-'})" for v in violations)
+            "validation_failed: " + "; ".join(f"{v.code}({v.ziffer or '-'})" for v in violations),
+            details={"violations": [v.model_dump(mode="python") for v in violations]},
         )
         self.violations = violations
 

@@ -7,6 +7,7 @@ other contract the engine speaks.
 
 from app.padnext.audit import RealDataRefused, audit_delivery, real_data_allowed
 from app.padnext.reader import (
+    InvalidXmlError,
     PadnextError,
     PadnextSchemaError,
     read_delivery,
@@ -22,6 +23,7 @@ from app.schemas.padnext import (
 )
 
 __all__ = [
+    "InvalidXmlError",
     "PadnextAuditReport",
     "PadnextAuditedPosition",
     "PadnextDelivery",

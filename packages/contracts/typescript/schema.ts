@@ -81,6 +81,12 @@ export interface paths {
          *
          *     A delivery flagged as production data is refused with 422 — see `app.padnext.audit` and
          *     `docs/compliance/PRIVATE_DATA_WARNING.md`.
+         *
+         *     Failures carry `error_code`: `EMPTY_REQUEST_BODY` (400), `INVALID_XML` (400, with the line and
+         *     column in `details`), `PADNEXT_SCHEMA_VIOLATION` (422, every violation in `details`),
+         *     `PADNEXT_UNREADABLE` (422), `UNKNOWN_ZIFFER` (422, when no position is in this catalog at
+         *     all), `REAL_DATA_REFUSED` (422) and `RULES_ENGINE_UNAVAILABLE` (503, retryable). See
+         *     `docs/errors.md`.
          */
         post: operations["padnext_audit_api_v1_padnext_audit_post"];
         delete?: never;
@@ -404,6 +410,12 @@ export interface paths {
          *     The response is a proposal, never an invoice: `status` is `DRAFT` and stays there until a
          *     named person approves it via `POST /api/v1/proposals/{id}/approve`. `receipt_hash` identifies
          *     the catalog, rule tables, logic programs, solver versions, policy and input that produced it.
+         *
+         *     Failures carry `error_code`: `VALIDATION_ERROR` (422) if the extraction does not match the
+         *     schema, `SOLVER_TIMEOUT` (504) if the optimiser found no answer set inside
+         *     `SOLVER_TIMEOUT_SECONDS`, `RULES_ENGINE_UNAVAILABLE` (503, retryable) if Soufflé could not be
+         *     run, and `TRANSIENT_DB_FAILURE` (503, retryable) if the draft could not be stored. See
+         *     `docs/errors.md`.
          */
         post: operations["solve_api_v1_solve_post"];
         delete?: never;
@@ -1321,6 +1333,52 @@ export interface components {
             /** Ziffern */
             ziffern?: string[];
         };
+        /**
+         * ErrorResponse
+         * @description The body of every non-2xx response this API produces.
+         *
+         *     Declared as a model so it appears in the OpenAPI document and the generated TypeScript, rather
+         *     than being an undocumented dict that clients discover by hitting it in production.
+         */
+        ErrorResponse: {
+            /**
+             * Detail
+             * @description Compatibility mirror, where FastAPI clients already look. Usually an object holding the same four fields; on a `VALIDATION_ERROR` it is Pydantic's own list of field errors, and on an error raised by a route as `HTTPException` it is whatever that route passed. Read the top-level fields instead — this one is deliberately untyped because it reproduces what shipped.
+             */
+            detail?: unknown;
+            /**
+             * Details
+             * @description Specifics a client can act on: line and column, unknown Ziffern, partials.
+             */
+            details?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Error
+             * @description Lowercase spelling of `error_code`, for clients written before it existed.
+             */
+            error: string;
+            /**
+             * Error Code
+             * @description Stable machine-readable code. See docs/errors.md.
+             */
+            error_code: string;
+            /**
+             * Message
+             * @description Human-readable. May change; do not switch on it.
+             */
+            message: string;
+            /**
+             * Retry After
+             * @description Seconds to wait before retrying the identical request. Present only when retrying could plausibly succeed; also sent as the `Retry-After` header.
+             */
+            retry_after?: number | null;
+            /**
+             * Status
+             * @description The HTTP status, repeated in the body so a logged payload is self-contained.
+             */
+            status: number;
+        };
         /** Examination */
         "Examination-Input": {
             /**
@@ -1390,11 +1448,6 @@ export interface components {
              * @default
              */
             note: string;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
         };
         /** HealthResponse */
         HealthResponse: {
@@ -2430,19 +2483,6 @@ export interface components {
              */
             rounding_policy: string;
         };
-        /** ValidationError */
-        ValidationError: {
-            /** Context */
-            ctx?: Record<string, never>;
-            /** Input */
-            input?: unknown;
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-        };
         /**
          * VocabularyResponse
          * @description What `GET /api/v1/vocabulary` returns.
@@ -2587,6 +2627,24 @@ export interface operations {
                     "application/json": components["schemas"]["CatalogResponse"];
                 };
             };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     catalog_ziffer_api_v1_catalog_ziffer__ziffer__get: {
@@ -2609,13 +2667,22 @@ export interface operations {
                     "application/json": components["schemas"]["ZifferResponse"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2636,6 +2703,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2662,13 +2747,22 @@ export interface operations {
                     "application/json": components["schemas"]["PadnextAuditReport"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2695,13 +2789,22 @@ export interface operations {
                     "application/json": components["schemas"]["BatchAuditJobList"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2728,13 +2831,22 @@ export interface operations {
                     "application/json": components["schemas"]["BatchAuditAccepted"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2759,13 +2871,22 @@ export interface operations {
                     "application/json": components["schemas"]["BatchAuditJob"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2797,13 +2918,22 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2828,13 +2958,22 @@ export interface operations {
                     "application/json": components["schemas"]["Proposal"][];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2859,13 +2998,22 @@ export interface operations {
                     "application/json": components["schemas"]["Proposal"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2894,13 +3042,22 @@ export interface operations {
                     "application/json": components["schemas"]["Proposal"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2936,13 +3093,22 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2971,13 +3137,22 @@ export interface operations {
                     "application/json": components["schemas"]["Proposal"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2998,6 +3173,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RuleCoverage"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -3024,13 +3217,22 @@ export interface operations {
                     "application/json": components["schemas"]["RuleReviewQueue"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -3059,13 +3261,22 @@ export interface operations {
                     "application/json": components["schemas"]["RuleReviewResult"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -3092,13 +3303,22 @@ export interface operations {
                     "application/json": components["schemas"]["Proposal"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -3119,6 +3339,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VocabularyResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
