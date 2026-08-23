@@ -581,3 +581,307 @@ async def test_two_uploads_with_the_same_name_both_get_a_row(database):
 
     job = await service.load_batch(accepted.batch_id)
     assert [f.filename for f in job.files] == ["same.xml", "same.xml"]
+
+
+# ------------------------------------------------------------------------------------------
+# recovery: a batch a dead process left behind
+# ------------------------------------------------------------------------------------------
+
+
+async def _force_status(database, batch_id: str, status: BatchJobStatus) -> None:
+    """Put a job into a status the happy path would never leave it in.
+
+    What a killed process leaves behind cannot be produced by calling the service — `process_batch`
+    always reaches a terminal state or fails loudly — so the row is written directly. That is the
+    point: the reaper's whole job is to clean up state no code path can create on purpose.
+    """
+    from sqlalchemy import select
+
+    from app.db.models import BatchJobRecord
+
+    async with database.session() as session:
+        job = (
+            await session.execute(
+                select(BatchJobRecord).where(BatchJobRecord.batch_id == batch_id)
+            )
+        ).scalar_one()
+        job.status = str(status)
+
+
+@pytest.mark.parametrize("stranded", [BatchJobStatus.PENDING, BatchJobStatus.PROCESSING])
+async def test_an_interrupted_batch_is_failed_at_startup_rather_than_left_in_limbo(
+    database, stranded
+):
+    """Both interruptible statuses are reaped, not just `PROCESSING`.
+
+    A process that died between the `202` and the background task's first write leaves `PENDING`,
+    which is the same permanent limbo reached one step earlier — so both are covered.
+    """
+    from app.services.batch_audit import INTERRUPTED_MESSAGE, BatchAuditService
+
+    service = BatchAuditService(database)
+    accepted, _ = await service.create_batch([("one.xml", b"<x/>")])
+    await _force_status(database, accepted.batch_id, stranded)
+
+    reaped = await service.reap_interrupted_batches()
+
+    assert reaped == [accepted.batch_id]
+    job = await service.load_batch(accepted.batch_id)
+    assert job.status is BatchJobStatus.FAILED
+    assert job.error_message == INTERRUPTED_MESSAGE
+    assert job.completed_at is not None
+    assert job.aggregate_summary is None, "a partial roll-up is worse than none"
+
+
+async def test_reaping_leaves_the_files_pending_rather_than_claiming_they_failed(database):
+    """A delivery nobody got to is not a delivery that failed its audit.
+
+    `PENDING` under a `FAILED` job reads correctly — "we never reached this file" — and it keeps
+    `processed_file_count` honest about how far the interrupted run had got.
+    """
+    from app.services.batch_audit import BatchAuditService
+
+    service = BatchAuditService(database)
+    accepted, payloads = await service.create_batch(
+        [("a.xml", b"<a/>"), ("b.xml", b"<b/>"), ("c.xml", b"<c/>")]
+    )
+
+    # One file landed before the process died; the other two never started.
+    await service._write_file_outcome(
+        payloads[0][0],
+        status=BatchFileStatus.COMPLETED,
+        report_json=make_report(
+            claimed="10.00", fine="10.00", wrong="0.00", unconfirmed="0.00"
+        ).model_dump(mode="json"),
+    )
+    await _force_status(database, accepted.batch_id, BatchJobStatus.PROCESSING)
+
+    await service.reap_interrupted_batches()
+
+    job = await service.load_batch(accepted.batch_id)
+    assert job.status is BatchJobStatus.FAILED
+    assert job.completed_file_count == 1
+    assert job.failed_file_count == 0, "no file failed — the run was abandoned"
+    assert job.processed_file_count == 1
+    assert sorted(f.status for f in job.files) == sorted(
+        [BatchFileStatus.COMPLETED, BatchFileStatus.PENDING, BatchFileStatus.PENDING]
+    )
+
+
+async def test_reaping_does_not_touch_a_batch_that_finished_or_already_failed(database):
+    """Idempotence, and the property that makes running this on every start safe."""
+    from app.services.batch_audit import BatchAuditService
+
+    service = BatchAuditService(database)
+    done, payloads = await service.create_batch([("one.xml", b"<x/>")])
+    await service._write_file_outcome(
+        payloads[0][0],
+        status=BatchFileStatus.COMPLETED,
+        report_json=make_report(
+            claimed="10.00", fine="10.00", wrong="0.00", unconfirmed="0.00"
+        ).model_dump(mode="json"),
+    )
+    await service._complete(done.batch_id)
+
+    assert await service.reap_interrupted_batches() == []
+    assert await service.reap_interrupted_batches() == []
+
+    job = await service.load_batch(done.batch_id)
+    assert job.status is BatchJobStatus.COMPLETED
+    assert job.error_message is None
+    assert job.aggregate_summary is not None
+
+
+async def test_reaping_an_empty_table_is_a_no_op(database):
+    from app.services.batch_audit import BatchAuditService
+
+    assert await BatchAuditService(database).reap_interrupted_batches() == []
+
+
+# ------------------------------------------------------------------------------------------
+# the listing: what makes a durable batch reachable again
+# ------------------------------------------------------------------------------------------
+
+
+async def test_the_listing_returns_batches_newest_first_with_the_whole_total(database):
+    from app.services.batch_audit import BatchAuditService
+
+    service = BatchAuditService(database)
+    created = []
+    for index in range(3):
+        accepted, _ = await service.create_batch([(f"f{index}.xml", b"<x/>")])
+        created.append(accepted.batch_id)
+
+    listing = await service.list_batches()
+
+    assert listing.total == 3
+    assert len(listing.jobs) == 3
+    # Newest first. `created_at` is stamped per call, so the last created must lead.
+    assert listing.jobs[0].batch_id == created[-1]
+    assert [job.created_at for job in listing.jobs] == sorted(
+        (job.created_at for job in listing.jobs), reverse=True
+    )
+
+
+async def test_the_listing_carries_the_rollup_but_never_the_files(database):
+    """The listing is a header. `aggregate_summary` is what makes it useful; `files` is what would
+    make it megabytes."""
+    from app.services.batch_audit import BatchAuditService
+
+    service = BatchAuditService(database)
+    accepted, payloads = await service.create_batch([("one.xml", b"<x/>")])
+    await service._write_file_outcome(
+        payloads[0][0],
+        status=BatchFileStatus.COMPLETED,
+        report_json=make_report(
+            claimed="100.00", fine="40.00", wrong="25.00", unconfirmed="35.00"
+        ).model_dump(mode="json"),
+    )
+    await service._complete(accepted.batch_id)
+
+    row = (await service.list_batches()).jobs[0]
+
+    assert row.status is BatchJobStatus.COMPLETED
+    assert row.file_count == 1
+    assert row.completed_file_count == 1
+    assert row.aggregate_summary is not None
+    assert row.aggregate_summary.claimed_total_eur == Decimal("100.00")
+    assert row.aggregate_summary.confirmed_wrong_eur == Decimal("25.00")
+    assert not hasattr(row, "files"), "a listing row has no files field to misread"
+
+
+async def test_the_listing_counts_files_for_a_job_that_never_finished(database):
+    """The counts come from `batch_files`, not from `aggregate_summary` — which is null on exactly
+    the jobs whose progress a reader most wants to see."""
+    from app.services.batch_audit import BatchAuditService
+
+    service = BatchAuditService(database)
+    accepted, payloads = await service.create_batch(
+        [("a.xml", b"<a/>"), ("b.xml", b"<b/>"), ("c.xml", b"<c/>")]
+    )
+    await service._write_file_outcome(
+        payloads[0][0],
+        status=BatchFileStatus.COMPLETED,
+        report_json=make_report(
+            claimed="10.00", fine="10.00", wrong="0.00", unconfirmed="0.00"
+        ).model_dump(mode="json"),
+    )
+    await service._write_file_outcome(
+        payloads[1][0], status=BatchFileStatus.FAILED, error_message="PadnextError: unreadable"
+    )
+    await _force_status(database, accepted.batch_id, BatchJobStatus.PROCESSING)
+
+    row = (await service.list_batches()).jobs[0]
+
+    assert row.status is BatchJobStatus.PROCESSING
+    assert row.file_count == 3
+    assert (row.completed_file_count, row.failed_file_count, row.processed_file_count) == (1, 1, 2)
+    assert row.aggregate_summary is None
+
+
+async def test_the_listing_pages_without_hiding_the_total(database):
+    from app.services.batch_audit import BatchAuditService
+
+    service = BatchAuditService(database)
+    for index in range(5):
+        await service.create_batch([(f"f{index}.xml", b"<x/>")])
+
+    first = await service.list_batches(limit=2, offset=0)
+    second = await service.list_batches(limit=2, offset=2)
+
+    assert (first.total, second.total) == (5, 5), "total is the table, not the page"
+    assert (first.limit, first.offset) == (2, 0)
+    assert len(first.jobs) == 2 and len(second.jobs) == 2
+    assert {job.batch_id for job in first.jobs}.isdisjoint({job.batch_id for job in second.jobs})
+
+
+async def test_the_listing_clamps_a_hostile_limit(database):
+    from app.services.batch_audit import MAX_BATCH_LIST_LIMIT, BatchAuditService
+
+    service = BatchAuditService(database)
+    await service.create_batch([("one.xml", b"<x/>")])
+
+    assert (await service.list_batches(limit=10**9)).limit == MAX_BATCH_LIST_LIMIT
+    assert (await service.list_batches(limit=0)).limit == 1
+    assert (await service.list_batches(offset=-5)).offset == 0
+
+
+# ------------------------------------------------------------------------------------------
+# the listing over HTTP
+# ------------------------------------------------------------------------------------------
+
+
+def test_the_batch_listing_endpoint_finds_a_batch_the_client_no_longer_has_a_handle_for(
+    client, three_files
+):
+    """The reason this endpoint exists: a reload loses the `batch_id`, and the roll-up is still
+    in the database."""
+    accepted = client.post("/api/v1/padnext/batch", files=three_files).json()
+
+    listing = client.get("/api/v1/padnext/batch")
+    assert listing.status_code == 200, listing.text
+    body = listing.json()
+
+    assert body["total"] >= 1
+    row = next(job for job in body["jobs"] if job["batch_id"] == accepted["batch_id"])
+    assert row["status"] == "COMPLETED"
+    assert row["file_count"] == 3
+    assert row["aggregate_summary"]["claimed_total_eur"]
+    assert "files" not in row
+
+
+def test_the_batch_listing_is_empty_rather_than_absent_when_nothing_has_run(client):
+    body = client.get("/api/v1/padnext/batch").json()
+
+    assert body == {"jobs": [], "total": 0, "limit": 50, "offset": 0}
+
+
+def test_the_batch_listing_refuses_a_limit_outside_its_range(client):
+    assert client.get("/api/v1/padnext/batch?limit=0").status_code == 422
+    assert client.get("/api/v1/padnext/batch?limit=99999").status_code == 422
+    assert client.get("/api/v1/padnext/batch?offset=-1").status_code == 422
+
+
+def test_the_listing_path_does_not_shadow_the_detail_path(client, three_files):
+    """`/batch` and `/batch/{id}` are distinct templates; a regression here would make one
+    unreachable."""
+    accepted = client.post("/api/v1/padnext/batch", files=three_files).json()
+
+    detail = client.get(f"/api/v1/padnext/batch/{accepted['batch_id']}")
+    assert detail.status_code == 200
+    assert detail.json()["batch_id"] == accepted["batch_id"]
+    assert len(detail.json()["files"]) == 3, "the detail path still carries the files"
+
+
+async def test_reaping_clears_a_rollup_that_should_not_have_existed(database):
+    """A `FAILED` batch must never carry totals, even one it somehow already had.
+
+    `_complete` writes the summary and the `COMPLETED` status in one transaction, so a `PROCESSING`
+    row holding a roll-up is unreachable through the service. This pins the reaper's guarantee
+    anyway: whatever it marks `FAILED` has no totals afterwards, which is what
+    `BatchAuditJob.aggregate_summary` documents and what the batch screen relies on when it refuses
+    to render an evaluation for a failed run.
+    """
+    from app.services.batch_audit import BatchAuditService
+
+    service = BatchAuditService(database)
+    accepted, payloads = await service.create_batch([("one.xml", b"<x/>")])
+    await service._write_file_outcome(
+        payloads[0][0],
+        status=BatchFileStatus.COMPLETED,
+        report_json=make_report(
+            claimed="100.00", fine="40.00", wrong="25.00", unconfirmed="35.00"
+        ).model_dump(mode="json"),
+    )
+    await service._complete(accepted.batch_id)
+    assert (await service.load_batch(accepted.batch_id)).aggregate_summary is not None
+
+    # What a killed process cannot leave behind, written by hand so the guarantee is unconditional.
+    await _force_status(database, accepted.batch_id, BatchJobStatus.PROCESSING)
+
+    await service.reap_interrupted_batches()
+
+    job = await service.load_batch(accepted.batch_id)
+    assert job.status is BatchJobStatus.FAILED
+    assert job.aggregate_summary is None, "a failed run must not present totals"
+    assert (await service.list_batches()).jobs[0].aggregate_summary is None

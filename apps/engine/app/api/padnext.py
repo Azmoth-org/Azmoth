@@ -4,11 +4,17 @@
 `PadnextAuditReport` out, synchronously. Sync (`def`) for the same reason as `solve` — the audit
 runs Soufflé.
 
-`POST /padnext/batch` and `GET /padnext/batch/{batch_id}` are the batch path. They exist because a
-practice's real question is not "is this invoice defensible" but "is our billing systematically
-wrong, and where" — and that question needs a hundred files, which is far too long for one request
-to hold open. So the batch path is asynchronous by necessity rather than by taste: the upload is
-accepted with a `202` and a handle, a `BackgroundTask` audits the files, and the caller polls.
+`POST /padnext/batch`, `GET /padnext/batch` and `GET /padnext/batch/{batch_id}` are the batch path.
+They exist because a practice's real question is not "is this invoice defensible" but "is our
+billing systematically wrong, and where" — and that question needs a hundred files, which is far too
+long for one request to hold open. So the batch path is asynchronous by necessity rather than by
+taste: the upload is accepted with a `202` and a handle, a `BackgroundTask` audits the files, and the
+caller polls.
+
+`GET /padnext/batch` (no id) is the listing, and it is what makes the durability real. The handle
+from the `202` lives in the caller's memory, so without a listing a finished batch became
+unreachable the moment a browser reloaded — its roll-up still in Postgres with nothing able to ask
+for it. It is also where a batch closed by the startup recovery becomes visible.
 
 The two paths share `read_delivery` and `audit_delivery` and nothing else. That is deliberate: the
 single-file endpoint is a shipped contract, so the batch path was built alongside it rather than by
@@ -26,6 +32,7 @@ from fastapi import (
     Body,
     File,
     HTTPException,
+    Query,
     Request,
     Response,
     UploadFile,
@@ -34,8 +41,19 @@ from fastapi import (
 
 from app.api.deps import batches, pipeline
 from app.padnext import PadnextError, RealDataRefused, audit_delivery, read_delivery
-from app.schemas import BatchAuditAccepted, BatchAuditJob, PadnextAuditReport
-from app.services.batch_audit import BatchNotExportable, BatchNotFound, EmptyBatch
+from app.schemas import (
+    BatchAuditAccepted,
+    BatchAuditJob,
+    BatchAuditJobList,
+    PadnextAuditReport,
+)
+from app.services.batch_audit import (
+    DEFAULT_BATCH_LIST_LIMIT,
+    MAX_BATCH_LIST_LIMIT,
+    BatchNotExportable,
+    BatchNotFound,
+    EmptyBatch,
+)
 from app.services.export import attachment_headers, batch_export_filename
 from app.solvers.souffle_engine import SouffleError
 
@@ -228,6 +246,33 @@ async def padnext_batch(
 
     background_tasks.add_task(service.process_batch, accepted.batch_id, payloads)
     return accepted
+
+
+@router.get("/batch", response_model=BatchAuditJobList)
+async def padnext_batch_list(
+    limit: int = Query(
+        default=DEFAULT_BATCH_LIST_LIMIT,
+        ge=1,
+        le=MAX_BATCH_LIST_LIMIT,
+        description="How many batches to return. `total` always reports the whole table.",
+    ),
+    offset: int = Query(default=0, ge=0),
+) -> BatchAuditJobList:
+    """Every batch this database holds, newest first, as headers without their files.
+
+    This is what makes a durable batch reachable again. A `batch_id` is issued once and the browser
+    holds it in memory, so before this endpoint existed a page reload orphaned a finished batch —
+    the roll-up was still in Postgres and nothing could ask for it. It is also where an operator
+    sees a batch that was `FAILED` by the startup recovery, and reads why in `error_message`.
+
+    Rows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every
+    delivery's full audit report would be megabytes to render a table. Open one with
+    `GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.
+
+    Declared before `/batch/{batch_id}` for readability only — the two paths are distinct templates
+    and neither shadows the other.
+    """
+    return await batches().list_batches(limit=limit, offset=offset)
 
 
 @router.get("/batch/{batch_id}", response_model=BatchAuditJob)

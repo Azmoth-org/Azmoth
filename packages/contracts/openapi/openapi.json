@@ -438,6 +438,114 @@
         "title": "BatchAuditJob",
         "type": "object"
       },
+      "BatchAuditJobList": {
+        "additionalProperties": false,
+        "description": "A page of batches, newest first, and how many there are in total.\n\n`total` is the whole table, not the page. A listing that only reported what it returned would\nlet a `limit` silently become \"how many batches exist\" — the same reason\n`RuleReviewQueue.pending_rule_count` reports the real backlog rather than the page.",
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/BatchAuditJobSummary"
+            },
+            "title": "Jobs",
+            "type": "array"
+          },
+          "limit": {
+            "default": 0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "BatchAuditJobList",
+        "type": "object"
+      },
+      "BatchAuditJobSummary": {
+        "additionalProperties": false,
+        "description": "One batch as a listing row: the header, without the files.\n\nDeliberately not `BatchAuditJob` with `files` left empty. A listing of fifty batches, each\ncarrying every delivery's full `PadnextAuditReport`, is megabytes of JSON to render a table of\nfifty rows — and a client handed a `BatchAuditJob` with an empty `files` list could not tell\n\"this batch has no files\" from \"this response does not carry them\". A separate model makes the\nabsence structural: there is no `files` field to misread.\n\nThe per-file counts are still here, because \"3 von 10 geprüft\" is the one thing a listing has to\nbe able to say, and they are computed from `batch_files` rather than read out of\n`aggregate_summary` — which is null while a job runs and on a job that failed, exactly the two\ncases where a reader most wants to know how far it got.",
+        "properties": {
+          "aggregate_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BatchAggregateSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "batch_id": {
+            "title": "Batch Id",
+            "type": "string"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "completed_file_count": {
+            "default": 0,
+            "title": "Completed File Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "failed_file_count": {
+            "default": 0,
+            "title": "Failed File Count",
+            "type": "integer"
+          },
+          "file_count": {
+            "default": 0,
+            "title": "File Count",
+            "type": "integer"
+          },
+          "processed_file_count": {
+            "default": 0,
+            "title": "Processed File Count",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BatchJobStatus"
+          }
+        },
+        "required": [
+          "batch_id",
+          "status",
+          "created_at"
+        ],
+        "title": "BatchAuditJobSummary",
+        "type": "object"
+      },
       "BatchFileResult": {
         "additionalProperties": false,
         "description": "One uploaded file and what became of it.",
@@ -3716,6 +3824,63 @@
       }
     },
     "/api/v1/padnext/batch": {
+      "get": {
+        "description": "Every batch this database holds, newest first, as headers without their files.\n\nThis is what makes a durable batch reachable again. A `batch_id` is issued once and the browser\nholds it in memory, so before this endpoint existed a page reload orphaned a finished batch —\nthe roll-up was still in Postgres and nothing could ask for it. It is also where an operator\nsees a batch that was `FAILED` by the startup recovery, and reads why in `error_message`.\n\nRows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every\ndelivery's full audit report would be megabytes to render a table. Open one with\n`GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.\n\nDeclared before `/batch/{batch_id}` for readability only — the two paths are distinct templates\nand neither shadows the other.",
+        "operationId": "padnext_batch_list_api_v1_padnext_batch_get",
+        "parameters": [
+          {
+            "description": "How many batches to return. `total` always reports the whole table.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "How many batches to return. `total` always reports the whole table.",
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchAuditJobList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Padnext Batch List",
+        "tags": [
+          "padnext"
+        ]
+      },
       "post": {
         "description": "Accept many PADnext deliveries and audit them in the background.\n\nReturns `202` with a `batch_id` immediately; the audit itself has not started. Poll\n`GET /api/v1/padnext/batch/{batch_id}` for progress, and read `aggregate_summary` once the\nstatus is `COMPLETED`.\n\nMultipart rather than raw bytes, unlike the single-file endpoint: many files in one request is\nwhat multipart is for, and there is no way to delimit them in a raw body. That is why the\nengine now depends on `python-multipart`.\n\nA delivery flagged as production data is refused per file, not per batch — the file is marked\n`FAILED` with the reason and the rest of the batch proceeds. See\n`docs/compliance/PRIVATE_DATA_WARNING.md`.",
         "operationId": "padnext_batch_api_v1_padnext_batch_post",

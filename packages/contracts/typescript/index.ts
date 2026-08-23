@@ -130,6 +130,25 @@ export type BatchFileStatus = Schemas["BatchFileStatus"];
 export type BatchFileResult = Schemas["BatchFileResult"];
 
 /**
+ * What `GET /api/v1/padnext/batch` returns: a page of batches, newest first, plus the real `total`.
+ *
+ * This is what makes a stored batch reachable again — the `batch_id` from the `202` lives in the
+ * caller's memory, so before this endpoint a browser reload orphaned a finished batch whose roll-up
+ * was still in Postgres. `total` is the whole table, never the page.
+ */
+export type BatchAuditJobList = Schemas["BatchAuditJobList"];
+
+/**
+ * One batch as a listing row: the header and the roll-up, and **no** `files`.
+ *
+ * Deliberately a distinct type from `BatchAuditJob` rather than one with an empty `files` array —
+ * there is no field here to mistake for "this batch has no deliveries". Open a row with
+ * `GET /api/v1/padnext/batch/{batch_id}` for the per-file detail. A row whose `error_message` reads
+ * "Interrupted by server restart" was closed by the engine's startup recovery, not by an audit.
+ */
+export type BatchAuditJobSummary = Schemas["BatchAuditJobSummary"];
+
+/**
  * The three honest buckets, summed across every file that could be audited.
  *
  * It carries the same three fields as `PadnextAuditReport` and the same prohibition: they must
@@ -197,6 +216,7 @@ export const ENGINE_ROUTES = {
   proposals: "/api/v1/proposals",
   padnextAudit: "/api/v1/padnext/audit",
   padnextBatch: "/api/v1/padnext/batch",
+  padnextBatchDetail: "/api/v1/padnext/batch/{batch_id}",
   padnextBatchExport: "/api/v1/padnext/batch/{batch_id}/export",
   proposalExport: "/api/v1/proposals/{proposal_id}/export",
   catalog: "/api/v1/catalog",

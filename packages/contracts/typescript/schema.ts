@@ -96,7 +96,23 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Padnext Batch List
+         * @description Every batch this database holds, newest first, as headers without their files.
+         *
+         *     This is what makes a durable batch reachable again. A `batch_id` is issued once and the browser
+         *     holds it in memory, so before this endpoint existed a page reload orphaned a finished batch —
+         *     the roll-up was still in Postgres and nothing could ask for it. It is also where an operator
+         *     sees a batch that was `FAILED` by the startup recovery, and reads why in `error_message`.
+         *
+         *     Rows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every
+         *     delivery's full audit report would be megabytes to render a table. Open one with
+         *     `GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.
+         *
+         *     Declared before `/batch/{batch_id}` for readability only — the two paths are distinct templates
+         *     and neither shadows the other.
+         */
+        get: operations["padnext_batch_list_api_v1_padnext_batch_get"];
         put?: never;
         /**
          * Padnext Batch
@@ -725,6 +741,83 @@ export interface components {
             file_count: number;
             /** Files */
             files?: components["schemas"]["BatchFileResult"][];
+            /**
+             * Processed File Count
+             * @default 0
+             */
+            processed_file_count: number;
+            status: components["schemas"]["BatchJobStatus"];
+        };
+        /**
+         * BatchAuditJobList
+         * @description A page of batches, newest first, and how many there are in total.
+         *
+         *     `total` is the whole table, not the page. A listing that only reported what it returned would
+         *     let a `limit` silently become "how many batches exist" — the same reason
+         *     `RuleReviewQueue.pending_rule_count` reports the real backlog rather than the page.
+         */
+        BatchAuditJobList: {
+            /** Jobs */
+            jobs?: components["schemas"]["BatchAuditJobSummary"][];
+            /**
+             * Limit
+             * @default 0
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /**
+         * BatchAuditJobSummary
+         * @description One batch as a listing row: the header, without the files.
+         *
+         *     Deliberately not `BatchAuditJob` with `files` left empty. A listing of fifty batches, each
+         *     carrying every delivery's full `PadnextAuditReport`, is megabytes of JSON to render a table of
+         *     fifty rows — and a client handed a `BatchAuditJob` with an empty `files` list could not tell
+         *     "this batch has no files" from "this response does not carry them". A separate model makes the
+         *     absence structural: there is no `files` field to misread.
+         *
+         *     The per-file counts are still here, because "3 von 10 geprüft" is the one thing a listing has to
+         *     be able to say, and they are computed from `batch_files` rather than read out of
+         *     `aggregate_summary` — which is null while a job runs and on a job that failed, exactly the two
+         *     cases where a reader most wants to know how far it got.
+         */
+        BatchAuditJobSummary: {
+            aggregate_summary?: components["schemas"]["BatchAggregateSummary"] | null;
+            /** Batch Id */
+            batch_id: string;
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Completed File Count
+             * @default 0
+             */
+            completed_file_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Message */
+            error_message?: string | null;
+            /**
+             * Failed File Count
+             * @default 0
+             */
+            failed_file_count: number;
+            /**
+             * File Count
+             * @default 0
+             */
+            file_count: number;
             /**
              * Processed File Count
              * @default 0
@@ -2537,6 +2630,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PadnextAuditReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    padnext_batch_list_api_v1_padnext_batch_get: {
+        parameters: {
+            query?: {
+                /** @description How many batches to return. `total` always reports the whole table. */
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchAuditJobList"];
                 };
             };
             /** @description Validation Error */

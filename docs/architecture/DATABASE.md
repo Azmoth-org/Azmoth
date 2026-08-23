@@ -300,11 +300,35 @@ says how much is left.
 
 ### `BackgroundTasks` is not durable, and the schema shows it
 
-A batch is processed in the same process that accepted it, so a restart mid-run leaves a row on
-`PROCESSING` with some files still `PENDING` and nothing to resume it. That is the price of the
-MVP's no-Celery, no-Redis constraint, and it is stated rather than hidden: `GET` reports the real
-state, the web app stops polling after fifteen minutes and says why, and re-uploading the files
-produces a fresh batch. A durable queue is the fix when one is wanted.
+A batch is processed in the same process that accepted it, so a restart mid-run abandons it: the row
+is left on `PROCESSING` — or on `PENDING`, if the process died before the task's first write — with
+some files still `PENDING` and nothing to resume it. That is the price of the MVP's no-Celery,
+no-Redis constraint, and it is stated rather than hidden.
+
+**An abandoned run is closed, not left looking alive.** `BatchAuditService.reap_interrupted_batches`
+runs from the app's lifespan, before the server accepts a request, and marks every batch still
+`PENDING` or `PROCESSING` as `FAILED` with `error_message = "Interrupted by server restart"`. That
+moment is what makes it safe: no batch can belong to a process that has not started serving yet, so
+every such row is by construction a leftover. Re-uploading the files produces a fresh batch.
+
+Two details of the recovery are deliberate:
+
+* **The files stay `PENDING`.** Marking them `FAILED` would claim they were audited and rejected,
+  which is the one thing that did not happen. `PENDING` under a `FAILED` job reads correctly — "we
+  never reached this delivery" — and keeps `processed_file_count` honest about how far the run got.
+* **No roll-up survives.** `aggregate_summary_json` is cleared, so a `FAILED` batch never presents
+  totals. A set of numbers attached to a run nobody can identify the end of is worse than none, and
+  it is the same refusal `_fail_quietly` makes.
+
+The assumption is one process per database. Under `--workers > 1`, or a rolling deploy where a new
+container starts while the old one drains, a starting process would reap a batch genuinely running on
+a sibling — set `REAP_INTERRUPTED_BATCHES=false` there and reap from a single admin step. A durable
+queue is still the real fix when one is wanted.
+
+`GET /api/v1/padnext/batch` is the other half of this: a `batch_id` lives in the caller's memory, so
+without a listing a finished batch became unreachable the moment a browser reloaded, and a reaped one
+was invisible unless somebody still had its id. The listing returns headers and roll-ups without the
+per-file reports, and `error_message` is where an operator reads that a run was interrupted.
 
 ---
 

@@ -78,6 +78,13 @@ Interactive docs at <http://localhost:8000/docs>.
 | `POST` | `/api/v1/proposals/{id}/reject` | terminal, with a reason |
 | `POST` | `/api/v1/proposals/{id}/export` | reachable only from `APPROVED` |
 | `POST` | `/api/v1/padnext/audit` | audit a `.padx` container or `*_padx.xml` payload |
+| `POST` | `/api/v1/padnext/batch` | audit many deliveries; `202` with a handle to poll |
+| `GET` | `/api/v1/padnext/batch` | every batch, newest first — headers and roll-ups, no files |
+| `GET` | `/api/v1/padnext/batch/{id}` | one batch: progress, then the roll-up and every file's report |
+| `POST` | `/api/v1/padnext/batch/{id}/export` | a completed batch as a ZIP of CSVs |
+| `GET` | `/api/v1/rules/coverage` | how much of the rule set is actually enforced |
+| `GET` | `/api/v1/rules/review-queue` | unverified rules, with the GOÄ sentence each came from |
+| `POST` | `/api/v1/rules/{id}/review` | a billing expert's verdict; merged into the running engine |
 | `GET` | `/api/v1/catalog` | catalog provenance, coverage and its warnings |
 | `GET` | `/api/v1/catalog/ziffer/{ziffer}` | one position, with the rules that touch it |
 | `GET` | `/api/v1/vocabulary` | exactly the clinical vocabulary the bridge can map |
@@ -342,5 +349,5 @@ app/
   padnext/             reader + audit
 alembic/               migration history; alembic.ini reads DATABASE_URL, never a committed URL
 scripts/               engine_cli, migrate, export_openapi, import_goae, fetch_goae, …
-tests/                 649 tests — see tests/README.md
+tests/                 731 tests — see tests/README.md
 ```
