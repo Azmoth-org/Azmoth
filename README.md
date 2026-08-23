@@ -1,6 +1,6 @@
 # Govatax
 
-A monorepo holding a deterministic **GOÄ coding engine** and the Next.js app that will front it.
+A monorepo holding a deterministic **GOÄ coding engine** and the Next.js app that fronts it.
 
 ```
 apps/
@@ -13,7 +13,7 @@ packages/
 logic/         the symbolic layer: Clingo ASP + Soufflé Datalog + golden cases
 data/          the GOÄ catalog, rule tables and mappings, with provenance
 docs/          architecture, compliance, migration
-infra/docker/  compose file for the engine
+infra/docker/  compose file for the whole stack: Postgres + engine + web
 ```
 
 > ⚠️ **Synthetic data only.** The engine implements no access control, no audit logging and no PHI
@@ -43,32 +43,44 @@ in an append-only audit log, and re-deciding a decided proposal is refused with 
 
 ## Getting started
 
-### The web app
+### The whole application, one command
 
 ```bash
-pnpm install
-pnpm dev
-```
-
-### The engine
-
-Needs Python 3.11 and the Soufflé 2.5 binary. Easiest path is Docker, from the repo root:
-
-```bash
-# Postgres, then the engine — which migrates it (`alembic upgrade head`) and serves the API.
 docker compose -f infra/docker/docker-compose.yml up --build
-curl -s localhost:8000/api/v1/health
 ```
 
-Or locally — see [`apps/engine/README.md`](apps/engine/README.md#install):
+That starts three services in order — Postgres, then the engine (which migrates the database with
+`alembic upgrade head` before serving), then the web app, each gated on the previous one's
+healthcheck:
+
+| | |
+| --- | --- |
+| <http://localhost:3000> | the UI — Prüfung, Rechnungsprüfung, Stapelprüfung, Regelprüfung |
+| <http://localhost:8000/api/v1/health> | the engine's API, and `/docs` for the OpenAPI explorer |
+
+Nothing needs configuring first. `ENGINE_BASE_URL` is set to `http://engine:8000` inside the stack,
+and it is deliberately server-side only — the browser never learns the engine's address and talks to
+it only through the Next route handlers under `/api/engine/*`.
+
+`docker compose down` stops the stack and keeps the data; `down -v` deletes the
+`govatax-postgres-data` volume, which holds approval records — a decision, not a side effect of
+stopping. Ports are overridable with `WEB_PORT` and `POSTGRES_PORT`.
+
+### Working on one tier at a time
 
 ```bash
+# the web app against an engine you are already running
+pnpm install && pnpm dev                         # → localhost:3000
+
+# the engine on the host — needs Python 3.11 and the Soufflé 2.5 binary
 cd apps/engine
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python scripts/engine_cli.py check     # engines, data, logic, end-to-end probe
-.venv/bin/python -m pytest -q                    # 649 tests, against in-memory SQLite
+.venv/bin/python -m pytest -q                    # 731 tests, against in-memory SQLite
 .venv/bin/uvicorn app.main:app --reload
 ```
+
+See [`apps/engine/README.md`](apps/engine/README.md#install) for the Soufflé install.
 
 ## Shared types
 

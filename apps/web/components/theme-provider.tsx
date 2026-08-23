@@ -1,8 +1,18 @@
 "use client"
 
+import { ThemeProvider as NextThemesProvider } from "next-themes"
 import * as React from "react"
-import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
 
+/**
+ * Theme state for the whole app. Nothing else.
+ *
+ * It used to also install a global `keydown` listener that flipped the theme on any bare `d` press
+ * outside a form field. That came from the project scaffold and was removed rather than kept: the
+ * only place it was ever documented was the placeholder home page, and an invisible global shortcut
+ * that inverts the screen is the wrong thing to have on a page where somebody is reading invoice
+ * positions. The switch is now a labelled button in the top bar — see
+ * `components/layout/theme-toggle.tsx`.
+ */
 function ThemeProvider({
   children,
   ...props
@@ -15,57 +25,9 @@ function ThemeProvider({
       disableTransitionOnChange
       {...props}
     >
-      <ThemeHotkey />
       {children}
     </NextThemesProvider>
   )
-}
-
-function isTypingTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false
-  }
-
-  return (
-    target.isContentEditable ||
-    target.tagName === "INPUT" ||
-    target.tagName === "TEXTAREA" ||
-    target.tagName === "SELECT"
-  )
-}
-
-function ThemeHotkey() {
-  const { resolvedTheme, setTheme } = useTheme()
-
-  React.useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.defaultPrevented || event.repeat) {
-        return
-      }
-
-      if (event.metaKey || event.ctrlKey || event.altKey) {
-        return
-      }
-
-      if (event.key.toLowerCase() !== "d") {
-        return
-      }
-
-      if (isTypingTarget(event.target)) {
-        return
-      }
-
-      setTheme(resolvedTheme === "dark" ? "light" : "dark")
-    }
-
-    window.addEventListener("keydown", onKeyDown)
-
-    return () => {
-      window.removeEventListener("keydown", onKeyDown)
-    }
-  }, [resolvedTheme, setTheme])
-
-  return null
 }
 
 export { ThemeProvider }

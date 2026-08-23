@@ -51,7 +51,7 @@ Everything below must pass before you open a pull request. CI runs the same comm
 # Engine (Python 3.11 + the souffle binary — see apps/engine/README.md)
 cd apps/engine
 .venv/bin/python scripts/engine_cli.py check     # engines, data, logic, end-to-end probe
-.venv/bin/python -m pytest                       # 649 tests, against in-memory SQLite
+.venv/bin/python -m pytest                       # 731 tests, against in-memory SQLite
 
 # Whole workspace
 pnpm turbo typecheck lint build
@@ -143,7 +143,7 @@ Never type a field into TypeScript that the OpenAPI document does not have.
 ## Pull requests
 
 - Target `main`. Keep PRs small; stack them when work genuinely depends on earlier work.
-- Say what you verified, not just what you wrote. Paste the test line (`645 passed, 4 skipped`).
+- Say what you verified, not just what you wrote. Paste the test line (`731 passed, 4 skipped`).
 - Call out anything touching money, a rule, the solver objective, or the compliance posture in the
   PR title so it gets the right reviewer.
 - A PR that changes `logic/` or `data/` needs a second approver.
@@ -152,13 +152,13 @@ Never type a field into TypeScript that the OpenAPI document does not have.
 
 ```
 apps/engine/      Python 3.11 FastAPI — the coding engine and the PADnext auditor
-apps/web/         Next.js 16 — the review UI at /review
+apps/web/         Next.js 16 — /review, /padnext, /padnext/batch, /rules, behind one app shell
 packages/contracts/  generated OpenAPI → TypeScript contract (do not hand-edit)
 packages/ui/      shadcn/ui components shared by the apps
 logic/            Clingo ASP + Soufflé Datalog programs, golden cases  ← see logic/README.md
 data/             GOÄ catalog, rule tables, mappings, raw snapshot + provenance
 docs/             architecture, compliance, migration record
-infra/docker/     compose file: Postgres + the engine
+infra/docker/     compose file: Postgres + engine + web (`up --build` starts everything)
 ```
 
 Add a shadcn component with the CLI from the repo root, so it lands in `packages/ui`:

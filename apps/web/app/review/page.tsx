@@ -17,7 +17,7 @@ export const metadata: Metadata = {
  */
 export default function ReviewPage() {
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+    <>
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">GOÄ-Abrechnungsvorschlag prüfen</h1>
         <p className="text-muted-foreground text-sm">
@@ -29,6 +29,6 @@ export default function ReviewPage() {
 
       <SyntheticDataBanner />
       <ReviewWorkbench />
-    </main>
+    </>
   )
 }

@@ -7,14 +7,13 @@ import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/al
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
 
+import { CopyableHash } from "@/components/common/copyable-hash"
 import { BucketSummary } from "@/components/padnext/bucket-summary"
 import { FindingsPanel } from "@/components/padnext/findings-panel"
 import { PositionsTable } from "@/components/padnext/positions-table"
 import { ErrorPanel } from "@/components/review/error-panel"
 import { auditPadnextFile } from "@/lib/padnext/client"
 import { eur } from "@/lib/padnext/format"
-// Receipt hashes are truncated identically on both audit screens; reused rather than re-implemented.
-import { shortHash } from "@/lib/review/format"
 import type { PadnextResult } from "@/lib/padnext/types"
 
 /** What the engine's reader accepts: a `.padx` container, or a bare payload/order file. */
@@ -53,9 +52,9 @@ function Provenance({ result }: { result: Extract<PadnextResult, { kind: "report
           <div className="text-muted-foreground">nicht nachrechenbar</div>
           <div className="font-mono tabular-nums">{eur(report.unpriceable_claimed_eur)}</div>
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="text-muted-foreground">Receipt</div>
-          <div className="font-mono break-all">{shortHash(report.receipt_hash)}</div>
+          <CopyableHash value={report.receipt_hash} label="Receipt-Hash" />
         </div>
       </CardContent>
     </Card>

@@ -75,3 +75,6 @@ data/raw/*.zip
 **/*.sqlite
 **/*.sqlite3
 apps/engine/*.db
+*.db
+*.sqlite
+*.sqlite3
