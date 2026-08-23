@@ -1,4 +1,10 @@
-import { FileCheck2Icon, LayersIcon, ScaleIcon, StethoscopeIcon } from "lucide-react"
+import {
+  FileCheck2Icon,
+  LayersIcon,
+  LayoutDashboardIcon,
+  ScaleIcon,
+  StethoscopeIcon,
+} from "lucide-react"
 
 /**
  * The application's screens, in the order the work happens.
@@ -6,6 +12,11 @@ import { FileCheck2Icon, LayersIcon, ScaleIcon, StethoscopeIcon } from "lucide-r
  * One list, used by the sidebar, the mobile nav and the dashboard cards, so a new screen cannot be
  * added to one and forgotten in the others — which is how `/rules` and `/padnext/batch` came to be
  * reachable only by typing their URLs.
+ *
+ * The dashboard is the first entry and is in this list rather than beside it, so the sidebar
+ * highlights it like any other screen and the top bar names it. It is excluded from the *workspace
+ * grid* on the dashboard itself by `WORKSPACE_ITEMS` below — a card linking to the page it is on is
+ * not navigation.
  *
  * `description` is the same sentence as the screen's own `metadata.description`. Kept identical on
  * purpose: the dashboard card and the browser tab should not describe a screen differently.
@@ -19,7 +30,17 @@ export type NavItem = {
   internal?: boolean
 }
 
+/** The dashboard's own path. Named because two things below have to agree about it. */
+export const DASHBOARD_HREF = "/"
+
 export const NAV_ITEMS: readonly NavItem[] = [
+  {
+    href: DASHBOARD_HREF,
+    label: "Übersicht",
+    description:
+      "Systemstatus, die letzten Abrechnungsvorschläge und die letzten Stapelprüfungen auf einen Blick.",
+    icon: LayoutDashboardIcon,
+  },
   {
     href: "/review",
     label: "Prüfung",
@@ -52,6 +73,17 @@ export const NAV_ITEMS: readonly NavItem[] = [
 ]
 
 /**
+ * The four workbenches, without the dashboard — what the dashboard's own card grid renders.
+ *
+ * Derived rather than a second literal, so adding a screen to `NAV_ITEMS` puts it on the dashboard
+ * too. That is the mistake this module was written to prevent, and a hand-maintained copy would
+ * reintroduce it one entry at a time.
+ */
+export const WORKSPACE_ITEMS: readonly NavItem[] = NAV_ITEMS.filter(
+  (item) => item.href !== DASHBOARD_HREF,
+)
+
+/**
  * Which single nav entry the reader is on, or null for a path outside the nav.
  *
  * Deliberately not a per-item `startsWith` predicate. `/padnext` is a prefix of `/padnext/batch`, so
@@ -61,6 +93,11 @@ export const NAV_ITEMS: readonly NavItem[] = [
  *
  * Matching is anchored on a path segment (`href` itself, or `href` followed by `/`), so `/rulesets`
  * would not match `/rules`.
+ *
+ * The dashboard's `/` needs no special case, and it is worth saying why rather than leaving the next
+ * reader to work it out: `pathname === "/"` matches only the root, and the prefix test looks for
+ * `"//"`, which no path starts with. So `/` is active on the dashboard and on nothing else, and it
+ * never competes with a longer href in the reduce below.
  */
 export function activeHref(pathname: string): string | null {
   const matches = NAV_ITEMS.filter(
