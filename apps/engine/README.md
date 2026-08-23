@@ -143,9 +143,15 @@ engine **refuses to start** on anything but Postgres.
 .venv/bin/python scripts/engine_cli.py check                       # full stack check
 .venv/bin/python scripts/engine_cli.py check-souffle                # container healthcheck
 .venv/bin/python scripts/engine_cli.py solve ../../logic/tests/cases/case_001_knee/input.json
+.venv/bin/python scripts/engine_cli.py solve <case.json> --stats   # timing + grounding breakdown
 .venv/bin/python scripts/engine_cli.py padnext ../../logic/tests/cases/padnext/00004711_20260726_ADL_000001.padx
 .venv/bin/python scripts/engine_cli.py catalog --ziffer 301
 ```
+
+`--stats` splits catalog loading, parsing, each pipeline stage, Clingo grounding and Clingo search,
+and prints the size of the ground program from `clingo.Control.statistics`. What it measures on the
+three golden cases, and what would make a solve slow, is in
+[`docs/performance_baseline.md`](../../docs/performance_baseline.md).
 
 Provenance tooling — how the committed catalog was built, and how to rebuild it:
 

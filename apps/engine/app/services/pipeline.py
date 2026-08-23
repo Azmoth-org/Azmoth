@@ -216,6 +216,7 @@ class Pipeline:
             extraction.patient.setting = setting
 
         timer = StageTimer()
+        started = time.perf_counter()
 
         with timer.time("bridge"):
             bridge = self.bridge(extraction)
@@ -223,6 +224,13 @@ class Pipeline:
             rules_result = self.apply_rules(extraction, bridge)
         with timer.time("clingo"):
             optimization = self.optimize(rules_result, extraction, bridge)
+
+        # The solver measured its own three phases from inside; copy them out so a reader of the
+        # audit trail can see where the `clingo` stage above actually went. Fact generation and
+        # grounding scale with the number of positions in play, the search does not necessarily.
+        timer.timings["clingo_build_facts"] = optimization.build_ms
+        timer.timings["clingo_ground"] = optimization.ground_ms
+        timer.timings["clingo_solve"] = optimization.solve_ms
 
         # Feed the chosen factors back through the rules engine for an independent verdict on
         # the final invoice — including analog positions, which were never candidates before.
@@ -252,6 +260,11 @@ class Pipeline:
         # Pydantic copies the dict on validation, so the validation stage's own duration — only
         # known once build() returned — has to be written back explicitly.
         audit.stage_timings_ms = dict(timer.timings)
+        audit.solve_time_ms = optimization.solve_ms
+        # Measured end to end rather than summed from the stages: the sum would quietly omit
+        # anything that is not inside a `timer.time()` block, which is exactly the kind of cost
+        # that goes unnoticed. A gap between this and the stage sum is a real gap.
+        audit.total_time_ms = round((time.perf_counter() - started) * 1000, 2)
         return coding, audit, rules_result, optimization
 
     # -- the proposal path (what the API returns) -------------------------------------------
@@ -357,6 +370,10 @@ class Pipeline:
             # cached path and the fresh path cannot report different statuses for one result.
             solver_status=audit.solver_status,
             solver_timed_out=audit.solver_status == "TIMEOUT_PARTIAL",
+            # Read off the same audit trail, for the same reason: the cached path and the fresh
+            # path must not be able to report two different durations for one result.
+            solve_time_ms=audit.solve_time_ms,
+            total_time_ms=audit.total_time_ms,
             enforced_rule_count=coverage.enforced_rule_count,
             advisory_rule_count=coverage.advisory_rule_count,
             unverified_rule_count=coverage.unverified_rule_count,

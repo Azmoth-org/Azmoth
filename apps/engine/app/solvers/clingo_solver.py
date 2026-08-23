@@ -32,6 +32,7 @@ from app.schemas import (
     BlockedCode,
     ClinicalExtraction,
     FactorDecision,
+    GroundingStats,
     OptimizationResult,
     RulesResult,
     Warning_,
@@ -69,6 +70,37 @@ def _q(value: str) -> str:
     return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"') + '"'
 
 
+def _grounding_stats(
+    ctl: clingo.Control, *, program: str, facts: str
+) -> GroundingStats | None:
+    """Read the ground-program size off clingo's own statistics.
+
+    Available on `Control.statistics` after a solve without passing `--stats`; the extra flag only
+    raises the *detail* level, and nothing below is in the detailed-only set. Wrapped defensively
+    all the same: these numbers are diagnostics, and a clingo release that renames a key must not
+    be able to fail a solve that already produced a correct invoice.
+    """
+    try:
+        stats = ctl.statistics
+        lp = stats["problem"]["lp"]
+        solvers = stats.get("solving", {}).get("solvers", {})
+        return GroundingStats(
+            atoms=int(lp["atoms"]),
+            atoms_aux=int(lp["atoms_aux"]),
+            bodies=int(lp["bodies"]),
+            rules=int(lp["rules"]),
+            rules_choice=int(lp["rules_choice"]),
+            rules_minimize=int(lp["rules_minimize"]),
+            choices=int(solvers.get("choices", 0)),
+            conflicts=int(solvers.get("conflicts", 0)),
+            program_bytes=len(program.encode("utf-8")),
+            fact_lines=sum(1 for line in facts.splitlines() if line and not line.startswith("%")),
+        )
+    except Exception as exc:  # noqa: BLE001 - diagnostics must never fail a valid solve
+        log.debug("clingo statistics unavailable: %s", exc)
+        return None
+
+
 class ClingoSolver:
     def __init__(
         self,
@@ -81,6 +113,14 @@ class ClingoSolver:
         self.rules = rules or load_rules()
         self._per_ziffer_reasons: dict[str, list[tuple[str, str]]] = {}
         self._encounter_reasons: list[tuple[str, str]] = []
+        #: The ground-program size of the most recent solve, for `engine_cli solve --stats`.
+        #:
+        #: A profiling hook, not a result: last-run-wins, so under concurrent solves it names
+        #: whichever finished last and must not be read by anything that decides an invoice. The
+        #: same numbers reach the pipeline properly, on `OptimizationResult.grounding`; this exists
+        #: because the CLI holds a proposal, and grounding statistics are deliberately not part of
+        #: the response payload a client receives.
+        self.last_grounding: GroundingStats | None = None
 
     @property
     def version(self) -> str:
@@ -186,7 +226,9 @@ class ClingoSolver:
     ) -> OptimizationResult:
         self._precheck(rules_result)
 
+        build_started = time.perf_counter()
         facts = self.build_facts(rules_result, extraction, bridge)
+        build_ms = round((time.perf_counter() - build_started) * 1000, 2)
         asp_path = self.settings.asp_path
         if not asp_path.is_file():
             raise ClingoError(
@@ -196,11 +238,17 @@ class ClingoSolver:
         program = asp_path.read_text(encoding="utf-8") + "\n" + facts
 
         ctl = clingo.Control(["--models=0", "--opt-mode=opt"])
+        # Grounding is timed on its own because it is the half that scales with the *data*: the
+        # encoding is fixed, the number of positions in play is not, and a rule with two unbound
+        # Ziffer variables instantiates quadratically in it. A single "clingo took 40 ms" number
+        # cannot tell that apart from a hard search, and the two have opposite remedies.
+        ground_started = time.perf_counter()
         try:
             ctl.add("base", [], program)
             ctl.ground([("base", [])])
         except RuntimeError as exc:
             raise ClingoError(f"ASP program failed to ground: {exc}", program=program) from exc
+        ground_ms = round((time.perf_counter() - ground_started) * 1000, 2)
 
         best: list[clingo.Symbol] | None = None
         cost: list[int] = []
@@ -245,6 +293,10 @@ class ClingoSolver:
 
         result = self._parse_model(best, rules_result, cost, count, status)
         result.solve_ms = solve_ms
+        result.build_ms = build_ms
+        result.ground_ms = ground_ms
+        result.grounding = _grounding_stats(ctl, program=program, facts=facts)
+        self.last_grounding = result.grounding
         result.timed_out = timed_out
         if timed_out:
             result.warnings.append(

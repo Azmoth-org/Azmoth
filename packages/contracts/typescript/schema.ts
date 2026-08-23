@@ -586,6 +586,11 @@ export interface components {
              */
             rules_version: string;
             /**
+             * Solve Time Ms
+             * @default 0
+             */
+            solve_time_ms: number;
+            /**
              * Solver Status
              * @default
              */
@@ -599,6 +604,11 @@ export interface components {
              * Format: date-time
              */
             timestamp: string;
+            /**
+             * Total Time Ms
+             * @default 0
+             */
+            total_time_ms: number;
             /**
              * Unverified Rule Policy
              * @default warn
@@ -1758,6 +1768,11 @@ export interface components {
              */
             setting_source: string;
             /**
+             * Solve Time Ms
+             * @default 0
+             */
+            solve_time_ms: number;
+            /**
              * Source Name
              * @default
              */
@@ -1767,6 +1782,11 @@ export interface components {
              * @default 0
              */
             suppressed_unverified_rule_count: number;
+            /**
+             * Total Time Ms
+             * @default 0
+             */
+            total_time_ms: number;
             /**
              * Unconfirmed Eur
              * @default 0.00
@@ -2061,6 +2081,11 @@ export interface components {
             rules_hash: string;
             /** Rules Version */
             rules_version: string;
+            /**
+             * Solve Time Ms
+             * @default 0
+             */
+            solve_time_ms: number;
             solver_result: components["schemas"]["CodingResponse"];
             /**
              * Solver Status
@@ -2081,6 +2106,11 @@ export interface components {
              * @default 0
              */
             suppressed_unverified_rule_count: number;
+            /**
+             * Total Time Ms
+             * @default 0
+             */
+            total_time_ms: number;
             /**
              * Unverified Rule Count
              * @default 0

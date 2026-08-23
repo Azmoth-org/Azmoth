@@ -73,6 +73,21 @@ class Proposal(BaseModel):
     #: True when the response was served from the content-addressed cache.
     cached: bool = False
 
+    #: What the run that produced this result cost: `solve_time_ms` is pure Clingo search,
+    #: `total_time_ms` is the whole symbolic pipeline. Flattened up from the audit trail for the
+    #: same reason `solver_status` is — a reviewer reads them in the header, not two levels down —
+    #: and derived from it in exactly one place, so the two can never disagree.
+    #:
+    #: They describe the *run*, not the request that served it. A `cached` proposal repeats the
+    #: timings of the run that filled the cache, because that is the work the result came from;
+    #: the lookup that served it took microseconds and is not a solve. Read `cached` first.
+    #:
+    #: Catalog and rule loading are not in either number: both loaders are `lru_cache`d, so a
+    #: served request pays neither. `engine_cli.py solve --stats` reports startup separately, and
+    #: `docs/performance_baseline.md` explains what that costs.
+    solve_time_ms: float = 0.0
+    total_time_ms: float = 0.0
+
     @property
     def is_approved(self) -> bool:
         return self.status is ProposalStatus.APPROVED

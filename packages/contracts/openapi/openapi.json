@@ -205,6 +205,11 @@
             "title": "Rules Version",
             "type": "string"
           },
+          "solve_time_ms": {
+            "default": 0.0,
+            "title": "Solve Time Ms",
+            "type": "number"
+          },
           "solver_status": {
             "default": "",
             "title": "Solver Status",
@@ -221,6 +226,11 @@
             "format": "date-time",
             "title": "Timestamp",
             "type": "string"
+          },
+          "total_time_ms": {
+            "default": 0.0,
+            "title": "Total Time Ms",
+            "type": "number"
           },
           "unverified_rule_policy": {
             "default": "warn",
@@ -2245,6 +2255,11 @@
             "title": "Setting Source",
             "type": "string"
           },
+          "solve_time_ms": {
+            "default": 0.0,
+            "title": "Solve Time Ms",
+            "type": "number"
+          },
           "source_name": {
             "default": "",
             "title": "Source Name",
@@ -2254,6 +2269,11 @@
             "default": 0,
             "title": "Suppressed Unverified Rule Count",
             "type": "integer"
+          },
+          "total_time_ms": {
+            "default": 0.0,
+            "title": "Total Time Ms",
+            "type": "number"
           },
           "unconfirmed_eur": {
             "default": "0.00",
@@ -2871,6 +2891,11 @@
             "title": "Rules Version",
             "type": "string"
           },
+          "solve_time_ms": {
+            "default": 0.0,
+            "title": "Solve Time Ms",
+            "type": "number"
+          },
           "solver_result": {
             "$ref": "#/components/schemas/CodingResponse"
           },
@@ -2896,6 +2921,11 @@
             "default": 0,
             "title": "Suppressed Unverified Rule Count",
             "type": "integer"
+          },
+          "total_time_ms": {
+            "default": 0.0,
+            "title": "Total Time Ms",
+            "type": "number"
           },
           "unverified_rule_count": {
             "default": 0,

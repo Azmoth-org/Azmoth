@@ -100,6 +100,7 @@ from app.schemas.rules import (
 from app.schemas.solver import (
     AnalogDecision,
     FactorDecision,
+    GroundingStats,
     MissingDocumentation,
     OptimizationResult,
 )
@@ -142,6 +143,7 @@ __all__ = [
     "ExportRequest",
     "Examination",
     "FactorDecision",
+    "GroundingStats",
     "HealthResponse",
     "InvoiceLine",
     "JustificationFactor",

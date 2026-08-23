@@ -159,8 +159,9 @@ def _to_record(proposal: Proposal) -> ProposalRecord:
 def _to_proposal(record: ProposalRecord) -> Proposal:
     """Row → Pydantic, reproducing the response the API served when the proposal was created.
 
-    The five rule-coverage counts and `solver_status` are *derived*, not stored twice: the counts
-    come out of `rule_coverage_json` and the status out of the solver result's own audit trail.
+    The five rule-coverage counts, `solver_status` and the two timing metrics are *derived*, not
+    stored twice: the counts come out of `rule_coverage_json`, the status and the timings out of
+    the solver result's own audit trail.
     Storing them again in their own columns would create two places for one fact, and the API
     flattens them precisely so a client cannot render a proposal without seeing them — a flattened
     copy that disagreed with its source would defeat the point.
@@ -192,6 +193,12 @@ def _to_proposal(record: ProposalRecord) -> Proposal:
         missing_documentation=record.missing_documentation_json or [],
         solver_status=solver_status,
         solver_timed_out=solver_status == "TIMEOUT_PARTIAL",
+        # Derived, not stored in their own columns, for the reason above: the audit trail already
+        # holds them, and a stored copy that drifted from it would be a second answer to one
+        # question. It also means a proposal read back next year still reports what its own run
+        # cost, rather than how long the SELECT took.
+        solve_time_ms=float(audit_trail.get("solve_time_ms") or 0.0),
+        total_time_ms=float(audit_trail.get("total_time_ms") or 0.0),
         enforced_rule_count=coverage.enforced_rule_count if coverage else 0,
         advisory_rule_count=coverage.advisory_rule_count if coverage else 0,
         unverified_rule_count=coverage.unverified_rule_count if coverage else 0,

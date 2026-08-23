@@ -291,6 +291,17 @@ class PadnextAuditReport(BaseModel):
     suppressed_unverified_rule_count: int = 0
     rule_coverage_detail: RuleCoverage | None = None
 
+    #: What the rules engine itself cost. Named `solve_time_ms` to match the proposal payload,
+    #: but note what it measures here: the audit path evaluates Soufflé and never runs Clingo —
+    #: there is nothing to optimise, because the invoice already exists and the question is only
+    #: whether its positions hold. A reader comparing an audit against a proposal is comparing two
+    #: different engines.
+    solve_time_ms: float = 0.0
+    #: End to end for the audit: parsing already done by the reader is *not* included, everything
+    #: from `audit_delivery` onwards is. Stripped by `app.core.canonical`, so it cannot move the
+    #: receipt hash below.
+    total_time_ms: float = 0.0
+
     #: SHA-256 over catalog identity + rule identity + the claimed positions + our verdicts, so a
     #: report can be tied to the exact data and policy that produced it.
     receipt_hash: str = ""

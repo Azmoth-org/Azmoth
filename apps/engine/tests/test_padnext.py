@@ -23,6 +23,7 @@ from app.padnext import (
     read_file,
 )
 from app.config import PADNEXT_EXAMPLES_DIR, UnverifiedRulePolicy
+from app.core.canonical import canonical
 from app.padnext.audit import build_audit_input, derive_setting
 from app.schemas.padnext import (
     PadnextCase,
@@ -677,6 +678,14 @@ def test_the_synthetic_extraction_carries_no_clinical_claims(payload_bytes):
 
 
 def test_reading_the_same_delivery_twice_gives_the_same_report(pipeline, payload_bytes):
+    """Compared in canonical form, which is what makes the comparison mean anything.
+
+    The report carries measured timings (`solve_time_ms`, `total_time_ms`), and two runs of a
+    deterministic audit differ in them by design. `canonical()` strips exactly those — and nothing
+    that decides money, which `test_golden_normalization.py` asserts in both directions — so a
+    verdict, an amount or a receipt that moved between the two runs still fails here.
+    """
+
     def run():
         delivery, findings = read_delivery(payload_bytes, source_name=PAYLOAD_NAME)
         report = audit_delivery(
@@ -686,9 +695,13 @@ def test_reading_the_same_delivery_twice_gives_the_same_report(pipeline, payload
             souffle_run=pipeline.souffle.run,
             read_findings=findings,
         )
-        return report.model_dump_json()
+        return canonical(report.model_dump(mode="python"))
 
-    assert run() == run()
+    first, second = run(), run()
+
+    assert first == second
+    assert first["receipt_hash"], "a stripped-empty report would make this assert nothing"
+    assert first["claimed_total_eur"]
 
 
 def test_read_file_accepts_both_bundled_forms():
