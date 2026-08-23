@@ -79,6 +79,17 @@ MAPPINGS_DIR = DATA_DIR / "mappings"
 RAW_DIR = DATA_DIR / "raw"
 LICENSED_DIR = DATA_DIR / "licensed"
 
+#: XML schemas the engine validates input against. Ours, hand-written, licensed with the repo.
+SCHEMAS_DIR = DATA_DIR / "schemas"
+
+#: The PADnext subset schema. NOT the official XSD — see the long comment at the top of the file
+#: for why the official one is not redistributed and what this one deliberately does not enforce.
+PADNEXT_XSD_PATH = SCHEMAS_DIR / "padnext" / "padx_adl_v2.12.subset.xsd"
+
+#: Where an operator who holds the official PADneXt schema puts it. Preferred over the subset
+#: when present, and git-ignored like everything else under `data/licensed/`.
+PADNEXT_LICENSED_XSD_PATH = LICENSED_DIR / "padnext" / "padx_adl_v2.12.xsd"
+
 CATALOG_PATH = CATALOG_DIR / CATALOG_FILENAME
 OVERRIDES_PATH = CATALOG_DIR / OVERRIDES_FILENAME
 MAPPING_PATH = MAPPINGS_DIR / "entity_to_ziffer.csv"
@@ -112,6 +123,22 @@ class UnverifiedRulePolicy(StrEnum):
 class BaseFactorPolicy(StrEnum):
     EINFACHSATZ = "einfachsatz"
     SCHWELLENWERT = "schwellenwert"
+
+
+class PadnextSchemaPolicy(StrEnum):
+    """What a PADnext delivery that violates the subset schema is allowed to do.
+
+    Deliberately the same three-value shape as `UnverifiedRulePolicy`, because it is the same
+    kind of decision: how much authority to give a check that can be wrong about a real file.
+
+        strict  (default)  the delivery is refused — `PadnextSchemaError`, HTTP 422
+        warn               every violation becomes a finding and the audit runs anyway
+        off                the schema is not consulted at all
+    """
+
+    STRICT = "strict"
+    WARN = "warn"
+    OFF = "off"
 
 
 class Settings(BaseSettings):
@@ -216,6 +243,12 @@ class Settings(BaseSettings):
     #: Refusing production data is the default. See docs/compliance/PRIVATE_DATA_WARNING.md.
     padnext_allow_real_data: bool = False
 
+    #: How hard the framing check bites. `strict` refuses a delivery whose document-level shape is
+    #: wrong — the reasoning is in `data/schemas/padnext/padx_adl_v2.12.subset.xsd`: framing is
+    #: fatal, positions are advisory. `warn` is the escape hatch for the day a real PVS export is
+    #: 99 % conforming and still worth auditing; it turns every violation into a finding.
+    padnext_schema_policy: PadnextSchemaPolicy = PadnextSchemaPolicy.STRICT
+
     # -- derived paths ------------------------------------------------------------------
 
     @property
@@ -255,6 +288,20 @@ class Settings(BaseSettings):
     @property
     def mapping_path(self) -> Path:
         return self.mappings_dir / "entity_to_ziffer.csv"
+
+    @property
+    def schemas_dir(self) -> Path:
+        return self.data_dir / "schemas"
+
+    @property
+    def padnext_xsd_path(self) -> Path:
+        """The schema actually used: the official one where an operator has licensed it, ours
+        otherwise. Resolved per call rather than cached, so dropping the licensed file in does not
+        need a restart to be noticed by the next process to load the schema."""
+        licensed = self.data_dir / "licensed" / "padnext" / "padx_adl_v2.12.xsd"
+        if licensed.is_file():
+            return licensed
+        return self.schemas_dir / "padnext" / "padx_adl_v2.12.subset.xsd"
 
     @property
     def asp_path(self) -> Path:

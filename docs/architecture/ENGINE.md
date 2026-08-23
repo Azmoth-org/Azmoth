@@ -282,6 +282,7 @@ record now, rather than instead of one. Schema and migration commands:
 | Rule tables, with `verified` / `legal_basis` / `quote` per row | `data/rules/*.csv` |
 | Entity → Ziffer mapping | `data/mappings/entity_to_ziffer.csv` |
 | Raw official XML + manifest | `data/raw/` |
+| PADnext framing schema (ours, a strict subset — not the official XSD) | `data/schemas/padnext/` |
 | Synthetic cases and frozen snapshots | `logic/tests/` |
 | The service | `apps/engine/` |
 | Generated API contract | `packages/contracts/` |

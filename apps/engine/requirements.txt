@@ -14,6 +14,13 @@ clingo==5.8.0
 
 httpx==0.28.1
 
+# XML Schema validation for PADnext deliveries (app/padnext/schema.py). Pinned like everything
+# else, and lxml specifically rather than a pure-Python validator: libxml2 reports the LINE and
+# COLUMN of each violation, and an error that cannot say where the problem is leaves whoever has
+# to fix the export grepping. It parses only for validation — the reader's own xml.etree parse is
+# untouched — and installs from a manylinux wheel, so the slim image needs no build toolchain.
+lxml==6.1.2
+
 # Multipart form parsing, required by Starlette to decode `UploadFile`. Added for
 # `POST /api/v1/padnext/batch`, which takes many files in one request — the single-file
 # `/padnext/audit` endpoint takes raw bytes and deliberately still needs none of this.

@@ -6,7 +6,13 @@ other contract the engine speaks.
 """
 
 from app.padnext.audit import RealDataRefused, audit_delivery, real_data_allowed
-from app.padnext.reader import PadnextError, read_delivery, read_file
+from app.padnext.reader import (
+    PadnextError,
+    PadnextSchemaError,
+    read_delivery,
+    read_file,
+)
+from app.padnext.schema import SchemaUnavailable, SchemaViolation, validate_payload
 from app.schemas.padnext import (
     PadnextAuditedPosition,
     PadnextAuditReport,
@@ -22,9 +28,13 @@ __all__ = [
     "PadnextError",
     "PadnextFinding",
     "PadnextPosition",
+    "PadnextSchemaError",
     "RealDataRefused",
+    "SchemaUnavailable",
+    "SchemaViolation",
     "audit_delivery",
     "read_delivery",
     "read_file",
     "real_data_allowed",
+    "validate_payload",
 ]
