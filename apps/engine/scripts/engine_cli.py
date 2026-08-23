@@ -4,6 +4,7 @@
     python scripts/engine_cli.py check                 # engines, data, logic, end-to-end probe
     python scripts/engine_cli.py check-souffle         # can the rules engine actually evaluate?
     python scripts/engine_cli.py solve <case.json>     # code one case
+    python scripts/engine_cli.py solve <case.json> --stats   # ... with a timing breakdown
     python scripts/engine_cli.py padnext <file.padx>   # audit a delivery
     python scripts/engine_cli.py catalog --ziffer 301  # provenance, or one position
 
@@ -17,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
@@ -255,6 +257,87 @@ def cmd_check_souffle(args: argparse.Namespace) -> int:
 # ==========================================================================================
 
 
+def _print_stats(
+    *,
+    startup_ms: float,
+    parse_ms: float,
+    request_ms: float,
+    proposal,
+    grounding,
+    catalog,
+    rules,
+) -> None:
+    """The timing breakdown behind `--stats`, written to stdout.
+
+    Read the three groups separately. **Startup** is paid once per process and not per case — the
+    catalog and rule loaders are `lru_cache`d, so a long-running service pays it at boot and an API
+    request pays none of it. **Per case** is what a request actually costs. **Ground program** is
+    the size of what Clingo searched, and it is the number to watch: search time is a function of
+    it, and it grows with the positions in play rather than with the encoding.
+    """
+    audit = proposal.solver_result.audit_trail
+    stages = audit.stage_timings_ms
+    #: Everything this case cost after startup: parsing, the symbolic pipeline, and the proposal
+    #: work around it (receipt hash, cache write, rule-coverage build). Used as the denominator so
+    #: the shares add to 100 % rather than to "100 % of the part someone remembered to time".
+    #:
+    #: `request_ms` is measured here rather than read off the proposal, because the payload's
+    #: `total_time_ms` deliberately reports the *run* — a cache hit repeats the timings of the run
+    #: it serves. The difference between the two is the proposal work, which is what `wrap_ms`
+    #: names.
+    per_case = parse_ms + request_ms
+    wrap_ms = round(request_ms - audit.total_time_ms, 2)
+
+    def row(label: str, ms: float, of: float | None = None) -> str:
+        share = f"{ms / of * 100:>5.1f} %" if of else "       "
+        return f"  {label:<34}{ms:>9.2f} ms  {share}"
+
+    print()
+    print("=" * 78)
+    print(f"TIMING — {proposal.proposal_id}   catalog {proposal.catalog_version}")
+    print("=" * 78)
+    print("startup (once per process, cached thereafter)")
+    print(row("catalog + rules load", startup_ms))
+    print(
+        f"       {len(catalog.ziffern)} Ziffern, {rules.summary()['exclusions_enforced']} enforced "
+        f"exclusion rules"
+    )
+    print()
+    print("per case")
+    print(row("input parse + schema validation", parse_ms, per_case))
+    print(row("bridge (entity -> Ziffer)", stages.get("bridge", 0.0), per_case))
+    print(row("souffle (rules)", stages.get("souffle", 0.0), per_case))
+    print(row("clingo build facts", stages.get("clingo_build_facts", 0.0), per_case))
+    print(row("clingo ground", stages.get("clingo_ground", 0.0), per_case))
+    print(row("clingo solve", stages.get("clingo_solve", 0.0), per_case))
+    print(row("souffle (verification pass)", stages.get("souffle_verification", 0.0), per_case))
+    print(row("validation + pricing", stages.get("validation", 0.0), per_case))
+    print(row("receipt + cache + coverage", wrap_ms, per_case))
+    print("  " + "-" * 52)
+    print(row("solve_time_ms (payload)", proposal.solve_time_ms, per_case))
+    print(row("total_time_ms (payload, pipeline)", proposal.total_time_ms, per_case))
+    print(row("TOTAL end-to-end (incl. parse)", per_case, per_case))
+    if proposal.cached:
+        print("  (served from cache — the payload timings describe the run that filled it)")
+    print()
+    if grounding is None:
+        # Not a failure: the numbers below are read from `clingo.Control.statistics`, and the
+        # engine deliberately treats a missing or renamed key as "no diagnostics", never as a
+        # failed solve. Fall back to reading the timing deltas above.
+        print("ground program: clingo reported no statistics for this run")
+    else:
+        print("ground program (clingo statistics)")
+        print(f"  {'atoms':<34}{grounding.atoms:>9}  ({grounding.atoms_aux} auxiliary)")
+        print(f"  {'rules':<34}{grounding.rules:>9}  ({grounding.rules_choice} choice, "
+              f"{grounding.rules_minimize} minimize)")
+        print(f"  {'bodies':<34}{grounding.bodies:>9}")
+        print(f"  {'injected fact lines':<34}{grounding.fact_lines:>9}")
+        print(f"  {'program size':<34}{grounding.program_bytes:>9}  bytes")
+        print(f"  {'search: choices / conflicts':<34}{grounding.choices:>9} / "
+              f"{grounding.conflicts}")
+    print("=" * 78)
+
+
 def cmd_solve(args: argparse.Namespace) -> int:
     from app.services.pipeline import Pipeline
     from app.validation.validator import ValidationFailed
@@ -264,23 +347,49 @@ def cmd_solve(args: argparse.Namespace) -> int:
         print(f"error: {path} does not exist", file=sys.stderr)
         return 2
 
+    # Startup and parsing are timed around the imports' side effects deliberately: the catalog and
+    # the rule tables are loaded by `Pipeline()`, and pretending that cost belongs to the solve
+    # would make every measurement here useless for capacity planning.
+    startup_started = time.perf_counter()
+    pipeline = Pipeline()
+    startup_ms = round((time.perf_counter() - startup_started) * 1000, 2)
+
+    parse_started = time.perf_counter()
     try:
         extraction = _load_extraction(path)
     except ValidationError as exc:
         print("error: the extraction JSON does not match the schema\n", file=sys.stderr)
         print(exc, file=sys.stderr)
         return 2
+    parse_ms = round((time.perf_counter() - parse_started) * 1000, 2)
 
+    request_started = time.perf_counter()
     try:
-        proposal = Pipeline().propose(extraction, setting=args.setting)
+        proposal = pipeline.propose(extraction, setting=args.setting)
     except ValidationFailed as exc:
         _print_json(
             {"error": "validation_failed", "violations": [v.model_dump() for v in exc.violations]}
         )
         return 1
+    request_ms = round((time.perf_counter() - request_started) * 1000, 2)
+
+    # Read off the solver rather than the response: the ground-program size is a diagnostic about
+    # how the answer was computed, not part of the answer, so it is deliberately not in the
+    # payload a client receives.
+    grounding = pipeline.clingo.last_grounding
 
     if args.json:
         _print_json(proposal.model_dump(mode="json"))
+        if args.stats:
+            _print_stats(
+                startup_ms=startup_ms,
+                parse_ms=parse_ms,
+                request_ms=request_ms,
+                proposal=proposal,
+                grounding=grounding,
+                catalog=pipeline.catalog,
+                rules=pipeline.rules,
+            )
         return 0
 
     response = proposal.solver_result
@@ -322,6 +431,16 @@ def cmd_solve(args: argparse.Namespace) -> int:
         print(f"  [{warning.severity:<7}] {warning.type}: {warning.message[:110]}")
     print()
     print("Dies ist ein VORSCHLAG (DRAFT), keine Rechnung. Ärztliche Prüfung erforderlich.")
+    if args.stats:
+        _print_stats(
+            startup_ms=startup_ms,
+            parse_ms=parse_ms,
+            request_ms=request_ms,
+            proposal=proposal,
+            grounding=grounding,
+            catalog=pipeline.catalog,
+            rules=pipeline.rules,
+        )
     return 0
 
 
@@ -465,6 +584,11 @@ def main(argv: list[str] | None = None) -> int:
     solve.add_argument("case", help="path to a clinical extraction JSON file")
     solve.add_argument("--setting", choices=["ambulant", "stationaer", "belegarzt"], default=None)
     solve.add_argument("--json", action="store_true", help="emit the full proposal as JSON")
+    solve.add_argument(
+        "--stats",
+        action="store_true",
+        help="print a timing breakdown: catalog load, parse, grounding, solve, total",
+    )
     solve.set_defaults(func=cmd_solve)
 
     pad = sub.add_parser(

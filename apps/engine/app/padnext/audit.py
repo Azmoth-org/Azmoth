@@ -33,6 +33,7 @@ when almost all of it was simply never checked.
 from __future__ import annotations
 
 import os
+import time
 from decimal import Decimal
 
 from app.bridge.entity_to_ziffer import BridgeResult
@@ -481,6 +482,7 @@ def audit_delivery(
     `souffle_run(extraction, bridge, proposed_factors=...)` is injected rather than imported so
     this stays testable without a Soufflé binary, and so the caller controls engine construction.
     """
+    started = time.perf_counter()
     settings = settings or get_settings()
     if delivery.echtdaten is True and not real_data_allowed(settings):
         raise RealDataRefused(
@@ -528,7 +530,9 @@ def audit_delivery(
         else:
             seen[position.ziffer] = position.positionsnr
 
+    engine_started = time.perf_counter()
     rules_result = souffle_run(extraction, bridge, proposed_factors=proposed_factors) if goae else None
+    solve_time_ms = round((time.perf_counter() - engine_started) * 1000, 2) if goae else 0.0
 
     billable: set[str] = set(rules_result.billable) if rules_result else set()
     blocked_by_ziffer = {b.ziffer: b for b in (rules_result.blocked if rules_result else [])}
@@ -960,5 +964,7 @@ def audit_delivery(
         advisory_rule_count=coverage.advisory_rule_count,
         suppressed_unverified_rule_count=coverage.suppressed_unverified_rule_count,
         rule_coverage_detail=coverage,
+        solve_time_ms=solve_time_ms,
+        total_time_ms=round((time.perf_counter() - started) * 1000, 2),
         receipt_hash=receipt,
     )

@@ -90,6 +90,15 @@ class AuditTrail(BaseModel):
     timestamp: datetime
     per_code: list[AuditTrailEntry] = Field(default_factory=list)
     stage_timings_ms: dict[str, float] = Field(default_factory=dict)
+    #: Pure Clingo search: what `ctl.solve()` itself cost, with grounding and fact generation
+    #: excluded. This is the number that a rule change is allowed to move.
+    solve_time_ms: float = 0.0
+    #: The whole symbolic run this trail describes — bridge, Soufflé, grounding, search,
+    #: verification and validation. Always >= `solve_time_ms`.
+    #:
+    #: Both are measurements, not results. `app.core.canonical` strips them, so they cannot move
+    #: a receipt hash or a cache key, and the golden snapshots do not see them.
+    total_time_ms: float = 0.0
 
 
 class CodingResponse(BaseModel):

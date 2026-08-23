@@ -59,6 +59,9 @@ def test_volatile_keys_covers_the_fields_the_api_actually_emits():
     assert "stage_timings_ms" in VOLATILE_KEYS
     assert "timestamp" in VOLATILE_KEYS
     assert "solve_ms" in VOLATILE_KEYS, "measured solver wall-clock is not part of the answer"
+    assert "solve_time_ms" in VOLATILE_KEYS, "the published solve metric is a measurement"
+    assert "total_time_ms" in VOLATILE_KEYS, "so is the published end-to-end metric"
+    assert "ground_ms" in VOLATILE_KEYS and "build_ms" in VOLATILE_KEYS
     assert "proposal_id" in VOLATILE_KEYS, "a per-request id must not move the cache key"
     assert "created_at" in VOLATILE_KEYS
 
