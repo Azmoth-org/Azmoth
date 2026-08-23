@@ -1,14 +1,19 @@
-# Run the engine and its database from the monorepo root:
+# Run the whole application from the monorepo root:
 #
 #     docker compose -f infra/docker/docker-compose.yml up --build
 #
-# The build context is the repo root, because the image needs `logic/` and `data/`, which live
-# outside `apps/engine` by design.
+#     http://localhost:3000   the review and audit UI
+#     http://localhost:8000   the engine's API (and /docs)
 #
-# Two services. `postgres` holds the proposals and the immutable audit log; `engine` migrates it on
-# start (`alembic upgrade head`, in the image's entrypoint) and then serves the API. There is no
-# in-memory fallback: the engine refuses to start under APP_ENV=production without a Postgres
-# DATABASE_URL, which is the point of this stack existing rather than a bare `uvicorn`.
+# The build context of both images is the repo root, because each needs files from outside its own
+# app directory: the engine needs `logic/` and `data/`, the web app needs the pnpm lockfile and the
+# `packages/*` it consumes as source.
+#
+# Three services, started in that order by their healthchecks. `postgres` holds the proposals and
+# the immutable audit log; `engine` migrates it on start (`alembic upgrade head`, in the image's
+# entrypoint) and then serves the API; `web` serves the UI and is the only tier a browser talks to.
+# There is no in-memory fallback: the engine refuses to start under APP_ENV=production without a
+# Postgres DATABASE_URL, which is the point of this stack existing rather than a bare `uvicorn`.
 
 services:
   postgres:
@@ -123,6 +128,48 @@ services:
       interval: 30s
       timeout: 10s
       start_period: 15s
+      retries: 3
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    image: govatax-web:0.3.0
+    # No `container_name`, for the same reason the other two have none.
+    depends_on:
+      engine:
+        # `service_healthy`, not `service_started`. The engine's healthcheck proves Soufflé is
+        # present and the catalog loaded, so waiting on it means the first screen a reviewer opens
+        # either works or reports a real problem — rather than showing "Engine nicht erreichbar"
+        # for the twenty seconds the engine spends migrating and loading the catalog.
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      # Server-side ONLY, and deliberately not NEXT_PUBLIC_: the browser must never learn the
+      # engine's address. Every call goes through a Next route handler under /api/engine/*, which is
+      # also the seam authentication will eventually sit in (there is none today — see
+      # docs/compliance/PRIVATE_DATA_WARNING.md).
+      #
+      # `engine` is the compose service name, resolved on the default network. Overridable so the
+      # same image can be pointed at an engine outside this stack.
+      ENGINE_BASE_URL: "${ENGINE_BASE_URL:-http://engine:8000}"
+      NODE_ENV: "production"
+    healthcheck:
+      # Asks the Next.js server whether it can serve a request. Deliberately NOT a page and not a
+      # proxy to the engine: `/` renders live engine data, so a healthcheck pointed at it would mark
+      # this container unhealthy — and have it restarted — whenever the engine restarted.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
       retries: 3
     restart: unless-stopped
 

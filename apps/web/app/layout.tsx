@@ -1,15 +1,35 @@
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import type { Metadata } from "next"
+import { Geist_Mono, Inter } from "next/font/google"
 
 import "@workspace/ui/globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/utils"
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'})
+import { AppShell } from "@/components/layout/app-shell"
+import { ThemeProvider } from "@/components/theme-provider"
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
+
+/**
+ * The default tab title and the template every screen's own title fills in.
+ *
+ * Without this the root had no metadata at all, so the dashboard's tab carried whatever Next
+ * inferred. `%s` keeps each screen's German title first — a reviewer with four tabs open needs the
+ * screen name before the product name.
+ */
+export const metadata: Metadata = {
+  title: {
+    default: "Govatax — GOÄ-Prüfung",
+    template: "%s · Govatax",
+  },
+  description:
+    "Deterministische GOÄ-Kodierung und Rechnungsprüfung mit nachvollziehbarer Begründung. " +
+    "Interne Anwendung, nur synthetische Daten.",
+}
 
 export default function RootLayout({
   children,
@@ -17,13 +37,18 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
+    // `lang="de"` because every string in this application is German. It was `en`, which makes a
+    // screen reader pronounce "Abrechnungsvorschlag" with English phonemes and tells the browser to
+    // offer the wrong translation and the wrong hyphenation.
     <html
-      lang="en"
+      lang="de"
       suppressHydrationWarning
       className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <AppShell>{children}</AppShell>
+        </ThemeProvider>
       </body>
     </html>
   )

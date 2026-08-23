@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/al
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
 
+import { CopyableHash } from "@/components/common/copyable-hash"
 import { BatchDropzone } from "@/components/padnext/batch-dropzone"
 import { BatchFilesTable } from "@/components/padnext/batch-files-table"
 import { BatchProgress, FailedFilesNotice } from "@/components/padnext/batch-progress"
@@ -118,9 +119,11 @@ function Provenance({ job }: { job: BatchAuditJob }) {
   return (
     <Card>
       <CardContent className="grid grid-cols-2 gap-x-6 gap-y-2 pt-6 text-xs sm:grid-cols-4">
-        <div>
+        <div className="min-w-0">
           <div className="text-muted-foreground">Stapel</div>
-          <div className="font-mono break-all">{job.batch_id}</div>
+          {/* Copyable: this id is how the batch is found again after a reload, via the listing
+              endpoint or GET /api/v1/padnext/batch/{id}. */}
+          <CopyableHash value={job.batch_id} length={32} label="Stapel-ID" />
         </div>
         <div>
           <div className="text-muted-foreground">Dateien</div>
