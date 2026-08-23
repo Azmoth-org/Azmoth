@@ -483,6 +483,12 @@ async def test_the_store_refuses_every_transition_the_lifecycle_forbids(store, c
 
 
 def test_proposals_can_be_listed_and_filtered_by_status(client, manual_case):
+    """The listing is a paginated envelope, not a bare array — see `tests/test_pagination.py`.
+
+    Kept here, in the module that defends the P0 proposal fixes, because the claim it makes is
+    older than pagination: a reviewer must be able to ask for one lifecycle state and get exactly
+    that state back. Only the shape of the reading moved (`body["items"]`).
+    """
     draft = solve_proposal(client, manual_case("case_001_knee"))
     solve_proposal(client, manual_case("case_002_cardiology"))
     client.post(
@@ -492,8 +498,9 @@ def test_proposals_can_be_listed_and_filtered_by_status(client, manual_case):
     drafts = client.get("/api/v1/proposals", params={"status": "DRAFT"}).json()
     approved = client.get("/api/v1/proposals", params={"status": "APPROVED"}).json()
 
-    assert {p["status"] for p in drafts} == {"DRAFT"}
-    assert [p["proposal_id"] for p in approved] == [draft["proposal_id"]]
+    assert {p["status"] for p in drafts["items"]} == {"DRAFT"}
+    assert [p["proposal_id"] for p in approved["items"]] == [draft["proposal_id"]]
+    assert (drafts["total"], approved["total"]) == (1, 1)
 
 
 # ==========================================================================================

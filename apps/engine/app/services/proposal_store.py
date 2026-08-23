@@ -46,7 +46,7 @@ from app.core.canonical import sha256_of
 from app.db.models import AuditEvent, AuditEventType, ProposalRecord, as_utc, utcnow
 from app.db.retry import retry_database
 from app.db.session import Database, get_database
-from app.schemas import Proposal, ProposalStatus, RuleCoverage
+from app.schemas import Proposal, ProposalList, ProposalStatus, RuleCoverage
 from app.schemas.export import ProposalExport
 from app.services.export import build_proposal_export
 
@@ -66,6 +66,15 @@ ANONYMOUS_ACTOR = "anonymous"
 
 #: The actor for events the engine itself causes — a `CREATED` row follows a solve, not a person.
 SYSTEM_ACTOR = "system"
+
+#: Default and maximum page size for `GET /proposals`.
+#:
+#: The ceiling is 100 rather than the 500 the batch listing started with, and it is lower for a
+#: reason that is specific to this table: a listing row is a whole `Proposal`, `solver_result` and
+#: proof trees included, so a page here is one to two orders of magnitude larger per row than a
+#: batch header. `total` travels in the response, so a page never hides how many proposals exist.
+DEFAULT_PROPOSAL_LIST_LIMIT = 50
+MAX_PROPOSAL_LIST_LIMIT = 100
 
 
 class ProposalNotFound(KeyError):
@@ -256,24 +265,83 @@ class ProposalStore:
             return _to_proposal(record)
 
     async def list_proposals(
-        self, *, status: ProposalStatus | None = None, limit: int = 500
-    ) -> list[Proposal]:
-        """The most recent proposals, oldest-first, optionally in one status.
+        self,
+        *,
+        status: ProposalStatus | None = None,
+        case_id: str | None = None,
+        limit: int = DEFAULT_PROPOSAL_LIST_LIMIT,
+        offset: int = 0,
+    ) -> ProposalList:
+        """One page of proposals, newest first, with the filtered total beside it.
 
-        The ordering is the in-memory store's, preserved on purpose: it returned insertion order and
-        dropped its oldest entry past 512, so "the newest `limit`, in ascending order" is what a
-        client already sees. The newest are selected and *then* re-sorted ascending — selecting the
-        oldest 500 of a table that only grows would show a durable store's first week forever.
+        **The order is now descending, and that is a change.** This method used to select the newest
+        `limit` rows and re-sort them ascending, to reproduce what the in-memory store returned.
+        That reasoning does not survive paging: with `offset` in the picture, ascending-within-page
+        means page 0 runs old→new, page 1 runs old→new over *older* rows, and the sequence a caller
+        reads by walking the pages is not sorted at all. A paged listing needs one global order, and
+        newest-first is both the useful one for a review queue and the one `GET /padnext/batch`
+        already serves.
+
+        `created_at DESC` with `id DESC` as the tie-break. The tie-break is load-bearing rather than
+        decorative: `created_at` comes from the application clock (`utcnow`), two proposals written
+        in the same microsecond are possible, and an order that could differ between two reads of
+        the same rows would make paging skip or repeat one.
+
+        `total` counts everything matching the filters, not the page — the same statement minus the
+        window — so `status=DRAFT` reports the whole backlog and not how much of it fitted.
+
+        `case_id` matches **exactly**. A substring search is what a filter box suggests, and it
+        would be the wrong trade here: `ix_proposals_case_id` is a plain B-tree, `LIKE '%x%'` cannot
+        use it, and making it usable means a trigram index — a schema change, for a column that
+        holds the caller's own opaque handle for an encounter rather than prose anybody skims. An
+        empty or whitespace-only value is treated as no filter, so a cleared input box does not
+        become a search for the empty string.
+
+        Two statements, one session, no N+1: the page is a single `SELECT` and `_to_proposal` reads
+        only columns of the row it was handed. `ProposalRecord.events` is lazily loaded and never
+        touched here, which is what keeps a page of fifty from also reading fifty audit logs.
         """
-        statement = select(ProposalRecord).order_by(
-            ProposalRecord.created_at.desc(), ProposalRecord.id.desc()
-        )
+        limit = max(1, min(limit, MAX_PROPOSAL_LIST_LIMIT))
+        offset = max(0, offset)
+
+        filters = []
         if status is not None:
-            statement = statement.where(ProposalRecord.status == str(status))
+            filters.append(ProposalRecord.status == str(status))
+        if case_id is not None and case_id.strip():
+            filters.append(ProposalRecord.case_id == case_id.strip())
 
         async with self.database.session() as session:
-            records = (await session.execute(statement.limit(limit))).scalars().all()
-            return [_to_proposal(record) for record in reversed(records)]
+            total = int(
+                (
+                    await session.execute(
+                        select(func.count()).select_from(ProposalRecord).where(*filters)
+                    )
+                ).scalar_one()
+            )
+
+            records = (
+                (
+                    await session.execute(
+                        select(ProposalRecord)
+                        .where(*filters)
+                        .order_by(
+                            ProposalRecord.created_at.desc(),
+                            ProposalRecord.id.desc(),
+                        )
+                        .limit(limit)
+                        .offset(offset)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+
+            return ProposalList(
+                items=[_to_proposal(record) for record in records],
+                total=total,
+                limit=limit,
+                offset=offset,
+            )
 
     async def audit_events(self, proposal_id: str) -> list[dict[str, Any]]:
         """The append-only log for one proposal, oldest first.
@@ -313,10 +381,20 @@ class ProposalStore:
             for event in events
         ]
 
-    async def count(self, *, status: ProposalStatus | None = None) -> int:
+    async def count(
+        self, *, status: ProposalStatus | None = None, case_id: str | None = None
+    ) -> int:
+        """How many proposals match, ignoring any page. The same filters `list_proposals` applies.
+
+        Kept as a public method even though the listing now reports its own `total`: it is what a
+        health check and the suite use to assert on a table without materialising a page of whole
+        solver results.
+        """
         statement = select(func.count()).select_from(ProposalRecord)
         if status is not None:
             statement = statement.where(ProposalRecord.status == str(status))
+        if case_id is not None and case_id.strip():
+            statement = statement.where(ProposalRecord.case_id == case_id.strip())
         async with self.database.session() as session:
             return int((await session.execute(statement)).scalar_one())
 
@@ -539,11 +617,14 @@ class ProposalStore:
 __all__ = [
     "ALLOWED",
     "ANONYMOUS_ACTOR",
+    "DEFAULT_PROPOSAL_LIST_LIMIT",
     "EVENT_FOR_STATUS",
+    "MAX_PROPOSAL_LIST_LIMIT",
     "SYSTEM_ACTOR",
     "IllegalTransition",
     "IllegalTransitionError",
     "ProposalExport",
+    "ProposalList",
     "ProposalNotFound",
     "ProposalStore",
     "input_hash_of",

@@ -72,14 +72,14 @@ Interactive docs at <http://localhost:8000/docs>.
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | engine availability, versions, cache state, solver timeout |
 | `POST` | `/api/v1/solve` | clinical entities → a **DRAFT** proposal with a receipt hash |
-| `GET` | `/api/v1/proposals` | list, optionally filtered by status |
+| `GET` | `/api/v1/proposals` | a page of proposals: `?status=&case_id=&limit=&offset=` → `{items, total, limit, offset}` |
 | `GET` | `/api/v1/proposals/{id}` | one proposal |
 | `POST` | `/api/v1/proposals/{id}/approve` | the human approval boundary; `approved_by` required |
 | `POST` | `/api/v1/proposals/{id}/reject` | terminal, with a reason |
 | `POST` | `/api/v1/proposals/{id}/export` | reachable only from `APPROVED` |
 | `POST` | `/api/v1/padnext/audit` | audit a `.padx` container or `*_padx.xml` payload |
 | `POST` | `/api/v1/padnext/batch` | audit many deliveries; `202` with a handle to poll |
-| `GET` | `/api/v1/padnext/batch` | every batch, newest first — headers and roll-ups, no files |
+| `GET` | `/api/v1/padnext/batch` | a page of batches, newest first: `?status=&created_after=&limit=&offset=` → `{jobs, total, limit, offset}` — headers and roll-ups, no files |
 | `GET` | `/api/v1/padnext/batch/{id}` | one batch: progress, then the roll-up and every file's report |
 | `POST` | `/api/v1/padnext/batch/{id}/export` | a completed batch as a ZIP of CSVs |
 | `GET` | `/api/v1/rules/coverage` | how much of the rule set is actually enforced |

@@ -3089,6 +3089,36 @@
         "title": "ProposalExport",
         "type": "object"
       },
+      "ProposalList": {
+        "additionalProperties": false,
+        "description": "A page of proposals, newest first, and how many there are in total.\n\nThis replaced a bare JSON array, and the reason is `total`. A listing that returned only what\nit was asked for could not tell a reviewer whether \"50 Entwürfe\" means fifty or the first fifty\nof nine hundred — and the one thing a review queue has to be able to say is how much is still\nwaiting. `total` is therefore the count of everything matching the *filters*, not the page: with\n`status=DRAFT` it is the whole backlog, and it is what a \"1–50 von 214\" header reads.\n\nSame shape and same reasoning as `BatchAuditJobList`, with one deliberate difference: the field\nis `items`, not `proposals`. The batch listing shipped its rows as `jobs` before pagination\nexisted here and renaming it would break a document already committed to\n`packages/contracts/`, so the two are not spelled the same. New envelopes use `items`.\n\nRows are the full `Proposal`, not a reduced summary. That is a cost — every row carries its\nwhole `solver_result` — and it is paid on purpose: the flattened rule-coverage counts exist so\nthat a client *cannot* render a proposal without having seen them, and a listing model that\ndropped them would be the one place in the API where a draft appears without its coverage\ncaveat. The `limit` ceiling of 100 is what bounds the payload instead.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Proposal"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "ProposalList",
+        "type": "object"
+      },
       "ProposalStatus": {
         "enum": [
           "DRAFT",
@@ -3917,29 +3947,68 @@
     },
     "/api/v1/padnext/batch": {
       "get": {
-        "description": "Every batch this database holds, newest first, as headers without their files.\n\nThis is what makes a durable batch reachable again. A `batch_id` is issued once and the browser\nholds it in memory, so before this endpoint existed a page reload orphaned a finished batch —\nthe roll-up was still in Postgres and nothing could ask for it. It is also where an operator\nsees a batch that was `FAILED` by the startup recovery, and reads why in `error_message`.\n\nRows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every\ndelivery's full audit report would be megabytes to render a table. Open one with\n`GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.\n\nDeclared before `/batch/{batch_id}` for readability only — the two paths are distinct templates\nand neither shadows the other.",
+        "description": "A page of the batches this database holds, newest first, as headers without their files.\n\nThis is what makes a durable batch reachable again. A `batch_id` is issued once and the browser\nholds it in memory, so before this endpoint existed a page reload orphaned a finished batch —\nthe roll-up was still in Postgres and nothing could ask for it. It is also where an operator\nsees a batch that was `FAILED` by the startup recovery, and reads why in `error_message`.\n\nRows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every\ndelivery's full audit report would be megabytes to render a table. Open one with\n`GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.\n\n`total` is recounted under `status` and `created_after`, so it says how many batches match and\nnever how many rows the table happens to hold. The rows themselves stay in `jobs` — not `items`,\nwhich is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one\nshipped first and renaming a field in a contract already committed to `packages/contracts/`\nwould break a client to buy symmetry.\n\nThe page size ceiling is now 100, down from 500; `limit=200` is a `422` where it used to be\nserved. See `MAX_BATCH_LIST_LIMIT` for why.\n\nDeclared before `/batch/{batch_id}` for readability only — the two paths are distinct templates\nand neither shadows the other.",
         "operationId": "padnext_batch_list_api_v1_padnext_batch_get",
         "parameters": [
           {
-            "description": "How many batches to return. `total` always reports the whole table.",
+            "description": "Only batches in this state. Omit for every state. `PROCESSING` is what is still running; `FAILED` is what broke, including anything the startup recovery closed.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/BatchJobStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only batches in this state. Omit for every state. `PROCESSING` is what is still running; `FAILED` is what broke, including anything the startup recovery closed.",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Only batches created at or after this instant — **inclusive**, so a batch stamped exactly here is returned. ISO-8601; a value without an offset is read as UTC.",
+            "in": "query",
+            "name": "created_after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only batches created at or after this instant — **inclusive**, so a batch stamped exactly here is returned. ISO-8601; a value without an offset is read as UTC.",
+              "title": "Created After"
+            }
+          },
+          {
+            "description": "How many batches to return. `total` always reports every match.",
             "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
               "default": 50,
-              "description": "How many batches to return. `total` always reports the whole table.",
-              "maximum": 500,
+              "description": "How many batches to return. `total` always reports every match.",
+              "maximum": 100,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
             }
           },
           {
+            "description": "How many matches to skip. 0 is the newest.",
             "in": "query",
             "name": "offset",
             "required": false,
             "schema": {
               "default": 0,
+              "description": "How many matches to skip. 0 is the newest.",
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
@@ -4146,9 +4215,11 @@
     },
     "/api/v1/proposals": {
       "get": {
+        "description": "One page of proposals, newest first, with the count of every match beside it.\n\n**This returns an envelope, where it previously returned a bare JSON array.** A client reading\nthe old shape sees `items`. The change is not cosmetic: without `total` a caller cannot tell\nfifty proposals from the first fifty of nine hundred, and a review queue whose size it cannot\nstate is not a queue. `total` counts everything matching `status` and `case_id`, not the page.\n\nUnpaginated is no longer an option, and that is deliberate rather than an oversight. The old\ncall took the newest 500 rows unconditionally and each of those carries a whole `solver_result`;\non a table that only grows, \"all records\" is a response size that depends on how long the\nservice has been running. Omitting `limit` gets the newest 50 — a default, not a cap on what is\nreachable, since `offset` walks the rest.\n\nOrdered `created_at DESC`, tie-broken on the surrogate key so two proposals stamped in the same\nmicrosecond cannot swap places between two reads and make paging skip or repeat one. Note that\nthis reverses what the endpoint used to return: it served the newest page *ascending*, which\ncannot be paged coherently. See `app.services.proposal_store.list_proposals`.",
         "operationId": "list_proposals_api_v1_proposals_get",
         "parameters": [
           {
+            "description": "Only proposals in this lifecycle state. Omit for every state. `DRAFT` is the review queue: nobody has taken responsibility for those yet.",
             "in": "query",
             "name": "status",
             "required": false,
@@ -4161,7 +4232,53 @@
                   "type": "null"
                 }
               ],
+              "description": "Only proposals in this lifecycle state. Omit for every state. `DRAFT` is the review queue: nobody has taken responsibility for those yet.",
               "title": "Status"
+            }
+          },
+          {
+            "description": "Only proposals carrying exactly this `case_id` — the caller's own identifier for the encounter, matched in full rather than as a substring. Blank is the same as omitting it.",
+            "in": "query",
+            "name": "case_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only proposals carrying exactly this `case_id` — the caller's own identifier for the encounter, matched in full rather than as a substring. Blank is the same as omitting it.",
+              "title": "Case Id"
+            }
+          },
+          {
+            "description": "How many proposals to return. `total` always reports every match.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "How many proposals to return. `total` always reports every match.",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "How many matches to skip. 0 is the newest.",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "How many matches to skip. 0 is the newest.",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
             }
           }
         ],
@@ -4170,11 +4287,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/Proposal"
-                  },
-                  "title": "Response List Proposals Api V1 Proposals Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/ProposalList"
                 }
               }
             },

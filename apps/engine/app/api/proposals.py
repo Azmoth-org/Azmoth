@@ -33,11 +33,17 @@ from app.schemas import (
     ExportRequest,
     Proposal,
     ProposalExport,
+    ProposalList,
     ProposalStatus,
     RejectionRequest,
 )
 from app.services.export import attachment_headers, proposal_export_filename
-from app.services.proposal_store import IllegalTransitionError, ProposalNotFound
+from app.services.proposal_store import (
+    DEFAULT_PROPOSAL_LIST_LIMIT,
+    MAX_PROPOSAL_LIST_LIMIT,
+    IllegalTransitionError,
+    ProposalNotFound,
+)
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 
@@ -67,9 +73,52 @@ def _conflict(exc: IllegalTransitionError) -> HTTPException:
     )
 
 
-@router.get("", response_model=list[Proposal])
-async def list_proposals(status: ProposalStatus | None = Query(default=None)) -> list[Proposal]:
-    return await proposals().list_proposals(status=status)
+@router.get("", response_model=ProposalList)
+async def list_proposals(
+    status: ProposalStatus | None = Query(
+        default=None,
+        description=(
+            "Only proposals in this lifecycle state. Omit for every state. `DRAFT` is the review "
+            "queue: nobody has taken responsibility for those yet."
+        ),
+    ),
+    case_id: str | None = Query(
+        default=None,
+        description=(
+            "Only proposals carrying exactly this `case_id` — the caller's own identifier for the "
+            "encounter, matched in full rather than as a substring. Blank is the same as omitting "
+            "it."
+        ),
+    ),
+    limit: int = Query(
+        default=DEFAULT_PROPOSAL_LIST_LIMIT,
+        ge=1,
+        le=MAX_PROPOSAL_LIST_LIMIT,
+        description="How many proposals to return. `total` always reports every match.",
+    ),
+    offset: int = Query(default=0, ge=0, description="How many matches to skip. 0 is the newest."),
+) -> ProposalList:
+    """One page of proposals, newest first, with the count of every match beside it.
+
+    **This returns an envelope, where it previously returned a bare JSON array.** A client reading
+    the old shape sees `items`. The change is not cosmetic: without `total` a caller cannot tell
+    fifty proposals from the first fifty of nine hundred, and a review queue whose size it cannot
+    state is not a queue. `total` counts everything matching `status` and `case_id`, not the page.
+
+    Unpaginated is no longer an option, and that is deliberate rather than an oversight. The old
+    call took the newest 500 rows unconditionally and each of those carries a whole `solver_result`;
+    on a table that only grows, "all records" is a response size that depends on how long the
+    service has been running. Omitting `limit` gets the newest 50 — a default, not a cap on what is
+    reachable, since `offset` walks the rest.
+
+    Ordered `created_at DESC`, tie-broken on the surrogate key so two proposals stamped in the same
+    microsecond cannot swap places between two reads and make paging skip or repeat one. Note that
+    this reverses what the endpoint used to return: it served the newest page *ascending*, which
+    cannot be paged coherently. See `app.services.proposal_store.list_proposals`.
+    """
+    return await proposals().list_proposals(
+        status=status, case_id=case_id, limit=limit, offset=offset
+    )
 
 
 @router.get("/{proposal_id}", response_model=Proposal)

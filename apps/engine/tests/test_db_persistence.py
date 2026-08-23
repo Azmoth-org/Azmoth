@@ -235,7 +235,14 @@ async def test_two_databases_do_not_see_each_others_rows(tmp_path):
 # ==========================================================================================
 
 
-async def test_listing_filters_by_status_and_keeps_insertion_order(store):
+async def test_listing_filters_by_status_and_returns_newest_first(store):
+    """Descending, and that is a change this test used to assert the other way round.
+
+    It previously pinned ascending order, to reproduce what the in-memory dictionary returned. That
+    reasoning did not survive `offset`: ascending-within-page over descending pages means the
+    sequence a caller reads by walking the pages is not sorted at all. One global order, newest
+    first — the same one `GET /padnext/batch` already serves.
+    """
     base = datetime(2026, 1, 1, tzinfo=timezone.utc)
     first, second, third = [
         await store.create_proposal(make_proposal(created_at=base + timedelta(minutes=i)))
@@ -248,21 +255,23 @@ async def test_listing_filters_by_status_and_keeps_insertion_order(store):
     drafts = await store.list_proposals(status=ProposalStatus.DRAFT)
     approved = await store.list_proposals(status=ProposalStatus.APPROVED)
 
-    assert [p.proposal_id for p in everything] == [
-        first.proposal_id,
-        second.proposal_id,
+    assert [p.proposal_id for p in everything.items] == [
         third.proposal_id,
+        second.proposal_id,
+        first.proposal_id,
     ]
-    assert [p.proposal_id for p in drafts] == [first.proposal_id, third.proposal_id]
-    assert [p.proposal_id for p in approved] == [second.proposal_id]
+    assert [p.proposal_id for p in drafts.items] == [third.proposal_id, first.proposal_id]
+    assert [p.proposal_id for p in approved.items] == [second.proposal_id]
+
+    # `total` is the filtered match count, not the page and not the table.
+    assert (everything.total, drafts.total, approved.total) == (3, 2, 1)
 
 
 async def test_the_limit_keeps_the_newest_not_the_oldest(store):
     """A durable store only grows, so a capped list must show the recent end of it.
 
-    The in-memory store evicted its oldest entry past 512 and returned insertion order, so "newest
-    N, ascending" reproduces what a client already saw — and "oldest N" would have shown a
-    production database its first week, forever.
+    "Oldest N" would have shown a production database its first week, forever. The order is now
+    descending as well as newest-first, so the newest row leads the page rather than closing it.
     """
     base = datetime(2026, 1, 1, tzinfo=timezone.utc)
     created = [
@@ -272,10 +281,11 @@ async def test_the_limit_keeps_the_newest_not_the_oldest(store):
 
     newest_two = await store.list_proposals(limit=2)
 
-    assert [p.proposal_id for p in newest_two] == [
-        created[3].proposal_id,
+    assert [p.proposal_id for p in newest_two.items] == [
         created[4].proposal_id,
-    ], "ascending order, but the newest two"
+        created[3].proposal_id,
+    ], "descending order, and the newest two"
+    assert newest_two.total == 5, "the page is two; the table is five"
 
 
 # ==========================================================================================
