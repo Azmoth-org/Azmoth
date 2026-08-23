@@ -191,6 +191,59 @@ class BatchAuditJob(BaseModel):
     files: list[BatchFileResult] = Field(default_factory=list)
 
 
+class BatchAuditJobSummary(BaseModel):
+    """One batch as a listing row: the header, without the files.
+
+    Deliberately not `BatchAuditJob` with `files` left empty. A listing of fifty batches, each
+    carrying every delivery's full `PadnextAuditReport`, is megabytes of JSON to render a table of
+    fifty rows — and a client handed a `BatchAuditJob` with an empty `files` list could not tell
+    "this batch has no files" from "this response does not carry them". A separate model makes the
+    absence structural: there is no `files` field to misread.
+
+    The per-file counts are still here, because "3 von 10 geprüft" is the one thing a listing has to
+    be able to say, and they are computed from `batch_files` rather than read out of
+    `aggregate_summary` — which is null while a job runs and on a job that failed, exactly the two
+    cases where a reader most wants to know how far it got.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    batch_id: str
+    status: BatchJobStatus
+    created_at: datetime
+    completed_at: datetime | None = None
+
+    file_count: int = 0
+    processed_file_count: int = 0
+    completed_file_count: int = 0
+    failed_file_count: int = 0
+
+    #: Why the batch itself failed. On a batch reaped after a restart this carries that reason, so a
+    #: listing is where an operator finds out a run was interrupted rather than having to open it.
+    error_message: str | None = None
+
+    #: The stored roll-up, present only on a `COMPLETED` batch. Carried in the listing because it is
+    #: what makes the list useful — a reader scanning for the batch with the largest
+    #: `confirmed_wrong_eur` should not have to open each one.
+    aggregate_summary: BatchAggregateSummary | None = None
+
+
+class BatchAuditJobList(BaseModel):
+    """A page of batches, newest first, and how many there are in total.
+
+    `total` is the whole table, not the page. A listing that only reported what it returned would
+    let a `limit` silently become "how many batches exist" — the same reason
+    `RuleReviewQueue.pending_rule_count` reports the real backlog rather than the page.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    jobs: list[BatchAuditJobSummary] = Field(default_factory=list)
+    total: int = 0
+    limit: int = 0
+    offset: int = 0
+
+
 class BatchAuditAccepted(BaseModel):
     """The `202` body: the handle to poll, and nothing that is not known yet.
 
@@ -211,6 +264,8 @@ __all__ = [
     "BatchAggregateSummary",
     "BatchAuditAccepted",
     "BatchAuditJob",
+    "BatchAuditJobList",
+    "BatchAuditJobSummary",
     "BatchFileResult",
     "BatchFileStatus",
     "BatchJobStatus",

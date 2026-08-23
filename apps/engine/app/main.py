@@ -1,6 +1,6 @@
 """FastAPI surface.
 
-Five routers, one prefix (`/api/v1`), no UI. The engine serves an API and nothing else: the POC's
+Six routers, one prefix (`/api/v1`), no UI. The engine serves an API and nothing else: the POC's
 static pages, its demo endpoints and its experimental free-text path are deliberately absent — see
 `docs/migration/MIGRATION_PLAN.md` §2.
 
@@ -22,7 +22,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api import catalog, health, padnext, proposals, rules, solve
-from app.api.deps import pipeline, reset_async
+from app.api.deps import batches, pipeline, reset_async
 from app.config import get_settings
 from app.core.limits import RequestSizeLimitMiddleware
 from app.db.session import get_database, init_models
@@ -64,6 +64,20 @@ async def lifespan(_app: FastAPI):
     from app.services.rule_reviews import refresh_pipeline_rules
 
     await refresh_pipeline_rules(p)
+
+    # Close batches a previous process abandoned. Here — after the schema exists and before the
+    # server accepts anything — because that is the only moment at which a `PENDING` or `PROCESSING`
+    # batch row is guaranteed not to belong to this process, and is therefore guaranteed to be a
+    # leftover of one that died. A batch is audited by a `BackgroundTask` that does not survive its
+    # process, so without this the row stays in limbo forever and the screen polling it can only
+    # time out. See `BatchAuditService.reap_interrupted_batches` for why this assumes one worker.
+    if settings.reap_interrupted_batches:
+        await batches().reap_interrupted_batches()
+    else:
+        log.info(
+            "batch recovery disabled (REAP_INTERRUPTED_BATCHES=false) — an interrupted batch will "
+            "stay PENDING/PROCESSING until something else closes it"
+        )
 
     if not p.souffle.available():
         log.error(

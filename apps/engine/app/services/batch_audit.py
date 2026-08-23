@@ -28,11 +28,16 @@ summing it across a year of invoices manufactures a six-figure accusation agains
 may be billing correctly. `BatchAggregateSummary` keeps the split and re-checks the identity.
 
 **Known limitation: `BackgroundTasks` is not durable.** A job is processed in the same process that
-accepted it, so a restart mid-batch leaves a row stuck in `PROCESSING` with some files still
-`PENDING`. That is the price of the MVP's no-Celery, no-Redis constraint and it is stated rather
-than hidden: `GET` reports the real state, the frontend stops polling instead of spinning forever,
-and re-uploading the files produces a fresh batch. A durable queue is the fix when one is wanted;
-nothing here pretends to be one.
+accepted it, so a restart mid-batch abandons the run: the row is left at `PROCESSING`, or at
+`PENDING` if the process died before the task's first write, with some files still `PENDING`. That
+is the price of the MVP's no-Celery, no-Redis constraint and it is stated rather than hidden.
+
+What is *not* left to the reader is the limbo that used to follow. `reap_interrupted_batches` runs
+from the lifespan, before the server accepts a request, and closes every interruptible row as
+`FAILED` with `error_message = "Interrupted by server restart"` — so an abandoned run is a batch
+that visibly failed and says why, rather than one that appears to still be running. Re-uploading the
+files produces a fresh batch. A durable queue is still the real fix when one is wanted; nothing here
+pretends to be one, and the reaper's own single-process assumption is documented on the method.
 """
 
 from __future__ import annotations
@@ -43,7 +48,7 @@ from collections.abc import Iterable, Sequence
 from decimal import Decimal
 from typing import Any, Callable
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 from starlette.concurrency import run_in_threadpool
 
@@ -54,6 +59,8 @@ from app.schemas.batch import (
     BatchAggregateSummary,
     BatchAuditAccepted,
     BatchAuditJob,
+    BatchAuditJobList,
+    BatchAuditJobSummary,
     BatchFileResult,
     BatchFileStatus,
     BatchJobStatus,
@@ -68,6 +75,26 @@ log = logging.getLogger(__name__)
 BATCH_ID_HEX_DIGITS = 16
 
 ZERO = Decimal("0.00")
+
+#: Default and maximum page size for `GET /padnext/batch`.
+#:
+#: A ceiling for the same reason the rule review queue has one: a batch row carries its whole
+#: `aggregate_summary`, so an unbounded listing grows with the table. `total` travels in the
+#: response, so a page never hides how many batches exist.
+DEFAULT_BATCH_LIST_LIMIT = 50
+MAX_BATCH_LIST_LIMIT = 500
+
+#: The statuses a batch cannot still legitimately be in once the process that owned it is gone.
+#:
+#: `PENDING` belongs here as well as `PROCESSING`. A job is written `PENDING` by `create_batch` and
+#: moved to `PROCESSING` by the background task, so a process that died between the `202` and the
+#: task's first write leaves a `PENDING` row that nothing will ever pick up — the same permanent
+#: limbo as an interrupted `PROCESSING` row, reached one step earlier.
+INTERRUPTIBLE_STATUSES = (str(BatchJobStatus.PENDING), str(BatchJobStatus.PROCESSING))
+
+#: What a reaped batch says happened to it. Written to `batch_jobs.error_message`, which the
+#: listing and the detail endpoint both return, and which the batch screen already renders.
+INTERRUPTED_MESSAGE = "Interrupted by server restart"
 
 
 def new_batch_id() -> str:
@@ -356,6 +383,163 @@ class BatchAuditService:
                 files=files,
             )
 
+    async def list_batches(
+        self, *, limit: int = DEFAULT_BATCH_LIST_LIMIT, offset: int = 0
+    ) -> BatchAuditJobList:
+        """Batches newest first, as headers without their files.
+
+        The per-file counts come from one grouped query over `batch_files` rather than from
+        `selectinload`ing every file of every listed batch. That is not a micro-optimisation: the
+        rows being avoided each hold a whole `PadnextAuditReport` in a JSON column, so loading a
+        page of fifty batches the obvious way would read every audit report in the table to print
+        fifty numbers.
+
+        Ordered by `created_at DESC` with `batch_id` as a tie-break. The tie-break is not
+        decoration — `created_at` is stamped by the application clock, two batches accepted in the
+        same microsecond are possible, and a listing whose order changed between two reads of the
+        same data would make paging skip or repeat a row.
+        """
+        limit = max(1, min(limit, MAX_BATCH_LIST_LIMIT))
+        offset = max(0, offset)
+
+        async with self.database.session() as session:
+            total = (
+                await session.execute(select(func.count()).select_from(BatchJobRecord))
+            ).scalar_one()
+
+            page = (
+                (
+                    await session.execute(
+                        select(BatchJobRecord)
+                        .order_by(
+                            BatchJobRecord.created_at.desc(),
+                            BatchJobRecord.batch_id.desc(),
+                        )
+                        .limit(limit)
+                        .offset(offset)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+
+            #: `{job.id: {file_status: count}}` for the listed page only.
+            counts: dict[uuid.UUID, dict[str, int]] = {}
+            if page:
+                grouped = await session.execute(
+                    select(
+                        BatchFileRecord.batch_job_id,
+                        BatchFileRecord.status,
+                        func.count(),
+                    )
+                    .where(BatchFileRecord.batch_job_id.in_([job.id for job in page]))
+                    .group_by(BatchFileRecord.batch_job_id, BatchFileRecord.status)
+                )
+                for job_id, file_status, count in grouped:
+                    counts.setdefault(job_id, {})[file_status] = count
+
+            jobs: list[BatchAuditJobSummary] = []
+            for job in page:
+                by_status = counts.get(job.id, {})
+                completed = by_status.get(str(BatchFileStatus.COMPLETED), 0)
+                failed = by_status.get(str(BatchFileStatus.FAILED), 0)
+                jobs.append(
+                    BatchAuditJobSummary(
+                        batch_id=job.batch_id,
+                        status=BatchJobStatus(job.status),
+                        created_at=as_utc(job.created_at),
+                        completed_at=as_utc(job.completed_at),
+                        file_count=sum(by_status.values()),
+                        processed_file_count=completed + failed,
+                        completed_file_count=completed,
+                        failed_file_count=failed,
+                        error_message=job.error_message,
+                        aggregate_summary=(
+                            BatchAggregateSummary.model_validate(job.aggregate_summary_json)
+                            if job.aggregate_summary_json is not None
+                            else None
+                        ),
+                    )
+                )
+
+            return BatchAuditJobList(jobs=jobs, total=total, limit=limit, offset=offset)
+
+    # -- recovery --------------------------------------------------------------------------
+
+    async def reap_interrupted_batches(self, *, message: str = INTERRUPTED_MESSAGE) -> list[str]:
+        """Fail every batch a previous process left mid-flight. Returns the ids it closed.
+
+        `BackgroundTasks` is not durable: a batch is processed in the process that accepted it, so a
+        restart mid-run leaves `batch_jobs.status` at `PROCESSING` (or `PENDING`, if the process died
+        before the task's first write) with no task alive to move it on. Nothing in the request path
+        can notice — the row is a perfectly valid record of a run that will never continue — so the
+        browser polls until `POLL_TIMEOUT_MS` and the row stays in limbo forever.
+
+        This is the operator half of that story. It runs once from the lifespan, **before** the
+        server accepts a request, which is what makes it safe: at that moment no batch can belong to
+        this process, so every interruptible row is by construction a leftover.
+
+        **The files are deliberately left `PENDING`.** Marking them `FAILED` would claim they were
+        audited and rejected, which is the one thing that did not happen. `PENDING` under a `FAILED`
+        job reads correctly — "we never got to this delivery" — and it keeps
+        `processed_file_count` honest about how far the interrupted run had got.
+
+        **No `aggregate_summary` is written.** The same refusal `_fail_quietly` makes: a roll-up over
+        the files that happened to land before the process died is a number nobody can identify the
+        moment of, and it is worse than none.
+
+        **The honest limit: this assumes one process owns the table.** Under `--workers > 1`, or a
+        rolling deploy where a new container starts while the old one is still draining, a starting
+        process would reap a batch that is genuinely running on a sibling — turning a live job into a
+        `FAILED` one. It is the same single-process assumption `refresh_pipeline_rules` already
+        documents, and the same fix applies (a durable queue, or a shared lock), which is the Redis
+        this MVP is not allowed to add. Set `REAP_INTERRUPTED_BATCHES=false` on a multi-worker
+        deployment and reap from a single migration/admin step instead.
+        """
+        now = utcnow()
+
+        async with self.database.session() as session:
+            stranded = (
+                (
+                    await session.execute(
+                        select(BatchJobRecord).where(
+                            BatchJobRecord.status.in_(INTERRUPTIBLE_STATUSES)
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+
+            reaped: list[str] = []
+            for job in stranded:
+                previous = job.status
+                job.status = str(BatchJobStatus.FAILED)
+                job.error_message = message
+                job.completed_at = now
+                # Belt and braces: `BatchAuditJob` documents that a FAILED batch carries no
+                # roll-up, and `_complete` writes the summary and the COMPLETED status in one
+                # transaction — so a PROCESSING row with a stored summary should not exist. If one
+                # somehow does, clearing it is right: a set of totals attached to a run that was
+                # abandoned is a number somebody could reconcile against, which is the one thing
+                # this whole feature refuses to produce.
+                job.aggregate_summary_json = None
+                reaped.append(job.batch_id)
+                log.warning(
+                    "batch %s was %s at startup and cannot be resumed — marked FAILED (%s)",
+                    job.batch_id,
+                    previous,
+                    message,
+                )
+
+        if reaped:
+            log.warning(
+                "reaped %d interrupted batch(es): %s. Re-upload the files to audit them.",
+                len(reaped),
+                ", ".join(reaped),
+            )
+        return reaped
+
     # -- process ---------------------------------------------------------------------------
 
     async def process_batch(self, batch_id: str, payloads: Iterable[tuple[uuid.UUID, Upload]]) -> None:
@@ -532,6 +716,10 @@ class BatchAuditService:
 
 
 __all__ = [
+    "DEFAULT_BATCH_LIST_LIMIT",
+    "INTERRUPTED_MESSAGE",
+    "INTERRUPTIBLE_STATUSES",
+    "MAX_BATCH_LIST_LIMIT",
     "BatchAuditService",
     "BatchNotExportable",
     "BatchNotFound",
