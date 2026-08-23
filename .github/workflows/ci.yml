@@ -214,15 +214,25 @@ jobs:
           echo
 
           # The legal artefacts: the solver programs, and the versioned official data they run on.
+          #
+          # Narrowed to data/catalogs/goae_current/ rather than all of data/catalogs/. That
+          # directory holds the real official GOÄ snapshot and is the only catalog edition the
+          # engine bills with (DEFAULT_CATALOG_VERSION); the era directories beside it are small
+          # synthetic fixtures for the temporal-routing tests, carry "synthetic": true, and cannot
+          # move a golden receipt because no golden case loads them. Gating on them would demand
+          # golden-snapshot evidence for a change that provably has no billing behaviour to
+          # re-examine — and a gate that fires when nothing happened is a gate people learn to
+          # bypass. Adding a *real* edition still trips this, because its directory is not a
+          # fixture and someone must look at what it prices. See data/catalogs/README.md.
           legal=$(printf '%s\n' "$changed" \
-            | grep -E '^(logic/asp/|logic/datalog/|data/catalogs/|data/rules/)' || true)
+            | grep -E '^(logic/asp/|logic/datalog/|data/catalogs/goae_current/|data/rules/)' || true)
 
           # The evidence that billing behaviour was re-examined.
           evidence=$(printf '%s\n' "$changed" \
             | grep -E '^logic/tests/(golden|cases)/' || true)
 
           if [ -z "$legal" ]; then
-            echo "No changes under logic/asp/, logic/datalog/, data/catalogs/ or data/rules/."
+            echo "No changes under logic/asp/, logic/datalog/, data/catalogs/goae_current/ or data/rules/."
             echo "Logic guard: not applicable."
             exit 0
           fi

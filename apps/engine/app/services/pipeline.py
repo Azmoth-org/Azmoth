@@ -76,9 +76,26 @@ class Pipeline:
         catalog: Catalog | None = None,
         rules: RuleStore | None = None,
         cache: ResultCache | None = None,
+        *,
+        catalog_version: str | None = None,
     ) -> None:
+        """`catalog_version` names a catalog edition under `data/catalogs/` — the temporal route.
+
+        A pipeline is bound to one edition for its whole life, which is the point: the catalog
+        feeds the two solvers, the validator and the receipt, and an edition that could change
+        underneath them would make a proposal's identity meaningless. Auditing across eras means
+        one pipeline per era, not one pipeline switching.
+
+        Unknown editions raise `CatalogNotFoundError` here rather than at first solve, so a
+        mis-typed era fails at construction with the list of editions that do exist.
+        """
         self.settings = settings or get_settings()
-        self.catalog = catalog or load_catalog(self.settings.catalog_path)
+        if catalog is not None and catalog_version:
+            raise ValueError(
+                f"Pipeline(): pass either an already-loaded catalog or catalog_version="
+                f"{catalog_version!r}, not both."
+            )
+        self.catalog = catalog or self._load_catalog(catalog_version)
         self.rules = rules or load_rules(
             self.settings.rules_data_dir, policy=self.settings.unverified_rule_policy
         )
@@ -96,7 +113,26 @@ class Pipeline:
         #: see `apply_rule_reviews` for why it must move when one is.
         self._rules_hash = self._csv_rules_hash
 
+    def _load_catalog(self, catalog_version: str | None) -> Catalog:
+        """Route to an edition, or take the configured path when no era was named.
+
+        The unrouted branch stays a path lookup rather than a route through
+        `settings.default_catalog_version` on purpose: `settings.catalog_path` is what every
+        existing caller and the startup version check already use, so the default load reads the
+        same bytes it always did.
+        """
+        if catalog_version:
+            return load_catalog(
+                catalog_version=catalog_version, catalogs_dir=self.settings.catalogs_dir
+            )
+        return load_catalog(self.settings.catalog_path)
+
     # -- identity ---------------------------------------------------------------------------
+
+    @property
+    def catalog_edition(self) -> str:
+        """The edition directory this pipeline is bound to. Not the declared `catalog_version`."""
+        return self.catalog.routed_version
 
     @property
     def rules_hash(self) -> str:

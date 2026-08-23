@@ -1,6 +1,6 @@
 # `apps/engine/tests`
 
-649 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
+754 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
 behaviour the POC did not have. **None was weakened to make the migration pass** — where a
 migrated test failed only because a path moved, the path was fixed; where it asserted on an
 artefact this monorepo does not contain (the POC's static UI), the assertion moved to the contract
@@ -32,7 +32,7 @@ count, or run in the image where the binary is always there.
 
 ```
 $ .venv/bin/python -m pytest -q
-645 passed, 4 skipped in 24.5s    # the 4 skips are the Postgres parametrisations; see below
+754 passed, 4 skipped in 31s      # the 4 skips are the Postgres parametrisations; see below
 ```
 
 ## What each file is for
@@ -50,6 +50,7 @@ $ .venv/bin/python -m pytest -q
 | `test_souffle.py` | 36 | the Datalog layers: specificity, Zielleistung, exclusions, mutual clusters |
 | `test_bridge_and_data.py` | 54 | the deterministic bridge, the catalog loader, the rule store |
 | `test_catalog_snapshot_identity.py` | 24 | **provenance** — that the committed catalog really is the official GOÄ |
+| `test_multi_catalog.py` | 38 | **temporal routing** — one catalog edition per era: the right directory is opened, an unknown one is refused, and two editions cannot share a receipt hash |
 | `test_schema.py` | 44 | the frozen input contract, and that no billing concept leaks into it |
 | `test_api.py` | 31 | the HTTP contract, including that the dropped POC surfaces are gone |
 | `test_api_envelope.py` | 10 | both accepted request shapes, and that tolerating the bare one did not weaken typo detection |

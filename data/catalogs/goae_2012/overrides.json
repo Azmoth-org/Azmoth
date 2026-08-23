@@ -1,0 +1,4 @@
+{
+ "note": "No overrides. The file exists because the loader looks for it beside every catalog; a fixture (goae_2012) has nothing to correct — regenerate it instead.",
+ "overrides": []
+}
