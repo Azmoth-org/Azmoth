@@ -104,7 +104,7 @@ export interface paths {
         };
         /**
          * Padnext Batch List
-         * @description Every batch this database holds, newest first, as headers without their files.
+         * @description A page of the batches this database holds, newest first, as headers without their files.
          *
          *     This is what makes a durable batch reachable again. A `batch_id` is issued once and the browser
          *     holds it in memory, so before this endpoint existed a page reload orphaned a finished batch —
@@ -114,6 +114,15 @@ export interface paths {
          *     Rows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every
          *     delivery's full audit report would be megabytes to render a table. Open one with
          *     `GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.
+         *
+         *     `total` is recounted under `status` and `created_after`, so it says how many batches match and
+         *     never how many rows the table happens to hold. The rows themselves stay in `jobs` — not `items`,
+         *     which is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one
+         *     shipped first and renaming a field in a contract already committed to `packages/contracts/`
+         *     would break a client to buy symmetry.
+         *
+         *     The page size ceiling is now 100, down from 500; `limit=200` is a `422` where it used to be
+         *     served. See `MAX_BATCH_LIST_LIMIT` for why.
          *
          *     Declared before `/batch/{batch_id}` for readability only — the two paths are distinct templates
          *     and neither shadows the other.
@@ -213,7 +222,26 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Proposals */
+        /**
+         * List Proposals
+         * @description One page of proposals, newest first, with the count of every match beside it.
+         *
+         *     **This returns an envelope, where it previously returned a bare JSON array.** A client reading
+         *     the old shape sees `items`. The change is not cosmetic: without `total` a caller cannot tell
+         *     fifty proposals from the first fifty of nine hundred, and a review queue whose size it cannot
+         *     state is not a queue. `total` counts everything matching `status` and `case_id`, not the page.
+         *
+         *     Unpaginated is no longer an option, and that is deliberate rather than an oversight. The old
+         *     call took the newest 500 rows unconditionally and each of those carries a whole `solver_result`;
+         *     on a table that only grows, "all records" is a response size that depends on how long the
+         *     service has been running. Omitting `limit` gets the newest 50 — a default, not a cap on what is
+         *     reachable, since `offset` walks the rest.
+         *
+         *     Ordered `created_at DESC`, tie-broken on the surrogate key so two proposals stamped in the same
+         *     microsecond cannot swap places between two reads and make paging skip or repeat one. Note that
+         *     this reverses what the endpoint used to return: it served the newest page *ascending*, which
+         *     cannot be paged coherently. See `app.services.proposal_store.list_proposals`.
+         */
         get: operations["list_proposals_api_v1_proposals_get"];
         put?: never;
         post?: never;
@@ -2212,6 +2240,46 @@ export interface components {
             warnings?: components["schemas"]["Warning_"][];
         };
         /**
+         * ProposalList
+         * @description A page of proposals, newest first, and how many there are in total.
+         *
+         *     This replaced a bare JSON array, and the reason is `total`. A listing that returned only what
+         *     it was asked for could not tell a reviewer whether "50 Entwürfe" means fifty or the first fifty
+         *     of nine hundred — and the one thing a review queue has to be able to say is how much is still
+         *     waiting. `total` is therefore the count of everything matching the *filters*, not the page: with
+         *     `status=DRAFT` it is the whole backlog, and it is what a "1–50 von 214" header reads.
+         *
+         *     Same shape and same reasoning as `BatchAuditJobList`, with one deliberate difference: the field
+         *     is `items`, not `proposals`. The batch listing shipped its rows as `jobs` before pagination
+         *     existed here and renaming it would break a document already committed to
+         *     `packages/contracts/`, so the two are not spelled the same. New envelopes use `items`.
+         *
+         *     Rows are the full `Proposal`, not a reduced summary. That is a cost — every row carries its
+         *     whole `solver_result` — and it is paid on purpose: the flattened rule-coverage counts exist so
+         *     that a client *cannot* render a proposal without having seen them, and a listing model that
+         *     dropped them would be the one place in the API where a draft appears without its coverage
+         *     caveat. The `limit` ceiling of 100 is what bounds the payload instead.
+         */
+        ProposalList: {
+            /** Items */
+            items?: components["schemas"]["Proposal"][];
+            /**
+             * Limit
+             * @default 0
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /**
          * ProposalStatus
          * @enum {string}
          */
@@ -2770,8 +2838,13 @@ export interface operations {
     padnext_batch_list_api_v1_padnext_batch_get: {
         parameters: {
             query?: {
-                /** @description How many batches to return. `total` always reports the whole table. */
+                /** @description Only batches in this state. Omit for every state. `PROCESSING` is what is still running; `FAILED` is what broke, including anything the startup recovery closed. */
+                status?: components["schemas"]["BatchJobStatus"] | null;
+                /** @description Only batches created at or after this instant — **inclusive**, so a batch stamped exactly here is returned. ISO-8601; a value without an offset is read as UTC. */
+                created_after?: string | null;
+                /** @description How many batches to return. `total` always reports every match. */
                 limit?: number;
+                /** @description How many matches to skip. 0 is the newest. */
                 offset?: number;
             };
             header?: never;
@@ -2941,7 +3014,14 @@ export interface operations {
     list_proposals_api_v1_proposals_get: {
         parameters: {
             query?: {
+                /** @description Only proposals in this lifecycle state. Omit for every state. `DRAFT` is the review queue: nobody has taken responsibility for those yet. */
                 status?: components["schemas"]["ProposalStatus"] | null;
+                /** @description Only proposals carrying exactly this `case_id` — the caller's own identifier for the encounter, matched in full rather than as a substring. Blank is the same as omitting it. */
+                case_id?: string | null;
+                /** @description How many proposals to return. `total` always reports every match. */
+                limit?: number;
+                /** @description How many matches to skip. 0 is the newest. */
+                offset?: number;
             };
             header?: never;
             path?: never;
@@ -2955,7 +3035,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Proposal"][];
+                    "application/json": components["schemas"]["ProposalList"];
                 };
             };
             /** @description See docs/errors.md for the codes. */

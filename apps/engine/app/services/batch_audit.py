@@ -45,6 +45,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Iterable, Sequence
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Callable
 
@@ -81,8 +82,15 @@ ZERO = Decimal("0.00")
 #: A ceiling for the same reason the rule review queue has one: a batch row carries its whole
 #: `aggregate_summary`, so an unbounded listing grows with the table. `total` travels in the
 #: response, so a page never hides how many batches exist.
+#:
+#: **The maximum was 500 and is now 100.** A request for `limit=200` that used to be served is now
+#: a `422`. Lowered on purpose, for two reasons rather than one: 500 rows each carrying a full
+#: roll-up is a response no screen renders and no reviewer reads, and the two list endpoints now
+#: have to agree — a client that can page proposals and batches with one helper is worth more than
+#: a ceiling nobody asked for. See `MAX_PROPOSAL_LIST_LIMIT`, which is the same number for a
+#: stricter reason (a proposal row carries a whole solver result).
 DEFAULT_BATCH_LIST_LIMIT = 50
-MAX_BATCH_LIST_LIMIT = 500
+MAX_BATCH_LIST_LIMIT = 100
 
 #: The statuses a batch cannot still legitimately be in once the process that owned it is gone.
 #:
@@ -384,9 +392,14 @@ class BatchAuditService:
             )
 
     async def list_batches(
-        self, *, limit: int = DEFAULT_BATCH_LIST_LIMIT, offset: int = 0
+        self,
+        *,
+        status: BatchJobStatus | None = None,
+        created_after: datetime | None = None,
+        limit: int = DEFAULT_BATCH_LIST_LIMIT,
+        offset: int = 0,
     ) -> BatchAuditJobList:
-        """Batches newest first, as headers without their files.
+        """Batches newest first, as headers without their files, filtered and paged.
 
         The per-file counts come from one grouped query over `batch_files` rather than from
         `selectinload`ing every file of every listed batch. That is not a micro-optimisation: the
@@ -398,19 +411,46 @@ class BatchAuditService:
         decoration — `created_at` is stamped by the application clock, two batches accepted in the
         same microsecond are possible, and a listing whose order changed between two reads of the
         same data would make paging skip or repeat a row.
+
+        `status` is the filter an operator actually reaches for: `PROCESSING` after a restart is
+        "what is still running", `FAILED` is "what the reaper closed and why". `total` is recounted
+        under the same filters, so it answers "how many failed", never "how many rows exist".
+
+        `created_after` is **inclusive** — a batch stamped exactly at that instant is returned. That
+        is the reading a date picker wants ("everything from the 1st"), and it is the one the
+        parameter's OpenAPI description states, because "after" alone is ambiguous enough to get a
+        boundary row silently dropped. A naive value is taken as UTC and an aware one converted to
+        it (`as_utc`), which is what makes the comparison mean the same thing on both dialects:
+        Postgres stores `timestamptz`, SQLite stores the naive UTC string `utcnow` wrote and would
+        otherwise compare a `+02:00` wall clock against it.
+
+        **The index only covers half of this.** `ix_batch_jobs_status_created_at` is
+        `(status, created_at)`, so `status` alone and `status` with `created_after` are served by it;
+        `created_after` on its own has no usable leading column and falls back to a scan plus sort.
+        Left as is rather than fixed with a second index: at this MVP's table sizes the scan is
+        cheaper than the write cost of an index, and adding one is a schema change.
         """
         limit = max(1, min(limit, MAX_BATCH_LIST_LIMIT))
         offset = max(0, offset)
 
+        filters = []
+        if status is not None:
+            filters.append(BatchJobRecord.status == str(status))
+        if created_after is not None:
+            filters.append(BatchJobRecord.created_at >= as_utc(created_after))
+
         async with self.database.session() as session:
             total = (
-                await session.execute(select(func.count()).select_from(BatchJobRecord))
+                await session.execute(
+                    select(func.count()).select_from(BatchJobRecord).where(*filters)
+                )
             ).scalar_one()
 
             page = (
                 (
                     await session.execute(
                         select(BatchJobRecord)
+                        .where(*filters)
                         .order_by(
                             BatchJobRecord.created_at.desc(),
                             BatchJobRecord.batch_id.desc(),

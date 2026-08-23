@@ -1,6 +1,6 @@
 # `apps/engine/tests`
 
-832 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
+912 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
 behaviour the POC did not have. **None was weakened to make the migration pass** — where a
 migrated test failed only because a path moved, the path was fixed; where it asserted on an
 artefact this monorepo does not contain (the POC's static UI), the assertion moved to the contract
@@ -32,7 +32,7 @@ count, or run in the image where the binary is always there.
 
 ```
 $ .venv/bin/python -m pytest -q
-832 passed, 4 skipped in 30s      # the 4 skips are the Postgres parametrisations; see below
+912 passed, 4 skipped in 30s      # the 4 skips are the Postgres parametrisations; see below
 ```
 
 ## What each file is for
@@ -59,6 +59,7 @@ $ .venv/bin/python -m pytest -q
 | `test_request_limits.py` | 7 | oversized bodies refused at the perimeter, before they are buffered |
 | `test_db_persistence.py` | 27 | **durability** — an approval survives a real restart; the lifecycle under a row lock; the migration matches the models |
 | `test_audit_log.py` | 15 | the audit log records what happened, in order, with an actor — and cannot be rewritten |
+| `test_pagination.py` | 31 | **paging and filtering the two list endpoints** — that `total` follows the filter rather than the table, that two pages never overlap, and that a limit outside its range is a `422` and not a clamped success |
 
 ## The database, and why the suite does not use yours
 

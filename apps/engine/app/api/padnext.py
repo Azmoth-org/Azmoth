@@ -25,6 +25,7 @@ lives in the shared functions.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 
 from fastapi import (
     APIRouter,
@@ -46,6 +47,7 @@ from app.schemas import (
     BatchAuditAccepted,
     BatchAuditJob,
     BatchAuditJobList,
+    BatchJobStatus,
     PadnextAuditReport,
 )
 from app.services.batch_audit import (
@@ -292,15 +294,29 @@ async def padnext_batch(
 
 @router.get("/batch", response_model=BatchAuditJobList)
 async def padnext_batch_list(
+    status: BatchJobStatus | None = Query(
+        default=None,
+        description=(
+            "Only batches in this state. Omit for every state. `PROCESSING` is what is still "
+            "running; `FAILED` is what broke, including anything the startup recovery closed."
+        ),
+    ),
+    created_after: datetime | None = Query(
+        default=None,
+        description=(
+            "Only batches created at or after this instant — **inclusive**, so a batch stamped "
+            "exactly here is returned. ISO-8601; a value without an offset is read as UTC."
+        ),
+    ),
     limit: int = Query(
         default=DEFAULT_BATCH_LIST_LIMIT,
         ge=1,
         le=MAX_BATCH_LIST_LIMIT,
-        description="How many batches to return. `total` always reports the whole table.",
+        description="How many batches to return. `total` always reports every match.",
     ),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, description="How many matches to skip. 0 is the newest."),
 ) -> BatchAuditJobList:
-    """Every batch this database holds, newest first, as headers without their files.
+    """A page of the batches this database holds, newest first, as headers without their files.
 
     This is what makes a durable batch reachable again. A `batch_id` is issued once and the browser
     holds it in memory, so before this endpoint existed a page reload orphaned a finished batch —
@@ -311,10 +327,21 @@ async def padnext_batch_list(
     delivery's full audit report would be megabytes to render a table. Open one with
     `GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.
 
+    `total` is recounted under `status` and `created_after`, so it says how many batches match and
+    never how many rows the table happens to hold. The rows themselves stay in `jobs` — not `items`,
+    which is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one
+    shipped first and renaming a field in a contract already committed to `packages/contracts/`
+    would break a client to buy symmetry.
+
+    The page size ceiling is now 100, down from 500; `limit=200` is a `422` where it used to be
+    served. See `MAX_BATCH_LIST_LIMIT` for why.
+
     Declared before `/batch/{batch_id}` for readability only — the two paths are distinct templates
     and neither shadows the other.
     """
-    return await batches().list_batches(limit=limit, offset=offset)
+    return await batches().list_batches(
+        status=status, created_after=created_after, limit=limit, offset=offset
+    )
 
 
 @router.get("/batch/{batch_id}", response_model=BatchAuditJob)

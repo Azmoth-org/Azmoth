@@ -78,6 +78,7 @@ from app.schemas.padnext import (
 from app.schemas.proposal import (
     ApprovalRequest,
     Proposal,
+    ProposalList,
     ProposalStatus,
     RejectionRequest,
 )
@@ -163,6 +164,7 @@ __all__ = [
     "Procedure",
     "Proposal",
     "ProposalExport",
+    "ProposalList",
     "ProposalStatus",
     "ProofStep",
     "RejectionRequest",

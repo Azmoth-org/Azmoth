@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.common import RuleCoverage, Warning_
 from app.schemas.result import CodingResponse
@@ -91,6 +91,37 @@ class Proposal(BaseModel):
     @property
     def is_approved(self) -> bool:
         return self.status is ProposalStatus.APPROVED
+
+
+class ProposalList(BaseModel):
+    """A page of proposals, newest first, and how many there are in total.
+
+    This replaced a bare JSON array, and the reason is `total`. A listing that returned only what
+    it was asked for could not tell a reviewer whether "50 Entwürfe" means fifty or the first fifty
+    of nine hundred — and the one thing a review queue has to be able to say is how much is still
+    waiting. `total` is therefore the count of everything matching the *filters*, not the page: with
+    `status=DRAFT` it is the whole backlog, and it is what a "1–50 von 214" header reads.
+
+    Same shape and same reasoning as `BatchAuditJobList`, with one deliberate difference: the field
+    is `items`, not `proposals`. The batch listing shipped its rows as `jobs` before pagination
+    existed here and renaming it would break a document already committed to
+    `packages/contracts/`, so the two are not spelled the same. New envelopes use `items`.
+
+    Rows are the full `Proposal`, not a reduced summary. That is a cost — every row carries its
+    whole `solver_result` — and it is paid on purpose: the flattened rule-coverage counts exist so
+    that a client *cannot* render a proposal without having seen them, and a listing model that
+    dropped them would be the one place in the API where a draft appears without its coverage
+    caveat. The `limit` ceiling of 100 is what bounds the payload instead.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[Proposal] = Field(default_factory=list)
+
+    #: Every proposal matching the filters, not the length of `items`. See the class docstring.
+    total: int = 0
+    limit: int = 0
+    offset: int = 0
 
 
 class ApprovalRequest(BaseModel):
