@@ -1,5 +1,9 @@
+import { ArrowRightIcon } from "lucide-react"
+import Link from "next/link"
+
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -43,6 +47,19 @@ export async function RecentProposalsCard() {
         <CardDescription>
           <Body result={result} />
         </CardDescription>
+        {/*
+          The way out of "5 von 214". A card that states a total it cannot show the rest of is a
+          dead end, so the header carries the link to the full, filterable list.
+        */}
+        <CardAction>
+          <Link
+            href="/proposals"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors"
+          >
+            Alle Prüfungen
+            <ArrowRightIcon className="size-3" aria-hidden />
+          </Link>
+        </CardAction>
       </CardHeader>
       <CardContent className="flex-1">
         <Rows result={result} />
