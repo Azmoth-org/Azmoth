@@ -1,0 +1,59 @@
+{
+  "patient": { "age": 34, "sex": "w", "setting": "ambulant" },
+  "consultation": {
+    "id": "consultation",
+    "type": "beratung",
+    "duration_minutes": 9,
+    "confidence": "1.0"
+  },
+  "examinations": [
+    {
+      "id": "exam_handgelenk",
+      "type": "symptombezogene_untersuchung",
+      "organ_system": "bewegungsapparat",
+      "organs": ["handgelenk"],
+      "complexity": "mittel",
+      "confidence": "1.0"
+    }
+  ],
+  "procedures": [
+    {
+      "id": "proc_punktion",
+      "type": "punktion",
+      "organ": "gelenk",
+      "details": "Punktion des rechten Handgelenks, 6 ml seröses Punktat entlastet",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_verband",
+      "type": "verband",
+      "organ": "handgelenk",
+      "details": "Zirkulärer Kompressionsverband des rechten Handgelenks unmittelbar nach der Punktion angelegt",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_sono",
+      "type": "sonographie",
+      "organ": "handgelenk",
+      "details": "Sonographie des rechten Handgelenks, Erguss im Radiokarpalgelenk ohne Nachweis einer Synovialitis",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    }
+  ],
+  "lab_tests": [{ "id": "lab_crp", "type": "crp", "confidence": "1.0" }],
+  "diagnoses": [
+    { "text": "Reizerguss des rechten Handgelenks nach Distorsion", "confidence": "0.90" }
+  ],
+  "justification_factors": [
+    {
+      "id": "just_verband",
+      "reason": "Aufwendige Verbandtechnik mit Schienung und mehrfacher Nachkorrektur wegen Schwellungsprogredienz",
+      "severity": "mittel",
+      "applies_to": ["proc_verband"],
+      "confidence": "1.0"
+    }
+  ],
+  "notes": "Synthetic case, no real patient data. WHAT THIS TESTS: § 4 Abs. 2a GOÄ, the Zielleistungsprinzip, in the configuration where the component is documented at least as well as its target service and even carries its own written justification. The dressing (Nr. 200) was applied in connection with the puncture, so it is a component of that service and not separately chargeable. EXPECTED BEHAVIOUR: Nr. 200 is blocked with reason zielleistung, blocked_by Nr. 300, under rule ziel_man_300_200 — the block is a hard rule, so neither the component's own confidence of 1.0 nor its documented difficulty rescues it, and the justification on Nr. 200 is silently irrelevant rather than applied elsewhere. Second point: the wrist is not named in Nr. 301 or Nr. 302, so this act produces only the generic Nr. 300 and no specificity contest happens — the parent named in the block is therefore Nr. 300, and the rule that fires is the generic one."
+}

@@ -1,0 +1,125 @@
+{
+  "description": "Inpatient polytrauma primary survey. 21 Ziffern across chapters B, C, F, M and O reach the rules engine; 14 are charged and 7 are blocked. Exercises all three suppression layers and three arbitration clusters in one solve, plus § 6a Minderung on every line.",
+  "catalog_version": "goae_official_snapshot_2026-07-25",
+  "accepted_ziffern": [
+    "3",
+    "8",
+    "301",
+    "302",
+    "410",
+    "424",
+    "651",
+    "659",
+    "3511",
+    "3550",
+    "3560",
+    "3741",
+    "5030",
+    "5135"
+  ],
+  "blocked_ziffern": [
+    {
+      "ziffer": "5",
+      "reason_contains": "conflict_lost",
+      "blocked_by": "8",
+      "note": "Nr. 5, Nr. 7 and Nr. 8 exclude one another mutually (Anmerkungen zu den Nummern 5 bis 8), so all three go to arbitration together and exactly one survives. Nr. 8 wins on evidence (1.0 vs 0.85 vs 0.60)."
+    },
+    {
+      "ziffer": "7",
+      "reason_contains": "conflict_lost",
+      "blocked_by": "8",
+      "note": "The other loser of the same three-way cluster. Note that rule_id on these entries names *a* pair the position is in, not necessarily the pair against the winner — the legal basis is the same Anmerkung either way. See docs/audit/GOLDEN_CORPUS.md, finding G-1."
+    },
+    {
+      "ziffer": "422",
+      "reason_contains": "conflict_lost",
+      "blocked_by": "424",
+      "note": "Second three-way cluster: Nr. 422 to Nr. 424 are not chargeable next to one another. The fully documented Doppler study (Nr. 424, confidence 1.0) wins over the Real-Time recording (Nr. 423, 0.85) and the Time-Motion mention (Nr. 422, 0.55)."
+    },
+    { "ziffer": "423", "reason_contains": "conflict_lost", "blocked_by": "424" },
+    {
+      "ziffer": "650",
+      "reason_contains": "conflict_lost",
+      "blocked_by": "651",
+      "note": "Third cluster, Nr. 650 to Nr. 653. The twelve-lead resting ECG beats the monitor strip. Nr. 659 is NOT part of this cluster and stays on the invoice."
+    },
+    {
+      "ziffer": "300",
+      "reason_contains": "less_specific",
+      "blocked_by": "301",
+      "note": "The knee puncture matches the generic Nr. 300 and the knee-specific Nr. 301; specificity (rule spec_301_300) resolves it in Datalog. The shoulder puncture is a different act and keeps its own Nr. 302 — one act, one position, and two punctures are two acts."
+    },
+    {
+      "ziffer": "200",
+      "reason_contains": "zielleistung",
+      "blocked_by": "301",
+      "note": "The critical stratification check in this case: the dressing is blocked by Nr. 301, the parent that SURVIVED specificity, and not by Nr. 300, which was itself suppressed one layer earlier. A position that has already lost must not suppress a third one."
+    }
+  ],
+  "warnings_contain": [
+    "rule_coverage_incomplete",
+    "minderung_applied",
+    "catalog_text_quality"
+  ],
+  "factor_expectations": [
+    {
+      "ziffer": "8",
+      "factor": "3.5",
+      "max_factor": "3.5",
+      "requires_justification": true,
+      "note": "'schwer' on the whole-body status: shock-room conditions, intubated patient, repeated survey. Takes the winner of the arbitration to the Höchstsatz. The factor plays no part in deciding the arbitration — the objective ranks positions by points, never by fee."
+    },
+    {
+      "ziffer": "301",
+      "factor": "2.6",
+      "max_factor": "3.5",
+      "requires_justification": true,
+      "note": "'mittel' on the knee puncture: 2.3 + 0.3."
+    },
+    {
+      "ziffer": "302",
+      "factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": false,
+      "note": "The shoulder puncture has no documented difficulty of its own, and the justification naming proc_punktion_knie must not leak onto it — even though both acts map into the same Leistungsgruppe."
+    },
+    { "ziffer": "424", "factor": "2.3", "max_factor": "3.5", "requires_justification": false },
+    { "ziffer": "651", "factor": "2.3", "max_factor": "3.5", "requires_justification": false },
+    { "ziffer": "659", "factor": "2.3", "max_factor": "3.5", "requires_justification": false },
+    {
+      "ziffer": "5030",
+      "factor": "1.8",
+      "max_factor": "2.5",
+      "requires_justification": false,
+      "note": "Abschnitt O takes the § 5 Abs. 3 band."
+    },
+    { "ziffer": "5135", "factor": "1.8", "max_factor": "2.5", "requires_justification": false },
+    { "ziffer": "3550", "factor": "1.15", "max_factor": "1.3", "requires_justification": false },
+    { "ziffer": "3741", "factor": "1.15", "max_factor": "1.3", "requires_justification": false },
+    { "ziffer": "3560", "factor": "1.15", "max_factor": "1.3", "requires_justification": false },
+    { "ziffer": "3511", "factor": "1.15", "max_factor": "1.3", "requires_justification": false },
+    { "ziffer": "3", "factor": "2.3", "max_factor": "3.5", "requires_justification": false },
+    { "ziffer": "410", "factor": "2.3", "max_factor": "3.5", "requires_justification": false }
+  ],
+  "missing_documentation_expectations": [
+    { "ziffer": "3", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "302", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "410", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "424", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "651", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "659", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "5030", "current_factor": "1.8", "possible_factor": "2.5" },
+    { "ziffer": "5135", "current_factor": "1.8", "possible_factor": "2.5" },
+    { "ziffer": "3511", "current_factor": "1.15", "possible_factor": "1.3" },
+    { "ziffer": "3550", "current_factor": "1.15", "possible_factor": "1.3" },
+    { "ziffer": "3560", "current_factor": "1.15", "possible_factor": "1.3" },
+    { "ziffer": "3741", "current_factor": "1.15", "possible_factor": "1.3" }
+  ],
+  "missing_documentation_is_exhaustive": true,
+  "total_amount_eur": "322.29",
+  "total_punkte": 3363,
+  "minderung_applied": true,
+  "minderung_rate": "0.25",
+  "total_amount_eur_before_minderung": "429.72",
+  "note_on_minderung": "§ 6a Abs. 1 GOÄ: a stationär encounter is reduced by 25 % on every line, and none of these positions is exempt under § 6a Abs. 1 Satz 3. This is the only bundled case in which the reduction actually fires, so it is the one that would fail if the exemption list or the rate moved."
+}

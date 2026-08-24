@@ -1,0 +1,163 @@
+{
+  "patient": { "age": 47, "sex": "m", "setting": "stationaer" },
+  "consultation": {
+    "id": "consultation",
+    "type": "eingehende_beratung",
+    "duration_minutes": 25,
+    "confidence": "1.0"
+  },
+  "examinations": [
+    {
+      "id": "exam_ganzkoerper",
+      "type": "untersuchung_ganzkoerperstatus",
+      "organ_system": "ganzkoerper",
+      "organs": ["kopf", "thorax", "abdomen", "wirbelsaeule", "extremitaeten"],
+      "complexity": "komplex",
+      "confidence": "1.0"
+    },
+    {
+      "id": "exam_bewegungsapparat",
+      "type": "vollstaendige_untersuchung_organsystem",
+      "organ_system": "bewegungsapparat",
+      "organs": ["schulter", "knie", "becken"],
+      "complexity": "komplex",
+      "confidence": "0.85"
+    },
+    {
+      "id": "exam_thorax_symptom",
+      "type": "symptombezogene_untersuchung",
+      "organ_system": "atmungsorgane",
+      "organs": ["thorax"],
+      "complexity": "mittel",
+      "confidence": "0.60"
+    }
+  ],
+  "procedures": [
+    {
+      "id": "proc_punktion_knie",
+      "type": "punktion",
+      "organ": "knie",
+      "details": "Punktion des rechten Kniegelenks, 40 ml blutiges Punktat bei Hämarthros nach Anpralltrauma",
+      "complexity": "komplex",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_punktion_schulter",
+      "type": "punktion",
+      "organ": "schulter",
+      "details": "Punktion des linken Schultergelenks bei posttraumatischem Hämarthros, 18 ml aspiriert",
+      "complexity": "komplex",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_verband",
+      "type": "verband",
+      "organ": "knie",
+      "details": "Kompressionsverband des rechten Kniegelenks im Anschluss an die Punktion",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_roentgen_knie",
+      "type": "roentgen",
+      "organ": "knie",
+      "details": "Röntgenaufnahmen des rechten Kniegelenks in zwei Ebenen, keine dislozierte Fraktur",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_roentgen_thorax",
+      "type": "roentgen",
+      "organ": "thorax",
+      "details": "Röntgenaufnahme der Brustorgane im Liegen, Rippenserienfraktur 5 bis 7 links, kein Pneumothorax",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_sono_abdomen",
+      "type": "sonographie",
+      "organ": "abdomen",
+      "details": "Sonographie des Abdomens im Rahmen der Schockraumdiagnostik, kein Nachweis freier Flüssigkeit",
+      "complexity": "komplex",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_ekg_ruhe",
+      "type": "ekg",
+      "organ": "herz",
+      "details": "Elektrokardiographische Untersuchung in Ruhe, 12 Ableitungen, zum Ausschluss einer Contusio cordis",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_ekg_rhythmus",
+      "type": "ekg_rhythmusfeststellung",
+      "organ": "herz",
+      "details": "Monitorstreifen zur Rhythmusbeurteilung im Schockraum, Dokumentation ohne vollständige Ableitungen",
+      "complexity": "einfach",
+      "confidence": "0.70"
+    },
+    {
+      "id": "proc_langzeit_ekg",
+      "type": "langzeit_ekg",
+      "organ": "herz",
+      "details": "Langzeit-EKG über 24 Stunden zur Überwachung nach Thoraxtrauma",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_echo_doppler",
+      "type": "echokardiographie_doppler",
+      "organ": "herz",
+      "details": "Zweidimensionale doppler-echokardiographische Untersuchung mit vollständiger Bilddokumentation, kein Perikarderguss, unauffällige Klappenfunktion",
+      "complexity": "komplex",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_echo_2d",
+      "type": "echokardiographie",
+      "organ": "herz",
+      "details": "Zweidimensionale Real-Time-Darstellung als Teil derselben Untersuchung dokumentiert",
+      "complexity": "mittel",
+      "confidence": "0.85"
+    },
+    {
+      "id": "proc_echo_1d",
+      "type": "echokardiographie_eindimensional",
+      "organ": "herz",
+      "details": "Time-Motion-Aufzeichnung im Untersuchungsprotokoll erwähnt, keine eigene Bilddokumentation",
+      "complexity": "einfach",
+      "confidence": "0.55"
+    }
+  ],
+  "lab_tests": [
+    { "id": "lab_bb", "type": "blutbild", "confidence": "1.0" },
+    { "id": "lab_crp", "type": "crp", "confidence": "1.0" },
+    { "id": "lab_glu", "type": "glukose", "confidence": "1.0" },
+    { "id": "lab_urin", "type": "urinstatus", "confidence": "1.0" }
+  ],
+  "diagnoses": [
+    { "text": "Polytrauma nach Verkehrsunfall", "confidence": "1.0" },
+    { "text": "Rippenserienfraktur 5 bis 7 links mit Lungenkontusion", "confidence": "0.90" },
+    { "text": "Hämarthros des rechten Kniegelenks", "confidence": "1.0" },
+    { "text": "Posttraumatischer Hämarthros des linken Schultergelenks", "confidence": "0.95" },
+    { "text": "Verdacht auf Contusio cordis", "confidence": "0.60" }
+  ],
+  "justification_factors": [
+    {
+      "id": "just_ganzkoerper",
+      "reason": "Ganzkörperstatus unter Schockraumbedingungen bei intubiertem, nicht kooperationsfähigem Patienten erhoben, wiederholte Untersuchung im Verlauf der ersten Stunde, erheblich erhöhter Zeit- und Personalaufwand",
+      "severity": "schwer",
+      "applies_to": ["exam_ganzkoerper"],
+      "confidence": "1.0"
+    },
+    {
+      "id": "just_punktion_knie",
+      "reason": "Erschwerte Punktion bei massivem Hämarthros mit Koagelbildung, Aspiration in mehreren Etappen mit Spülung erforderlich",
+      "severity": "mittel",
+      "applies_to": ["proc_punktion_knie"],
+      "confidence": "1.0"
+    }
+  ],
+  "notes": "Synthetic case, no real patient data. WHAT THIS TESTS: a large input in which three suppression mechanisms and two arbitration clusters interact at once, under § 6a Minderung. 21 Ziffern reach the rules engine across the chapters B, C, F, M and O; 14 survive onto the invoice and 7 are blocked, each with its own reason. EXPECTED BEHAVIOUR, mechanism by mechanism: (1) exclusion cluster Nr. 5 / Nr. 7 / Nr. 8 — the whole-body status is the best documented of the three, so Nr. 8 is charged and Nr. 5 and Nr. 7 are blocked as conflict_lost; (2) exclusion cluster Nr. 422 / Nr. 423 / Nr. 424 — the full Doppler study is documented, so Nr. 424 is charged and the two weaker records are blocked; (3) exclusion cluster Nr. 650 bis 653 — the twelve-lead resting ECG (Nr. 651) beats the monitor strip (Nr. 650), while the 24-hour recording Nr. 659 is chargeable alongside because no rule excludes it; (4) specificity — the knee puncture matches Nr. 300 and Nr. 301, and the knee-specific Nr. 301 displaces the generic position; (5) Zielleistung — the dressing Nr. 200 is a component of the puncture and is blocked by the SURVIVING parent Nr. 301, not by the suppressed Nr. 300, which is what the stratification of the rules program guarantees. The two documented justifications raise exactly two lines (Nr. 8 to the Höchstsatz 3.5, Nr. 301 to 2.6) and leave the other twelve at their Schwellenwert. Because the encounter is stationär, § 6a GOÄ reduces every line by 25 percent."
+}

@@ -1,0 +1,52 @@
+{
+  "patient": { "age": 71, "sex": "w", "setting": "ambulant" },
+  "consultation": {
+    "id": "consultation",
+    "type": "eingehende_beratung",
+    "duration_minutes": 16,
+    "confidence": "1.0"
+  },
+  "examinations": [
+    {
+      "id": "exam_herz",
+      "type": "vollstaendige_untersuchung_organsystem",
+      "organ_system": "herz_kreislauf",
+      "organs": ["herz"],
+      "complexity": "mittel",
+      "confidence": "1.0"
+    }
+  ],
+  "procedures": [
+    {
+      "id": "proc_echo_2d",
+      "type": "echokardiographie",
+      "organ": "herz",
+      "details": "Zweidimensionale echokardiographische Untersuchung mittels Real-Time-Verfahren, vollständige Bilddokumentation aller Standardebenen, Ejektionsfraktion 42 Prozent",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_echo_doppler",
+      "type": "echokardiographie_doppler",
+      "organ": "herz",
+      "details": "Dopplerableitung im Rahmen derselben Sitzung begonnen, wegen unzureichender Anlotbarkeit abgebrochen, keine Bilddokumentation der Dopplerbefunde vorhanden",
+      "complexity": "mittel",
+      "confidence": "0.60"
+    },
+    {
+      "id": "proc_ekg",
+      "type": "ekg",
+      "organ": "herz",
+      "details": "Elektrokardiographische Untersuchung in Ruhe, 12 Ableitungen, normofrequenter Sinusrhythmus",
+      "complexity": "einfach",
+      "confidence": "1.0"
+    }
+  ],
+  "lab_tests": [{ "id": "lab_bb", "type": "blutbild", "confidence": "1.0" }],
+  "diagnoses": [
+    { "text": "Belastungsdyspnoe NYHA II", "confidence": "0.90" },
+    { "text": "Verdacht auf Herzinsuffizienz mit reduzierter Ejektionsfraktion", "confidence": "0.75" }
+  ],
+  "justification_factors": [],
+  "notes": "Synthetic case, no real patient data. WHAT THIS TESTS: mutual exclusion plus the objective ordering that resolves it. Nr. 422 bis 424 are not chargeable next to one another (Anmerkung zu den Nummern 422 bis 424), so Datalog refuses to decide and exports the pair as a conflict for the optimiser. Here the better documented position is the CHEAPER one: Nr. 423 carries 500 Punkte and full documentation, Nr. 424 carries 700 Punkte and an aborted, undocumented Doppler study. EXPECTED BEHAVIOUR: Nr. 423 is charged and Nr. 424 is blocked with reason conflict_lost, blocked_by Nr. 423 — the evidence objective outranks the revenue objective, so the engine gives up 200 Punkte rather than bill the better-paying position on the weaker record. Nr. 651 stays on the invoice: no rule excludes the resting ECG from the echocardiography cluster."
+}
