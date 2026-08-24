@@ -12,9 +12,14 @@ logic/
 │   └── goae_rules.dl           Soufflé Datalog program — derives what is CERTAIN
 └── tests/
     ├── cases/                  synthetic inputs (input.json) + expectations (expected.json)
-    │   ├── case_001_knee/
-    │   ├── case_002_cardiology/
-    │   ├── case_003_dermatology/
+    │   ├── case_001_knee/               all three suppression layers + the § 5 Abs. 2 ladder
+    │   ├── case_002_cardiology/         EKG arbitration, § 5 Abs. 4 lab band, one-line justification
+    │   ├── case_003_dermatology/        § 6 Abs. 2 Analogansatz incl. the collision rule
+    │   ├── case_004_factor_cap/         Höchstsatz reached with a written reason, per band
+    │   ├── case_005_mutual_exclusion/   mutual exclusion where evidence beats revenue
+    │   ├── case_006_zielleistung/       § 4 Abs. 2a against a well-documented component
+    │   ├── case_007_missing_docs/       no justification anywhere: fall back to the Schwellenwert
+    │   ├── case_008_complex_polytrauma/ 21 Ziffern, three clusters, § 6a Minderung
     │   └── padnext/            synthetic PADnext delivery (.auf order file, _padx.xml payload, .padx container)
     └── golden/                 frozen, canonicalised full responses — <case>.golden.normalized.json
 ```
@@ -27,6 +32,7 @@ logic/
 | Soufflé Datalog program | `logic/datalog/goae_rules.dl` | `app/solvers/souffle_engine.py` (`settings.datalog_path`) |
 | Golden snapshots | `logic/tests/golden/*.golden.normalized.json` | `apps/engine/tests/test_golden_snapshot.py` |
 | Synthetic cases | `logic/tests/cases/<case>/{input,expected}.json` | `apps/engine/tests/test_manual_cases.py` |
+| What each case tests | `docs/audit/GOLDEN_CORPUS.md` | — (prose; the assertions live in `expected.json`) |
 | PADnext fixture | `logic/tests/cases/padnext/` | `apps/engine/tests/test_padnext.py` |
 
 The rule *data* (exclusions, Zielleistung, specificity, analog candidates, factor caps) is not

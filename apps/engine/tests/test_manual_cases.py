@@ -18,7 +18,21 @@ CASES = sorted(p.name for p in CASES_DIR.iterdir() if (p / "input.json").exists(
 
 
 def test_there_are_synthetic_cases():
-    assert CASES == ["case_001_knee", "case_002_cardiology", "case_003_dermatology"]
+    """The corpus is enumerated here so that deleting a case fails the build.
+
+    `CASES` is read off the directory, which is what makes adding a case a one-directory change —
+    but it also means a case that vanished would silently reduce the suite to whatever is left.
+    """
+    assert CASES == [
+        "case_001_knee",
+        "case_002_cardiology",
+        "case_003_dermatology",
+        "case_004_factor_cap",
+        "case_005_mutual_exclusion",
+        "case_006_zielleistung",
+        "case_007_missing_docs",
+        "case_008_complex_polytrauma",
+    ]
 
 
 @pytest.mark.parametrize("name", CASES)
@@ -81,6 +95,52 @@ def test_case_matches_expected_total(client, manual_case, expected_case, name):
     assert Decimal(total["amount_eur"]) == Decimal(expected["total_amount_eur"]), name
     assert total["punkte"] == expected["total_punkte"], name
     assert total["minderung_applied"] is expected["minderung_applied"], name
+
+    # § 6a GOÄ. Only asserted where the case declares it, because the gross amount equals the net
+    # one on an ambulant encounter and pinning it everywhere would say nothing.
+    if "minderung_rate" in expected:
+        assert Decimal(total["minderung_rate"]) == Decimal(expected["minderung_rate"]), name
+    if "total_amount_eur_before_minderung" in expected:
+        assert Decimal(total["amount_eur_before_minderung"]) == Decimal(
+            expected["total_amount_eur_before_minderung"]
+        ), name
+
+
+@pytest.mark.parametrize("name", CASES)
+def test_case_reports_the_expected_documentation_gaps(client, manual_case, expected_case, name):
+    """What the record would have to say for a higher factor to be lawful — per line.
+
+    This is the assertion that makes the *absence* of a justification checkable. Without it a case
+    like case_007 would pass while the engine silently stopped reporting the gap, and the invoice
+    would look identical: same factors, same money, one fewer thing a physician is told.
+
+    `missing_documentation_is_exhaustive` pins the whole set rather than a few members, which is
+    what catches the opposite failure — a gap reported for a line that already carries a written
+    reason, i.e. asking a physician to justify something they justified.
+    """
+    result = solve_payload(client, manual_case(name))
+    expected = expected_case(name)
+    entries = expected.get("missing_documentation_expectations")
+    if entries is None:
+        return
+
+    actual = {m["ziffer"]: m for m in result["coding"]["missing_documentation"]}
+    for entry in entries:
+        ziffer = entry["ziffer"]
+        assert ziffer in actual, f"{name}: expected a documentation gap for GOÄ {ziffer}"
+        gap = actual[ziffer]
+        assert Decimal(gap["current_factor"]) == Decimal(entry["current_factor"]), (
+            f"{name}: GOÄ {ziffer}"
+        )
+        assert Decimal(gap["possible_factor"]) == Decimal(entry["possible_factor"]), (
+            f"{name}: GOÄ {ziffer}"
+        )
+        assert gap["missing"], f"{name}: GOÄ {ziffer} gap reported without saying what is missing"
+
+    if expected.get("missing_documentation_is_exhaustive"):
+        assert sorted(actual) == sorted(e["ziffer"] for e in entries), (
+            f"{name}: the set of documentation gaps moved"
+        )
 
 
 @pytest.mark.parametrize("name", CASES)

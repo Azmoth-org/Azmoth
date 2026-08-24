@@ -1,0 +1,38 @@
+{
+  "description": "Echocardiography case. Two mutually exclusive positions (Anmerkung zu den Nummern 422 bis 424) where the better documented one is also the cheaper one, so the arbitration provably follows the record and not the money.",
+  "catalog_version": "goae_official_snapshot_2026-07-25",
+  "accepted_ziffern": ["3", "7", "423", "651", "3550"],
+  "blocked_ziffern": [
+    {
+      "ziffer": "424",
+      "reason_contains": "conflict_lost",
+      "blocked_by": "423",
+      "note": "Nr. 422 to Nr. 424 are not chargeable next to one another, so Datalog exports the pair as a conflict instead of letting negation delete both. Nr. 424 is worth 700 Punkte and Nr. 423 only 500, and Nr. 423 still wins: @3 (evidence, 1.0 vs 0.60) is decided before @1 (revenue) in the objective ordering. An engine that maximised revenue would have billed the aborted, undocumented Doppler study."
+    }
+  ],
+  "warnings_contain": ["rule_coverage_incomplete"],
+  "factor_expectations": [
+    { "ziffer": "423", "factor": "2.3", "max_factor": "3.5", "requires_justification": false },
+    {
+      "ziffer": "651",
+      "factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": false,
+      "note": "The resting ECG stays on the invoice: no rule excludes Abschnitt F Nr. 651 from the echocardiography cluster, and none was invented to make the case tidier."
+    },
+    { "ziffer": "3", "factor": "2.3", "requires_justification": false },
+    { "ziffer": "7", "factor": "2.3", "requires_justification": false },
+    { "ziffer": "3550", "factor": "1.15", "max_factor": "1.3", "requires_justification": false }
+  ],
+  "missing_documentation_expectations": [
+    { "ziffer": "3", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "7", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "423", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "651", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "3550", "current_factor": "1.15", "possible_factor": "1.3" }
+  ],
+  "missing_documentation_is_exhaustive": true,
+  "total_amount_eur": "146.53",
+  "total_punkte": 1123,
+  "minderung_applied": false
+}
