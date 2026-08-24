@@ -1,7 +1,9 @@
 import {
   FileCheck2Icon,
+  HistoryIcon,
   LayersIcon,
   LayoutDashboardIcon,
+  ListIcon,
   ScaleIcon,
   StethoscopeIcon,
 } from "lucide-react"
@@ -49,6 +51,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
     icon: StethoscopeIcon,
   },
   {
+    href: "/proposals",
+    label: "Alle Prüfungen",
+    description:
+      "Alle gespeicherten GOÄ-Abrechnungsvorschläge, filterbar nach Status und Fall-ID. Nur synthetische Daten.",
+    icon: ListIcon,
+  },
+  {
     href: "/padnext",
     label: "Rechnungsprüfung",
     description:
@@ -63,6 +72,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
     icon: LayersIcon,
   },
   {
+    href: "/padnext/batch/history",
+    label: "Stapel-Historie",
+    description:
+      "Alle gespeicherten PADnext-Stapelprüfungen, filterbar nach Status. Nur synthetische Daten.",
+    icon: HistoryIcon,
+  },
+  {
     href: "/rules",
     label: "Regelprüfung",
     description:
@@ -73,7 +89,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
 ]
 
 /**
- * The four workbenches, without the dashboard — what the dashboard's own card grid renders.
+ * Every screen except the dashboard — what the dashboard's own card grid renders.
  *
  * Derived rather than a second literal, so adding a screen to `NAV_ITEMS` puts it on the dashboard
  * too. That is the mistake this module was written to prevent, and a hand-maintained copy would
@@ -86,10 +102,11 @@ export const WORKSPACE_ITEMS: readonly NavItem[] = NAV_ITEMS.filter(
 /**
  * Which single nav entry the reader is on, or null for a path outside the nav.
  *
- * Deliberately not a per-item `startsWith` predicate. `/padnext` is a prefix of `/padnext/batch`, so
- * a predicate would report *both* entries active on the batch screen — two highlighted rows and no
- * answer to "where am I". This resolves the longest matching href instead, which keeps exactly one
- * entry active and still highlights Stapelprüfung on a future `/padnext/batch/<id>`.
+ * Deliberately not a per-item `startsWith` predicate. `/padnext` is a prefix of `/padnext/batch`,
+ * which is in turn a prefix of `/padnext/batch/history`, so a predicate would report *three* entries
+ * active on the history screen — three highlighted rows and no answer to "where am I". This resolves
+ * the longest matching href instead, which keeps exactly one entry active and still highlights
+ * Stapelprüfung on a future `/padnext/batch/<id>`.
  *
  * Matching is anchored on a path segment (`href` itself, or `href` followed by `/`), so `/rulesets`
  * would not match `/rules`.
