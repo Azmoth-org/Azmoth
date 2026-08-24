@@ -73,7 +73,8 @@ Consequently:
 `goae_optimize.lp` optimises **lexicographically**, and revenue is last:
 
 ```
-@5  never charge an analog position that is already charged directly   (§ 6 Abs. 2 GOÄ)
+@5  never charge an analog position that is already charged directly, and never leave a
+    § 6 Abs. 2 request uncovered when a legal candidate exists   (§ 6 Abs. 2 GOÄ)
 @4  never leave a documented, chargeable service off the invoice entirely
 @3  prefer the position with the stronger clinical evidence
 @2  prefer the more specific position
@@ -85,9 +86,23 @@ This ordering is the legal posture of the whole system:
 - Evidence and specificity outrank money **on purpose**. An objective that maximised revenue
   would systematically pick whichever of two competing positions pays more — that is upcoding.
 - `@1` only separates options that are equally well evidenced and equally specific.
-- The hard rules are **integrity constraints** (`:- bill(A), bill(B), excluded(A,B).` and
-  `:- bill(C), bill(P), zielleistung(P,C).`), not weighted objectives. No objective can trade
-  them away.
+- The hard rules are **integrity constraints** (`:- charged(A), charged(B), excluded(A,B).` and
+  `:- charged(C), charged(P), zielleistung(P,C).`), not weighted objectives. No objective can
+  trade them away.
+- They range over **`charged/1`, not `bill/1`**. `charged/1` is the union of what the rules engine
+  proved billable and what the § 6 Abs. 2 Analogansatz chose; `bill/1` is only the first. Under
+  `bill/1` an analog position faced neither constraint, so the ladder could land on a position that
+  is not chargeable next to one already billed — the validator then refused the invoice and the
+  caller got a `500`. A charge is a charge whichever rule put it there. Narrowing either constraint
+  back to `bill/1` reopens that hole, and
+  `test_production_fixes.py::test_the_objective_ordering_is_untouched` pins the exact text against
+  it.
+- Because those constraints bind analog positions, the § 6 Abs. 2 choice is `0 { analog(A,Z) } 1`,
+  not `1 { analog(A,Z) } 1`. A forced cardinality over a ladder whose every candidate is excluded
+  has no model, and the caller would get "nothing is chargeable" for the whole encounter instead of
+  an invoice with one named gap. An uncovered request is reported (`analog_uncovered`) and scored
+  through the existing `@5` term, so covering the service still wins whenever any candidate is
+  legal — the relaxation only ever bites where the alternative was UNSAT.
 - The Zielleistungsprinzip (§ 4 Abs. 2a GOÄ) is resolved in **Datalog**, not in the optimiser,
   precisely because components are frequently worth more in sum than the target service.
 - The Steigerungsfaktor ladder never exceeds the § 5 band, and any factor above the

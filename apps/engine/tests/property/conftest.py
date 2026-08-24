@@ -21,15 +21,23 @@ Clingo, the Soufflé re-check of the chosen factors, the validator, the receipt.
 `receipt_hash` available to assert on, and it is why the determinism property is about the receipt
 a Rechnungsprüfer would be handed rather than about two Python objects comparing equal.
 
-## One region the generator stays out of
+## One region the generator used to stay out of, and now aims at
 
-Exactly one: an Analogansatz service is not documented alongside a service whose Ziffer is mutually
-exclusive with one of that analog type's candidate targets. That combination trips an **open defect
-in the engine** rather than testing an invariant, and generating it would make the suite fail
-intermittently on a bug nobody is going to fix in a test commit. `_analog_conflicts()` derives the
-region from the rule tables and documents the defect in full; the defect itself is reproduced
-deterministically by an `xfail(strict=True)` in the test module and written up in
-`docs/audit/PROPERTY_TEST_FINDINGS.md`. No assertion was weakened for it.
+An Analogansatz service documented alongside a service whose Ziffer is incompatible with one of
+that analog type's § 6 Abs. 2 candidate targets. Until the analog/exclusion fix this combination
+tripped an open defect — the two legality constraints in `logic/asp/goae_optimize.lp` ranged over
+`bill/1`, which an analog position never enters, so the ladder could land on a position that is not
+chargeable next to one already billed and the validator refused the whole invoice with a `500`
+(F-1 in `docs/audit/PROPERTY_TEST_FINDINGS.md`). `_drop_defective_combinations()` kept the
+generator out of it.
+
+The constraints now range over `charged/1`, so the region is *targeted* instead of avoided. The
+same derivation from the rule tables that used to be a filter is now a strategy:
+`ANALOG_EXCLUSION_ROWS` pairs each analog entity type with the documented services that collide
+with one of its candidates, and `analog_exclusion_requests()` builds requests that put the two
+together on purpose. It is still derived rather than written out, so a new analog candidate or a
+new exclusion widens the region automatically instead of quietly leaving it untested, and
+`test_the_generated_space_is_worth_exploring` pins its current size.
 
 ## The cache is off
 
@@ -279,44 +287,37 @@ SERVICES = st.one_of(
 
 
 # ------------------------------------------------------------------------------------------
-# one region the generator stays out of, and why
+# the region where a § 6 Abs. 2 ladder meets the exclusion table
 # ------------------------------------------------------------------------------------------
 
 
-def _analog_conflicts() -> dict[str, frozenset[tuple[str, str]]]:
-    """Per Analogansatz entity type, the services it must not be documented alongside.
+def _analog_exclusion_rows() -> dict[str, tuple[MappingRow, ...]]:
+    """Per Analogansatz entity type, the services that collide with one of its candidate targets.
 
-    **This is a known, open defect in the engine, not a property that does not hold.** The two
-    legality constraints in `logic/asp/goae_optimize.lp` range over `bill/1`:
+    A candidate target is incompatible with another position when the exclusion table names the
+    pair in either direction, or when the Zielleistung table makes one a component of the other.
+    Both relations are read from `RULES`, which is loaded under the same
+    `UnverifiedRulePolicy.WARN` the pipeline runs with — so these are the rules that actually
+    constrain an invoice, not every row in the CSVs.
 
-        :- bill(A), bill(B), excluded(A, B), A != B.
-        :- bill(C), bill(P), zielleistung(P, C).
-
-    An analog position reaches the invoice through `analog/2`, which contributes to `charged/1` but
-    never to `bill/1` — so it faces neither constraint. The `excluded/2` facts are injected and the
-    catalog guard three lines below the constraints already ranges over `charged/1`, so the fix is
-    almost certainly those two heads, but it is a legal-posture change to the solver and belongs in
-    its own reviewed branch, not in a test commit.
-
-    What it costs in practice: an OCT documented alongside a Ganzkörperstatus, where the analog
-    ladder is pushed off Nr. 750 and Nr. 410 by collisions and lands on Nr. 5, which is mutually
-    exclusive with Nr. 7 and Nr. 8. The validator catches it and refuses — correctly — so the
-    caller gets a `500` for a request that is clinically ordinary.
-    `test_the_analog_ladder_ignores_exclusions_against_the_final_invoice` in the test module
-    reproduces it exactly, as an `xfail` that starts failing the build the day it is fixed.
+    Documenting one of these services alongside the analog one forces the § 6 Abs. 2 ladder to
+    reckon with the exclusion table: the closest candidate may be unusable, and the engine has to
+    either walk to a legal one or say that it cannot. **That used to be an open defect** — see the
+    module docstring — and it is the region `analog_exclusion_requests()` now generates.
 
     Derived from the rule tables rather than written out, so a new analog candidate or a new
-    exclusion widens this automatically instead of quietly reopening the hole.
+    exclusion widens it automatically instead of silently costing coverage.
     """
     targets: dict[str, set[str]] = {}
     for rule in RULES.analog_candidates:
-        targets.setdefault(rule.source_entity_type, set()).add(rule.target_ziffer)
+        if CATALOG.has(rule.target_ziffer) and CATALOG.is_active(rule.target_ziffer):
+            targets.setdefault(rule.source_entity_type, set()).add(rule.target_ziffer)
 
     pairs: list[tuple[str, str]] = [
         (rule.from_ziffer, rule.to_ziffer) for rule in RULES.exclusions
     ] + [(rule.parent_ziffer, rule.child_ziffer) for rule in RULES.zielleistung]
 
-    conflicts: dict[str, frozenset[tuple[str, str]]] = {}
+    rows: dict[str, tuple[MappingRow, ...]] = {}
     for entity_type, target_ziffern in targets.items():
         incompatible = {
             other
@@ -325,31 +326,34 @@ def _analog_conflicts() -> dict[str, frozenset[tuple[str, str]]]:
             for other in ({right} if left == target else set())
             | ({left} if right == target else set())
         }
-        conflicts[entity_type] = frozenset(
-            (_kind(row), _service_type(row)) for row in ROWS if row.ziffer in incompatible
-        )
-    return conflicts
+        matching = tuple(row for row in ROWS if row.ziffer in incompatible)
+        if matching:
+            rows[entity_type] = matching
+    return rows
 
 
-ANALOG_CONFLICTS: dict[str, frozenset[tuple[str, str]]] = _analog_conflicts()
+#: analog entity type -> the mapping rows whose service collides with one of its candidates.
+ANALOG_EXCLUSION_ROWS: dict[str, tuple[MappingRow, ...]] = _analog_exclusion_rows()
+
+#: The same region as `(kind, type)` pairs — what a request actually carries. Pinned by
+#: `test_the_generated_space_is_worth_exploring` so the region cannot shrink unnoticed.
+ANALOG_EXCLUSION_REGION: dict[str, frozenset[tuple[str, str]]] = {
+    entity_type: frozenset((_kind(row), _service_type(row)) for row in rows)
+    for entity_type, rows in ANALOG_EXCLUSION_ROWS.items()
+}
 
 
-def _drop_defective_combinations(
-    services: list[tuple[str, dict[str, Any]]],
-) -> list[tuple[str, dict[str, Any]]]:
-    """Drop an Analogansatz service that would trip the open defect above.
+def _place(extraction: dict[str, Any], kind: str, entity: dict[str, Any]) -> None:
+    """Put one generated service into the list of the extraction it belongs in.
 
-    The analog service is dropped rather than the whole example rejected: rejecting would burn
-    draws and could trip `filter_too_much`, and the rest of the drawn encounter is a perfectly good
-    test case. Everything else about the Analogansatz path — including the collision warning — is
-    still generated whenever no incompatible service was drawn alongside it.
+    The contract has room for exactly one consultation per encounter; a second drawn one is
+    dropped rather than coerced into a procedure, which would document something that did not
+    happen. Shared by both request strategies so they cannot disagree about placement.
     """
-    documented = {(kind, entity["type"]) for kind, entity in services}
-    return [
-        (kind, entity)
-        for kind, entity in services
-        if not (ANALOG_CONFLICTS.get(entity["type"], frozenset()) & documented)
-    ]
+    if kind == "consultation":
+        extraction.setdefault("consultation", entity)
+    else:
+        extraction[f"{kind}s"].append(entity)
 
 
 @st.composite
@@ -360,9 +364,7 @@ def solve_requests(draw: Any, min_services: int = 1, max_services: int = 10) -> 
     fresh object per run, and a falsifying example prints as the request body a caller would have
     sent, which is what someone reproducing it needs.
     """
-    services = _drop_defective_combinations(
-        draw(st.lists(SERVICES, min_size=min_services, max_size=max_services))
-    )
+    services = draw(st.lists(SERVICES, min_size=min_services, max_size=max_services))
 
     extraction: dict[str, Any] = {
         "patient": {
@@ -375,13 +377,7 @@ def solve_requests(draw: Any, min_services: int = 1, max_services: int = 10) -> 
         "lab_tests": [],
     }
     for kind, entity in services:
-        if kind == "consultation":
-            # The contract has room for exactly one consultation per encounter. A second drawn
-            # one is dropped rather than coerced into a procedure, which would document something
-            # that did not happen.
-            extraction.setdefault("consultation", entity)
-        else:
-            extraction[f"{kind}s"].append(entity)
+        _place(extraction, kind, entity)
 
     # What a justification can name. A lab test is addressable as "labor" rather than by its
     # analyte, because that is the `entity_type` the bridge builds the act with — naming the
@@ -415,4 +411,41 @@ def solve_requests(draw: Any, min_services: int = 1, max_services: int = 10) -> 
     # separately so both ways of stating the same thing are exercised.
     if draw(st.booleans()):
         payload["setting"] = draw(SETTINGS)
+    return payload
+
+
+@st.composite
+def analog_exclusion_requests(draw: Any) -> dict[str, Any]:
+    """A request that puts a § 6 Abs. 2 ladder up against the exclusion table on purpose.
+
+    One Analogansatz service, plus at least one documented service whose Ziffer is incompatible
+    with one of that analog type's candidate targets, plus an ordinary drawn encounter around them
+    so the properties are exercised against a realistic invoice rather than a two-line one.
+
+    `solve_requests` reaches this region on its own — the filter that used to keep it out is gone —
+    but only by chance, and the interesting combinations are a small corner of a wide space. This
+    strategy makes them the *only* thing drawn, which is what turns
+    `test_analog_positions_obey_the_same_hard_rules` into a test that reliably runs rather than one
+    that occasionally happens to.
+    """
+    payload = draw(solve_requests(min_services=0, max_services=4))
+    extraction = payload["extraction"]
+
+    entity_type = draw(st.sampled_from(sorted(ANALOG_EXCLUSION_ROWS)))
+    _kind_, analog_entity = draw(_analog_entity(entity_type))
+    _place(extraction, _kind_, analog_entity)
+
+    rows = ANALOG_EXCLUSION_ROWS[entity_type]
+    conflicting = draw(
+        st.lists(
+            st.sampled_from(rows),
+            min_size=1,
+            max_size=len(rows),
+            unique_by=lambda row: row.ziffer,
+        )
+    )
+    for row in conflicting:
+        kind, entity = draw(_entity(row))
+        _place(extraction, kind, entity)
+
     return payload

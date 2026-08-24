@@ -3,16 +3,23 @@
 **Date:** 2026-08-24 · **Cases:** `logic/tests/cases/` · **Snapshots:** `logic/tests/golden/` ·
 **Runner:** `apps/engine/tests/test_manual_cases.py`, `apps/engine/tests/test_golden_snapshot.py`
 
-Eight synthetic encounters, each one chosen because it pins a rule the others do not. Cases 001 to
-003 came with the migration. Cases 004 to 008 were added here to cover the edge cases a randomised
+Nine synthetic encounters, each one chosen because it pins a rule the others do not. Cases 001 to
+003 came with the migration. Cases 004 to 008 were added to cover the edge cases a randomised
 property sweep reaches rarely or never: the ends of the factor ladder, arbitration where the
 evidence and the money disagree, § 4 Abs. 2a against a well-documented component, and one large
-encounter in which every mechanism fires at once.
+encounter in which every mechanism fires at once. Case 009 was added with the analog/exclusion fix
+and is the only case in the corpus that exists because of a *defect*: it is the regression gate for
+F-1 in [`PROPERTY_TEST_FINDINGS.md`](PROPERTY_TEST_FINDINGS.md).
 
-**No solver logic, rule table, catalog or schema was modified.** Every `expected.json` records what
-the engine at `51e8601` actually decides, and each decision below was read back and checked against
-the GOÄ text before it was frozen. One provenance imprecision surfaced while doing that and is
-recorded as G-1 — it is not fixed here.
+**Cases 001 to 008 were frozen against an unmodified engine.** Every `expected.json` for them
+records what the engine at `51e8601` actually decides, and each decision below was read back and
+checked against the GOÄ text before it was frozen. One provenance imprecision surfaced while doing
+that and is recorded as G-1 — it is not fixed here.
+
+**The analog/exclusion fix moved exactly one value in those eight snapshots:**
+`audit_trail.logic_version`, which is a SHA over the logic programs and therefore *must* move when
+one of them changes. No charged position, factor, amount, blocked entry or proof step differs — see
+the fix's own section below.
 
 ## What each case pins
 
@@ -26,6 +33,7 @@ recorded as G-1 — it is not fixed here.
 | `case_006_zielleistung` | ambulant | 5 | 1 | § 4 Abs. 2a beats a component's own confidence **and** its own justification |
 | `case_007_missing_docs` | ambulant | 6 | 0 | no reason anywhere → Schwellenwert, not rejection; every gap reported |
 | `case_008_complex_polytrauma` | stationär | 14 | 7 | 21 Ziffern, three clusters, layer stratification, § 6a Minderung |
+| `case_009_analog_exclusion` | ambulant | 3 | 1 | a § 6 Abs. 2 analog candidate blocked by a verified exclusion, and the ladder's fallback |
 
 ### case_004_factor_cap — the top of the ladder
 
@@ -115,8 +123,50 @@ Abs. 1 reduces every line by 25 %: **429.72 € gross → 322.29 € net**. It i
 in which the reduction fires, so it is the one that fails if the rate or the § 6a Abs. 1 Satz 3
 exemption list moves.
 
-`pytest tests/test_manual_cases.py tests/test_golden_snapshot.py` is 130 tests over the eight cases
-in about 15 s, `case_008` included; the full engine suite is 997 tests in about 90 s.
+### case_009_analog_exclusion — an Analogansatz is a charge, and faces what a charge faces
+
+A dermatologic follow-up: a full skin examination (**Nr. 7**), a dermatoscopy (**Nr. 750**), a
+lymph-node sonography (**Nr. 410**), and an optical coherence tomography that has no position in the
+1982 Gebührenverzeichnis at all. The OCT goes through § 6 Abs. 2, and its candidate ladder is
+Nr. 750 (0.75), Nr. 410 (0.55), Nr. 5 (0.25).
+
+Every rung is contested, which is the point:
+
+| Rung | Similarity | What happens to it |
+|---|---|---|
+| Nr. 750 | 0.75 | already billed directly for the dermatoscopy → a **collision** |
+| Nr. 410 | 0.55 | already billed directly for the sonography → a **collision** |
+| Nr. 5 | 0.25 | **blocked**: not chargeable next to Nr. 7 under `excl_man_5_7` |
+
+The `@5` objective ranks collision-avoidance above similarity, so the ladder is pushed all the way
+down to Nr. 5 — and Nr. 5 is where the engine used to break. Nr. 5 and Nr. 7 are mutually exclusive
+under a reviewer-verified rule, the `excluded/2` fact was injected, and the constraint that would
+have used it read `bill(A), bill(B)` — a relation an analog position never enters. The solver
+charged Nr. 5 next to Nr. 7, the validator refused the invoice, and the caller got a **`500` for a
+clinically ordinary encounter**. That is F-1.
+
+With both constraints over `charged/1`, Nr. 5 is unusable, the ladder comes back up to Nr. 750, and
+the case pins three things no other case in the corpus does:
+
+- **The analog position obeys the exclusion table.** `case_003` also exercises § 6 Abs. 2 and the
+  collision rule, but nothing in it is *excluded* against anything, so it passed throughout the
+  defect. This case fails the moment either constraint is narrowed back to `bill/1`.
+- **A rejected rung explains itself.** Nr. 5 is not a proposed position — nothing in the record
+  documents a symptombezogene Untersuchung — so before the fix it would simply have been absent. It
+  is now reported with `reason: exclusion`, `blocked_by: 7`, `rule_id: excl_man_5_7`, the
+  Leistungslegende quote as its legal basis, and one `analog_candidate_blocked` proof atom. "Why not
+  the closer candidate" is the first question anyone asks about an Analogansatz, and it is the one
+  question a § 6 Abs. 2 decision is worthless without.
+- **A collision is reported, not dodged.** Nr. 750 is charged **once**, at 2.3, covering both the
+  dermatoscopy and — as the Analogziffer — the tomography, with an `analog_collision` warning
+  naming it. The engine does not invent a second Nr. 750 line and does not silently drop the OCT.
+
+Three lines, 480 Punkte, **64.35 €**, no Minderung, and all three sit exactly on their Schwellenwert
+because the record carries no written reason — pinned so that this case cannot quietly become a test
+about the factor ladder instead.
+
+`pytest tests/test_manual_cases.py tests/test_golden_snapshot.py` is 145 tests over the nine cases
+in about 15 s, `case_008` included; the full engine suite is 1009 tests in about 90 s.
 
 ## G-1 — a blocked position can cite the wrong rule row of the right Anmerkung
 

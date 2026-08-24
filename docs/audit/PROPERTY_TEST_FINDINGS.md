@@ -1,12 +1,22 @@
 # Property-test findings
 
-**Date:** 2026-08-24 · **Suite:** `apps/engine/tests/property/` (Hypothesis) · **Engine:** `7f77afa`
+**Date:** 2026-08-24 · **Suite:** `apps/engine/tests/property/` (Hypothesis) · **Engine:** `7f77afa`,
+findings re-checked after the analog/exclusion fix
 
-Five invariants were added over randomly generated `POST /api/v1/solve` requests. One open defect
-came out of the first wide sweep. **No solver logic, rule table, catalog or schema was modified** —
-the fix for the defect below is a legal-posture change and belongs in its own reviewed branch.
+Five invariants were added over randomly generated `POST /api/v1/solve` requests, and one defect
+came out of the first wide sweep. At the time of writing **no solver logic, rule table, catalog or
+schema was modified** — the fix was a legal-posture change and belonged in its own reviewed branch.
 
-## What was run
+> **F-1 is now fixed** on `fix/analog-respects-exclusions`. The write-up below is kept as the
+> record of how it was found and what was decided; the "what changed, and what did not" section at
+> the end says what actually landed. A sixth property and a golden case
+> (`case_009_analog_exclusion`) replaced the `xfail`, and the generator no longer avoids the
+> region — it aims at it.
+
+## What was run, when the defect was found
+
+Historical — these are the runs that found F-1, against the engine *before* the fix. The post-fix
+runs are in "What changed, and what did not" at the end.
 
 | Sweep | Command | Result |
 |---|---|---|
@@ -22,9 +32,10 @@ that broke it made the *validator* refuse the invoice, so every assertion downst
 **Severity:** high. A clinically ordinary request returns `500`. No wrong amount is ever billed —
 the validator catches it — but the engine cannot answer a question it should be able to answer.
 
-**Status:** open. Recorded as
-`tests/property/test_financial_invariants.py::test_the_analog_ladder_ignores_exclusions_against_the_final_invoice`,
-an `xfail(strict=True)` that reproduces it in four lines and fails the build the day it is fixed.
+**Status: FIXED.** Both constraints now range over `charged/1`. The reproduction below is pinned as
+`tests/property/test_financial_invariants.py::test_the_analog_ladder_respects_exclusions_against_the_final_invoice`
+— no longer an `xfail`, and now asserting the invoice it produces rather than only the absence of a
+violation.
 
 ### Minimal reproduction
 
@@ -84,7 +95,7 @@ Walking the reproduction:
 The layered design is what makes this visible: the component that picks the number is not the
 component that approves it, and here the approver was right.
 
-### The change that would fix it — for review, not applied
+### The change that fixed it
 
 Widening both constraints to the relation that already includes analog positions:
 
@@ -99,36 +110,84 @@ The catalog guard immediately below them already reads `:- charged(Z), not code_
 which suggests `charged/1` was the intent for legality throughout and these two heads were simply
 left behind.
 
-**Two things need deciding before that lands, and neither is a test author's call:**
+**Two things needed deciding before it landed, and both were carried out as predicted:**
 
 1. **It can make the program UNSAT.** `1 { analog(A, Z) } 1` demands exactly one analog position
    per unlisted service. If every candidate on a ladder is excluded against something already
    billed, a hard constraint has no model, and the caller gets "nothing is chargeable" instead of
    an invoice — the failure mode the `@5` comment in that file explicitly avoids by keeping
-   collisions soft. Relaxing the cardinality to `0 { ... } 1` and reporting an uncovered analog
-   request is the obvious companion change, and it adds a new honest outcome to the response
-   contract.
-2. **It changes what is billed.** On the reproduction above the solver would charge Nr. 750
-   analogously *with* a collision warning instead of Nr. 5. That is a better answer, but it is a
-   different invoice, and `CONTRIBUTING.md` puts changes to what the system is willing to bill
-   behind legal and domain review.
+   collisions soft. **Done:** the cardinality is now `0 { ... } 1`, and an uncovered request is
+   reported as an `analog_uncovered` warning.
 
-Suggested branch: `fix/analog-respects-exclusions`.
+   The companion change turned out to need a third piece. `0 { ... } 1` on its own makes the
+   coverage *worse*, not better: an uncovered request scores 0 collisions at `@5` while a
+   colliding one scores 1, so the solver would rather charge nothing than charge a colliding
+   candidate. So `analog_uncovered` feeds the **same** `@5` term — `analog_collision(A, "")` —
+   which makes "no candidate at all" exactly as expensive as one collision, and `@2` (similarity)
+   and `@1` (points) then break the tie toward covering the service. Coverage therefore still wins
+   whenever any candidate is legal, and the relaxation only ever bites where the alternative was
+   UNSAT. Feeding the existing term rather than adding an `@6` was deliberate:
+   `test_the_objective_ordering_is_untouched` forbids a new priority level, and rightly — that
+   would be an objective-ordering change requiring legal review, which this is not.
 
-### What the test suite does about it meanwhile
+   With the current tables the uncovered branch is **unreachable**: Nr. 750 and Nr. 410 appear in
+   no exclusion or Zielleistung row, so the OCT ladder always has a legal rung. It is defensive,
+   and it is there because adding one exclusion row on Nr. 750 would otherwise convert this `500`
+   into a different `500`.
 
-`tests/property/conftest.py::_analog_conflicts` keeps the generator out of exactly this region: an
-Analogansatz service is not documented alongside a service whose Ziffer is mutually exclusive with
-one of that analog type's candidate targets. It is derived from `analog_candidates.csv`,
-`exclusions*.csv` and `zielleistung*.csv` rather than written out, so a new analog candidate or a
-new exclusion widens it automatically instead of quietly reopening the hole — and
-`test_the_generated_space_is_worth_exploring` pins its current size, so a widening fails rather
-than silently costing coverage.
+2. **It changes what is billed.** **Confirmed, and only where it had to.** On the reproduction the
+   solver now charges Nr. 750 analogously with a collision warning instead of Nr. 5. Across the
+   whole bundled corpus the change is provably contained:
+   `test_the_engine_still_reproduces_the_frozen_snapshot` compares every leaf of all eight frozen
+   snapshots against the live engine, and the **only** value that moved is
+   `audit_trail.logic_version`, the SHA over the logic programs,
+   which must move when one of them changes. No charged position, factor, amount, blocked entry or
+   proof step differs in any of the eight.
 
-Today that region is one pair: `optische_kohaerenztomographie` (the only analog type in the
-tables) against `vollstaendige_untersuchung_organsystem` (Nr. 7) and
-`untersuchung_ganzkoerperstatus` (Nr. 8). No assertion was weakened to accommodate it, and the
-Analogansatz path itself — including the collision warning — is still generated everywhere else.
+Branch: `fix/analog-respects-exclusions`.
+
+### What changed, and what did not
+
+**The logic** — `logic/asp/goae_optimize.lp`, four edits:
+
+| Change | Why |
+|---|---|
+| both legality constraints `bill/1` → `charged/1` | the fix itself |
+| `1 { analog(A,Z) } 1` → `0 { analog(A,Z) } 1` | the widened constraints can leave a ladder with no legal rung; UNSAT is a `500` too |
+| `analog_uncovered/1`, scored via `analog_collision(A, "")` | keeps coverage strictly preferred, without a new priority level |
+| `analog_blocked/4` | reports *which* rungs the invoice ruled out, and under which relation |
+
+`analog_blocked/4` is the one addition that is not strictly required to stop the `500`. It is there
+because "the § 6 Abs. 2 ladder silently skipped its two closest candidates" is not an auditable
+statement, and the § 6 Abs. 2 decision is the one a Rechnungsprüfer is most likely to challenge. It
+surfaces through the existing `BlockedCode` contract — `reason: "exclusion" | "zielleistung"`,
+which the schema already had — so no response field was added or changed.
+
+**One latent bug surfaced with it.** The arbitration-loss loop in `ClingoSolver._parse_model`
+tested `ziffer in billed`, so a member of a mutual cluster that the solver did not bill directly but
+*did* put on the invoice as someone else's Analogziffer was reported `conflict_lost` while being
+charged — the same Ziffer in `proposed_codes` and `blocked_codes` at once. It was unreachable while
+the generator avoided this region, and `test_uniqueness_invariant` caught it within one wide sweep
+of the guard being removed. It now tests the full charged set.
+
+**The test suite.** The generator no longer avoids anything. `_analog_conflicts()` — the filter that
+kept this region out — became `_analog_exclusion_rows()`, the same derivation over
+`analog_candidates.csv`, `exclusions*.csv` and `zielleistung*.csv`, feeding
+`analog_exclusion_requests()`: a strategy that documents an Analogansatz service *together with*
+something incompatible with one of its candidates, on purpose. The region is still one pair —
+`optische_kohaerenztomographie` against `vollstaendige_untersuchung_organsystem` (Nr. 7) and
+`untersuchung_ganzkoerperstatus` (Nr. 8) — and `test_the_generated_space_is_worth_exploring` still
+pins it, but as a **floor** now rather than a ceiling: widening is welcome, emptying it out is what
+fails.
+
+| Sweep, after the fix | Result |
+|---|---|
+| `pytest tests/property/ --hypothesis-seed=0` | 8 passed, no xfail |
+| `HYPOTHESIS_MAX_EXAMPLES=1500 pytest tests/property/ --hypothesis-seed=random` | 8 passed (~9 000 requests, the previously-excluded region included) |
+| `pytest` (whole engine suite) | 1009 passed, 7 skipped, **0 xfailed** |
+
+**What was not changed:** no database schema, no response schema, no objective and no priority
+level, no rule table, no catalog, and no `expected.json` for cases 001–008.
 
 ## What held
 

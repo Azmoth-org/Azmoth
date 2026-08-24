@@ -1,0 +1,55 @@
+{
+  "patient": {
+    "age": 58,
+    "sex": "w",
+    "setting": "ambulant"
+  },
+  "examinations": [
+    {
+      "id": "exam_haut_vollstaendig",
+      "type": "vollstaendige_untersuchung_organsystem",
+      "organ_system": "haut",
+      "organs": [
+        "rumpf",
+        "extremitaeten",
+        "kapillitium"
+      ],
+      "complexity": "mittel",
+      "confidence": "1.0"
+    }
+  ],
+  "procedures": [
+    {
+      "id": "proc_dermatoskopie",
+      "type": "dermatoskopie",
+      "organ": "haut",
+      "details": "Auflichtmikroskopie der pigmentierten Laesion am linken Oberschenkel, asymmetrisches Pigmentnetz",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_sonographie",
+      "type": "sonographie",
+      "details": "Sonographie der inguinalen Lymphknotenstation links, kein Nachweis einer Metastasierung",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_oct",
+      "type": "optische_kohaerenztomographie",
+      "organ": "haut",
+      "details": "Optische Kohaerenztomographie der Laesion zur Beurteilung der Tiefenausdehnung vor Exzisionsplanung",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    }
+  ],
+  "lab_tests": [],
+  "diagnoses": [
+    {
+      "text": "Nachsorge bei Zustand nach Melanom, Verdacht auf zweiten atypischen Naevus",
+      "confidence": "0.85"
+    }
+  ],
+  "justification_factors": [],
+  "notes": "Synthetic case, no real patient data. WHAT THIS TESTS: the § 6 Abs. 2 Analogansatz against the exclusion table. The optical coherence tomography has no position in the 1982 Gebuehrenverzeichnis, so its analog ladder is Nr. 750 (0.75), Nr. 410 (0.55), Nr. 5 (0.25). Nr. 750 and Nr. 410 are both already billed directly, so the collision objective - the highest-priority one - pushes the ladder down to Nr. 5, and Nr. 5 is not chargeable next to the Nr. 7 examination under the verified rule excl_man_5_7. EXPECTED BEHAVIOUR: Nr. 5 is BLOCKED with reason exclusion and blocked_by Nr. 7, carrying the rule id and a proof atom; the Analogansatz falls back to Nr. 750 and reports the collision for human review. Before the analog/exclusion fix the two legality constraints in logic/asp/goae_optimize.lp ranged over bill/1, which an analog position never enters, so the solver charged Nr. 5 next to Nr. 7 and the validator refused the whole invoice with a 500. This case is the regression gate for that."
+}

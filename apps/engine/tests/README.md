@@ -34,9 +34,8 @@ count, or run in the image where the binary is always there.
 
 ```
 $ .venv/bin/python -m pytest -q
-992 passed, 7 skipped, 1 xfailed in 87s   # 4 skips: the Postgres parametrisations, see below
-                                          # 3 skips: the benchmarks, see below
-                                          # 1 xfail: an open defect, see the property suite below
+1009 passed, 7 skipped in 90s   # 4 skips: the Postgres parametrisations, see below
+                                # 3 skips: the benchmarks, see below
 ```
 
 Seven is the whole expected skip count, and it is written down here so that an *eighth* stands out.
@@ -46,12 +45,12 @@ Run with `-rs` and pytest names the reason for each.
 
 | File | Tests | What it defends |
 | --- | --- | --- |
-| `test_golden_snapshot.py` | 11 | **golden** — the frozen POC output, reproduced field-for-field |
+| `test_golden_snapshot.py` | 23 | **golden** — the frozen POC output, reproduced field-for-field |
 | `test_golden_normalization.py` | 16 | **golden** — the normaliser the snapshot, the cache key and the receipt all depend on |
-| `test_manual_cases.py` | 41 | **golden / determinism** — the three synthetic cases end to end, twice |
+| `test_manual_cases.py` | 122 | **golden / determinism** — the nine synthetic cases end to end, twice |
 | `test_clingo.py` | 34 | **legal posture** — arbitration, the factor ladder, Analogansatz, brute-force differential |
 | `test_property.py` | 84 | **property-based** — ten invariants over randomly generated candidate sets |
-| `property/test_financial_invariants.py` | 7 | **property-based, Hypothesis** — five invariants over randomly generated `/solve` requests, plus the open defect the first sweep found |
+| `property/test_financial_invariants.py` | 8 | **property-based, Hypothesis** — six invariants over randomly generated `/solve` requests, including the § 6 Abs. 2 Analogansatz against the exclusion table |
 | `test_production_fixes.py` | 64 | the seven P0 fixes: config, timeout, cache, proposals, coverage, documentation gaps, receipts |
 | `test_padnext.py` | 75 | reading a delivery and auditing it; one deliberate defect per position, and the three honest money buckets |
 | `test_padnext_schema.py` | 63 | **framing validation** — the five ways a delivery is refused before it is read, with a line number, and the position-level problems that must never be a refusal |
@@ -190,25 +189,31 @@ where people still run it before committing, and it covers the generated space s
 [`docs/audit/PROPERTY_TEST_FINDINGS.md`](../../../docs/audit/PROPERTY_TEST_FINDINGS.md) was found at
 1500 and would be a reasonable nightly figure.
 
-### The one `xfail`, and why it is `strict`
+### The defect the first sweep found, and where it went
 
 The first wide sweep failed all five properties on one shared cause: an Analogansatz position
 reaches the invoice through `analog/2`, and the two legality constraints in
-`logic/asp/goae_optimize.lp` range over `bill/1`, so it faces neither. The validator catches it and
-refuses, which turns an ordinary encounter into a `500`.
+`logic/asp/goae_optimize.lp` ranged over `bill/1`, so it faced neither. The validator caught it and
+refused, which turned an ordinary encounter into a `500`. It was recorded as F-1 in
+[`docs/audit/PROPERTY_TEST_FINDINGS.md`](../../../docs/audit/PROPERTY_TEST_FINDINGS.md) and held as
+an `xfail(strict=True)` until it could be fixed on its own reviewed branch.
 
-Fixing it changes what the solver is willing to bill, so it is **not** fixed here — it is recorded
-as `test_the_analog_ladder_ignores_exclusions_against_the_final_invoice`, an `xfail(strict=True)`
-that reproduces it in four lines. `strict` means the day the constraint is widened, that test
-XPASSes and fails the build, telling whoever fixed it to delete the marker and the generator guard
-that goes with it. The root cause, the proposed diff and the two decisions it needs first are in
-[`docs/audit/PROPERTY_TEST_FINDINGS.md`](../../../docs/audit/PROPERTY_TEST_FINDINGS.md).
+**It is fixed.** Both constraints now range over `charged/1`, and there is no `xfail` in the suite
+any more. Three things replaced it, because a fixed bug with one regression test is a bug waiting to
+come back:
 
-No assertion was weakened for it. The generator declines exactly one combination — an Analogansatz
-service alongside a service whose Ziffer is mutually exclusive with one of that analog type's
-candidate targets — derived from the rule tables rather than written out, and
-`test_the_generated_space_is_worth_exploring` pins its size so a data change cannot widen it
-silently.
+| Where | What it holds |
+| --- | --- |
+| `test_the_analog_ladder_respects_exclusions_against_the_final_invoice` | the exact reproduction, now asserting the invoice it produces — `{7, 410, 750}`, Nr. 5 blocked by Nr. 7, the collision reported |
+| `test_analog_positions_obey_the_same_hard_rules` | the property, over generated requests aimed at the region: no exclusion and no § 4 Abs. 2a pair survives on an invoice, every § 6 Abs. 2 request is answered, and every ruled-out rung carries a proof atom |
+| `test_production_fixes.py::test_the_objective_ordering_is_untouched` | the constraint text itself, so narrowing either one back to `bill/1` fails immediately rather than after a sweep |
+
+The generator no longer declines anything. The combination it used to drop — an Analogansatz
+service alongside a service whose Ziffer is incompatible with one of that analog type's candidate
+targets — is now what `analog_exclusion_requests()` deliberately builds, from the same derivation
+over the rule tables that used to be the filter. `test_the_generated_space_is_worth_exploring` pins
+that region as a **floor** now rather than a ceiling: widening it is welcome, and it emptying out
+would silently gut the property, so that is what fails.
 
 ## The determinism tests
 
@@ -231,7 +236,7 @@ needs legal and domain review — see [`logic/README.md`](../../../logic/README.
 
 | Test | Claim |
 | --- | --- |
-| `test_production_fixes.py::test_the_objective_ordering_is_untouched` | `@5/@4/@3/@2/@1` in that order, revenue last, hard rules as integrity constraints, no new priority level |
+| `test_production_fixes.py::test_the_objective_ordering_is_untouched` | `@5/@4/@3/@2/@1` in that order, revenue last, hard rules as integrity constraints **over `charged/1`**, no new priority level |
 | `test_clingo.py` (arbitration) | a mutual conflict is decided on **evidence**, not on money |
 | `test_clingo.py` (brute force) | the solver's choice equals an exhaustive enumeration's optimum |
 | `test_clingo.py` / `test_manual_cases.py` (factor ladder) | no factor leaves its § 5 band or its Leistungslegende cap |

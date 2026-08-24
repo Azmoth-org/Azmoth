@@ -1,4 +1,4 @@
-"""Five invariants that must hold for *every* valid request, not for three golden cases.
+"""Six invariants that must hold for *every* valid request, not for three golden cases.
 
 Each test states one claim, recomputed from the catalog rather than read back off the response, and
 Hypothesis looks for a request that breaks it. The generator is described in
@@ -23,6 +23,12 @@ multiplier the law does not permit.
 
 **`test_determinism_invariant`** — the same request twice produces the same `receipt_hash`. A
 failure means the receipt attests to nothing.
+
+**`test_analog_positions_obey_the_same_hard_rules`** — a position charged analogously under § 6
+Abs. 2 GOÄ is subject to the exclusion table and to § 4 Abs. 2a exactly as a directly billed one
+is, and a candidate the invoice rules out is *reported* rather than silently skipped. A failure
+means the § 6 Abs. 2 ladder can put a position on an invoice that the law does not allow there —
+which is the defect recorded as F-1 in `docs/audit/PROPERTY_TEST_FINDINGS.md`.
 
 **Two of these are also checked inside the engine, and that is the point.**
 `app.validation.validator` re-checks the factor bands and the total independently of the solver,
@@ -53,9 +59,12 @@ from app.schemas import Coding, Proposal
 from app.services.pipeline import Pipeline
 from app.validation.validator import ValidationFailed, cent_to_eur, line_amount_cent
 from tests.property.conftest import (
-    ANALOG_CONFLICTS,
+    ANALOG_EXCLUSION_REGION,
+    ANALOG_TYPES,
+    CATALOG,
     REACHABLE_ZIFFERN,
     RULES,
+    analog_exclusion_requests,
     solve,
     solve_requests,
 )
@@ -353,43 +362,153 @@ def test_determinism_invariant(property_pipeline: Pipeline, payload: dict[str, A
 
 
 # ------------------------------------------------------------------------------------------
-# what the sweep found
+# 6. the § 6 Abs. 2 Analogansatz obeys the same hard rules
 # ------------------------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "OPEN DEFECT. The two legality constraints in logic/asp/goae_optimize.lp range over "
-        "bill/1, and an Analogansatz position reaches the invoice through analog/2 — so it faces "
-        "neither the exclusion nor the Zielleistung constraint. Fixing it means changing what the "
-        "solver is willing to bill, which needs its own reviewed branch. See "
-        "docs/audit/PROPERTY_TEST_FINDINGS.md."
-    ),
-)
-def test_the_analog_ladder_ignores_exclusions_against_the_final_invoice(
+def _incompatible(a: str, b: str) -> bool:
+    """Whether two positions may not both be charged, under either enforced relation.
+
+    Read from `RULES`, which is loaded under the same `UnverifiedRulePolicy.WARN` the pipeline runs
+    with, so this is the rule set that actually constrains an invoice. Both relations are checked
+    in both directions: the ASP constraints forbid *co-occurrence*, so which way round the CSV
+    happened to state a pair does not change what is billable.
+    """
+    if any(
+        {rule.from_ziffer, rule.to_ziffer} == {a, b} for rule in RULES.exclusions
+    ):
+        return True
+    return any(
+        {rule.parent_ziffer, rule.child_ziffer} == {a, b} for rule in RULES.zielleistung
+    )
+
+
+def _analog_candidates(payload: dict[str, Any]) -> dict[str, set[str]]:
+    """The § 6 Abs. 2 ladder each documented Analogansatz service will be offered.
+
+    Keyed by entity type, filtered to positions the catalog has and lists as active — the same
+    filter `ClingoSolver.build_facts` applies before injecting `analog_cand/3`, so this is the
+    candidate set the solver actually chooses from rather than every row in the table.
+    """
+    documented = {
+        entity["type"]
+        for entity in payload["extraction"].get("procedures", [])
+        if entity["type"] in ANALOG_TYPES
+    }
+    return {
+        entity_type: {
+            rule.target_ziffer
+            for rule in RULES.analog_for(entity_type)
+            if CATALOG.has(rule.target_ziffer) and CATALOG.is_active(rule.target_ziffer)
+        }
+        for entity_type in documented
+    }
+
+
+@given(payload=analog_exclusion_requests())
+@hypothesis_settings(max_examples=MAX_EXAMPLES)
+def test_analog_positions_obey_the_same_hard_rules(
+    property_pipeline: Pipeline, payload: dict[str, Any]
+) -> None:
+    """An Analogansatz position is a charge, and faces every constraint a charge faces.
+
+    § 6 Abs. 2 GOÄ lets an unlisted service be billed as an equivalent listed one. It does not
+    exempt the result from anything: the position that ends up on the invoice is subject to the
+    Leistungslegenden exclusions and to the Zielleistungsprinzip (§ 4 Abs. 2a) exactly as it would
+    be if the bridge had proposed it directly. That is one claim, and it has three halves here:
+
+    * **The invoice is legal.** No enforced exclusion and no Zielleistung pair survives on it,
+      whichever rule put each position there. This is what fails if the two hard constraints in
+      `logic/asp/goae_optimize.lp` are ever narrowed back to `bill/1`.
+    * **The engine answers.** Every documented § 6 Abs. 2 service is either charged analogously or
+      named in an `analog_uncovered` warning. Both are answers; silence is not, and neither is the
+      `500` this used to produce — `_solve` turns a validator contradiction into a named failure,
+      so the original defect fails this test on the first half before reaching the second.
+    * **A rejected rung is explained.** A candidate that the final invoice made unusable is
+      reported as blocked, with a blocker that is really on the invoice and at least one proof
+      atom. "Why not the closer candidate" is the first question anyone asks about an Analogansatz,
+      and the § 6 Abs. 2 decision is not auditable if the response cannot answer it.
+
+    The generator aims squarely at this region — see `analog_exclusion_requests` — because it is a
+    narrow corner of a wide space that the five properties above reach only by luck.
+    """
+    _proposal, coding = _solve(property_pipeline, payload)
+
+    charged = {line.ziffer for line in coding.proposed_codes}
+
+    for rule in RULES.exclusions:
+        assert not (rule.from_ziffer in charged and rule.to_ziffer in charged), (
+            f"{rule.rule_id} is violated by {sorted(charged)}"
+        )
+    for rule in RULES.zielleistung:
+        assert not (rule.parent_ziffer in charged and rule.child_ziffer in charged), (
+            f"{rule.rule_id}: GOÄ {rule.child_ziffer} is charged next to its target service "
+            f"GOÄ {rule.parent_ziffer} (§ 4 Abs. 2a GOÄ)"
+        )
+
+    ladders = _analog_candidates(payload)
+    answered = {decision.entity_type for decision in coding.analog_codes} | {
+        warning.type for warning in coding.warnings if warning.type == "analog_uncovered"
+    }
+    for entity_type in ladders:
+        assert entity_type in answered or "analog_uncovered" in answered, (
+            f"the documented Analogansatz service {entity_type!r} is neither charged analogously "
+            "nor reported as uncoverable"
+        )
+        event(f"analog answered: {entity_type}")
+
+    blocked = {entry.ziffer: entry for entry in coding.blocked_codes}
+    for candidates in ladders.values():
+        for candidate in sorted(candidates):
+            blockers = sorted(w for w in charged if _incompatible(candidate, w))
+            if not blockers:
+                continue
+            event("analog candidate ruled out by the invoice")
+            assert candidate not in charged, (
+                f"GOÄ {candidate} was charged as an Analogziffer next to "
+                f"GOÄ {', '.join(blockers)}, which the rules do not allow"
+            )
+            entry = blocked.get(candidate)
+            assert entry is not None, (
+                f"GOÄ {candidate} could not be used as an Analogziffer because of "
+                f"GOÄ {', '.join(blockers)}, and nothing in the response says so"
+            )
+            assert entry.explanation, f"GOÄ {candidate} is blocked without an explanation"
+            assert entry.proof, f"GOÄ {candidate} is blocked without a single proof atom"
+            assert entry.blocked_by in charged, (
+                f"GOÄ {candidate} is reported as blocked by GOÄ {entry.blocked_by}, which is not "
+                "on the invoice"
+            )
+
+
+def test_the_analog_ladder_respects_exclusions_against_the_final_invoice(
     property_pipeline: Pipeline,
 ) -> None:
     """The minimal case `test_uniqueness_invariant` shrank to, pinned as a regression test.
 
-    A dermatoscopy (Nr. 750), a sonography (Nr. 410) and a whole-body status examination (Nr. 7)
-    are all documented directly. An optical coherence tomography is documented too — it has no
-    Ziffer of its own, so § 6 Abs. 2 GOÄ charges it analogously, and its candidate ladder is
-    Nr. 750 (0.75), Nr. 410 (0.55), Nr. 5 (0.25).
+    A dermatoscopy (Nr. 750), a sonography (Nr. 410) and an organ-system examination (Nr. 7) are
+    all documented directly. An optical coherence tomography is documented too — it has no Ziffer
+    of its own, so § 6 Abs. 2 GOÄ charges it analogously, and its candidate ladder is Nr. 750
+    (0.75), Nr. 410 (0.55), Nr. 5 (0.25).
 
     The first two candidates are already billed directly, and avoiding that collision is objective
-    @5 — ranked above similarity at @2 — so the solver walks down to Nr. 5. Nothing stops it: Nr. 5
-    and Nr. 7 are mutually exclusive under `excl_man_5_7`, the fact is injected, and the constraint
-    that would use it only looks at `bill/1`.
+    @5 — ranked above similarity at @2 — so the solver walks down to Nr. 5. **This is where the
+    engine used to break.** Nr. 5 and Nr. 7 are mutually exclusive under `excl_man_5_7`, the fact
+    is injected, and the constraint that would have used it looked only at `bill/1` — which an
+    analog position never enters. The solver charged Nr. 5 anyway, the validator refused the
+    invoice, and the caller got a `500` for an ordinary encounter. Recorded as F-1 in
+    `docs/audit/PROPERTY_TEST_FINDINGS.md`, and reproduced here as an `xfail(strict=True)` until
+    the constraints were widened to `charged/1`.
 
-    The validator then does its job and refuses the invoice, so the caller gets a `500` for an
-    ordinary encounter. That is the defect: not a wrong amount, but a legitimate request the engine
-    cannot answer.
+    Now Nr. 5 is unusable, the ladder goes back up to its closest candidate, and the collision is
+    reported rather than dodged: Nr. 750 is charged once, for both the dermatoscopy and — as the
+    analog position — the tomography, with `analog_collision` telling a human to look at it. That
+    is a different invoice from the one the ladder was reaching for, and it is a legal one.
 
-    `strict=True` is the point of writing it this way. The day the constraint is widened to
-    `charged/1`, this test passes, `strict` turns that into a build failure, and whoever fixed it
-    is told to delete the marker and the guard in `tests/property/conftest.py` that keeps the
-    generator out of this region.
+    The exact positions are asserted, not just the absence of a violation. The property test above
+    covers "no exclusion is violated" across the whole region; what only this case can pin is
+    *which* answer the objective ordering produces once the constraint is in force, so a future
+    change to that ordering shows up here as a diff rather than as a silently different bill.
     """
     payload = {
         "extraction": {
@@ -403,12 +522,34 @@ def test_the_analog_ladder_ignores_exclusions_against_the_final_invoice(
         }
     }
     proposal = solve(property_pipeline, payload)
+    coding = proposal.solver_result.coding
 
-    charged = {line.ziffer for line in proposal.solver_result.coding.proposed_codes}
+    charged = {line.ziffer for line in coding.proposed_codes}
     for rule in RULES.exclusions:
         assert not (rule.from_ziffer in charged and rule.to_ziffer in charged), (
             f"{rule.rule_id} is violated by {sorted(charged)}"
         )
+
+    assert charged == {"7", "410", "750"}, (
+        "the objective ordering no longer produces the invoice this case was frozen against"
+    )
+    assert "5" not in charged, "Nr. 5 is not chargeable next to Nr. 7 (excl_man_5_7)"
+
+    # The analog position is the closest candidate, charged once and flagged for a human.
+    assert [(d.entity_type, d.ziffer) for d in coding.analog_codes] == [
+        ("optische_kohaerenztomographie", "750")
+    ]
+    assert any(w.type == "analog_collision" and w.ziffer == "750" for w in coding.warnings), (
+        "Nr. 750 is charged both directly and as the Analogziffer — that must be reported"
+    )
+
+    # And the rung the invoice ruled out says so itself, with the verified rule that did it.
+    rejected = next(entry for entry in coding.blocked_codes if entry.ziffer == "5")
+    assert rejected.reason == "exclusion"
+    assert rejected.blocked_by == "7"
+    assert rejected.rule_id == "excl_man_5_7"
+    assert rejected.explanation
+    assert [step.rule for step in rejected.proof] == ["analog_candidate_blocked"]
 
 
 # ------------------------------------------------------------------------------------------
@@ -439,13 +580,17 @@ def test_the_generated_space_is_worth_exploring() -> None:
     ):
         assert cluster <= REACHABLE_ZIFFERN, f"{sorted(cluster - REACHABLE_ZIFFERN)} unreachable"
 
-    # And the one region the generator stays out of has to stay as small as it is claimed to be.
-    # `_analog_conflicts` derives it from the rule tables, so an unrelated data change could widen
-    # it — silently removing coverage rather than failing. Pinned here instead.
-    assert set(ANALOG_CONFLICTS) == {"optische_kohaerenztomographie"}, (
-        f"a new Analogansatz candidate widened the excluded region: {sorted(ANALOG_CONFLICTS)}"
+    # The region where a § 6 Abs. 2 ladder meets the exclusion table is the whole subject of
+    # `test_analog_positions_obey_the_same_hard_rules`, and it is derived from the rule tables —
+    # so an unrelated data change could empty it and leave that test passing over nothing. Pinned
+    # here instead. This assertion used to say the opposite: it bounded a region the generator
+    # *avoided*, because the engine returned a 500 for it. Widening is now welcome; vanishing is
+    # not, which is why the analog type is named and the count is a floor.
+    assert set(ANALOG_EXCLUSION_REGION) >= {"optische_kohaerenztomographie"}, (
+        f"no Analogansatz type collides with the exclusion table any more: "
+        f"{sorted(ANALOG_EXCLUSION_REGION)}"
     )
-    assert ANALOG_CONFLICTS["optische_kohaerenztomographie"] == {
+    assert ANALOG_EXCLUSION_REGION["optische_kohaerenztomographie"] >= {
         ("examination", "untersuchung_ganzkoerperstatus"),
         ("examination", "vollstaendige_untersuchung_organsystem"),
-    }, "the open analog/exclusion defect now costs more coverage than it did"
+    }, "the analog/exclusion region shrank — that test now covers less than it did"

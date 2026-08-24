@@ -32,6 +32,7 @@ def test_there_are_synthetic_cases():
         "case_006_zielleistung",
         "case_007_missing_docs",
         "case_008_complex_polytrauma",
+        "case_009_analog_exclusion",
     ]
 
 
