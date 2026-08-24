@@ -44,3 +44,14 @@ alembic==1.19.1
 # -- development / test ------------------------------------------------------------------------
 pytest==9.1.1
 pytest-asyncio==1.4.0
+
+# Property-based testing. Pinned like everything else: Hypothesis's own generation strategy
+# changes between minor releases, so an unpinned bump would silently change which inputs the
+# invariant tests actually cover — and a suite whose coverage moves on its own cannot be used as
+# evidence about money.
+#
+# The `[pytest]` extra is what registers the pytest plugin that makes `--hypothesis-seed` and the
+# statistics output work; the base package alone gives the strategies but not the integration.
+# One line rather than two, because extras are additive and a second pinned line for the same
+# distribution would only be a place for the two pins to drift apart.
+hypothesis[pytest]==6.165.10

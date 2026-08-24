@@ -42,7 +42,14 @@ jobs:
       - name: pytest (inside the container, engines required)
         # No extra `-q`: pytest.ini already passes it, and a second one means `-qq`, at which pytest
         # prints no summary line at all. `-rs` lists the reason for every skip.
-        run: docker run --rm -e REQUIRE_ENGINES=1 govatax-engine:ci python -m pytest -rs
+        #
+        # `--hypothesis-seed=0` pins the input set of tests/property/. Without it those tests
+        # explore new requests on every run, which is what they are for locally and wrong here: a
+        # red build nobody can reproduce from the same commit is a red build people learn to
+        # re-run. The nightly sweep is where new inputs belong — see apps/engine/tests/README.md.
+        run: >-
+          docker run --rm -e REQUIRE_ENGINES=1 govatax-engine:ci
+          python -m pytest -rs --hypothesis-seed=0
 
   # ===========================================================================================
   # JOB 2 — the database layer, against a real Postgres.
