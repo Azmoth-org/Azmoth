@@ -1,5 +1,11 @@
 # Performance baseline — where the time actually goes
 
+> **Looking for the regression gate?** That is
+> [`performance_baselines.md`](performance_baselines.md) (plural) — the baselines and the soft/hard
+> thresholds `apps/engine/tests/benchmarks/` fails a build on. This document is the *profile* that
+> explains those numbers: which stage a request spends its time in, and what would make Clingo
+> expensive. One letter apart, and deliberately so: the gate is derived from this measurement.
+
 **Measured 2026-08-23** on the three committed golden cases. Every number here was produced by
 `engine_cli.py solve --stats`, seven cold processes per case, median reported. Nothing in this
 document changes what the engine bills: task 1.3 was measurement only, and the ASP encoding, the

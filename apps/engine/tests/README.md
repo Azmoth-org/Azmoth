@@ -1,6 +1,6 @@
 # `apps/engine/tests`
 
-919 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
+1000 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
 behaviour the POC did not have. **None was weakened to make the migration pass** — where a
 migrated test failed only because a path moved, the path was fixed; where it asserted on an
 artefact this monorepo does not contain (the POC's static UI), the assertion moved to the contract
@@ -11,11 +11,12 @@ it was really about, and that is recorded in
 
 ```bash
 cd apps/engine
-.venv/bin/python -m pytest -q                    # all of it, ~75 s
+.venv/bin/python -m pytest -q                    # all of it, ~87 s
 .venv/bin/python -m pytest -q tests/test_clingo.py
 .venv/bin/python -m pytest -q -k determinis      # by name
 .venv/bin/python -m pytest -q --lf               # last failures only
 .venv/bin/python -m pytest -q --ignore=tests/property   # skip the ~40 s Hypothesis suite
+.venv/bin/python -m pytest tests/benchmarks --benchmark-only   # the perf gate, skipped by default
 ```
 
 Inside the container image, where Soufflé is guaranteed present:
@@ -33,9 +34,13 @@ count, or run in the image where the binary is always there.
 
 ```
 $ .venv/bin/python -m pytest -q
-914 passed, 4 skipped, 1 xfailed in 74s   # 4 skips: the Postgres parametrisations, see below
+992 passed, 7 skipped, 1 xfailed in 87s   # 4 skips: the Postgres parametrisations, see below
+                                          # 3 skips: the benchmarks, see below
                                           # 1 xfail: an open defect, see the property suite below
 ```
+
+Seven is the whole expected skip count, and it is written down here so that an *eighth* stands out.
+Run with `-rs` and pytest names the reason for each.
 
 ## What each file is for
 
@@ -63,6 +68,26 @@ $ .venv/bin/python -m pytest -q
 | `test_db_persistence.py` | 27 | **durability** — an approval survives a real restart; the lifecycle under a row lock; the migration matches the models |
 | `test_audit_log.py` | 15 | the audit log records what happened, in order, with an actor — and cannot be rewritten |
 | `test_pagination.py` | 31 | **paging and filtering the two list endpoints** — that `total` follows the filter rather than the table, that two pages never overlap, and that a limit outside its range is a `422` and not a clamped success |
+| `benchmarks/test_performance.py` | 3 | **performance regressions** — cold catalog + rule load, one solve, one proposal round trip, each gated on a soft and a hard threshold |
+
+## The benchmarks, and why they are skipped by default
+
+`tests/benchmarks/` measures wall-clock, so it is the one part of this suite whose result depends on
+what else the machine is doing. `pytest.ini` carries `--benchmark-skip`; `--benchmark-only`
+overrides it, and that is the only way these three run:
+
+```bash
+.venv/bin/python -m pytest tests/benchmarks --benchmark-only
+```
+
+Each reports the median of 10 timed rounds against two thresholds: **soft** at the baseline +20%,
+which warns and prints a summary section but still passes, and **hard** at +100%, which fails and
+names the number. The baselines, the machine they were measured on, the observed run-to-run spread
+and the reasoning behind the two thresholds are in
+[`docs/performance_baselines.md`](../../../docs/performance_baselines.md). CI runs them as its own
+`engine-benchmarks` job and keeps the JSON as an artefact.
+
+The three skips this produces in an ordinary run are intentional, and they are counted above.
 
 ## The database, and why the suite does not use yours
 
