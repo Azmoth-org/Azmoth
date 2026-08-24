@@ -5,8 +5,8 @@ on:
     branches: [main]
   pull_request:
 
-# A new push to the same ref cancels the previous run. Two jobs build a Docker image, so duplicated
-# runs are expensive.
+# A new push to the same ref cancels the previous run. Three jobs build a Docker image, so
+# duplicated runs are expensive.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -52,7 +52,72 @@ jobs:
           python -m pytest -rs --hypothesis-seed=0
 
   # ===========================================================================================
-  # JOB 2 — the database layer, against a real Postgres.
+  # JOB 2 — performance regressions.
+  #
+  # Inside the image, for the same reason JOB 1 is: the solve benchmark drives the real pipeline and
+  # needs the `souffle` binary. A bare runner without it would SKIP that benchmark and the job would
+  # go green having measured two things out of three — so REQUIRE_ENGINES=1 turns the absence into a
+  # failure here too.
+  #
+  # `--benchmark-only` is what runs these at all: pytest.ini carries `--benchmark-skip` so an
+  # ordinary run pays none of their wall-clock, and `--benchmark-only` overrides it. It also skips
+  # every non-benchmark test, which is why this is its own job rather than a step in JOB 1 — the two
+  # flags are mutually exclusive in one invocation.
+  #
+  # Soft thresholds (baseline +20%) warn and are visible in the log. Hard thresholds (+100%) fail
+  # this job. Baselines, the machine they were measured on and the threshold arithmetic are in
+  # docs/performance_baselines.md.
+  # ===========================================================================================
+  engine-benchmarks:
+    name: engine-benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the engine image
+        # Context is the repo root: the image needs logic/ and data/, which live outside apps/engine.
+        run: docker build -f apps/engine/Dockerfile -t govatax-engine:ci .
+
+      - name: Benchmarks (hard thresholds fail this job)
+        env:
+          # PROVISIONAL, and not measured — see docs/performance_baselines.md §6. The baselines were
+          # taken on a documented idle laptop; this runner is shared, virtualised, and pays for two
+          # Soufflé process spawns per solve out of whatever its neighbours leave over. 3.0 is a
+          # deliberate over-estimate so the first runs report numbers instead of failing on variance,
+          # which makes CI a catastrophe gate rather than the +100% gate it is locally. Tighten it
+          # from the uploaded artefacts once there are a few green runs to read.
+          BENCHMARK_THRESHOLD_SCALE: "3.0"
+        run: |
+          # World-writable because the image runs as uid 10001 (Dockerfile `USER 10001`) and a bind
+          # mount the runner created is owned by the runner. Without this, --benchmark-json fails on
+          # a permission error, which looks nothing like the threshold failure this job is for.
+          mkdir -p benchmark-artifacts && chmod 777 benchmark-artifacts
+
+          docker run --rm \
+            -e REQUIRE_ENGINES=1 \
+            -e BENCHMARK_THRESHOLD_SCALE="$BENCHMARK_THRESHOLD_SCALE" \
+            -v "$GITHUB_WORKSPACE/benchmark-artifacts:/artifacts" \
+            govatax-engine:ci \
+            python -m pytest tests/benchmarks -rs --benchmark-only \
+              --benchmark-columns=median,min,max,stddev \
+              --benchmark-json=/artifacts/benchmark-results.json
+
+      - name: Store the results
+        # `always()`, because the artefact of a run that breached a hard threshold is the one
+        # somebody actually needs. `extra_info` in the JSON carries the baseline, both thresholds,
+        # the scale factor and the observed median for every benchmark, so the artefact explains the
+        # failure on its own.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-benchmark-results
+          path: benchmark-artifacts/benchmark-results.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  # ===========================================================================================
+  # JOB 3 — the database layer, against a real Postgres.
   #
   # JOB 1 runs the whole suite, but `DATABASE_URL` there is in-memory SQLite (forced by
   # tests/conftest.py), so the four parametrisations in tests/test_db_persistence.py that exercise
@@ -124,7 +189,7 @@ jobs:
           fi
 
   # ===========================================================================================
-  # JOB 3 — the JS/TS workspace.
+  # JOB 4 — the JS/TS workspace.
   # ===========================================================================================
   web-checks:
     name: web-checks
@@ -162,7 +227,7 @@ jobs:
           echo "generated TypeScript is in sync"
 
   # ===========================================================================================
-  # JOB 4 — the contract and the legal posture. The one that matters most.
+  # JOB 5 — the contract and the legal posture. The one that matters most.
   #
   # No Docker here: `export_openapi.py --check` only builds the FastAPI app object and serialises
   # its schema. It never solves, so it needs clingo (a wheel) but not the Soufflé binary — which

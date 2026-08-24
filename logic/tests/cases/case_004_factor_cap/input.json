@@ -1,0 +1,69 @@
+{
+  "patient": { "age": 63, "sex": "m", "setting": "ambulant" },
+  "consultation": {
+    "id": "consultation",
+    "type": "eingehende_beratung",
+    "duration_minutes": 18,
+    "confidence": "1.0"
+  },
+  "examinations": [
+    {
+      "id": "exam_schulter",
+      "type": "vollstaendige_untersuchung_organsystem",
+      "organ_system": "bewegungsapparat",
+      "organs": ["schulter", "oberarm", "halswirbelsaeule"],
+      "complexity": "komplex",
+      "confidence": "1.0"
+    }
+  ],
+  "procedures": [
+    {
+      "id": "proc_punktion",
+      "type": "punktion",
+      "organ": "schulter",
+      "details": "Punktion des linken Schultergelenks unter sonographischer Kontrolle, 25 ml trübes Punktat aspiriert und zur Erregerdiagnostik eingesandt",
+      "complexity": "komplex",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_sono",
+      "type": "sonographie",
+      "organ": "schulter",
+      "details": "Sonographie des linken Schultergelenks, ausgedehnter Erguss mit Kapselverdickung",
+      "complexity": "mittel",
+      "confidence": "1.0"
+    }
+  ],
+  "lab_tests": [
+    { "id": "lab_bb", "type": "blutbild", "confidence": "1.0" },
+    { "id": "lab_crp", "type": "crp", "confidence": "1.0" }
+  ],
+  "diagnoses": [
+    { "text": "Verdacht auf bakterielle Omarthritis links", "confidence": "0.85" },
+    { "text": "Zustand nach Rotatorenmanschettenrekonstruktion links", "confidence": "1.0" }
+  ],
+  "justification_factors": [
+    {
+      "id": "just_punktion",
+      "reason": "Erheblich erschwerte Gelenkpunktion: adipöser Patient, ausgeprägte periartikuläre Verkalkungen und Narbenzug nach Voroperation, Zugang nur unter durchgehender sonographischer Kontrolle möglich, Aspiration in mehreren Etappen, Zeitaufwand 35 Minuten",
+      "severity": "schwer",
+      "applies_to": ["proc_punktion"],
+      "confidence": "1.0"
+    },
+    {
+      "id": "just_untersuchung",
+      "reason": "Erhöhter Untersuchungsaufwand durch schmerzbedingt eingeschränkte Mitarbeit und Voroperation, Seitenvergleich und Funktionsprüfung mehrerer Gelenkabschnitte erforderlich",
+      "severity": "mittel",
+      "applies_to": ["exam_schulter"],
+      "confidence": "1.0"
+    },
+    {
+      "id": "just_crp",
+      "reason": "Kurzfristige Notfallbestimmung außerhalb der regulären Laborzeiten mit Sofortbefundung zur Entscheidung über die stationäre Einweisung",
+      "severity": "schwer",
+      "applies_to": ["lab_crp"],
+      "confidence": "1.0"
+    }
+  ],
+  "notes": "Synthetic case, no real patient data. WHAT THIS TESTS: the § 5 Abs. 2 factor ladder at its upper end, and that the Höchstsatz is a per-band ceiling rather than a global 3.5. Three documented justifications of different severity land on three different rungs: 'schwer' on the shoulder puncture takes Nr. 302 to the Höchstsatz 3.5 of the general band, 'mittel' on the complete examination takes Nr. 7 to 2.3 + 0.3 = 2.6, and 'schwer' on the CRP takes Nr. 3741 to 1.3 — the Höchstsatz of the § 5 Abs. 4 laboratory band, NOT 3.5. EXPECTED BEHAVIOUR: a factor at the legal maximum with a written reason is accepted and capped, never rejected; a line without a justification (Nr. 3, Nr. 410, Nr. 3550) stays at its Schwellenwert."
+}

@@ -55,3 +55,14 @@ pytest-asyncio==1.4.0
 # One line rather than two, because extras are additive and a second pinned line for the same
 # distribution would only be a place for the two pins to drift apart.
 hypothesis[pytest]==6.165.10
+
+# Benchmarks. `tests/benchmarks/` measures the three costs a deployment pays — cold catalog load,
+# one solve, one proposal round trip — and gates each against a soft and a hard threshold, so a
+# performance regression fails a build instead of being noticed a quarter later. Pinned like
+# everything else, and for a sharper reason than most: pytest-benchmark's calibration and its
+# outlier handling are what turn ten timings into the median the thresholds are written against, and
+# a minor bump that changed either would move every number in docs/performance_baselines.md without
+# anything about this engine having changed.
+#
+# `--benchmark-skip` in pytest.ini keeps these out of an ordinary run; see that file.
+pytest-benchmark==5.3.0

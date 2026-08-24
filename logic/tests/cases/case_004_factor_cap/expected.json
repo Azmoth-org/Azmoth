@@ -1,0 +1,60 @@
+{
+  "description": "Shoulder-joint puncture for suspected septic arthritis. Exercises the upper end of the § 5 Abs. 2 factor ladder: a documented 'schwer' reason takes a line to the Höchstsatz and is capped there rather than rejected, and the Höchstsatz is read off the position's own band — 3.5 for the general band, 1.3 for the § 5 Abs. 4 laboratory band.",
+  "catalog_version": "goae_official_snapshot_2026-07-25",
+  "accepted_ziffern": ["3", "7", "302", "410", "3550", "3741"],
+  "blocked_ziffern": [],
+  "warnings_contain": ["rule_coverage_incomplete"],
+  "factor_expectations": [
+    {
+      "ziffer": "302",
+      "factor": "3.5",
+      "min_factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": true,
+      "note": "'schwer' takes the ladder straight to the band maximum. The factor is CAPPED at the Höchstsatz, not refused: § 5 Abs. 2 allows it and § 12 Abs. 3 is satisfied by the written reason, which is carried on the line."
+    },
+    {
+      "ziffer": "3741",
+      "factor": "1.3",
+      "max_factor": "1.3",
+      "requires_justification": true,
+      "note": "Abschnitt M takes the § 5 Abs. 4 band, so its Höchstsatz is 1.3. The same 'schwer' severity that produced 3.5 above produces 1.3 here — proof that the ceiling is per band and not a global 3.5."
+    },
+    {
+      "ziffer": "7",
+      "factor": "2.6",
+      "max_factor": "3.5",
+      "requires_justification": true,
+      "note": "'mittel' is one rung, not the maximum: 2.3 + 0.3."
+    },
+    {
+      "ziffer": "3",
+      "factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": false,
+      "note": "No justification names the consultation, so it stays at the Schwellenwert. A justification bound to one service must not raise the rest of the invoice."
+    },
+    {
+      "ziffer": "410",
+      "factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": false
+    },
+    {
+      "ziffer": "3550",
+      "factor": "1.15",
+      "max_factor": "1.3",
+      "requires_justification": false,
+      "note": "The 'schwer' reason on the CRP is bound to lab_crp only and does not reach the blood count."
+    }
+  ],
+  "missing_documentation_expectations": [
+    { "ziffer": "3", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "410", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "3550", "current_factor": "1.15", "possible_factor": "1.3" }
+  ],
+  "missing_documentation_is_exhaustive": true,
+  "total_amount_eur": "141.34",
+  "total_punkte": 1020,
+  "minderung_applied": false
+}

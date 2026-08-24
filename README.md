@@ -41,6 +41,8 @@ in an append-only audit log, and re-deciding a decided proposal is refused with 
   what a client should do about it
 - [`docs/performance_baseline.md`](docs/performance_baseline.md) — where a solve actually spends its
   time, and what counts as slow
+- [`docs/performance_baselines.md`](docs/performance_baselines.md) — the baselines and soft/hard
+  thresholds `tests/benchmarks/` gates against, and the machine they were measured on
 - [`logic/README.md`](logic/README.md) — **read before changing a rule or an objective**
 - [`apps/engine/tests/README.md`](apps/engine/tests/README.md) — which tests are golden, which pin
   determinism, which pin the legal posture

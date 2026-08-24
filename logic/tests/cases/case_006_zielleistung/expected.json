@@ -1,0 +1,44 @@
+{
+  "description": "Wrist puncture with a dressing. Exercises § 4 Abs. 2a GOÄ where the component is documented as well as its target service and carries its own written justification — the Zielleistung block is a hard rule and neither helps it.",
+  "catalog_version": "goae_official_snapshot_2026-07-25",
+  "accepted_ziffern": ["1", "5", "300", "410", "3741"],
+  "blocked_ziffern": [
+    {
+      "ziffer": "200",
+      "reason_contains": "zielleistung",
+      "blocked_by": "300",
+      "note": "The dressing was applied in connection with the puncture, so it is a methodically necessary component of it (rule ziel_man_300_200, Allgemeine Bestimmung zu Abschnitt C VIII). The block is decided in Datalog, not in the optimiser, precisely so that it cannot be traded away: Nr. 200 has confidence 1.0 and a documented 'mittel' difficulty of its own, and is blocked all the same."
+    }
+  ],
+  "warnings_contain": ["rule_coverage_incomplete"],
+  "factor_expectations": [
+    {
+      "ziffer": "300",
+      "factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": false,
+      "note": "The wrist is not named in Nr. 301 (elbow, knee, vertebral joint) or Nr. 302 (shoulder, hip), so the act produces only the generic Nr. 300 and no specificity contest takes place. That is what makes this case different from case_001: the Zielleistung parent here is the generic position, and the rule that fires is ziel_man_300_200 rather than ziel_man_301_200."
+    },
+    {
+      "ziffer": "1",
+      "factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": false,
+      "note": "Nr. 1 and Nr. 5 sit on the same invoice: the Anmerkung to Nr. 5 excludes Nr. 6 to Nr. 8, not the Beratung."
+    },
+    { "ziffer": "5", "factor": "2.3", "max_factor": "3.5", "requires_justification": false },
+    { "ziffer": "410", "factor": "2.3", "max_factor": "3.5", "requires_justification": false },
+    { "ziffer": "3741", "factor": "1.15", "max_factor": "1.3", "requires_justification": false }
+  ],
+  "missing_documentation_expectations": [
+    { "ziffer": "1", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "5", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "300", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "410", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "3741", "current_factor": "1.15", "possible_factor": "1.3" }
+  ],
+  "missing_documentation_is_exhaustive": true,
+  "total_amount_eur": "77.75",
+  "total_punkte": 680,
+  "minderung_applied": false
+}

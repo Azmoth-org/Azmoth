@@ -1,0 +1,937 @@
+{
+  "audit_trail": {
+    "base_factor_policy": "schwellenwert",
+    "catalog_sha256": "244b403386d39052115ff5853e8b1e0b65714082241fdc03babdb283def9e845",
+    "catalog_source": "https://www.gesetze-im-internet.de/go__1982/xml.zip",
+    "catalog_version": "goae_official_snapshot_2026-07-25",
+    "extraction_confidence_avg": "0.9812",
+    "extraction_mode": "manual",
+    "extraction_model": "manual",
+    "llm_saw_goae_catalog": false,
+    "logic_version": "80b3de05cd78bd13b9117951a7b6b1758822add12911040db8505079107c3b44",
+    "optimizer": "clingo",
+    "optimizer_version": "5.8.0",
+    "per_code": [
+      {
+        "steps": [
+          {
+            "detail": "eingehende_beratung",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3"
+          }
+        ],
+        "ziffer": "3"
+      },
+      {
+        "steps": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3550"
+          }
+        ],
+        "ziffer": "3550"
+      },
+      {
+        "steps": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3741"
+          }
+        ],
+        "ziffer": "3741"
+      },
+      {
+        "steps": [
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "302"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "302"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "302"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "302"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "302"
+          },
+          {
+            "detail": "punktion",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "302"
+          }
+        ],
+        "ziffer": "302"
+      },
+      {
+        "steps": [
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "410"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "410"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "410"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "410"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "410"
+          },
+          {
+            "detail": "sonographie",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "410"
+          }
+        ],
+        "ziffer": "410"
+      },
+      {
+        "steps": [
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "vollstaendige_untersuchung_organsystem",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "7"
+          }
+        ],
+        "ziffer": "7"
+      }
+    ],
+    "rule_coverage": "partial",
+    "rule_coverage_detail": {
+      "advisory_rule_count": 862,
+      "analog_candidate_count": 3,
+      "enforced_rule_count": 35,
+      "policy_for_unverified_rules": "warn",
+      "rejected_rule_count": 0,
+      "review_verified_rule_count": 0,
+      "rule_coverage": "partial",
+      "rules_version": "auto_extracted_2026-07-25",
+      "suppressed_unverified_rule_count": 859,
+      "total_constraint_rule_count": 894,
+      "unverified_rule_count": 859,
+      "verified_share": "30/30"
+    },
+    "rule_summary": {
+      "analog_candidates": 3,
+      "exclusions_enforced": 30,
+      "exclusions_mutual": 15,
+      "factor_caps_enforced": 0,
+      "files_loaded": [
+        "analog_candidates.csv",
+        "exclusions.csv",
+        "exclusions.manual.csv",
+        "factor_caps.csv",
+        "specificity.csv",
+        "zielleistung.csv",
+        "zielleistung.manual.csv"
+      ],
+      "policy_for_unverified_rules": "warn",
+      "rejected_rules": 0,
+      "review_verified_rules": 0,
+      "specificity_enforced": 2,
+      "total_constraint_rules": 894,
+      "unverified_constraint_rules": 859,
+      "unverified_rules_not_enforced": 859,
+      "verified_share": "30/30",
+      "zielleistung_enforced": 3
+    },
+    "rules_engine": "souffle",
+    "rules_engine_version": "2.5 (2.5)",
+    "rules_version": "auto_extracted_2026-07-25",
+    "solver_status": "SAT",
+    "unverified_rule_policy": "warn"
+  },
+  "coding": {
+    "analog_codes": [],
+    "blocked_codes": [],
+    "conflicts_arbitrated": [],
+    "missing_documentation": [
+      {
+        "current_factor": "1.15",
+        "legal_basis": "§ 12 Abs. 3 GOÄ",
+        "missing": "Es ist keine besondere Schwierigkeit, kein erhöhter Zeitaufwand und keine erschwerende Umstände dokumentiert. Der Faktor bleibt daher bei 1.15. § 5 Abs. 2 GOÄ erlaubt bis 1.3, sofern eine schriftliche Begründung nach § 12 Abs. 3 GOÄ vorliegt — diese kann und darf nur der behandelnde Arzt formulieren.",
+        "possible_factor": "1.3",
+        "ziffer": "3550"
+      },
+      {
+        "current_factor": "2.3",
+        "legal_basis": "§ 12 Abs. 3 GOÄ",
+        "missing": "Es ist keine besondere Schwierigkeit, kein erhöhter Zeitaufwand und keine erschwerende Umstände dokumentiert. Der Faktor bleibt daher bei 2.3. § 5 Abs. 2 GOÄ erlaubt bis 3.5, sofern eine schriftliche Begründung nach § 12 Abs. 3 GOÄ vorliegt — diese kann und darf nur der behandelnde Arzt formulieren.",
+        "possible_factor": "3.5",
+        "ziffer": "3"
+      },
+      {
+        "current_factor": "2.3",
+        "legal_basis": "§ 12 Abs. 3 GOÄ",
+        "missing": "Es ist keine besondere Schwierigkeit, kein erhöhter Zeitaufwand und keine erschwerende Umstände dokumentiert. Der Faktor bleibt daher bei 2.3. § 5 Abs. 2 GOÄ erlaubt bis 3.5, sofern eine schriftliche Begründung nach § 12 Abs. 3 GOÄ vorliegt — diese kann und darf nur der behandelnde Arzt formulieren.",
+        "possible_factor": "3.5",
+        "ziffer": "410"
+      }
+    ],
+    "proposed_codes": [
+      {
+        "amount_cent_unrounded": "1515.469800",
+        "amount_eur": "15.15",
+        "amount_eur_before_minderung": "15.15",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "M",
+        "confidence": "1.0",
+        "factor": "1.3",
+        "factor_basis": "hoechstsatz",
+        "factor_legal_basis": "§ 5 Abs. 4 GOÄ",
+        "is_analog": false,
+        "justification": "Kurzfristige Notfallbestimmung außerhalb der regulären Laborzeiten mit Sofortbefundung zur Entscheidung über die stationäre Einweisung",
+        "justification_present": true,
+        "justification_required": true,
+        "minderung_applied": false,
+        "official_text": "C-reaktives Protein (CRP), Ligandenassay -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, Immundiffusion oder ähnliche Untersuchungsmethoden",
+        "proof": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3741"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3741"
+          }
+        ],
+        "punkte": 200,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "3741"
+      },
+      {
+        "amount_cent_unrounded": "2010.911850",
+        "amount_eur": "20.11",
+        "amount_eur_before_minderung": "20.11",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "B",
+        "confidence": "1.0",
+        "factor": "2.3",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Eingehende, das gewöhnliche Maß übersteigende Beratung - auch mittels Fernsprecher -",
+        "proof": [
+          {
+            "detail": "eingehende_beratung",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3"
+          }
+        ],
+        "punkte": 150,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "3"
+      },
+      {
+        "amount_cent_unrounded": "2424.751680",
+        "amount_eur": "24.25",
+        "amount_eur_before_minderung": "24.25",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "B",
+        "confidence": "1.0",
+        "factor": "2.6",
+        "factor_basis": "ueber_schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
+        "is_analog": false,
+        "justification": "Erhöhter Untersuchungsaufwand durch schmerzbedingt eingeschränkte Mitarbeit und Voroperation, Seitenvergleich und Funktionsprüfung mehrerer Gelenkabschnitte erforderlich",
+        "justification_present": true,
+        "justification_required": true,
+        "minderung_applied": false,
+        "official_text": "Vollständige körperliche Untersuchung mindestens eines der folgenden Organsysteme: das gesamte Hautorgan, die Stütz- und Bewegungsorgane, alle Brustorgane, alle Bauchorgane, der gesamte weibliche Genitaltrakt (gegebenenfalls einschließlich Nieren und ableitende Harnwege) - gegebenenfalls einschließlich Dokumentation -",
+        "proof": [
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "7"
+          },
+          {
+            "detail": "vollstaendige_untersuchung_organsystem",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "7"
+          }
+        ],
+        "punkte": 160,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "7"
+      },
+      {
+        "amount_cent_unrounded": "2681.215800",
+        "amount_eur": "26.81",
+        "amount_eur_before_minderung": "26.81",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "C",
+        "confidence": "1.0",
+        "factor": "2.3",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Ultraschalluntersuchung eines Organs",
+        "proof": [
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "410"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "410"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "410"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "410"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "410"
+          },
+          {
+            "detail": "sonographie",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "410"
+          }
+        ],
+        "punkte": 200,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "410"
+      },
+      {
+        "amount_cent_unrounded": "402.1823700",
+        "amount_eur": "4.02",
+        "amount_eur_before_minderung": "4.02",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "M",
+        "confidence": "1.0",
+        "factor": "1.15",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 4 GOÄ",
+        "is_analog": false,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Blutbild und Blutbildbestandteile",
+        "proof": [
+          {
+            "detail": "labor",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "3550"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "3550"
+          }
+        ],
+        "punkte": 60,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "3550"
+      },
+      {
+        "amount_cent_unrounded": "5100.138750",
+        "amount_eur": "51.00",
+        "amount_eur_before_minderung": "51.00",
+        "analog_for": null,
+        "catalog_provenance": "official",
+        "category": "C",
+        "confidence": "1.0",
+        "factor": "3.5",
+        "factor_basis": "hoechstsatz",
+        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
+        "is_analog": false,
+        "justification": "Erheblich erschwerte Gelenkpunktion: adipöser Patient, ausgeprägte periartikuläre Verkalkungen und Narbenzug nach Voroperation, Zugang nur unter durchgehender sonographischer Kontrolle möglich, Aspiration in mehreren Etappen, Zeitaufwand 35 Minuten",
+        "justification_present": true,
+        "justification_required": true,
+        "minderung_applied": false,
+        "official_text": "Punktion eines Schulter- oder Hüftgelenks",
+        "proof": [
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "302"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "302"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "302"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "302"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "302"
+          },
+          {
+            "detail": "punktion",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "302"
+          }
+        ],
+        "punkte": 250,
+        "status": "billable",
+        "text_quality": "ok",
+        "ziffer": "302"
+      }
+    ],
+    "total": {
+      "amount_cent_unrounded": "14134.6702500",
+      "amount_eur": "141.34",
+      "amount_eur_before_minderung": "141.34",
+      "minderung_applied": false,
+      "minderung_rate": "0",
+      "punkte": 1020,
+      "punktwert_cent": "5.82873",
+      "rounding_legal_basis": "§ 5 Abs. 1 Satz 4 GOÄ (ROUND_HALF_UP auf Cent)",
+      "rounding_policy": "ROUND_HALF_UP"
+    },
+    "warnings": [
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 3 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "3"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 302 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "302"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 3550 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "3550"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 3741 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "3741"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 410 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "410"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 7 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "7"
+      },
+      {
+        "legal_basis": "",
+        "message": "Regelabdeckung ist unvollständig: 30 Ausschlussregeln werden durchgesetzt, 859 automatisch extrahierte Regeln sind NICHT verifiziert und wirken bei Policy 'warn' nicht blockierend. Die Rechnung ist ein Vorschlag und ersetzt keine ärztliche Prüfung.",
+        "rule_id": "",
+        "severity": "warning",
+        "type": "rule_coverage_incomplete",
+        "ziffer": null
+      }
+    ]
+  },
+  "extraction": {
+    "consultation": {
+      "confidence": "1.0",
+      "duration_minutes": 18,
+      "id": "consultation",
+      "type": "eingehende_beratung"
+    },
+    "diagnoses": [
+      {
+        "confidence": "0.85",
+        "id": "dx_1",
+        "text": "Verdacht auf bakterielle Omarthritis links"
+      },
+      {
+        "confidence": "1.0",
+        "id": "dx_2",
+        "text": "Zustand nach Rotatorenmanschettenrekonstruktion links"
+      }
+    ],
+    "examinations": [
+      {
+        "complexity": "komplex",
+        "confidence": "1.0",
+        "id": "exam_schulter",
+        "organ_system": "bewegungsapparat",
+        "organs": [
+          "halswirbelsaeule",
+          "oberarm",
+          "schulter"
+        ],
+        "type": "vollstaendige_untersuchung_organsystem"
+      }
+    ],
+    "justification_factors": [
+      {
+        "applies_to": [
+          "exam_schulter"
+        ],
+        "confidence": "1.0",
+        "id": "just_untersuchung",
+        "reason": "Erhöhter Untersuchungsaufwand durch schmerzbedingt eingeschränkte Mitarbeit und Voroperation, Seitenvergleich und Funktionsprüfung mehrerer Gelenkabschnitte erforderlich",
+        "severity": "mittel"
+      },
+      {
+        "applies_to": [
+          "lab_crp"
+        ],
+        "confidence": "1.0",
+        "id": "just_crp",
+        "reason": "Kurzfristige Notfallbestimmung außerhalb der regulären Laborzeiten mit Sofortbefundung zur Entscheidung über die stationäre Einweisung",
+        "severity": "schwer"
+      },
+      {
+        "applies_to": [
+          "proc_punktion"
+        ],
+        "confidence": "1.0",
+        "id": "just_punktion",
+        "reason": "Erheblich erschwerte Gelenkpunktion: adipöser Patient, ausgeprägte periartikuläre Verkalkungen und Narbenzug nach Voroperation, Zugang nur unter durchgehender sonographischer Kontrolle möglich, Aspiration in mehreren Etappen, Zeitaufwand 35 Minuten",
+        "severity": "schwer"
+      }
+    ],
+    "lab_tests": [
+      {
+        "confidence": "1.0",
+        "id": "lab_bb",
+        "type": "blutbild"
+      },
+      {
+        "confidence": "1.0",
+        "id": "lab_crp",
+        "type": "crp"
+      }
+    ],
+    "notes": "Synthetic case, no real patient data. WHAT THIS TESTS: the § 5 Abs. 2 factor ladder at its upper end, and that the Höchstsatz is a per-band ceiling rather than a global 3.5. Three documented justifications of different severity land on three different rungs: 'schwer' on the shoulder puncture takes Nr. 302 to the Höchstsatz 3.5 of the general band, 'mittel' on the complete examination takes Nr. 7 to 2.3 + 0.3 = 2.6, and 'schwer' on the CRP takes Nr. 3741 to 1.3 — the Höchstsatz of the § 5 Abs. 4 laboratory band, NOT 3.5. EXPECTED BEHAVIOUR: a factor at the legal maximum with a written reason is accepted and capped, never rejected; a line without a justification (Nr. 3, Nr. 410, Nr. 3550) stays at its Schwellenwert.",
+    "patient": {
+      "age": 63,
+      "setting": "ambulant",
+      "sex": "m"
+    },
+    "procedures": [
+      {
+        "complexity": "komplex",
+        "confidence": "1.0",
+        "details": "Punktion des linken Schultergelenks unter sonographischer Kontrolle, 25 ml trübes Punktat aspiriert und zur Erregerdiagnostik eingesandt",
+        "id": "proc_punktion",
+        "organ": "schulter",
+        "type": "punktion"
+      },
+      {
+        "complexity": "mittel",
+        "confidence": "1.0",
+        "details": "Sonographie des linken Schultergelenks, ausgedehnter Erguss mit Kapselverdickung",
+        "id": "proc_sono",
+        "organ": "schulter",
+        "type": "sonographie"
+      }
+    ]
+  }
+}

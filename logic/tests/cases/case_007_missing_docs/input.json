@@ -1,0 +1,46 @@
+{
+  "patient": { "age": 58, "sex": "m", "setting": "ambulant" },
+  "consultation": {
+    "id": "consultation",
+    "type": "eingehende_beratung",
+    "duration_minutes": 22,
+    "confidence": "1.0"
+  },
+  "examinations": [
+    {
+      "id": "exam_ellenbogen",
+      "type": "vollstaendige_untersuchung_organsystem",
+      "organ_system": "bewegungsapparat",
+      "organs": ["ellenbogen", "oberarm", "handgelenk"],
+      "complexity": "komplex",
+      "confidence": "1.0"
+    }
+  ],
+  "procedures": [
+    {
+      "id": "proc_punktion",
+      "type": "punktion",
+      "organ": "ellenbogen",
+      "details": "Punktion des rechten Ellenbogengelenks, 12 ml seröses Punktat entlastet",
+      "complexity": "komplex",
+      "confidence": "1.0"
+    },
+    {
+      "id": "proc_sono",
+      "type": "sonographie",
+      "organ": "ellenbogen",
+      "details": "Sonographie des rechten Ellenbogengelenks mit Ergussnachweis und Darstellung der Bursa olecrani",
+      "complexity": "komplex",
+      "confidence": "1.0"
+    }
+  ],
+  "lab_tests": [
+    { "id": "lab_bb", "type": "blutbild", "confidence": "1.0" },
+    { "id": "lab_crp", "type": "crp", "confidence": "1.0" }
+  ],
+  "diagnoses": [
+    { "text": "Chronisch rezidivierender Reizerguss des rechten Ellenbogengelenks", "confidence": "0.85" }
+  ],
+  "justification_factors": [],
+  "notes": "Synthetic case, no real patient data. WHAT THIS TESTS: the fallback when nothing is documented. Every act in this case is recorded as 'komplex' with a confidence of 1.0, but the record contains no besondere Schwierigkeit, no erhöhter Zeitaufwand and no erschwerende Umstände — that is, no written reason under § 12 Abs. 3 GOÄ. EXPECTED BEHAVIOUR: clinical complexity alone must not raise a factor, and the absence of a reason must not reject a line either. Every position falls back to its Schwellenwert (2.3 for Nr. 3, Nr. 7, Nr. 301 and Nr. 410; 1.15 for the § 5 Abs. 4 laboratory positions Nr. 3550 and Nr. 3741), no line is flagged justification_required, and each one instead appears in missing_documentation stating the factor the band would allow if the treating physician did document a reason. The engine says 'the record does not support more', never 'charge more'."
+}
