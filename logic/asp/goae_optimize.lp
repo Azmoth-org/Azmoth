@@ -13,7 +13,8 @@
 %
 % OBJECTIVE ORDERING — lexicographic, and revenue is LAST
 %
-%   @5  never charge an analog position that is already charged directly
+%   @5  never charge an analog position that is already charged directly, and never leave a
+%       § 6 Abs. 2 request uncovered when a legal candidate exists (same term, see below)
 %   @4  never leave a documented, chargeable service off the invoice entirely
 %   @3  prefer the position with the stronger clinical evidence
 %   @2  prefer the more specific position
@@ -68,9 +69,15 @@
 bill(Z) :- fixed(Z).
 { bill(Z) } :- arbitrate(Z).
 
-% Exactly one analog position per unlisted service (§ 6 Abs. 2 GOÄ).
+% At most one analog position per unlisted service (§ 6 Abs. 2 GOÄ). `0 {...} 1` and not
+% `1 {...} 1`: the legality constraints below range over `charged/1`, so a ladder whose every
+% candidate is excluded against the final invoice has no model under a forced cardinality, and the
+% caller would get "nothing is chargeable" for the whole encounter instead of an invoice with one
+% named gap. The uncovered request is reported instead — and scored at @5 as being no better than
+% a collision, so covering the service still wins whenever any candidate is legal.
 has_analog_cand(A, Z) :- analog_cand(A, Z, _).
-1 { analog(A, Z) : has_analog_cand(A, Z) } 1 :- analog_needed(A, _).
+0 { analog(A, Z) : has_analog_cand(A, Z) } 1 :- analog_needed(A, _).
+analog_uncovered(A) :- analog_needed(A, _), not analog(A, _).
 
 charged(Z) :- bill(Z).
 charged(Z) :- analog(_, Z).
@@ -79,8 +86,24 @@ charged(Z) :- analog(_, Z).
 % HARD CONSTRAINTS — legality. No objective can trade these away.
 % =============================================================================================
 
-:- bill(A), bill(B), excluded(A, B), A != B.
-:- bill(C), bill(P), zielleistung(P, C).
+% Both range over `charged/1` rather than `bill/1`. An Analogansatz position reaches the invoice
+% through `analog/2` and contributes to `charged/1` only, so under `bill/1` it faced neither
+% constraint: the § 6 Abs. 2 ladder could land on a position that is not chargeable next to one
+% already billed. The validator then contradicted the solver and refused the invoice, which is a
+% 500 for a clinically ordinary request. A charge is a charge whichever rule put it there — and
+% the catalog guard immediately below has always read `charged/1`.
+:- charged(A), charged(B), excluded(A, B), A != B.
+:- charged(C), charged(P), zielleistung(P, C).
+
+% Which candidates on an Analogansatz ladder the final invoice itself ruled out, and under which
+% relation. Reported rather than merely absent, so "why not the closer candidate" is answerable
+% from the response: the two constraints above decide it, and this is the same join written as a
+% conclusion. `excluded/2` is read in both directions because the constraint is symmetric in
+% effect — it forbids co-occurrence however the rule table happened to state the pair.
+analog_blocked(A, Z, W, "exclusion") :- has_analog_cand(A, Z), charged(W), excluded(Z, W), Z != W.
+analog_blocked(A, Z, W, "exclusion") :- has_analog_cand(A, Z), charged(W), excluded(W, Z), Z != W.
+analog_blocked(A, Z, P, "zielleistung") :- has_analog_cand(A, Z), charged(P), zielleistung(P, Z).
+analog_blocked(A, Z, C, "zielleistung") :- has_analog_cand(A, Z), charged(C), zielleistung(Z, C).
 
 % A charged position must exist in the catalog. Belt and braces: `bill/1` cannot be derived for
 % anything that was not injected, but an inconsistent injection would be caught here.
@@ -125,6 +148,12 @@ justification_required(Z) :- factor(Z, F), sf(Z, T, _), F > T.
 % @5 — do not charge an analog position that is already charged directly. Kept soft so an
 % over-constrained candidate set degrades into a reported warning, not an UNSAT program.
 analog_collision(A, Z) :- analog(A, Z), bill(Z).
+% An uncovered § 6 Abs. 2 request is at least as bad as a collision, and is scored through the
+% *same* term on purpose: a new priority level would change the objective ordering, which needs
+% legal review, and this needs none — it only stops the relaxed cardinality above from preferring
+% to charge nothing over charging a colliding candidate. "" is not a Ziffer; it is the marker for
+% "no candidate at all", and the reader treats it as one.
+analog_collision(A, "") :- analog_uncovered(A).
 #minimize { 1@5, A, Z : analog_collision(A, Z) }.
 
 % @4 — a documented service must not vanish from the invoice entirely.
@@ -150,5 +179,7 @@ covered(A, B) :- conflict_pair(A, B), bill(B).
 #show factor/2.
 #show justification_required/1.
 #show analog_collision/2.
+#show analog_blocked/4.
+#show analog_uncovered/1.
 #show factor_count_bad/1.
 #show maxsev/2.

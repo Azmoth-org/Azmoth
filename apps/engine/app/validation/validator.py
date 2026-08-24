@@ -439,11 +439,20 @@ class Validator:
         # Attach each blocked position's own proof. Derived from the same two relations the audit
         # trail's `per_code` is built from, immediately below, so the two can never disagree — a
         # client reading `blocked_codes[].proof` and one reading `per_code` see the same steps.
+        #: A blocked position the *optimiser* derived can arrive with its own proof already
+        #: attached. An Analogansatz candidate ruled out by an exclusion was never proposed to the
+        #: rules engine, so neither proof relation has a row for it — see
+        #: `ClingoSolver._analog_blocked_codes`. Consulted as a fallback, after both relations, so
+        #: nothing that Datalog *did* derive can be shadowed by it.
+        solver_proof: dict[str, list[ProofStep]] = {
+            entry.ziffer: entry.proof for entry in optimization.dropped if entry.proof
+        }
+
         def proof_for(ziffer: str) -> list[ProofStep]:
             steps = [s for s in rules_result.proof if s.ziffer == ziffer]
             if not steps and verification is not None:
                 steps = [s for s in verification.proof if s.ziffer == ziffer]
-            return steps
+            return steps or solver_proof.get(ziffer, [])
 
         for entry in blocked_codes:
             entry.proof = proof_for(entry.ziffer)

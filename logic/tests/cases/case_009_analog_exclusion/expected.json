@@ -1,0 +1,46 @@
+{
+  "description": "Dermatologic follow-up. The § 6 Abs. 2 Analogansatz meets the exclusion table: the ladder's last rung, Nr. 5, is not chargeable next to the Nr. 7 examination under the verified rule excl_man_5_7, so it is BLOCKED with a proof atom and the Analogansatz falls back to Nr. 750 with a collision warning. This is the regression gate for the analog/exclusion defect (F-1) — before the fix the two legality constraints in logic/asp/goae_optimize.lp ranged over bill/1, which an analog position never enters, and this request returned a 500.",
+  "catalog_version": "goae_official_snapshot_2026-07-25",
+  "accepted_ziffern": ["7", "410", "750"],
+  "blocked_ziffern": [
+    {
+      "ziffer": "5",
+      "reason_contains": "exclusion",
+      "blocked_by": "7",
+      "note": "Nr. 5 is not a proposed position here — nothing in the record documents a symptombezogene Untersuchung. It reaches the invoice only as the third rung of the OCT's § 6 Abs. 2 ladder, and it is reported blocked rather than silently skipped so that 'why not the closer candidate' is answerable from the response. The blocking rule excl_man_5_7 is reviewer-verified, which is why it is enforced under UNVERIFIED_RULE_POLICY=warn."
+    }
+  ],
+  "analog_expectations": [
+    {
+      "entity_type": "optische_kohaerenztomographie",
+      "ziffer": "750",
+      "requires_human_review": true,
+      "note": "The ladder is Nr. 750 (0.75), Nr. 410 (0.55), Nr. 5 (0.25). Nr. 750 and Nr. 410 are both billed directly, so @5 pushes the choice down to Nr. 5 — and Nr. 5 is now unusable, so the ladder comes back up to its closest candidate and reports the collision. Nr. 750 is charged ONCE, for the dermatoscopy and the tomography together, which is exactly what a human is asked to check."
+    }
+  ],
+  "warnings_contain": [
+    "analog_collision",
+    "analogansatz_requires_human_review",
+    "rule_coverage_incomplete"
+  ],
+  "factor_expectations": [
+    {
+      "ziffer": "7",
+      "factor": "2.3",
+      "max_factor": "3.5",
+      "requires_justification": false,
+      "note": "No written reason anywhere in the record, so every line sits on its Schwellenwert. The case is about the exclusion, and pinning the factors keeps it from quietly becoming about the ladder as well."
+    },
+    { "ziffer": "410", "factor": "2.3", "max_factor": "3.5", "requires_justification": false },
+    { "ziffer": "750", "factor": "2.3", "max_factor": "3.5", "requires_justification": false }
+  ],
+  "missing_documentation_expectations": [
+    { "ziffer": "7", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "410", "current_factor": "2.3", "possible_factor": "3.5" },
+    { "ziffer": "750", "current_factor": "2.3", "possible_factor": "3.5" }
+  ],
+  "missing_documentation_is_exhaustive": true,
+  "total_amount_eur": "64.35",
+  "total_punkte": 480,
+  "minderung_applied": false
+}

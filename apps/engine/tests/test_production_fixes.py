@@ -606,8 +606,23 @@ def test_the_objective_ordering_is_untouched():
     assert "#maximize { P@2, Z : bill(Z), spec_priority(Z, P) }." in program
     assert "#maximize { P@1, Z : charged(Z), code_info(Z, P, _) }." in program
 
-    assert ":- bill(A), bill(B), excluded(A, B), A != B." in program
-    assert ":- bill(C), bill(P), zielleistung(P, C)." in program
+    # Both legality constraints range over `charged/1`, which is the relation an Analogansatz
+    # position is in. Under `bill/1` — what these read until the analog/exclusion fix — a § 6
+    # Abs. 2 position faced neither, so the solver could put a position on the invoice that is not
+    # chargeable next to one already billed and the validator would refuse the whole invoice.
+    # Narrowing either of them back to `bill/1` reopens that hole, which is why the exact text is
+    # pinned here rather than left to the property suite to rediscover.
+    assert ":- charged(A), charged(B), excluded(A, B), A != B." in program
+    assert ":- charged(C), charged(P), zielleistung(P, C)." in program
+    assert ":- bill(A), bill(B)" not in program, "a legality constraint narrowed back to bill/1"
+    assert ":- bill(C), bill(P)" not in program, "a legality constraint narrowed back to bill/1"
+
+    # The § 6 Abs. 2 choice is `0 {...} 1`, not `1 {...} 1`: with the constraints above ranging
+    # over `charged/1`, a forced cardinality turns a ladder whose every candidate is excluded into
+    # an UNSAT program — "nothing is chargeable" for the whole encounter. The uncovered request is
+    # reported instead, and scored through the @5 term so coverage still wins when it is legal.
+    assert "0 { analog(A, Z) : has_analog_cand(A, Z) } 1 :- analog_needed(A, _)." in program
+    assert "analog_collision(A, \"\") :- analog_uncovered(A)." in program
 
     # Each priority carries exactly one objective, so no second revenue term was slipped in at a
     # higher level. Comment lines (`%`) are excluded: the header documents the ordering in prose.

@@ -35,6 +35,7 @@ from app.schemas import (
     FactorDecision,
     GroundingStats,
     OptimizationResult,
+    ProofStep,
     RulesResult,
     Warning_,
 )
@@ -378,6 +379,9 @@ class ClingoSolver:
         justification_required: set[str] = set()
         bad: list[str] = []
         collisions: list[tuple[str, str]] = []
+        #: (act, candidate, blocker, relation) — candidates the final invoice ruled out.
+        analog_blocked: list[tuple[str, str, str, str]] = []
+        uncovered: list[str] = []
 
         for symbol in symbols:
             name, args = symbol.name, symbol.arguments
@@ -393,6 +397,12 @@ class ClingoSolver:
                 bad.append(args[0].string)
             elif name == "analog_collision":
                 collisions.append((args[0].string, args[1].string))
+            elif name == "analog_blocked":
+                analog_blocked.append(
+                    (args[0].string, args[1].string, args[2].string, args[3].string)
+                )
+            elif name == "analog_uncovered":
+                uncovered.append(args[0].string)
 
         if bad:
             raise ClingoError(
@@ -408,9 +418,14 @@ class ClingoSolver:
             solver_status=status,
         )
 
-        # Positions that lost an arbitration.
+        # Positions that lost an arbitration. `charged`, not `billed`: a member of a mutual cluster
+        # that the solver did not bill directly can still be on the invoice as the § 6 Abs. 2
+        # Analogziffer for some other service, and a position that is being charged has not lost
+        # anything. Reporting it as `conflict_lost` would put the same Ziffer on the invoice and in
+        # the blocked list at once — two contradictory statements in one audit trail.
+        charged_ziffern = billed | set(analogs.values())
         for ziffer in rules_result.arbitration_candidates:
-            if ziffer in billed:
+            if ziffer in charged_ziffern:
                 continue
             winner = next(
                 (
@@ -477,8 +492,33 @@ class ClingoSolver:
                 )
             )
 
+        # Analog candidates the invoice ruled out, and § 6 Abs. 2 requests it could not cover.
+        result.dropped.extend(
+            self._analog_blocked_codes(analog_blocked, rules_result, result, charged_ziffern)
+        )
+        for act_id in sorted(set(uncovered)):
+            request = next(
+                (r for r in rules_result.analog_requests if r.act_id == act_id), None
+            )
+            entity_type = request.entity_type if request else act_id
+            message = (
+                f"Analogansatz nicht möglich: Für die Leistung '{entity_type}' (Akt {act_id}) "
+                "ist keiner der Analogkandidaten neben den übrigen abgerechneten Positionen "
+                "berechnungsfähig (§ 6 Abs. 2 GOÄ). Die Leistung bleibt unabgerechnet – bitte "
+                "manuell prüfen."
+            )
+            log.warning(message)
+            result.warnings.append(
+                Warning_(
+                    type="analog_uncovered",
+                    severity="warning",
+                    legal_basis="§ 6 Abs. 2 GOÄ",
+                    message=message,
+                )
+            )
+
         # Factor decisions for everything on the invoice.
-        charged = sorted(billed | set(analogs.values()))
+        charged = sorted(charged_ziffern)
         for ziffer in charged:
             entry = self.catalog.get(ziffer)
             if entry is None:
@@ -530,6 +570,81 @@ class ClingoSolver:
             )
 
         return result
+
+    # -- the § 6 Abs. 2 ladder's rejected rungs ---------------------------------------------
+
+    def _analog_blocked_codes(
+        self,
+        blocked: list[tuple[str, str, str, str]],
+        rules_result: RulesResult,
+        result: OptimizationResult,
+        charged: set[str],
+    ) -> list[BlockedCode]:
+        """Analogansatz candidates the final invoice ruled out, as reported blocked positions.
+
+        These are the rungs of a § 6 Abs. 2 ladder that the two legality constraints in
+        `goae_optimize.lp` eliminated: a candidate that is not chargeable next to a position the
+        invoice actually carries. Before those constraints ranged over `charged/1` the solver could
+        pick such a candidate, and the validator refused the whole invoice — so this reports the
+        *reason* a closer candidate was passed over, which is the question a Rechnungsprüfer asks
+        about an Analogansatz.
+
+        The proof atom is built here rather than read out of a Datalog relation because an analog
+        candidate was never proposed to the rules engine: it has no row in either proof relation,
+        and `Validator.build` keeps this one instead of overwriting it with an empty list.
+
+        Nothing already reported blocked is reported twice — a candidate Ziffer can equally have
+        been proposed directly and suppressed by Datalog, and one position with two blocking
+        stories in one response is worse than either alone.
+        """
+        already = {entry.ziffer for entry in rules_result.blocked} | {
+            entry.ziffer for entry in result.dropped
+        }
+        out: dict[str, BlockedCode] = {}
+        for _act_id, ziffer, blocker, relation in sorted(blocked):
+            if ziffer in already or ziffer in charged or ziffer in out:
+                continue
+            entry = self.catalog.get(ziffer)
+            if relation == "zielleistung":
+                rule = self.rules.zielleistung_rule(blocker, ziffer) or (
+                    self.rules.zielleistung_rule(ziffer, blocker)
+                )
+                explanation = (
+                    f"GOÄ {ziffer} käme als Analogziffer (§ 6 Abs. 2 GOÄ) in Betracht, ist aber "
+                    f"methodisch notwendiger Bestandteil der abgerechneten GOÄ {blocker} und "
+                    "daher nicht daneben berechnungsfähig (§ 4 Abs. 2a GOÄ)."
+                )
+            else:
+                rule = self.rules.exclusion_rule(ziffer, blocker) or (
+                    self.rules.exclusion_rule(blocker, ziffer)
+                )
+                explanation = (
+                    f"GOÄ {ziffer} käme als Analogziffer (§ 6 Abs. 2 GOÄ) in Betracht, ist aber "
+                    f"neben der abgerechneten GOÄ {blocker} nicht berechnungsfähig. Der "
+                    "Analogansatz weicht deshalb auf einen anderen Kandidaten aus."
+                )
+            rule_id = rule.rule_id if rule is not None else ""
+            legal_basis = rule.legal_basis if rule is not None else ""
+            out[ziffer] = BlockedCode(
+                ziffer=ziffer,
+                official_text=entry.official_text if entry else "",
+                reason="zielleistung" if relation == "zielleistung" else "exclusion",
+                detail=f"analog_candidate_blocked_by:{blocker}",
+                blocked_by=blocker,
+                rule_id=rule_id,
+                legal_basis=legal_basis,
+                explanation=explanation,
+                proof=[
+                    ProofStep(
+                        ziffer=ziffer,
+                        rule="analog_candidate_blocked",
+                        detail=blocker,
+                        rule_id=rule_id,
+                        legal_basis=legal_basis,
+                    )
+                ],
+            )
+        return list(out.values())
 
     # -- documentation gaps ----------------------------------------------------------------
 

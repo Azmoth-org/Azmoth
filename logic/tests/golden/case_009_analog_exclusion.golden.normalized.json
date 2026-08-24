@@ -4,7 +4,7 @@
     "catalog_sha256": "244b403386d39052115ff5853e8b1e0b65714082241fdc03babdb283def9e845",
     "catalog_source": "https://www.gesetze-im-internet.de/go__1982/xml.zip",
     "catalog_version": "goae_official_snapshot_2026-07-25",
-    "extraction_confidence_avg": "0.9857",
+    "extraction_confidence_avg": "0.9700",
     "extraction_mode": "manual",
     "extraction_model": "manual",
     "llm_saw_goae_catalog": false,
@@ -15,155 +15,61 @@
       {
         "steps": [
           {
-            "detail": "300",
-            "legal_basis": "§ 4 Abs. 2a GOÄ i.V.m. Allgemeine Bestimmung zu Abschnitt C VIII",
-            "rule": "blocked_zielleistung",
-            "rule_id": "ziel_man_300_200",
-            "ziffer": "200"
+            "detail": "7",
+            "legal_basis": "GOÄ Anmerkungen zu den Nummern 5, 6, 7, 8 (Abschnitt B I)",
+            "rule": "analog_candidate_blocked",
+            "rule_id": "excl_man_5_7",
+            "ziffer": "5"
           }
         ],
-        "ziffer": "200"
+        "ziffer": "5"
       },
       {
         "steps": [
           {
-            "detail": "beratung",
+            "detail": "dermatoskopie",
             "legal_basis": "",
             "rule": "derived_from_act",
             "rule_id": "",
-            "ziffer": "1"
+            "ziffer": "750"
           },
           {
             "detail": "no_more_specific_position_for_the_same_act",
             "legal_basis": "",
             "rule": "most_specific_candidate",
             "rule_id": "",
-            "ziffer": "1"
+            "ziffer": "750"
           },
           {
             "detail": "no_mutually_exclusive_competitor",
             "legal_basis": "",
             "rule": "no_unresolved_conflict",
             "rule_id": "",
-            "ziffer": "1"
+            "ziffer": "750"
           },
           {
             "detail": "no_one_way_exclusion_violated",
             "legal_basis": "",
             "rule": "not_excluded",
             "rule_id": "",
-            "ziffer": "1"
+            "ziffer": "750"
           },
           {
             "detail": "not_a_component_of_another_charged_service",
             "legal_basis": "",
             "rule": "not_zielleistung_component",
             "rule_id": "",
-            "ziffer": "1"
+            "ziffer": "750"
           },
           {
             "detail": "present_and_active_in_loaded_catalog",
             "legal_basis": "",
             "rule": "catalog_match",
             "rule_id": "",
-            "ziffer": "1"
+            "ziffer": "750"
           }
         ],
-        "ziffer": "1"
-      },
-      {
-        "steps": [
-          {
-            "detail": "labor",
-            "legal_basis": "",
-            "rule": "derived_from_act",
-            "rule_id": "",
-            "ziffer": "3741"
-          },
-          {
-            "detail": "no_more_specific_position_for_the_same_act",
-            "legal_basis": "",
-            "rule": "most_specific_candidate",
-            "rule_id": "",
-            "ziffer": "3741"
-          },
-          {
-            "detail": "no_mutually_exclusive_competitor",
-            "legal_basis": "",
-            "rule": "no_unresolved_conflict",
-            "rule_id": "",
-            "ziffer": "3741"
-          },
-          {
-            "detail": "no_one_way_exclusion_violated",
-            "legal_basis": "",
-            "rule": "not_excluded",
-            "rule_id": "",
-            "ziffer": "3741"
-          },
-          {
-            "detail": "not_a_component_of_another_charged_service",
-            "legal_basis": "",
-            "rule": "not_zielleistung_component",
-            "rule_id": "",
-            "ziffer": "3741"
-          },
-          {
-            "detail": "present_and_active_in_loaded_catalog",
-            "legal_basis": "",
-            "rule": "catalog_match",
-            "rule_id": "",
-            "ziffer": "3741"
-          }
-        ],
-        "ziffer": "3741"
-      },
-      {
-        "steps": [
-          {
-            "detail": "no_more_specific_position_for_the_same_act",
-            "legal_basis": "",
-            "rule": "most_specific_candidate",
-            "rule_id": "",
-            "ziffer": "300"
-          },
-          {
-            "detail": "no_mutually_exclusive_competitor",
-            "legal_basis": "",
-            "rule": "no_unresolved_conflict",
-            "rule_id": "",
-            "ziffer": "300"
-          },
-          {
-            "detail": "no_one_way_exclusion_violated",
-            "legal_basis": "",
-            "rule": "not_excluded",
-            "rule_id": "",
-            "ziffer": "300"
-          },
-          {
-            "detail": "not_a_component_of_another_charged_service",
-            "legal_basis": "",
-            "rule": "not_zielleistung_component",
-            "rule_id": "",
-            "ziffer": "300"
-          },
-          {
-            "detail": "present_and_active_in_loaded_catalog",
-            "legal_basis": "",
-            "rule": "catalog_match",
-            "rule_id": "",
-            "ziffer": "300"
-          },
-          {
-            "detail": "punktion",
-            "legal_basis": "",
-            "rule": "derived_from_act",
-            "rule_id": "",
-            "ziffer": "300"
-          }
-        ],
-        "ziffer": "300"
+        "ziffer": "750"
       },
       {
         "steps": [
@@ -219,45 +125,45 @@
             "legal_basis": "",
             "rule": "most_specific_candidate",
             "rule_id": "",
-            "ziffer": "5"
+            "ziffer": "7"
           },
           {
             "detail": "no_mutually_exclusive_competitor",
             "legal_basis": "",
             "rule": "no_unresolved_conflict",
             "rule_id": "",
-            "ziffer": "5"
+            "ziffer": "7"
           },
           {
             "detail": "no_one_way_exclusion_violated",
             "legal_basis": "",
             "rule": "not_excluded",
             "rule_id": "",
-            "ziffer": "5"
+            "ziffer": "7"
           },
           {
             "detail": "not_a_component_of_another_charged_service",
             "legal_basis": "",
             "rule": "not_zielleistung_component",
             "rule_id": "",
-            "ziffer": "5"
+            "ziffer": "7"
           },
           {
             "detail": "present_and_active_in_loaded_catalog",
             "legal_basis": "",
             "rule": "catalog_match",
             "rule_id": "",
-            "ziffer": "5"
+            "ziffer": "7"
           },
           {
-            "detail": "symptombezogene_untersuchung",
+            "detail": "vollstaendige_untersuchung_organsystem",
             "legal_basis": "",
             "rule": "derived_from_act",
             "rule_id": "",
-            "ziffer": "5"
+            "ziffer": "7"
           }
         ],
-        "ziffer": "5"
+        "ziffer": "7"
       }
     ],
     "rule_coverage": "partial",
@@ -306,52 +212,42 @@
     "unverified_rule_policy": "warn"
   },
   "coding": {
-    "analog_codes": [],
+    "analog_codes": [
+      {
+        "act_id": "a4",
+        "entity_type": "optische_kohaerenztomographie",
+        "legal_basis": "§ 6 Abs. 2 GOÄ",
+        "quote": "§ 6 Abs. 2 GOÄ: Selbstständige ärztliche Leistungen, die in das Gebührenverzeichnis nicht aufgenommen sind, können entsprechend einer nach Art, Kosten- und Zeitaufwand gleichwertigen Leistung des Gebührenverzeichnisses berechnet werden. — Nr. 750 (Auflichtmikroskopie der Haut): apparative bildgebende Untersuchung derselben Region",
+        "requires_human_review": true,
+        "rule_id": "analog_oct_750",
+        "similarity": "0.75",
+        "ziffer": "750"
+      }
+    ],
     "blocked_codes": [
       {
-        "blocked_by": "300",
-        "detail": "blocked_by:300",
-        "explanation": "GOÄ 200 ist methodisch notwendiger Bestandteil der Zielleistung GOÄ 300 und daher nicht gesondert berechnungsfähig (§ 4 Abs. 2a GOÄ).",
-        "legal_basis": "§ 4 Abs. 2a GOÄ i.V.m. Allgemeine Bestimmung zu Abschnitt C VIII",
-        "official_text": "Verband - ausgenommen Schnell- und Sprühverbände, Augen-, Ohrenklappen oder Dreiecktücher -",
+        "blocked_by": "7",
+        "detail": "analog_candidate_blocked_by:7",
+        "explanation": "GOÄ 5 käme als Analogziffer (§ 6 Abs. 2 GOÄ) in Betracht, ist aber neben der abgerechneten GOÄ 7 nicht berechnungsfähig. Der Analogansatz weicht deshalb auf einen anderen Kandidaten aus.",
+        "legal_basis": "GOÄ Anmerkungen zu den Nummern 5, 6, 7, 8 (Abschnitt B I)",
+        "official_text": "Symptombezogene Untersuchung",
         "proof": [
           {
-            "detail": "300",
-            "legal_basis": "§ 4 Abs. 2a GOÄ i.V.m. Allgemeine Bestimmung zu Abschnitt C VIII",
-            "rule": "blocked_zielleistung",
-            "rule_id": "ziel_man_300_200",
-            "ziffer": "200"
+            "detail": "7",
+            "legal_basis": "GOÄ Anmerkungen zu den Nummern 5, 6, 7, 8 (Abschnitt B I)",
+            "rule": "analog_candidate_blocked",
+            "rule_id": "excl_man_5_7",
+            "ziffer": "5"
           }
         ],
-        "reason": "zielleistung",
+        "reason": "exclusion",
         "reconciled_with_final_invoice": true,
-        "rule_id": "ziel_man_300_200",
-        "ziffer": "200"
+        "rule_id": "excl_man_5_7",
+        "ziffer": "5"
       }
     ],
     "conflicts_arbitrated": [],
     "missing_documentation": [
-      {
-        "current_factor": "1.15",
-        "legal_basis": "§ 12 Abs. 3 GOÄ",
-        "missing": "Es ist keine besondere Schwierigkeit, kein erhöhter Zeitaufwand und keine erschwerende Umstände dokumentiert. Der Faktor bleibt daher bei 1.15. § 5 Abs. 2 GOÄ erlaubt bis 1.3, sofern eine schriftliche Begründung nach § 12 Abs. 3 GOÄ vorliegt — diese kann und darf nur der behandelnde Arzt formulieren.",
-        "possible_factor": "1.3",
-        "ziffer": "3741"
-      },
-      {
-        "current_factor": "2.3",
-        "legal_basis": "§ 12 Abs. 3 GOÄ",
-        "missing": "Es ist keine besondere Schwierigkeit, kein erhöhter Zeitaufwand und keine erschwerende Umstände dokumentiert. Der Faktor bleibt daher bei 2.3. § 5 Abs. 2 GOÄ erlaubt bis 3.5, sofern eine schriftliche Begründung nach § 12 Abs. 3 GOÄ vorliegt — diese kann und darf nur der behandelnde Arzt formulieren.",
-        "possible_factor": "3.5",
-        "ziffer": "1"
-      },
-      {
-        "current_factor": "2.3",
-        "legal_basis": "§ 12 Abs. 3 GOÄ",
-        "missing": "Es ist keine besondere Schwierigkeit, kein erhöhter Zeitaufwand und keine erschwerende Umstände dokumentiert. Der Faktor bleibt daher bei 2.3. § 5 Abs. 2 GOÄ erlaubt bis 3.5, sofern eine schriftliche Begründung nach § 12 Abs. 3 GOÄ vorliegt — diese kann und darf nur der behandelnde Arzt formulieren.",
-        "possible_factor": "3.5",
-        "ziffer": "300"
-      },
       {
         "current_factor": "2.3",
         "legal_basis": "§ 12 Abs. 3 GOÄ",
@@ -364,215 +260,97 @@
         "legal_basis": "§ 12 Abs. 3 GOÄ",
         "missing": "Es ist keine besondere Schwierigkeit, kein erhöhter Zeitaufwand und keine erschwerende Umstände dokumentiert. Der Faktor bleibt daher bei 2.3. § 5 Abs. 2 GOÄ erlaubt bis 3.5, sofern eine schriftliche Begründung nach § 12 Abs. 3 GOÄ vorliegt — diese kann und darf nur der behandelnde Arzt formulieren.",
         "possible_factor": "3.5",
-        "ziffer": "5"
+        "ziffer": "7"
+      },
+      {
+        "current_factor": "2.3",
+        "legal_basis": "§ 12 Abs. 3 GOÄ",
+        "missing": "Es ist keine besondere Schwierigkeit, kein erhöhter Zeitaufwand und keine erschwerende Umstände dokumentiert. Der Faktor bleibt daher bei 2.3. § 5 Abs. 2 GOÄ erlaubt bis 3.5, sofern eine schriftliche Begründung nach § 12 Abs. 3 GOÄ vorliegt — diese kann und darf nur der behandelnde Arzt formulieren.",
+        "possible_factor": "3.5",
+        "ziffer": "750"
       }
     ],
     "proposed_codes": [
       {
-        "amount_cent_unrounded": "1072.486320",
-        "amount_eur": "10.72",
-        "amount_eur_before_minderung": "10.72",
-        "analog_for": null,
-        "catalog_provenance": "official",
-        "category": "B",
-        "confidence": "1.0",
-        "factor": "2.3",
-        "factor_basis": "schwellenwert",
-        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
-        "is_analog": false,
-        "justification": null,
-        "justification_present": false,
-        "justification_required": false,
-        "minderung_applied": false,
-        "official_text": "Beratung - auch mittels Fernsprecher -",
-        "proof": [
-          {
-            "detail": "beratung",
-            "legal_basis": "",
-            "rule": "derived_from_act",
-            "rule_id": "",
-            "ziffer": "1"
-          },
-          {
-            "detail": "no_more_specific_position_for_the_same_act",
-            "legal_basis": "",
-            "rule": "most_specific_candidate",
-            "rule_id": "",
-            "ziffer": "1"
-          },
-          {
-            "detail": "no_mutually_exclusive_competitor",
-            "legal_basis": "",
-            "rule": "no_unresolved_conflict",
-            "rule_id": "",
-            "ziffer": "1"
-          },
-          {
-            "detail": "no_one_way_exclusion_violated",
-            "legal_basis": "",
-            "rule": "not_excluded",
-            "rule_id": "",
-            "ziffer": "1"
-          },
-          {
-            "detail": "not_a_component_of_another_charged_service",
-            "legal_basis": "",
-            "rule": "not_zielleistung_component",
-            "rule_id": "",
-            "ziffer": "1"
-          },
-          {
-            "detail": "present_and_active_in_loaded_catalog",
-            "legal_basis": "",
-            "rule": "catalog_match",
-            "rule_id": "",
-            "ziffer": "1"
-          }
-        ],
-        "punkte": 80,
-        "status": "billable",
-        "text_quality": "ok",
-        "ziffer": "1"
-      },
-      {
-        "amount_cent_unrounded": "1072.486320",
-        "amount_eur": "10.72",
-        "amount_eur_before_minderung": "10.72",
-        "analog_for": null,
-        "catalog_provenance": "official",
-        "category": "B",
-        "confidence": "1.0",
-        "factor": "2.3",
-        "factor_basis": "schwellenwert",
-        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
-        "is_analog": false,
-        "justification": null,
-        "justification_present": false,
-        "justification_required": false,
-        "minderung_applied": false,
-        "official_text": "Symptombezogene Untersuchung",
-        "proof": [
-          {
-            "detail": "no_more_specific_position_for_the_same_act",
-            "legal_basis": "",
-            "rule": "most_specific_candidate",
-            "rule_id": "",
-            "ziffer": "5"
-          },
-          {
-            "detail": "no_mutually_exclusive_competitor",
-            "legal_basis": "",
-            "rule": "no_unresolved_conflict",
-            "rule_id": "",
-            "ziffer": "5"
-          },
-          {
-            "detail": "no_one_way_exclusion_violated",
-            "legal_basis": "",
-            "rule": "not_excluded",
-            "rule_id": "",
-            "ziffer": "5"
-          },
-          {
-            "detail": "not_a_component_of_another_charged_service",
-            "legal_basis": "",
-            "rule": "not_zielleistung_component",
-            "rule_id": "",
-            "ziffer": "5"
-          },
-          {
-            "detail": "present_and_active_in_loaded_catalog",
-            "legal_basis": "",
-            "rule": "catalog_match",
-            "rule_id": "",
-            "ziffer": "5"
-          },
-          {
-            "detail": "symptombezogene_untersuchung",
-            "legal_basis": "",
-            "rule": "derived_from_act",
-            "rule_id": "",
-            "ziffer": "5"
-          }
-        ],
-        "punkte": 80,
-        "status": "billable",
-        "text_quality": "ok",
-        "ziffer": "5"
-      },
-      {
-        "amount_cent_unrounded": "1340.6079000",
-        "amount_eur": "13.41",
-        "amount_eur_before_minderung": "13.41",
-        "analog_for": null,
-        "catalog_provenance": "official",
-        "category": "M",
-        "confidence": "1.0",
-        "factor": "1.15",
-        "factor_basis": "schwellenwert",
-        "factor_legal_basis": "§ 5 Abs. 4 GOÄ",
-        "is_analog": false,
-        "justification": null,
-        "justification_present": false,
-        "justification_required": false,
-        "minderung_applied": false,
-        "official_text": "C-reaktives Protein (CRP), Ligandenassay -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, Immundiffusion oder ähnliche Untersuchungsmethoden",
-        "proof": [
-          {
-            "detail": "labor",
-            "legal_basis": "",
-            "rule": "derived_from_act",
-            "rule_id": "",
-            "ziffer": "3741"
-          },
-          {
-            "detail": "no_more_specific_position_for_the_same_act",
-            "legal_basis": "",
-            "rule": "most_specific_candidate",
-            "rule_id": "",
-            "ziffer": "3741"
-          },
-          {
-            "detail": "no_mutually_exclusive_competitor",
-            "legal_basis": "",
-            "rule": "no_unresolved_conflict",
-            "rule_id": "",
-            "ziffer": "3741"
-          },
-          {
-            "detail": "no_one_way_exclusion_violated",
-            "legal_basis": "",
-            "rule": "not_excluded",
-            "rule_id": "",
-            "ziffer": "3741"
-          },
-          {
-            "detail": "not_a_component_of_another_charged_service",
-            "legal_basis": "",
-            "rule": "not_zielleistung_component",
-            "rule_id": "",
-            "ziffer": "3741"
-          },
-          {
-            "detail": "present_and_active_in_loaded_catalog",
-            "legal_basis": "",
-            "rule": "catalog_match",
-            "rule_id": "",
-            "ziffer": "3741"
-          }
-        ],
-        "punkte": 200,
-        "status": "billable",
-        "text_quality": "ok",
-        "ziffer": "3741"
-      },
-      {
         "amount_cent_unrounded": "1608.729480",
         "amount_eur": "16.09",
         "amount_eur_before_minderung": "16.09",
+        "analog_for": "optische_kohaerenztomographie",
+        "catalog_provenance": "official",
+        "category": "F",
+        "confidence": "1.0",
+        "factor": "2.3",
+        "factor_basis": "schwellenwert",
+        "factor_legal_basis": "§ 5 Abs. 1, 2 GOÄ",
+        "is_analog": true,
+        "justification": null,
+        "justification_present": false,
+        "justification_required": false,
+        "minderung_applied": false,
+        "official_text": "Auflichtmikroskopie der Haut (Dermatoskopie), je Sitzung",
+        "proof": [
+          {
+            "detail": "analog_for:optische_kohaerenztomographie",
+            "legal_basis": "§ 6 Abs. 2 GOÄ",
+            "rule": "analogansatz",
+            "rule_id": "analog_oct_750",
+            "ziffer": "750"
+          },
+          {
+            "detail": "dermatoskopie",
+            "legal_basis": "",
+            "rule": "derived_from_act",
+            "rule_id": "",
+            "ziffer": "750"
+          },
+          {
+            "detail": "no_more_specific_position_for_the_same_act",
+            "legal_basis": "",
+            "rule": "most_specific_candidate",
+            "rule_id": "",
+            "ziffer": "750"
+          },
+          {
+            "detail": "no_mutually_exclusive_competitor",
+            "legal_basis": "",
+            "rule": "no_unresolved_conflict",
+            "rule_id": "",
+            "ziffer": "750"
+          },
+          {
+            "detail": "no_one_way_exclusion_violated",
+            "legal_basis": "",
+            "rule": "not_excluded",
+            "rule_id": "",
+            "ziffer": "750"
+          },
+          {
+            "detail": "not_a_component_of_another_charged_service",
+            "legal_basis": "",
+            "rule": "not_zielleistung_component",
+            "rule_id": "",
+            "ziffer": "750"
+          },
+          {
+            "detail": "present_and_active_in_loaded_catalog",
+            "legal_basis": "",
+            "rule": "catalog_match",
+            "rule_id": "",
+            "ziffer": "750"
+          }
+        ],
+        "punkte": 120,
+        "status": "billable_analog",
+        "text_quality": "ok",
+        "ziffer": "750"
+      },
+      {
+        "amount_cent_unrounded": "2144.972640",
+        "amount_eur": "21.45",
+        "amount_eur_before_minderung": "21.45",
         "analog_for": null,
         "catalog_provenance": "official",
-        "category": "C",
+        "category": "B",
         "confidence": "1.0",
         "factor": "2.3",
         "factor_basis": "schwellenwert",
@@ -582,55 +360,55 @@
         "justification_present": false,
         "justification_required": false,
         "minderung_applied": false,
-        "official_text": "Punktion eines Gelenks",
+        "official_text": "Vollständige körperliche Untersuchung mindestens eines der folgenden Organsysteme: das gesamte Hautorgan, die Stütz- und Bewegungsorgane, alle Brustorgane, alle Bauchorgane, der gesamte weibliche Genitaltrakt (gegebenenfalls einschließlich Nieren und ableitende Harnwege) - gegebenenfalls einschließlich Dokumentation -",
         "proof": [
           {
             "detail": "no_more_specific_position_for_the_same_act",
             "legal_basis": "",
             "rule": "most_specific_candidate",
             "rule_id": "",
-            "ziffer": "300"
+            "ziffer": "7"
           },
           {
             "detail": "no_mutually_exclusive_competitor",
             "legal_basis": "",
             "rule": "no_unresolved_conflict",
             "rule_id": "",
-            "ziffer": "300"
+            "ziffer": "7"
           },
           {
             "detail": "no_one_way_exclusion_violated",
             "legal_basis": "",
             "rule": "not_excluded",
             "rule_id": "",
-            "ziffer": "300"
+            "ziffer": "7"
           },
           {
             "detail": "not_a_component_of_another_charged_service",
             "legal_basis": "",
             "rule": "not_zielleistung_component",
             "rule_id": "",
-            "ziffer": "300"
+            "ziffer": "7"
           },
           {
             "detail": "present_and_active_in_loaded_catalog",
             "legal_basis": "",
             "rule": "catalog_match",
             "rule_id": "",
-            "ziffer": "300"
+            "ziffer": "7"
           },
           {
-            "detail": "punktion",
+            "detail": "vollstaendige_untersuchung_organsystem",
             "legal_basis": "",
             "rule": "derived_from_act",
             "rule_id": "",
-            "ziffer": "300"
+            "ziffer": "7"
           }
         ],
-        "punkte": 120,
+        "punkte": 160,
         "status": "billable",
         "text_quality": "ok",
-        "ziffer": "300"
+        "ziffer": "7"
       },
       {
         "amount_cent_unrounded": "2681.215800",
@@ -700,12 +478,12 @@
       }
     ],
     "total": {
-      "amount_cent_unrounded": "7775.5258200",
-      "amount_eur": "77.75",
-      "amount_eur_before_minderung": "77.75",
+      "amount_cent_unrounded": "6434.917920",
+      "amount_eur": "64.35",
+      "amount_eur_before_minderung": "64.35",
       "minderung_applied": false,
       "minderung_rate": "0",
-      "punkte": 680,
+      "punkte": 480,
       "punktwert_cent": "5.82873",
       "rounding_legal_basis": "§ 5 Abs. 1 Satz 4 GOÄ (ROUND_HALF_UP auf Cent)",
       "rounding_policy": "ROUND_HALF_UP"
@@ -713,27 +491,11 @@
     "warnings": [
       {
         "legal_basis": "",
-        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 1 sind nur teilweise importiert (rule_coverage=partial).",
+        "message": "Analogansatz-Kollision: Die als Analogziffer gewählte GOÄ 750 wird bereits direkt abgerechnet (Akt a4). Es existiert kein kollisionsfreier Analogkandidat – bitte manuell prüfen.",
         "rule_id": "",
-        "severity": "info",
-        "type": "rule_coverage_incomplete",
-        "ziffer": "1"
-      },
-      {
-        "legal_basis": "",
-        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 300 sind nur teilweise importiert (rule_coverage=partial).",
-        "rule_id": "",
-        "severity": "info",
-        "type": "rule_coverage_incomplete",
-        "ziffer": "300"
-      },
-      {
-        "legal_basis": "",
-        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 3741 sind nur teilweise importiert (rule_coverage=partial).",
-        "rule_id": "",
-        "severity": "info",
-        "type": "rule_coverage_incomplete",
-        "ziffer": "3741"
+        "severity": "warning",
+        "type": "analog_collision",
+        "ziffer": "750"
       },
       {
         "legal_basis": "",
@@ -745,11 +507,19 @@
       },
       {
         "legal_basis": "",
-        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 5 sind nur teilweise importiert (rule_coverage=partial).",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 7 sind nur teilweise importiert (rule_coverage=partial).",
         "rule_id": "",
         "severity": "info",
         "type": "rule_coverage_incomplete",
-        "ziffer": "5"
+        "ziffer": "7"
+      },
+      {
+        "legal_basis": "",
+        "message": "Die Ausschluss- und Bestandteilsregeln für GOÄ 750 sind nur teilweise importiert (rule_coverage=partial).",
+        "rule_id": "",
+        "severity": "info",
+        "type": "rule_coverage_incomplete",
+        "ziffer": "750"
       },
       {
         "legal_basis": "",
@@ -758,56 +528,45 @@
         "severity": "warning",
         "type": "rule_coverage_incomplete",
         "ziffer": null
+      },
+      {
+        "legal_basis": "§ 6 Abs. 2 GOÄ",
+        "message": "'optische_kohaerenztomographie' ist im Gebührenverzeichnis nicht enthalten und wird analog GOÄ 750 berechnet (Gleichwertigkeit 0.75). Die Rechnung muss die Analogziffer als solche kennzeichnen und die Gleichwertigkeit begründen; die Auswahl ist ÄRZTLICH ZU PRÜFEN.",
+        "rule_id": "analog_oct_750",
+        "severity": "warning",
+        "type": "analogansatz_requires_human_review",
+        "ziffer": "750"
       }
     ]
   },
   "extraction": {
-    "consultation": {
-      "confidence": "1.0",
-      "duration_minutes": 9,
-      "id": "consultation",
-      "type": "beratung"
-    },
+    "consultation": null,
     "diagnoses": [
       {
-        "confidence": "0.90",
+        "confidence": "0.85",
         "id": "dx_1",
-        "text": "Reizerguss des rechten Handgelenks nach Distorsion"
+        "text": "Nachsorge bei Zustand nach Melanom, Verdacht auf zweiten atypischen Naevus"
       }
     ],
     "examinations": [
       {
         "complexity": "mittel",
         "confidence": "1.0",
-        "id": "exam_handgelenk",
-        "organ_system": "bewegungsapparat",
+        "id": "exam_haut_vollstaendig",
+        "organ_system": "haut",
         "organs": [
-          "handgelenk"
+          "extremitaeten",
+          "kapillitium",
+          "rumpf"
         ],
-        "type": "symptombezogene_untersuchung"
+        "type": "vollstaendige_untersuchung_organsystem"
       }
     ],
-    "justification_factors": [
-      {
-        "applies_to": [
-          "proc_verband"
-        ],
-        "confidence": "1.0",
-        "id": "just_verband",
-        "reason": "Aufwendige Verbandtechnik mit Schienung und mehrfacher Nachkorrektur wegen Schwellungsprogredienz",
-        "severity": "mittel"
-      }
-    ],
-    "lab_tests": [
-      {
-        "confidence": "1.0",
-        "id": "lab_crp",
-        "type": "crp"
-      }
-    ],
-    "notes": "Synthetic case, no real patient data. WHAT THIS TESTS: § 4 Abs. 2a GOÄ, the Zielleistungsprinzip, in the configuration where the component is documented at least as well as its target service and even carries its own written justification. The dressing (Nr. 200) was applied in connection with the puncture, so it is a component of that service and not separately chargeable. EXPECTED BEHAVIOUR: Nr. 200 is blocked with reason zielleistung, blocked_by Nr. 300, under rule ziel_man_300_200 — the block is a hard rule, so neither the component's own confidence of 1.0 nor its documented difficulty rescues it, and the justification on Nr. 200 is silently irrelevant rather than applied elsewhere. Second point: the wrist is not named in Nr. 301 or Nr. 302, so this act produces only the generic Nr. 300 and no specificity contest happens — the parent named in the block is therefore Nr. 300, and the rule that fires is the generic one.",
+    "justification_factors": [],
+    "lab_tests": [],
+    "notes": "Synthetic case, no real patient data. WHAT THIS TESTS: the § 6 Abs. 2 Analogansatz against the exclusion table. The optical coherence tomography has no position in the 1982 Gebuehrenverzeichnis, so its analog ladder is Nr. 750 (0.75), Nr. 410 (0.55), Nr. 5 (0.25). Nr. 750 and Nr. 410 are both already billed directly, so the collision objective - the highest-priority one - pushes the ladder down to Nr. 5, and Nr. 5 is not chargeable next to the Nr. 7 examination under the verified rule excl_man_5_7. EXPECTED BEHAVIOUR: Nr. 5 is BLOCKED with reason exclusion and blocked_by Nr. 7, carrying the rule id and a proof atom; the Analogansatz falls back to Nr. 750 and reports the collision for human review. Before the analog/exclusion fix the two legality constraints in logic/asp/goae_optimize.lp ranged over bill/1, which an analog position never enters, so the solver charged Nr. 5 next to Nr. 7 and the validator refused the whole invoice with a 500. This case is the regression gate for that.",
     "patient": {
-      "age": 34,
+      "age": 58,
       "setting": "ambulant",
       "sex": "w"
     },
@@ -815,26 +574,26 @@
       {
         "complexity": "mittel",
         "confidence": "1.0",
-        "details": "Punktion des rechten Handgelenks, 6 ml seröses Punktat entlastet",
-        "id": "proc_punktion",
-        "organ": "gelenk",
-        "type": "punktion"
+        "details": "Auflichtmikroskopie der pigmentierten Laesion am linken Oberschenkel, asymmetrisches Pigmentnetz",
+        "id": "proc_dermatoskopie",
+        "organ": "haut",
+        "type": "dermatoskopie"
       },
       {
         "complexity": "mittel",
         "confidence": "1.0",
-        "details": "Sonographie des rechten Handgelenks, Erguss im Radiokarpalgelenk ohne Nachweis einer Synovialitis",
-        "id": "proc_sono",
-        "organ": "handgelenk",
+        "details": "Optische Kohaerenztomographie der Laesion zur Beurteilung der Tiefenausdehnung vor Exzisionsplanung",
+        "id": "proc_oct",
+        "organ": "haut",
+        "type": "optische_kohaerenztomographie"
+      },
+      {
+        "complexity": "mittel",
+        "confidence": "1.0",
+        "details": "Sonographie der inguinalen Lymphknotenstation links, kein Nachweis einer Metastasierung",
+        "id": "proc_sonographie",
+        "organ": null,
         "type": "sonographie"
-      },
-      {
-        "complexity": "mittel",
-        "confidence": "1.0",
-        "details": "Zirkulärer Kompressionsverband des rechten Handgelenks unmittelbar nach der Punktion angelegt",
-        "id": "proc_verband",
-        "organ": "handgelenk",
-        "type": "verband"
       }
     ]
   }
