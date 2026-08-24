@@ -1,6 +1,6 @@
 # `apps/engine/tests`
 
-912 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
+919 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
 behaviour the POC did not have. **None was weakened to make the migration pass** — where a
 migrated test failed only because a path moved, the path was fixed; where it asserted on an
 artefact this monorepo does not contain (the POC's static UI), the assertion moved to the contract
@@ -11,10 +11,11 @@ it was really about, and that is recorded in
 
 ```bash
 cd apps/engine
-.venv/bin/python -m pytest -q                    # all of it, ~20 s
+.venv/bin/python -m pytest -q                    # all of it, ~75 s
 .venv/bin/python -m pytest -q tests/test_clingo.py
 .venv/bin/python -m pytest -q -k determinis      # by name
 .venv/bin/python -m pytest -q --lf               # last failures only
+.venv/bin/python -m pytest -q --ignore=tests/property   # skip the ~40 s Hypothesis suite
 ```
 
 Inside the container image, where Soufflé is guaranteed present:
@@ -32,7 +33,8 @@ count, or run in the image where the binary is always there.
 
 ```
 $ .venv/bin/python -m pytest -q
-912 passed, 4 skipped in 30s      # the 4 skips are the Postgres parametrisations; see below
+914 passed, 4 skipped, 1 xfailed in 74s   # 4 skips: the Postgres parametrisations, see below
+                                          # 1 xfail: an open defect, see the property suite below
 ```
 
 ## What each file is for
@@ -43,7 +45,8 @@ $ .venv/bin/python -m pytest -q
 | `test_golden_normalization.py` | 16 | **golden** — the normaliser the snapshot, the cache key and the receipt all depend on |
 | `test_manual_cases.py` | 41 | **golden / determinism** — the three synthetic cases end to end, twice |
 | `test_clingo.py` | 34 | **legal posture** — arbitration, the factor ladder, Analogansatz, brute-force differential |
-| `test_property.py` | 84 | **property-based** — invariants over randomly generated candidate sets |
+| `test_property.py` | 84 | **property-based** — ten invariants over randomly generated candidate sets |
+| `property/test_financial_invariants.py` | 7 | **property-based, Hypothesis** — five invariants over randomly generated `/solve` requests, plus the open defect the first sweep found |
 | `test_production_fixes.py` | 64 | the seven P0 fixes: config, timeout, cache, proposals, coverage, documentation gaps, receipts |
 | `test_padnext.py` | 75 | reading a delivery and auditing it; one deliberate defect per position, and the three honest money buckets |
 | `test_padnext_schema.py` | 63 | **framing validation** — the five ways a delivery is refused before it is read, with a line number, and the position-level problems that must never be a refusal |
@@ -114,6 +117,74 @@ content-addressed cache key, and the receipt hash. It is asserted in both direct
 timings are stripped (or determinism checks would fail on a deterministic system) and that nothing
 load-bearing is (or two different results would hash to one cache key).
 
+## The Hypothesis property suite
+
+`tests/property/` is the newer half of the property-based testing, and it differs from
+`test_property.py` in what it generates and how far it runs.
+
+`test_property.py` builds a `BridgeResult` by hand from a curated pool of Ziffern and drives the
+symbolic layers directly, over 60 seeded cases. `tests/property/` generates a real
+`POST /api/v1/solve` body — the frozen input contract, clinical entities only, no Ziffer anywhere —
+and runs `Pipeline.propose` end to end, which is what makes `receipt_hash` available to assert on.
+The two are complementary: one reaches Ziffern the mapping table cannot produce, the other reaches
+the bridge, the receipt and the request contract.
+
+The generated vocabulary is `load_mapping()` filtered against the loaded catalog, so a generated
+service always resolves to a real, active position and the strategies cannot drift from
+`data/mappings/entity_to_ziffer.csv`. Adding a row widens them; removing one narrows them.
+
+| Property | Claim |
+| --- | --- |
+| `test_financial_sum_invariant` | Punktzahl x Punktwert x Faktor, less § 6a Minderung, rounded half-up per line and summed, equals `total.amount_eur` — recomputed from the catalog |
+| `test_uniqueness_invariant` | no Ziffer twice, lines in canonical order, nothing both charged and blocked |
+| `test_proof_invariant` | every position, charged or blocked, carries its reason — and a named blocker really is on the invoice |
+| `test_factor_bounds_invariant` | every factor inside `[1.0, Höchstsatz]`, capped by any Leistungslegende cap, justified above the Schwellenwert |
+| `test_determinism_invariant` | same request → same `Coding` and same `receipt_hash`, with the cache off so each run genuinely re-solved |
+
+```bash
+.venv/bin/python -m pytest tests/property/ --hypothesis-seed=0            # ~40 s, reproducible
+.venv/bin/python -m pytest tests/property/ --hypothesis-show-statistics   # what got generated
+HYPOTHESIS_MAX_EXAMPLES=2000 .venv/bin/python -m pytest tests/property/ \
+    --hypothesis-seed=random                                              # ~13 min sweep
+```
+
+### Why the seed is on the command line and not in the profile
+
+The profile deliberately does not set `derandomize`, so a plain run explores new inputs — which is
+the only reason to have these tests rather than more golden cases. `--hypothesis-seed=0` pins the
+input set when reproducibility matters, and CI passes it so a red build is actionable. The two are
+not interchangeable: Hypothesis checks `derandomize` *before* `--hypothesis-seed`, so setting it in
+the profile would have silently made the documented flag a no-op.
+
+### `max_examples`, and what it costs
+
+100 per property (50 for determinism, which solves twice per example) — about 40 s for the file, at
+roughly 80 ms per solve. That is the largest number that keeps the whole engine suite in the range
+where people still run it before committing, and it covers the generated space several times over.
+`HYPOTHESIS_MAX_EXAMPLES` raises it without editing anything; the bug in
+[`docs/audit/PROPERTY_TEST_FINDINGS.md`](../../../docs/audit/PROPERTY_TEST_FINDINGS.md) was found at
+1500 and would be a reasonable nightly figure.
+
+### The one `xfail`, and why it is `strict`
+
+The first wide sweep failed all five properties on one shared cause: an Analogansatz position
+reaches the invoice through `analog/2`, and the two legality constraints in
+`logic/asp/goae_optimize.lp` range over `bill/1`, so it faces neither. The validator catches it and
+refuses, which turns an ordinary encounter into a `500`.
+
+Fixing it changes what the solver is willing to bill, so it is **not** fixed here — it is recorded
+as `test_the_analog_ladder_ignores_exclusions_against_the_final_invoice`, an `xfail(strict=True)`
+that reproduces it in four lines. `strict` means the day the constraint is widened, that test
+XPASSes and fails the build, telling whoever fixed it to delete the marker and the generator guard
+that goes with it. The root cause, the proposed diff and the two decisions it needs first are in
+[`docs/audit/PROPERTY_TEST_FINDINGS.md`](../../../docs/audit/PROPERTY_TEST_FINDINGS.md).
+
+No assertion was weakened for it. The generator declines exactly one combination — an Analogansatz
+service alongside a service whose Ziffer is mutually exclusive with one of that analog type's
+candidate targets — derived from the rule tables rather than written out, and
+`test_the_generated_space_is_worth_exploring` pins its size so a data change cannot widen it
+silently.
+
 ## The determinism tests
 
 | Test | Claim |
@@ -125,6 +196,7 @@ load-bearing is (or two different results would hash to one cache key).
 | `test_production_fixes.py::test_the_receipt_ignores_measured_values` | timings do not move the receipt |
 | `test_production_fixes.py::test_the_second_identical_solve_is_served_from_the_cache` | the cache agrees |
 | `test_production_fixes.py` cache-key matrix | every input that can change an answer changes the key |
+| `property/test_financial_invariants.py::test_determinism_invariant` | …over randomly generated requests, with the cache off |
 
 ## The legal-posture tests
 
@@ -139,6 +211,7 @@ needs legal and domain review — see [`logic/README.md`](../../../logic/README.
 | `test_clingo.py` (brute force) | the solver's choice equals an exhaustive enumeration's optimum |
 | `test_clingo.py` / `test_manual_cases.py` (factor ladder) | no factor leaves its § 5 band or its Leistungslegende cap |
 | `test_manual_cases.py::test_case_factors_stay_inside_their_legal_band` | any factor above the Schwellenwert has a written reason (§ 12 Abs. 3) |
+| `property/test_financial_invariants.py` | …and the same for money, uniqueness and proof, over randomly generated requests |
 | `test_manual_cases.py::test_case_never_violates_a_rule_it_enforces` | no invoice violates an enforced exclusion or Zielleistung rule |
 | `test_souffle.py` (Zielleistung) | components are suppressed in **Datalog**, not traded off in the optimiser |
 | `test_validation.py` | the layer that picks a number is not the layer that approves it; a disagreement raises |
@@ -167,6 +240,15 @@ Shared fixtures are in `conftest.py`. The important ones:
   architectural claim, and these helpers are how the tests exercise it directly.
 - `manual_case` / `expected_case` / `golden_case` — read from `logic/tests/`, resolved through
   `app.config`, so the suite does not care which directory pytest was invoked from.
+
+In `tests/property/conftest.py`, for the Hypothesis suite only:
+
+- `property_pipeline` — a **session-scoped** pipeline with `cache_enabled=False`. Both halves
+  matter: `@given` with a function-scoped fixture trips `HealthCheck.function_scoped_fixture`, and
+  with the content-addressed cache on, Hypothesis's repeated inputs would assert against a dict
+  computed once instead of a solve.
+- `solve_requests()` / `solve()` — the request strategy and the one-line runner that parses a fresh
+  `SolveRequest` per call, so two runs of one payload cannot share an object.
 
 Case data lives in `logic/tests/cases/`, frozen snapshots in `logic/tests/golden/`, and the PADnext
 fixture in `logic/tests/cases/padnext/`. All of it is synthetic, and

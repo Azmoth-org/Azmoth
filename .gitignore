@@ -58,6 +58,11 @@ __pycache__/
 .mypy_cache/
 apps/engine/facts/
 
+# Hypothesis's example database: the failing inputs it found, so that a re-run replays them first.
+# Machine-local and reproducible — a failure worth keeping becomes a case in logic/tests/cases/ or
+# an assertion in tests/, not a committed blob.
+.hypothesis/
+
 # Licensed GOÄ datasets must never be committed: the bundled catalog is the official, public-domain
 # text (§ 5 UrhG), but a licensed dataset dropped here would not be. Everything in data/licensed/
 # except its README is ignored on purpose — see data/licensed/README.md.
