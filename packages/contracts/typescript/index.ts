@@ -48,6 +48,19 @@ export type ApprovalRequest = Schemas["ApprovalRequest"];
 export type RejectionRequest = Schemas["RejectionRequest"];
 
 /**
+ * What `GET /api/v1/proposals` returns: a page of proposals, newest first, plus the real `total`.
+ *
+ * `total` counts every proposal matching the request's `status` and `case_id` filters — not the
+ * page, and not the table. That is the field a listing exists for: without it a client cannot tell
+ * fifty drafts from the first fifty of nine hundred, and a review queue that cannot state its own
+ * size is not a queue.
+ *
+ * Rows are the full `Proposal`, so a listing carries each draft's rule-coverage counts and its whole
+ * `solver_result`. Ask for a small `limit`.
+ */
+export type ProposalList = Schemas["ProposalList"];
+
+/**
  * Body of `POST /api/v1/proposals/{id}/export`. `exported_by` is required, for the same reason
  * `approved_by` is on an approval: it is recorded in the audit log. It is not authenticated.
  */
