@@ -216,9 +216,10 @@ function Disclaimer() {
         render={
           <div className="text-sidebar-foreground/70 cursor-default px-2 py-1 text-xs group-data-[collapsible=icon]:hidden">
             {/*
-              `text-sidebar-*`, not `text-foreground`. The rail is dark and the document is light,
-              so the page's own text tokens are gray-900 here — which was invisible the moment the
-              rail stopped being white.
+              `text-sidebar-*`, not `text-foreground`. The rail carries its own light/dark pair, and
+              nothing guarantees it resolves to the same surface as the document — it is one step
+              darker in both modes today. Reading the rail's own tokens is what keeps this legible
+              whichever theme is on, and whatever the rail's ground becomes next.
             */}
             <p className="text-sidebar-foreground font-medium">Entwurf, keine Rechnung.</p>
             <p className="mt-1">
