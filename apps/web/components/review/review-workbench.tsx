@@ -34,7 +34,7 @@ import { AcceptedPositionsTable } from "@/components/review/accepted-positions-t
 import { AuditTrailPanel } from "@/components/review/audit-trail-panel"
 import { BlockedPositionsTable } from "@/components/review/blocked-positions-table"
 import { CaseSelector } from "@/components/review/case-selector"
-import { CollapsibleSection } from "@/components/review/collapsible-section"
+import { CollapsibleSection, Disclosure } from "@/components/review/collapsible-section"
 import { DecisionBar } from "@/components/review/decision-bar"
 import {
   ApproveDialog,
@@ -90,7 +90,7 @@ function Section({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           {Icon ? <Icon className={`size-4 shrink-0 ${iconColor}`} /> : null}
           <span className="min-w-0 flex-1">{title}</span>
           {count !== undefined ? (
@@ -116,7 +116,7 @@ function Section({
  */
 function ProposalSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Card>
         <CardContent className="space-y-4">
           <span className="sr-only" role="status">
@@ -127,20 +127,18 @@ function ProposalSkeleton() {
           <Skeleton className="h-24 w-full" />
         </CardContent>
       </Card>
-      <div className="grid gap-6 xl:grid-cols-5">
-        <Card className="xl:col-span-3">
-          <CardContent className="space-y-3">
-            <Skeleton className="h-5 w-48" />
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-        </Card>
-        <Card className="xl:col-span-2">
-          <CardContent className="space-y-3">
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-40 w-full" />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-40 w-full" />
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -160,9 +158,13 @@ function ProposalSkeleton() {
  * reviewer is doing is comparing them: this Ziffer was charged, that one was suppressed, and the
  * question is whether the suppression is correct.
  *
- * So the two tables sit side by side from `xl` up, at 3:2 — the accepted table carries the money and
- * five columns, the blocked table three — and stack below it. The two prose panels follow, and the
- * audit trail is last and collapsed: it is the longest section by far and it is consulted, not read.
+ * So the two tables are stacked, each the full width of the page. They were side by side at 3:2,
+ * which left the blocked table 440px for a Ziffer, a GOÄ legend and a reason badge; measuring the
+ * repair is what killed the whole idea, because the accepted table's six columns have an intrinsic
+ * width of 647px and half of this page never exceeds 604px. Side by side, one of the two always
+ * scrolls sideways. The two prose panels below *are* side by side — they are compact rows and they
+ * fit — and the audit trail is last and collapsed: it is the longest section by far and it is
+ * consulted, not read.
  *
  * It also makes the screen printable in one pass, which a tab strip cannot be: a printed proposal
  * that silently omitted the blocked positions would be a misleading document.
@@ -359,15 +361,24 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
   const shownError = malformedError ?? error
 
   return (
-    <div className="space-y-6">
-      {/* Picking and running a case is an input to the screen, not part of the document it produces. */}
-      <div className="print:hidden">
-        <CaseSelector
-          selected={selected}
-          onSelect={selectCase}
-          onRun={run}
-          pending={pending === "solving"}
-        />
+    <div className="space-y-8">
+      {/*
+        Picking and running a fixture is an input to the screen, not part of the document it
+        produces — and it is a *development* input. It was the first card on the page, which meant
+        the screen a physician uses to approve a bill opened with a test-case picker. It is filed
+        under a collapsed disclosure now, in a dashed box that says at a glance it is tooling rather
+        than a step of the workflow. Everyone who arrives from `/proposals` or the dashboard has a
+        proposal already and never opens it.
+      */}
+      <div className="rounded-2xl border border-dashed px-4 py-3 print:hidden">
+        <Disclosure label="Entwicklerwerkzeuge — synthetischen Fall ausführen" printOpen={false}>
+          <CaseSelector
+            selected={selected}
+            onSelect={selectCase}
+            onRun={run}
+            pending={pending === "solving"}
+          />
+        </Disclosure>
       </div>
 
       {shownError ? (
@@ -441,40 +452,50 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
           <RuleCoverageBanner proposal={proposal} />
 
           {/*
-            3:2 rather than 1:1. The accepted table carries five columns and every amount on the
-            screen; the blocked table carries three and is read one row at a time. Splitting the
-            width evenly would have squeezed the invoice to give room to the exceptions.
+            One under the other, each the full width of the page.
+
+            They were side by side at 3:2, and the blocked table's Beschreibung column got 128px of
+            it — three words to a line, with the reason badge hard against the right edge. Halving
+            the split instead of ending it was the obvious repair and the measurements refuse it:
+            the accepted table's six columns have an intrinsic width of **647px**, and half of this
+            page is 472px at 1280 and 604px at the `max-w-7xl` cap. There is no viewport this
+            application allows at which an invoice table and an exception table both fit in half of
+            it — a 1:1 split just moves the horizontal scrollbar from one card to the other, onto
+            the one carrying the money.
+
+            Stacked, both get 1104px. Beschreibung goes from 128px to ~870px and nothing scrolls
+            sideways at any width. The cost is about 400px of page height, on a screen that is
+            already scrolled through top to bottom.
+
+            The two prose panels below stay side by side: they are compact rows, not tables, and
+            they were measured at half width and fit.
           */}
-          <div className="grid items-start gap-6 xl:grid-cols-5">
-            <Section
-              title="Akzeptierte Positionen"
-              description="Berechnungsfähig nach den durchgesetzten Regeln. Beträge und Faktoren stammen unverändert aus der Engine."
-              count={accepted.length}
-              icon={CheckCircle2Icon}
-              tone="accepted"
-              flush
-              className="xl:col-span-3"
-            >
-              <AcceptedPositionsTable coding={coding} />
-            </Section>
+          <Section
+            title="Akzeptierte Positionen"
+            description="Berechnungsfähig nach den durchgesetzten Regeln. Beträge und Faktoren stammen unverändert aus der Engine."
+            count={accepted.length}
+            icon={CheckCircle2Icon}
+            tone="accepted"
+            flush
+          >
+            <AcceptedPositionsTable coding={coding} />
+          </Section>
 
-            <Section
-              title="Blockierte Positionen"
-              description="Von einer durchgesetzten Regel unterdrückt — mit Regel-ID und Rechtsgrundlage."
-              count={blocked.length}
-              icon={BanIcon}
-              tone="blocked"
-              flush
-              className="xl:col-span-2"
-            >
-              <BlockedPositionsTable coding={coding} />
-            </Section>
-          </div>
+          <Section
+            title="Blockierte Positionen"
+            description="Von einer durchgesetzten Regel unterdrückt — mit Regel-ID und Rechtsgrundlage."
+            count={blocked.length}
+            icon={BanIcon}
+            tone="blocked"
+            flush
+          >
+            <BlockedPositionsTable coding={coding} />
+          </Section>
 
-          <div className="grid items-start gap-6 xl:grid-cols-2">
+          <div className="grid items-start gap-6 lg:grid-cols-2">
             <Section
               title="Dokumentationslücken"
-              description="Keine Abrechnungsempfehlung — abgerechnet wird immer der angesetzte Faktor."
+              description="Positionen, deren angesetzter Faktor unter der gesetzlichen Obergrenze liegt."
               count={missing.length}
               icon={FileTextIcon}
             >
@@ -516,11 +537,13 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
           <EmptyMedia variant="icon">
             <PlayIcon />
           </EmptyMedia>
-          <EmptyTitle>Noch kein Vorschlag</EmptyTitle>
+          <EmptyTitle>Kein Vorschlag ausgewählt</EmptyTitle>
           <EmptyDescription>
-            Fall oben auswählen und <strong>Engine ausführen</strong>. Die Engine muss dafür unter{" "}
-            <span className="font-mono text-xs">ENGINE_BASE_URL</span> erreichbar sein (Standard{" "}
-            <span className="font-mono text-xs">http://localhost:8000</span>).
+            Öffnen Sie eine Prüfung über <strong>Alle Prüfungen</strong> in der Navigation oder über
+            die Übersicht. Zum Ausprobieren lässt sich oben unter{" "}
+            <strong>Entwicklerwerkzeuge</strong> ein synthetischer Fall ausführen; die Engine muss
+            dafür unter <span className="font-mono text-xs">ENGINE_BASE_URL</span> erreichbar sein
+            (Standard <span className="font-mono text-xs">http://localhost:8000</span>).
           </EmptyDescription>
         </Empty>
       ) : null}

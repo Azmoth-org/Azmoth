@@ -20,8 +20,13 @@ function ThemeProvider({
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      // Light, whatever the operating system says. `system` was the scaffold's default and it is
+      // the wrong default for this product: a screen carrying an amount and a signature should not
+      // arrive dark because somebody's laptop switched at sunset, and a physician who has never
+      // opened the toggle should never see the developer-tool version of it. Dark is still one
+      // click away in the top bar, and the choice persists — it is a preference, not the product.
+      defaultTheme="light"
+      enableSystem={false}
       disableTransitionOnChange
       {...props}
     >

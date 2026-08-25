@@ -1,3 +1,5 @@
+"use client"
+
 import { CheckIcon, ReceiptTextIcon, TriangleAlertIcon } from "lucide-react"
 
 import { Badge } from "@workspace/ui/components/badge"
@@ -16,74 +18,135 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@workspace/ui/components/tooltip"
+import { cn } from "@workspace/ui/lib/utils"
 
 import { ProofDialog } from "@/components/review/proof-dialog"
+import {
+  CARDS_ONLY,
+  CLAMP_2,
+  EDGE_PADDING,
+  FIGURE,
+  HEAD,
+  HEAD_FIGURE,
+  ROW,
+  TABLE_ONLY,
+  WRAP,
+} from "@/components/review/table-style"
 import { eur, factor, factorBasis, lineStatus, rate } from "@/lib/review/format"
-import type { Coding } from "@/lib/review/types"
+import type { Coding, InvoiceLine } from "@/lib/review/types"
 
 /**
- * Flush the table to the card's edges and keep the text off them.
+ * Roughly the length at which a GOÄ legend stops fitting in two lines of the Leistung column.
  *
- * `CardContent` is given `px-0` by the caller so the header row and the zebra stripes run the full
- * width of the card — a stripe that stops short of the edge reads as a box inside a box. The row
- * padding is restored on the first and last cell instead of on the container.
+ * A tooltip that repeats a sentence already fully visible is not a help, it is a flicker under the
+ * cursor — so the short legends do not get one. The threshold is generous on purpose: showing the
+ * tooltip on a sentence that happened to fit costs a reader nothing, and withholding it from one
+ * that was cut off costs them the text.
  */
-const EDGE_PADDING =
-  "[&_td:first-child]:pl-6 [&_td:last-child]:pr-6 [&_th:first-child]:pl-6 [&_th:last-child]:pr-6"
+const TOOLTIP_THRESHOLD = 90
 
 /**
- * Side padding for the three figure columns.
+ * A legend, clamped on screen and whole everywhere else.
  *
- * `p-3` on each of Punkte, Faktor and Betrag spent 72px of a 730px table on whitespace between
- * numbers that are already right-aligned and therefore already separated. That width belongs to the
- * Leistung column, which is a sentence.
+ * `line-clamp` is a *visual* truncation: the full sentence stays in the DOM, so a screen reader
+ * reads all of it and find-in-page still finds it. The tooltip is therefore for sighted mouse users
+ * only, which is why nothing here is wired to focus — and why print unclamps rather than
+ * substituting a tooltip it cannot show.
  */
-const FIGURE = "px-2 text-right align-top"
+function Legend({ text }: { text: string }) {
+  const body = <div className={cn("text-sm", CLAMP_2, WRAP)}>{text}</div>
+  if (text.length <= TOOLTIP_THRESHOLD) return body
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={body} />
+      <TooltipContent side="top" className="max-w-sm text-left leading-relaxed">
+        {text}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
 
 /**
- * German medical legend text needs to be allowed to break.
+ * § 12 Abs. 3 GOÄ, as a badge rather than as a paragraph.
  *
- * "Elektrokardiographische" is twenty-three characters that no amount of column-width negotiation
- * will shorten: without this the longest single word in a cell becomes that column's minimum width,
- * and the table overflows its card at every viewport. `hyphens-auto` does the right thing because
- * the document is `lang="de"`; `break-words` is the fallback for the strings that have no hyphen
- * points, such as a rule id.
+ * A missing justification is the one thing in this cell that changes what a reviewer has to *do*, so
+ * it stays loud. A justification that is present is a tick and nothing more on screen: the text
+ * itself is evidence, not a scanning aid, and it is kept for paper — where the reader is checking
+ * the record rather than working down the list.
  */
-const WRAP = "hyphens-auto break-words"
+function JustificationBadge({ line }: { line: InvoiceLine }) {
+  if (!line.justification_required) return null
 
-
-function JustificationBadge({
-  required,
-  present,
-  justification,
-}: {
-  required: boolean
-  present: boolean
-  justification: string | null | undefined
-}) {
-  if (!required) return null
-
-  if (present) {
+  if (!line.justification_present) {
     return (
-      <div className="mt-1.5 min-w-0 space-y-1">
-        <Badge variant="secondary" className="gap-1">
-          <CheckIcon />
-          begründet
-        </Badge>
-        {justification ? (
-          <p className="text-muted-foreground line-clamp-3 text-xs" title={justification}>
-            {justification}
-          </p>
-        ) : null}
-      </div>
+      <Badge variant="destructive" className="gap-1">
+        <TriangleAlertIcon />
+        Begründung fehlt (§ 12 Abs. 3 GOÄ)
+      </Badge>
     )
   }
 
   return (
-    <Badge variant="destructive" className="mt-1.5 gap-1">
+    <>
+      <Badge variant="secondary" className="gap-1">
+        <CheckIcon />
+        begründet
+      </Badge>
+      {line.justification ? (
+        <p className={cn("text-muted-foreground hidden text-xs print:block", WRAP)}>
+          {line.justification}
+        </p>
+      ) : null}
+    </>
+  )
+}
+
+/** Textqualität, only when it is not `ok` — the engine's own flag that a legend may be garbled. */
+function TextQualityBadge({ line }: { line: InvoiceLine }) {
+  if (!line.text_quality || line.text_quality === "ok") return null
+  return (
+    <Badge variant="destructive" className="gap-1">
       <TriangleAlertIcon />
-      Begründung fehlt (§ 12 Abs. 3 GOÄ)
+      Textqualität: {line.text_quality}
     </Badge>
+  )
+}
+
+/**
+ * Status, Abschnitt and Analogansatz — the line's classification.
+ *
+ * On screen this is three fragments of small grey text under every single row, which is precisely
+ * the kind of uniform detail that makes a table unscannable: it is identical on eight rows out of
+ * nine and therefore carries no distinction, while costing each row a third line. It moves onto
+ * paper, where the reader is checking a record rather than working down a list, and the row on
+ * screen keeps only what differs.
+ */
+function Classification({ line }: { line: InvoiceLine }) {
+  return (
+    <div className="text-muted-foreground hidden flex-wrap gap-x-2 text-xs print:flex">
+      <span>{lineStatus(line.status)}</span>
+      {line.category ? <span>· Abschnitt {line.category}</span> : null}
+      {line.analog_for ? <span>· analog für {line.analog_for}</span> : null}
+    </div>
+  )
+}
+
+/** The badges a row only carries when something about it needs acting on. */
+function Signals({ line }: { line: InvoiceLine }) {
+  const hasSignal = line.justification_required || (line.text_quality && line.text_quality !== "ok")
+  if (!hasSignal) return null
+
+  return (
+    <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
+      <TextQualityBadge line={line} />
+      <JustificationBadge line={line} />
+    </div>
   )
 }
 
@@ -95,18 +158,23 @@ function JustificationBadge({
  * this screen adds, multiplies or re-formats a number; the totals row is the engine's own
  * `coding.total`, not a sum computed here.
  *
- * ## Why five columns and not seven
+ * ## What the row is for
  *
- * This table now sits in a column rather than across the page, so the two cells that were pure prose
- * — the § 12 Abs. 3 justification and the line's status, category and Analogansatz — moved into the
- * Leistung cell they were describing. Nothing was dropped: the same badges, the same text, the same
- * proof tree, one column narrower each. What is left is the shape of an invoice line, which is what
- * a reader is checking: Ziffer, Leistung, Punkte, Faktor, Betrag.
+ * Five columns in the shape of an invoice line — Ziffer, Leistung, Punkte, Faktor, Betrag — with the
+ * three figures right-aligned and `tabular-nums`, so a column of amounts lines up on its decimal
+ * point and a reader can compare them without reading them. That is the whole reason the figures do
+ * not sit inline with the prose: an amount you have to *find* is an amount you check one at a time.
  *
- * `whitespace-normal` on the Leistung cell is a fix, not a style. `TableCell` sets
- * `whitespace-nowrap` for figures, `white-space` inherits, and the official GOÄ text is a sentence —
- * so every description was being laid out on a single line and pushed the amounts off the right edge
- * of the viewport, which is most of why this table needed horizontal scrolling to read at all.
+ * Rows are 56px rather than 40px and the legend is clamped to two lines. Both are the same decision:
+ * a physician working down nine positions is looking for the one that is wrong, and a table whose
+ * row height is set by its longest legend gives them nothing to step down. The full sentence is a
+ * hover away, and unclamped on paper.
+ *
+ * ## Below `lg`, a list of cards
+ *
+ * Five columns do not survive a tablet, let alone a 390px viewport — the previous version scrolled
+ * sideways, which means the Betrag and the Ziffer it belongs to are never on screen together. The
+ * card form puts them on one line and drops nothing. The table is what prints, always.
  */
 export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
   const lines = coding.proposed_codes ?? []
@@ -128,104 +196,171 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
     )
   }
 
+  // The engine's own footnote about how the total was reached. Built once and rendered twice —
+  // under the table and under the mobile total card — so the two cannot drift apart.
+  const footnote = total
+    ? `${
+        total.minderung_applied
+          ? `§ 6a Minderung angewendet (Satz ${rate(total.minderung_rate)}) · `
+          : ""
+      }Rundung ${total.rounding_policy}${
+        total.rounding_legal_basis ? ` (${total.rounding_legal_basis})` : ""
+      }`
+    : null
+
   return (
-    <Table className={EDGE_PADDING}>
-      <TableHeader>
-        <TableRow className="hover:bg-transparent">
-          <TableHead>Ziffer</TableHead>
-          <TableHead>Leistung</TableHead>
-          <TableHead className="px-2 text-right">Punkte</TableHead>
-          <TableHead className="px-2 text-right">Faktor</TableHead>
-          <TableHead className="px-2 text-right">Betrag</TableHead>
-          {/* A dialog trigger is useless on paper; the whole column goes with it. */}
-          <TableHead className="text-right print:hidden">Beweis</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <>
+      <div className={TABLE_ONLY}>
+        <Table className={EDGE_PADDING}>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className={HEAD}>Ziffer</TableHead>
+              <TableHead className={HEAD}>Leistung</TableHead>
+              <TableHead className={HEAD_FIGURE}>Punkte</TableHead>
+              <TableHead className={HEAD_FIGURE}>Faktor</TableHead>
+              <TableHead className={HEAD_FIGURE}>Betrag</TableHead>
+              {/* A dialog trigger is useless on paper; the whole column goes with it. */}
+              <TableHead className={cn(HEAD, "text-right print:hidden")}>Beweis</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lines.map((line) => (
+              <TableRow
+                key={`${line.ziffer}-${line.status ?? ""}`}
+                className={cn(ROW, "odd:bg-muted/30 hover:bg-transparent")}
+              >
+                <TableCell className="align-middle font-mono text-sm font-medium">
+                  <div>{line.ziffer}</div>
+                  {line.is_analog ? (
+                    <Badge variant="outline" className="mt-1">
+                      analog
+                    </Badge>
+                  ) : null}
+                </TableCell>
+                <TableCell className="w-full min-w-52 align-middle whitespace-normal">
+                  <Legend text={line.official_text} />
+                  <Classification line={line} />
+                  <Signals line={line} />
+                </TableCell>
+                <TableCell className={FIGURE}>{line.punkte}</TableCell>
+                <TableCell className={cn(FIGURE, "max-w-28 whitespace-normal")}>
+                  <div>{factor(line.factor)}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {factorBasis(line.factor_basis)}
+                  </div>
+                </TableCell>
+                <TableCell className={FIGURE}>
+                  <div className="font-medium">{eur(line.amount_eur)}</div>
+                  {line.minderung_applied ? (
+                    <div className="text-muted-foreground text-xs">
+                      vor § 6a: {eur(line.amount_eur_before_minderung)}
+                    </div>
+                  ) : null}
+                </TableCell>
+                <TableCell className="px-2 text-right align-middle print:hidden">
+                  <ProofDialog
+                    ziffer={line.ziffer}
+                    officialText={line.official_text}
+                    steps={line.proof ?? []}
+                    compact
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          {total ? (
+            <TableFooter>
+              <TableRow className={cn(ROW, "hover:bg-transparent")}>
+                <TableCell colSpan={2} className="whitespace-normal">
+                  <div className="text-base font-semibold">Gesamt</div>
+                  <div className="text-muted-foreground text-xs font-normal">
+                    Von der Engine ausgewiesen, nicht im Frontend berechnet.
+                  </div>
+                </TableCell>
+                <TableCell className={cn(FIGURE, "text-base font-semibold")}>
+                  {total.punkte}
+                </TableCell>
+                <TableCell className={cn(FIGURE, "text-muted-foreground text-xs font-normal")}>
+                  Punktwert
+                  <br />
+                  {total.punktwert_cent} ct
+                </TableCell>
+                <TableCell className={cn(FIGURE, "text-xl font-bold")}>
+                  {eur(total.amount_eur)}
+                </TableCell>
+                <TableCell className="print:hidden" />
+              </TableRow>
+              {footnote ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={6}
+                    className="text-muted-foreground text-xs font-normal whitespace-normal"
+                  >
+                    {footnote}
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableFooter>
+          ) : null}
+        </Table>
+      </div>
+
+      <ul className={cn(CARDS_ONLY, "space-y-3 px-6")}>
         {lines.map((line) => (
-          <TableRow
-            key={`${line.ziffer}-${line.status ?? ""}`}
-            className="odd:bg-muted/30 hover:bg-transparent"
-          >
-            <TableCell className="align-top font-mono font-medium">
-              <div>{line.ziffer}</div>
-              {line.is_analog ? (
-                <Badge variant="outline" className="mt-1">
-                  analog
-                </Badge>
-              ) : null}
-            </TableCell>
-            <TableCell className={`w-full min-w-52 align-top whitespace-normal ${WRAP}`}>
-              <div className="text-sm">{line.official_text}</div>
-              <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-2 text-xs">
-                <span>{lineStatus(line.status)}</span>
-                {line.category ? <span>· Abschnitt {line.category}</span> : null}
-                {line.analog_for ? <span>· analog für {line.analog_for}</span> : null}
-                {line.text_quality && line.text_quality !== "ok" ? (
-                  <span className="text-destructive">· Textqualität: {line.text_quality}</span>
-                ) : null}
+          <li key={`${line.ziffer}-${line.status ?? ""}`} className="rounded-2xl border p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="font-mono text-sm font-medium">{line.ziffer}</span>
+                {line.is_analog ? <Badge variant="outline">analog</Badge> : null}
               </div>
-              <JustificationBadge
-                required={line.justification_required ?? false}
-                present={line.justification_present ?? false}
-                justification={line.justification}
-              />
-            </TableCell>
-            <TableCell className={`${FIGURE} tabular-nums`}>{line.punkte}</TableCell>
-            <TableCell className={`${FIGURE} max-w-24 whitespace-normal`}>
-              <div className="tabular-nums">{factor(line.factor)}</div>
-              <div className="text-muted-foreground text-xs">{factorBasis(line.factor_basis)}</div>
-            </TableCell>
-            <TableCell className={FIGURE}>
-              <div className="font-medium tabular-nums">{eur(line.amount_eur)}</div>
-              {line.minderung_applied ? (
-                <div className="text-muted-foreground text-xs">
-                  vor § 6a: {eur(line.amount_eur_before_minderung)}
-                </div>
-              ) : null}
-            </TableCell>
-            <TableCell className="px-2 align-top text-right print:hidden">
+              <span className="shrink-0 text-lg font-semibold tabular-nums">
+                {eur(line.amount_eur)}
+              </span>
+            </div>
+
+            <p className={cn("mt-2 text-sm", WRAP)}>{line.official_text}</p>
+
+            <dl className="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t pt-3 text-xs">
+              <div className="flex gap-1">
+                <dt>Punkte</dt>
+                <dd className="text-foreground tabular-nums">{line.punkte}</dd>
+              </div>
+              <div className="flex gap-1">
+                <dt>Faktor</dt>
+                <dd className="text-foreground tabular-nums">{factor(line.factor)}</dd>
+              </div>
+              <div className="flex gap-1">
+                <dt className="sr-only">Faktorgrundlage</dt>
+                <dd>{factorBasis(line.factor_basis)}</dd>
+              </div>
+            </dl>
+
+            <Signals line={line} />
+
+            <div className="mt-3">
               <ProofDialog
                 ziffer={line.ziffer}
                 officialText={line.official_text}
                 steps={line.proof ?? []}
-                compact
               />
-            </TableCell>
-          </TableRow>
+            </div>
+          </li>
         ))}
-      </TableBody>
-      {total ? (
-        <TableFooter>
-          <TableRow className="hover:bg-transparent">
-            <TableCell colSpan={2} className="whitespace-normal">
-              <div className="font-medium">Gesamt</div>
-              <div className="text-muted-foreground text-xs">
-                Von der Engine ausgewiesen, nicht im Frontend berechnet.
-              </div>
-            </TableCell>
-            <TableCell className={`${FIGURE} tabular-nums`}>{total.punkte}</TableCell>
-            <TableCell className={`${FIGURE} text-muted-foreground text-xs`}>
-              Punktwert
-              <br />
-              {total.punktwert_cent} ct
-            </TableCell>
-            <TableCell className={`${FIGURE} text-base font-semibold tabular-nums`}>
-              {eur(total.amount_eur)}
-            </TableCell>
-            <TableCell className="print:hidden" />
-          </TableRow>
-          <TableRow className="hover:bg-transparent">
-            <TableCell colSpan={5} className="text-muted-foreground whitespace-normal text-xs">
-              {total.minderung_applied
-                ? `§ 6a Minderung angewendet (Satz ${rate(total.minderung_rate)}) · `
-                : ""}
-              Rundung {total.rounding_policy}
-              {total.rounding_legal_basis ? ` (${total.rounding_legal_basis})` : ""}
-            </TableCell>
-          </TableRow>
-        </TableFooter>
-      ) : null}
-    </Table>
+
+        {total ? (
+          <li className="bg-muted/40 rounded-2xl border p-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-base font-semibold">Gesamt</span>
+              <span className="text-2xl font-bold tabular-nums">{eur(total.amount_eur)}</span>
+            </div>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {total.punkte} Punkte · Punktwert {total.punktwert_cent} ct · von der Engine
+              ausgewiesen, nicht im Frontend berechnet.
+            </p>
+            {footnote ? <p className="text-muted-foreground mt-1 text-xs">{footnote}</p> : null}
+          </li>
+        ) : null}
+      </ul>
+    </>
   )
 }

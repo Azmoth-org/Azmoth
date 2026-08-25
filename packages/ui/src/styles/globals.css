@@ -50,73 +50,154 @@
     --font-sans: var(--font-sans);
 }
 
+/*
+ * The product palette.
+ *
+ * This is billing software for a physician's working day, not a developer tool, and the palette is
+ * the first thing that says which. Every value below is a Tailwind default so that a `gray-200`
+ * hard-coded in a component and a `border` token resolve to the same colour rather than to two
+ * greys that almost match.
+ *
+ * **Light is the product, dark is a preference.** `ThemeProvider` opens light regardless of the
+ * operating system — a screen carrying money and a signature should not change colour because
+ * somebody's laptop switched at sunset — and the toggle in the top bar still switches.
+ *
+ * **The ground is gray-50 and cards are white.** They were both white, which left a card
+ * distinguishable from the page only by its shadow; on a screen holding six of them the separation
+ * has to come from the surface, not from depth.
+ *
+ * **The rail follows the theme.** It used to be gray-900 in both modes, and under `variant="inset"`
+ * `SidebarProvider` paints the whole page wrapper with `--sidebar` — so the frame *and* the ground
+ * ignored the toggle. Every surface is now a light/dark pair, which is what shadcn's token set is
+ * for: `:root` and `.dark` define the same names, and `class="dark"` on `<html>` swaps all of them
+ * at once.
+ *
+ * **Blue is the only accent that means "do this".** `--primary` is blue-600 and nothing else on the
+ * screen is blue: red is a suppression or an error, amber is unresolved, green is charged.
+ */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --background: oklch(0.985 0.002 247.839);  /* gray-50 */
+    --foreground: oklch(0.21 0.034 264.665);   /* gray-900 */
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.21 0.034 264.665);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --popover-foreground: oklch(0.21 0.034 264.665);
+    --primary: oklch(0.546 0.245 262.881);     /* blue-600 */
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.967 0.003 264.542);   /* gray-100 */
+    --secondary-foreground: oklch(0.21 0.034 264.665);
+    --muted: oklch(0.967 0.003 264.542);
+    /*
+     * gray-600, not the gray-500 a mockup would pick. This token is the only secondary text colour
+     * the system has, so it carries card descriptions and column labels as well as genuine small
+     * print, and gray-500 at 12px on white is 4.8:1 — legal, and thin for a screen somebody reads
+     * for six hours. The size difference already says "secondary"; the contrast does not have to.
+     */
+    --muted-foreground: oklch(0.446 0.03 256.802);
+    --accent: oklch(0.967 0.003 264.542);
+    --accent-foreground: oklch(0.21 0.034 264.665);
+    --destructive: oklch(0.577 0.245 27.325);  /* red-600 */
+    --border: oklch(0.928 0.006 264.531);      /* gray-200 */
+    --input: oklch(0.928 0.006 264.531);
+    --ring: oklch(0.623 0.214 259.815);        /* blue-500 */
+    --chart-1: oklch(0.546 0.245 262.881);
+    --chart-2: oklch(0.707 0.165 254.624);
+    --chart-3: oklch(0.551 0.027 264.364);
+    --chart-4: oklch(0.373 0.034 259.733);
+    --chart-5: oklch(0.21 0.034 264.665);
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    /*
+     * The rail, in light mode.
+     *
+     * These eight were gray-900/gray-800 — a dark rail deliberately kept under a light document. It
+     * photographs well and it behaves badly: the toggle then changes every surface on screen except
+     * the one the eye uses to locate itself, so switching to dark looks like half the application
+     * failed to repaint. And because an inset layout paints the page wrapper with `--sidebar`, the
+     * ground behind the document was pinned to gray-900 in light mode too.
+     *
+     * Same stack as dark, one register up: the rail and the ground it bleeds into are gray-100, the
+     * inset document panel is `--background` (gray-50) and cards are white. Three surfaces, one step
+     * apart, in both modes — so the layout reads identically whichever theme is on.
+     */
+    --sidebar: oklch(0.967 0.003 264.542);             /* gray-100 */
+    --sidebar-foreground: oklch(0.21 0.034 264.665);   /* gray-900 */
+    --sidebar-primary: oklch(0.546 0.245 262.881);     /* blue-600 */
+    --sidebar-primary-foreground: oklch(1 0 0);
+    /* gray-200: hover, and the current page. One step off the rail, the same step dark mode uses. */
+    --sidebar-accent: oklch(0.928 0.006 264.531);
+    --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
+    --sidebar-border: oklch(0.928 0.006 264.531);      /* gray-200 */
+    --sidebar-ring: oklch(0.623 0.214 259.815);        /* blue-500 */
 }
 
+/*
+ * Dark, as a designed surface rather than an inverted one.
+ *
+ * The old values were the scaffold's: pure-neutral greys at chroma 0, a near-black ground, pure
+ * white text, and translucent-white borders. Three things were wrong with that, and they are the
+ * three things that make a dark mode read as a terminal instead of a product.
+ *
+ * **Chroma 0 is not a colour, it is the absence of one.** The light palette is Tailwind's `gray`,
+ * which carries a slight cool cast (chroma ~0.03 around hue 260). Switching to neutral grey in dark
+ * mode changed the product's temperature between modes for no reason. These are the same family,
+ * two ends of the same ramp: gray-950 / gray-900 / gray-800 / gray-700.
+ *
+ * **Three surfaces, three values.** The rail is gray-950, the page ground is gray-900, and cards are
+ * gray-800 — the same *stack* the light mode has (gray-100 rail, gray-50 ground, white cards), so the
+ * layout reads identically in both. When card and ground were 0.145 and 0.205 of a neutral ramp, the
+ * step existed but carried no hue to help the eye find the edge.
+ *
+ * **Borders are opaque and text is off-white.** `oklch(1 0 0 / 10%)` composites to something the eye
+ * loses against a card at any size below a full panel edge; gray-700 is a line you can actually see.
+ * And `#fff` on a dark ground vibrates — gray-100 is the off-white that every mature dark theme
+ * lands on, with gray-400 under it for secondary text at about 5.5:1 on a card.
+ *
+ * Written in oklch, like the rest of this file. A prescription elsewhere suggested HSL; mixing two
+ * colour spaces in one token set means two different meanings for "the same grey", and the light
+ * palette above is already oklch Tailwind defaults. The intent — nuanced greys, no pure black, no
+ * pure white — is what carries over, not the notation.
+ */
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --background: oklch(0.21 0.034 264.665);   /* gray-900 */
+    --foreground: oklch(0.967 0.003 264.542);  /* gray-100 — off-white, not #fff */
+    --card: oklch(0.278 0.033 256.848);        /* gray-800 */
+    --card-foreground: oklch(0.967 0.003 264.542);
+    --popover: oklch(0.278 0.033 256.848);
+    --popover-foreground: oklch(0.967 0.003 264.542);
+    /*
+     * blue-600, the same value light mode uses, not the blue-500 a dark theme reaches for by
+     * reflex. Lifting the accent makes the *fill* read better against a dark card and the *label*
+     * read worse: white on blue-500 measures 3.76:1, under AA for the one control on this screen
+     * that commits a physician to an invoice. blue-600 puts it at 5.25:1, and the primary action
+     * then looks identical in both modes — which is the right answer for a button whose meaning
+     * must never be in question. The focus ring stays blue-500, where nothing has to be read.
+     */
+    --primary: oklch(0.546 0.245 262.881);     /* blue-600 */
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.373 0.034 259.733);   /* gray-700 */
+    --secondary-foreground: oklch(0.967 0.003 264.542);
+    --muted: oklch(0.373 0.034 259.733);
+    --muted-foreground: oklch(0.707 0.022 261.325);  /* gray-400 */
+    --accent: oklch(0.373 0.034 259.733);
+    --accent-foreground: oklch(0.967 0.003 264.542);
+    --destructive: oklch(0.704 0.191 22.216);  /* red-400 — red-600 is unreadable on gray-800 */
+    --border: oklch(0.373 0.034 259.733);      /* gray-700, opaque */
+    --input: oklch(0.373 0.034 259.733);
+    --ring: oklch(0.623 0.214 259.815);
+    --chart-1: oklch(0.623 0.214 259.815);
+    --chart-2: oklch(0.707 0.165 254.624);
+    --chart-3: oklch(0.707 0.022 261.325);
+    --chart-4: oklch(0.551 0.027 264.364);
+    --chart-5: oklch(0.373 0.034 259.733);
+    /* One step darker than the page, as in light mode — the rail is the frame, not another panel. */
+    --sidebar: oklch(0.13 0.028 261.692);      /* gray-950 */
+    --sidebar-foreground: oklch(0.872 0.01 258.338);   /* gray-300 */
+    --sidebar-primary: oklch(0.546 0.245 262.881);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.278 0.033 256.848);      /* gray-800 */
+    --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
+    --sidebar-border: oklch(0.278 0.033 256.848);
+    --sidebar-ring: oklch(0.623 0.214 259.815);
 }
 
 @layer base {
@@ -181,6 +262,18 @@
     --destructive: oklch(0.51 0.21 27.325);
     --border: oklch(0.85 0 0);
     --input: oklch(0.85 0 0);
+    /*
+     * The rail is `display: none` on paper, but `--sidebar` is not only the rail: under an inset
+     * layout `SidebarProvider` paints the entire page wrapper with it, and gray-900 there is a
+     * sheet of black ink for anyone who prints with background graphics on. White, and the
+     * remaining sidebar tokens with it, so nothing that survives into the print tree carries a
+     * colour meant for a dark ground.
+     */
+    --sidebar: oklch(1 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.145 0 0);
+    --sidebar-border: oklch(0.85 0 0);
   }
 
   @page {

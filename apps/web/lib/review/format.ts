@@ -140,3 +140,64 @@ export function bySeverity<T extends { severity: WarningSeverity; type: string }
   if (prominence !== 0) return prominence
   return SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
 }
+
+/**
+ * The same seven reasons, short enough to be a badge.
+ *
+ * `BLOCKED_REASON_LABEL` is the full sentence — "Zielleistung (§ 4 Abs. 2a GOÄ)" — and it is what a
+ * reader needs once they are looking at *one* suppression. It is not what they need while scanning
+ * a column of them: at that moment the paragraph reference is the same width as the reason and
+ * carries none of the distinction between rows. So the badge in the Grund column is the short form,
+ * and the full label plus the legal basis is in the row's expanded detail, where it is being read
+ * rather than scanned.
+ *
+ * Exhaustive over the same closed union, so a new reason still fails the build in both places.
+ */
+export const BLOCKED_REASON_SHORT: Record<BlockedReason, string> = {
+  exclusion: "Ausschluss",
+  mutual_exclusion: "Wechselausschluss",
+  zielleistung: "Zielleistung",
+  less_specific: "Weniger spezifisch",
+  unknown_ziffer: "Unbekannte Ziffer",
+  inactive_ziffer: "Ziffer inaktiv",
+  conflict_lost: "Arbitrierung",
+}
+
+/**
+ * A scannable German title for each warning type the engine emits.
+ *
+ * `warning.type` is an identifier — `factor_above_leistungslegende_cap` — and a column of those is
+ * unreadable at a glance even though every character of it is meaningful. The map gives the row a
+ * title a reader can scan; the identifier itself stays in the expanded detail, because it is what
+ * you quote in a bug report and what joins this row to the engine's own logs.
+ *
+ * Deliberately **not** exhaustive and deliberately not a closed union: `type` is an open string in
+ * the contract, the engine adds types without a frontend release, and an unlabelled one must render
+ * as itself rather than as "Unbekannt". `warningTitle` falls back to the raw identifier.
+ */
+const WARNING_TYPE_LABEL: Record<string, string> = {
+  advisory_rules_present: "Beratende Regeln vorhanden",
+  analog_collision: "Analog-Kollision",
+  analog_uncovered: "Analogansatz ohne Regeldeckung",
+  analogansatz_requires_human_review: "Analogansatz muss geprüft werden",
+  blocking_basis_removed: "Sperrgrund entfallen",
+  catalog_text_quality: "Textqualität im Katalog",
+  exclusion_chain_detected: "Ausschlusskette erkannt",
+  factor_above_hoechstsatz: "Faktor über Höchstsatz",
+  factor_above_leistungslegende_cap: "Faktor über Legendengrenze",
+  inactive_ziffer: "Ziffer nicht aktiv",
+  justification_missing: "Begründung fehlt",
+  justification_target_not_billable: "Begründung ohne berechnete Position",
+  justification_target_unknown: "Begründung auf unbekannte Ziffer",
+  low_extraction_confidence: "Extraktion unsicher",
+  mapping_references_inactive_ziffer: "Mapping auf inaktive Ziffer",
+  mapping_references_unknown_ziffer: "Mapping auf unbekannte Ziffer",
+  minderung_applied: "Minderung nach § 6a GOÄ",
+  rule_coverage_incomplete: "Regelabdeckung unvollständig",
+  solver_timeout_partial: "Solver abgebrochen",
+  unknown_ziffer: "Ziffer nicht im Katalog",
+}
+
+export function warningTitle(type: string): string {
+  return WARNING_TYPE_LABEL[type] ?? type
+}

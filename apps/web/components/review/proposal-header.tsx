@@ -12,7 +12,7 @@ import {
 
 import { CopyableHash } from "@/components/common/copyable-hash"
 import { Disclosure } from "@/components/review/collapsible-section"
-import { PROPOSAL_STATUS_LABEL, eur, timestamp } from "@/lib/review/format"
+import { PROPOSAL_STATUS_LABEL, timestamp } from "@/lib/review/format"
 import type { Proposal, ProposalStatus } from "@/lib/review/types"
 
 const STATUS_VARIANT: Record<ProposalStatus, "default" | "secondary" | "destructive" | "outline"> = {
@@ -21,6 +21,9 @@ const STATUS_VARIANT: Record<ProposalStatus, "default" | "secondary" | "destruct
   REJECTED: "destructive",
   EXPORTED: "outline",
 }
+
+/** The one caption style every small label on this card uses: 12px, muted, one line. */
+const LABEL = "text-muted-foreground text-xs font-medium"
 
 function Field({
   label,
@@ -35,9 +38,9 @@ function Field({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dt className={LABEL}>{label}</dt>
       <dd
-        className={mono ? "truncate font-mono text-xs" : "truncate text-sm"}
+        className={mono ? "mt-1 truncate font-mono text-xs" : "mt-1 truncate text-sm"}
         title={title ?? value}
       >
         {value}
@@ -63,8 +66,8 @@ function HashField({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="mt-0.5">
+      <dt className={LABEL}>{label}</dt>
+      <dd className="mt-1">
         <CopyableHash value={value} length={length} label={label} />
       </dd>
     </div>
@@ -72,46 +75,40 @@ function HashField({
 }
 
 /**
- * One figure, sized by how much it matters.
+ * One counted line in the Positionen column.
  *
- * `tone` is the only place colour carries meaning on this screen: green for what is being charged,
- * red for what a rule removed. Everything else is the neutral palette, so that when a colour does
- * appear a reader can trust it means something.
+ * `tone` is the only place colour carries meaning on this card: green for what is being charged, red
+ * for what a rule removed. Everything else is the neutral palette, so that when a colour does appear
+ * a reader can trust it means something.
  */
-function Stat({
+function CountLine({
   label,
-  value,
-  hint,
-  tone = "neutral",
+  count,
+  tone,
   icon: Icon,
-  large = false,
 }: {
   label: string
-  value: string
-  hint?: string
-  tone?: "neutral" | "accepted" | "blocked"
-  icon?: React.ComponentType<{ className?: string }>
-  large?: boolean
+  count: number
+  tone: "accepted" | "blocked"
+  icon: React.ComponentType<{ className?: string }>
 }) {
-  const valueColor =
-    tone === "accepted"
-      ? "text-emerald-700 dark:text-emerald-400"
-      : tone === "blocked"
-        ? "text-destructive"
-        : "text-foreground"
+  // Zero is not a finding. A green tick over "0 Positionen berechnet" and a red bar over "0
+  // gesperrt" both claim a state that is not there; colour is reserved for a count that exists.
+  const color =
+    count === 0
+      ? "text-muted-foreground"
+      : tone === "accepted"
+        ? "text-emerald-700 dark:text-emerald-400"
+        : "text-destructive"
 
   return (
-    <div className="min-w-0">
-      <dt className="text-muted-foreground flex items-center gap-1.5 text-xs">
-        {Icon ? <Icon className="size-3.5 shrink-0" /> : null}
-        {label}
-      </dt>
-      <dd
-        className={`${large ? "text-3xl" : "text-2xl"} mt-1 font-semibold tabular-nums ${valueColor}`}
-      >
-        {value}
-      </dd>
-      {hint ? <p className="text-muted-foreground mt-0.5 text-xs">{hint}</p> : null}
+    <div className="flex items-baseline gap-2">
+      <Icon className={`${color} size-4 shrink-0 translate-y-0.5`} />
+      <span className="text-muted-foreground text-sm">{label}</span>
+      <span className="text-foreground text-base font-semibold tabular-nums">{count}</span>
+      <span className="text-muted-foreground text-sm">
+        {count === 1 ? "Position" : "Positionen"}
+      </span>
     </div>
   )
 }
@@ -121,13 +118,16 @@ function Stat({
  *
  * Three layers, in the order a reviewer needs them.
  *
- * **The result.** The total is the largest thing on the screen because it is the number the reader
- * came for and the one they are signing under. It is `coding.total.amount_eur` printed verbatim —
- * the engine computes in `Decimal` and serialises to a string precisely so that no client can
- * re-round it. Nothing here adds or formats a figure; the position counts are `length`, not sums.
+ * **Not the amount.** This card carried a tinted band whose largest element was the total, 100px
+ * under a 48px copy of the same figure in the sticky bar. Two heroes is no hero — the reader had to
+ * check that the two agreed, which is work the screen invented and then handed them. The amount is
+ * now on the page exactly twice: in the bar, and in the table footer that adds up to it.
  *
- * **The record.** Fall-ID, Vorschlags-ID, receipt hash, timestamps. These are what a dispute is
- * conducted with, so the identifiers are copyable in full rather than readable off the screen.
+ * **The record.** What is left is the only question this card is for: *which record is this?* The
+ * position counts as sentences rather than as more large figures, the timestamp, the Fall-ID and the
+ * receipt hash. Nothing here adds or formats a figure; the counts are `length`, not sums. The
+ * identifiers are copyable in full rather than readable off the screen, because they leave for a
+ * ticket, a dispute letter or a `psql` query.
  *
  * **The provenance.** Catalog, rule tables, logic programs, solver, policy — collapsed, because a
  * reader checking an amount does not need eight version strings in the way, and *present on paper*,
@@ -137,7 +137,6 @@ function Stat({
 export function ProposalHeader({ proposal }: { proposal: Proposal }) {
   const status = proposal.status ?? "DRAFT"
   const coding = proposal.solver_result.coding
-  const total = coding.total
   const acceptedCount = (coding.proposed_codes ?? []).length
   const blockedCount = (coding.blocked_codes ?? []).length
   // Read from the proposal, not from solver_result.audit_trail two levels down. The engine promotes
@@ -149,7 +148,7 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
+        <CardTitle className="flex flex-wrap items-center gap-2 text-lg font-semibold">
           <span className="text-muted-foreground text-sm font-normal">Vorschlag</span>
           <CopyableHash
             value={proposal.proposal_id}
@@ -191,63 +190,72 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
         ) : null}
       </CardHeader>
 
-      <CardContent className="space-y-6">
-        <dl className="bg-muted/40 grid grid-cols-2 gap-4 rounded-3xl border p-4 sm:gap-6 sm:p-5 lg:grid-cols-4 print:rounded-lg">
-          <div className="col-span-2 lg:col-span-1">
-            <Stat
-              label="Gesamtbetrag"
-              value={eur(total?.amount_eur)}
-              hint={
-                total
-                  ? `${total.punkte} Punkte · Punktwert ${total.punktwert_cent} ct`
-                  : "Die Engine hat keine Summe ausgewiesen."
-              }
-              large
-            />
-          </div>
-          <Stat
-            label="Berechnet"
-            value={String(acceptedCount)}
-            hint={acceptedCount === 1 ? "Position" : "Positionen"}
-            tone="accepted"
-            icon={CheckCircle2Icon}
-          />
-          <Stat
-            label="Gesperrt"
-            value={String(blockedCount)}
-            hint={blockedCount === 1 ? "Position" : "Positionen"}
-            tone="blocked"
-            icon={BanIcon}
-          />
+      <CardContent>
+        {/*
+          Four facts, one row, no repetition of the amount.
+          
+          This card used to open with a tinted band whose largest element was the total — 100px
+          under a 48px copy of the same figure in the sticky bar. Two heroes is no hero: the reader
+          had to check whether the two numbers agreed, which is work the screen created and then
+          asked them to do. The amount now appears exactly twice on this page, in the bar and in the
+          table footer that adds up to it, and this card answers the only question left: *which
+          record is this?* Positionen, Datum, Fall-ID, Receipt-Hash — what a dispute is conducted
+          with.
+        */}
+        <dl className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
           <div className="min-w-0">
-            <dt className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <dt className={LABEL}>Positionen</dt>
+            <dd className="mt-2 space-y-1.5">
+              <CountLine
+                label="Berechnet"
+                count={acceptedCount}
+                tone="accepted"
+                icon={CheckCircle2Icon}
+              />
+              <CountLine label="Gesperrt" count={blockedCount} tone="blocked" icon={BanIcon} />
+            </dd>
+          </div>
+
+          <div className="min-w-0">
+            <dt className={`${LABEL} flex items-center gap-1.5`}>
               <CalendarClockIcon className="size-3.5 shrink-0" />
               Erstellt
             </dt>
-            <dd className="mt-1 text-sm">{timestamp(proposal.created_at)}</dd>
+            <dd className="mt-2 text-sm">{timestamp(proposal.created_at)}</dd>
           </div>
+
+          {/*
+            The Vorschlags-ID is not here — it is the card's title, which is what it is: the name of
+            the record. These two are the ones a reader still has to be able to take with them.
+          */}
+          <Field label="Fall-ID" value={proposal.case_id || "—"} mono />
+          <HashField label="Receipt-Hash (SHA-256)" value={proposal.receipt_hash} length={24} />
         </dl>
 
         {/*
-          The Vorschlags-ID is not repeated here — it is the card's title, which is what it is: the
-          name of the record. These two are the ones a reader still has to be able to take with them.
+          Collapsed, and staying collapsed. Eight version strings are what makes the result
+          reproducible — same versions, same `receipt_hash` — and they are consulted during a
+          dispute, never while reading an amount. Present on paper regardless: a printed proposal
+          carrying a receipt hash that nothing could be checked against would be worse than one
+          carrying no hash at all.
         */}
-        <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-          <Field label="Fall-ID" value={proposal.case_id || "—"} mono />
-          <HashField label="Receipt-Hash (SHA-256)" value={proposal.receipt_hash} length={32} />
-        </dl>
-
-        <Disclosure label="Technische Herkunft und Versionen">
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-4">
-            <Field label="Katalogversion" value={proposal.catalog_version} mono />
-            <Field label="Regelversion" value={proposal.rules_version} mono />
-            <HashField label="Logic-Version" value={proposal.logic_version} length={12} />
-            <Field label="Solver (Clingo)" value={proposal.solver_version} mono />
-            <Field label="Regel-Engine (Soufflé)" value={proposal.rules_engine_version || "—"} mono />
-            <Field label="Solver-Status" value={solverStatus || "—"} mono />
-            <HashField label="Katalog-SHA-256" value={proposal.catalog_sha256} length={12} />
-          </dl>
-        </Disclosure>
+        <div className="mt-8 border-t pt-6">
+          <Disclosure label="Technische Herkunft und Versionen">
+            <dl className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
+              <Field label="Katalogversion" value={proposal.catalog_version} mono />
+              <Field label="Regelversion" value={proposal.rules_version} mono />
+              <HashField label="Logic-Version" value={proposal.logic_version} length={12} />
+              <Field label="Solver (Clingo)" value={proposal.solver_version} mono />
+              <Field
+                label="Regel-Engine (Soufflé)"
+                value={proposal.rules_engine_version || "—"}
+                mono
+              />
+              <Field label="Solver-Status" value={solverStatus || "—"} mono />
+              <HashField label="Katalog-SHA-256" value={proposal.catalog_sha256} length={12} />
+            </dl>
+          </Disclosure>
+        </div>
       </CardContent>
     </Card>
   )

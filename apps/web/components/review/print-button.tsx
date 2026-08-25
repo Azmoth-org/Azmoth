@@ -18,7 +18,7 @@ import { Button } from "@workspace/ui/components/button"
  */
 export function PrintButton() {
   return (
-    <Button variant="outline" onClick={() => window.print()} className="print:hidden">
+    <Button variant="ghost" size="sm" onClick={() => window.print()} className="print:hidden">
       <PrinterIcon />
       Drucken
     </Button>
