@@ -68,6 +68,26 @@ pnpm generate:contracts                                        # → packages/co
 `python scripts/export_openapi.py --check` fails if the committed document is stale. Never hand-edit
 `packages/contracts/typescript/schema.ts`.
 
+### The frontend smoke test
+
+One Playwright test guards the path a reader actually takes — `/` to a stored proposal. It is **not**
+part of `pnpm turbo lint typecheck build` and CI does not run it, because it needs a live engine
+rather than a compiler. Run it by hand when you touch the dashboard, `/review`, or the `?id=`
+deep-link handling:
+
+```bash
+# 1. an engine, from apps/engine
+.venv/bin/python -m uvicorn app.main:app --port 8000
+
+# 2. the test, from apps/web — it starts the dev server itself if one is not already up
+pnpm test:e2e
+```
+
+`PLAYWRIGHT_BASE_URL` points it somewhere else (a dev server on a spare port, or the container from
+`infra/docker/docker-compose.yml`, which brings up both tiers). With the engine down the test fails
+with a sentence saying so, rather than passing against a dashboard full of error states — see
+`apps/web/e2e/dashboard-smoke.spec.ts`.
+
 ### `souffle` missing makes tests *skip*, not fail
 
 Rules-engine tests skip when the `souffle` binary is absent, so a green run on a laptop without it
