@@ -22,6 +22,8 @@
  * one arrives from a paste as often as from a click.
  */
 
+import { isWellFormedId, type RawSearchParams } from "@/lib/deep-link"
+
 /**
  * Rows per page, fixed rather than a control.
  *
@@ -43,8 +45,12 @@ export type ListParams = {
  * Next hands `searchParams` as `string | string[] | undefined` per key, because `?page=1&page=2` is a
  * legal URL. The first value wins — arbitrary, but deterministic, which is what matters for a
  * paginated read where the alternative is a different page on every request.
+ *
+ * Defined in `lib/deep-link.ts` and re-exported here: both modules parse the same object, and two
+ * structurally identical aliases are two things to keep in step for no gain. Re-exported rather than
+ * moved so the pages that already import it from here do not have to care where it lives.
  */
-export type RawSearchParams = Record<string, string | string[] | undefined>
+export type { RawSearchParams }
 
 function first(raw: RawSearchParams, key: string): string | null {
   const value = raw[key]
@@ -174,7 +180,11 @@ export function nextHref(
  * the empty state would read as "no such proposal" when it means "this list cannot search for that".
  * Recognising the shape lets the empty state say which of the two happened. See the note in
  * `components/proposals/proposals-table.tsx`.
+ *
+ * Delegated to `lib/deep-link.ts`, which owns the shape of both handles. The same regex was written
+ * out here and would have had to be written out a third time for `batch_…`; a search box that
+ * recognises a handle and a permalink that accepts one must agree about what a handle looks like.
  */
 export function looksLikeProposalId(value: string): boolean {
-  return /^prop_[0-9a-f]{4,}$/i.test(value.trim())
+  return isWellFormedId("proposal", value)
 }

@@ -3,6 +3,7 @@ import Link from "next/link"
 
 import { BatchWorkbench } from "@/components/padnext/batch-workbench"
 import { SyntheticDataBanner } from "@/components/review/synthetic-data-banner"
+import { readDeepLinkId, type RawSearchParams } from "@/lib/deep-link"
 
 export const metadata: Metadata = {
   title: "PADnext-Stapelprüfung",
@@ -16,8 +17,25 @@ export const metadata: Metadata = {
  * A server component shell, like `/padnext` and `/review`: the banner and the explanation of what
  * the three buckets mean at batch scale must render even if the client bundle fails, and only the
  * upload and the polling below are interactive.
+ *
+ * ## `?id=batch_…`
+ *
+ * The dashboard's "Letzte Stapelprüfungen" card and every row of the Stapel-Historie link here with
+ * an id. It is read here and handed down; the workbench polls it through the `/api/engine` proxy,
+ * exactly as it polls a batch this tab uploaded. That is the whole reason the batch listing endpoint
+ * exists — a `batch_id` is issued once, in the `202`, so before this a finished roll-up sitting in
+ * Postgres had no route back to a screen.
+ *
+ * **A visit without the parameter is untouched:** `deepLinkId` is `null` and the upload interface
+ * renders exactly as before.
  */
-export default function PadnextBatchPage() {
+export default async function PadnextBatchPage({
+  searchParams,
+}: {
+  searchParams: Promise<RawSearchParams>
+}) {
+  const deepLinkId = readDeepLinkId(await searchParams)
+
   return (
     <>
       <header className="space-y-1">
@@ -41,7 +59,7 @@ export default function PadnextBatchPage() {
       </header>
 
       <SyntheticDataBanner />
-      <BatchWorkbench />
+      <BatchWorkbench deepLinkId={deepLinkId} />
     </>
   )
 }
