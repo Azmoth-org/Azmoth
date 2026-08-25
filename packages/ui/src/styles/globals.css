@@ -152,8 +152,14 @@
  *
  * **Screen chrome is not evidence.** Shadows and rings are cues about depth that a sheet of paper
  * does not have; a hairline says the same thing in ink. What each screen hides beyond this — its
- * navigation, its buttons — it hides itself with `print:hidden`, because only the screen knows which
- * of its parts are controls.
+ * buttons, its filters — it hides itself with `print:hidden`, because only the screen knows which of
+ * its parts are controls. The sidebar is the exception and is handled here: `Sidebar` puts the
+ * caller's `className` on its inner container, so `print:hidden` from the app never reaches the outer
+ * wrapper or the spacer that reserves 16rem of page width — and a printed sheet indented by a
+ * navigation rail that is not on it looks like a broken margin.
+ *
+ * `data-print` — the rules that reveal a collapsed section on paper — is the one thing that cannot
+ * live in this block. It is filed separately below, with the reason.
  */
 @media print {
   :root,
@@ -213,5 +219,52 @@
   /* A scroll container has no meaning on paper — it would clip the columns it cannot fit. */
   [data-slot="table-container"] {
     overflow: visible !important;
+  }
+
+  /* Navigation, and the gap it reserves. See the note above on why this cannot be a utility. */
+  [data-slot="sidebar"] {
+    display: none !important;
+  }
+
+  /* With the rail gone, the panel it floated inside is a margin and a shadow around nothing. */
+  [data-slot="sidebar-inset"] {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+}
+
+/*
+ * A section a reader collapsed is still part of the document.
+ *
+ * `data-print="expand"` reveals a panel that is hidden on screen — the audit trail, the version
+ * provenance — because a printed proposal missing the versions it was produced under would carry a
+ * receipt hash that nothing could be checked against. `data-print="omit"` does the opposite for the
+ * one kind of detail that is not evidence: measured timings and raw JSON, excluded from the receipt
+ * hash precisely because they are measured.
+ *
+ * **Why this sits in `@layer base` when the rest of the print stylesheet does not.** A collapsed
+ * panel is hidden by the `hidden` attribute, and Tailwind's preflight carries
+ * `[hidden]:where(:not([hidden="until-found"])) { display: none !important }` — in `@layer base`. For
+ * **important** declarations the cascade reverses layer order: unlayered important is the *weakest*
+ * rather than the strongest, and the earliest layer wins. So neither an unlayered rule nor a
+ * `print:block!` utility in `@layer utilities` can beat it at any specificity, because layer order is
+ * settled before specificity is ever consulted.
+ *
+ * Same layer, same specificity, later in the source. That is what wins here, and it is the only
+ * thing that does.
+ */
+@layer base {
+  @media print {
+    [data-print="expand"] {
+      display: block !important;
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    [data-print="omit"] {
+      display: none !important;
+    }
   }
 }

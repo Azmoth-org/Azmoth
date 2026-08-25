@@ -2,8 +2,32 @@ import { ScaleIcon } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
+import {
+  Progress,
+  ProgressLabel,
+  ProgressValue,
+} from "@workspace/ui/components/progress"
 
 import type { Proposal } from "@/lib/review/types"
+
+/**
+ * `verified_share` as a fraction, or null when it is not a fraction.
+ *
+ * The engine publishes it as a display string — `"30/30"` — and a meter needs a number. Parsed here
+ * rather than anywhere near the money: this is a count of *rules a human has reviewed*, not an
+ * amount, so deriving a percentage from it invents nothing. Anything that does not match `a/b` with
+ * `b > 0` returns null and the meter is not drawn, because a bar at an unknown position is worse
+ * than no bar.
+ */
+function verifiedFraction(share: string | null | undefined): { done: number; total: number } | null {
+  if (!share) return null
+  const match = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(share)
+  if (!match) return null
+  const done = Number(match[1])
+  const total = Number(match[2])
+  if (!Number.isFinite(done) || !Number.isFinite(total) || total <= 0) return null
+  return { done, total }
+}
 
 function Count({
   value,
@@ -57,6 +81,7 @@ export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
   const policy = coverage?.policy_for_unverified_rules
   const ruleCoverage = coverage?.rule_coverage ?? proposal.solver_result.audit_trail.rule_coverage
   const verifiedShare = coverage?.verified_share
+  const verified = verifiedFraction(verifiedShare)
 
   return (
     <Alert>
@@ -73,13 +98,35 @@ export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
             policy: {policy}
           </Badge>
         ) : null}
-        {verifiedShare ? (
+        {verifiedShare && !verified ? (
           <Badge variant="outline" className="font-mono">
             verifiziert: {verifiedShare}
           </Badge>
         ) : null}
       </AlertTitle>
       <AlertDescription className="space-y-4">
+        {/*
+          The share of the *manually verified* rule set that has been reviewed — not the share of the
+          GOÄ that is covered. Those are different numbers and confusing them is the whole reason
+          this banner exists, so the label says which one this is.
+        */}
+        {verified ? (
+          <Progress value={(verified.done / verified.total) * 100} className="max-w-md">
+            <ProgressLabel className="text-foreground text-xs font-medium">
+              Manuell verifizierte Regeln geprüft
+            </ProgressLabel>
+            {/*
+              A render function, because that is what Base UI's `ProgressValue` takes. Its argument
+              is the formatted percentage, which is deliberately ignored: "30/30" says how many rules
+              a human actually reviewed, and "100 %" would read as a claim about GOÄ coverage — the
+              exact confusion this banner exists to prevent.
+            */}
+            <ProgressValue className="text-xs">
+              {() => `${verified.done}/${verified.total}`}
+            </ProgressValue>
+          </Progress>
+        ) : null}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Count
             value={enforced}

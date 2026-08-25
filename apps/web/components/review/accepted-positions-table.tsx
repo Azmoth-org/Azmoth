@@ -1,6 +1,12 @@
-import { CheckIcon, TriangleAlertIcon } from "lucide-react"
+import { CheckIcon, ReceiptTextIcon, TriangleAlertIcon } from "lucide-react"
 
 import { Badge } from "@workspace/ui/components/badge"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyMedia,
+  EmptyTitle,
+} from "@workspace/ui/components/empty"
 import {
   Table,
   TableBody,
@@ -108,11 +114,17 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
 
   if (lines.length === 0) {
     return (
-      <p className="text-muted-foreground px-6 text-sm">
-        Keine berechnungsfähige Position. Das ist ein gültiges Ergebnis — die dokumentierten
-        Leistungen ließen sich keiner durchsetzbaren Position zuordnen. Die gesperrten Positionen und
-        die Hinweise der Engine stehen daneben.
-      </p>
+      <Empty className="mx-6 border">
+        <EmptyMedia variant="icon">
+          <ReceiptTextIcon />
+        </EmptyMedia>
+        <EmptyTitle>Keine berechnungsfähige Position</EmptyTitle>
+        <EmptyDescription>
+          Ein gültiges Ergebnis, kein Fehler: die dokumentierten Leistungen ließen sich keiner
+          durchsetzbaren Position zuordnen. Die gesperrten Positionen und die Hinweise der Engine
+          stehen daneben.
+        </EmptyDescription>
+      </Empty>
     )
   }
 

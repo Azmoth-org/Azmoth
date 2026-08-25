@@ -83,10 +83,12 @@ export function AppShell({
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       {/*
-        Navigation is not part of the document. `/review` prints, and what it prints is a billing
-        proposal — not the application it was read in.
+        Navigation is not part of the document — `/review` prints a billing proposal, not the
+        application it was read in — but that is not arranged here. `Sidebar` puts this `className` on
+        its inner container, which leaves the outer wrapper and the spacer reserving 16rem of page
+        width behind; the print stylesheet in `@workspace/ui` hides `[data-slot="sidebar"]` instead.
       */}
-      <Sidebar collapsible="icon" variant="inset" className="print:hidden">
+      <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>

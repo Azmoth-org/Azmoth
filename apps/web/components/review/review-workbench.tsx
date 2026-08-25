@@ -1,9 +1,19 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { BanIcon, CheckCircle2Icon, FileTextIcon, InfoIcon, ScrollTextIcon } from "lucide-react"
+import {
+  BanIcon,
+  CheckCircle2Icon,
+  DownloadIcon,
+  FileTextIcon,
+  InfoIcon,
+  LockIcon,
+  PlayIcon,
+  ScrollTextIcon,
+} from "lucide-react"
 import * as React from "react"
 
+import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import {
   Card,
@@ -12,7 +22,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
-import { Separator } from "@workspace/ui/components/separator"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyMedia,
+  EmptyTitle,
+} from "@workspace/ui/components/empty"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 
 import { AcceptedPositionsTable } from "@/components/review/accepted-positions-table"
@@ -20,6 +35,7 @@ import { AuditTrailPanel } from "@/components/review/audit-trail-panel"
 import { BlockedPositionsTable } from "@/components/review/blocked-positions-table"
 import { CaseSelector } from "@/components/review/case-selector"
 import { CollapsibleSection } from "@/components/review/collapsible-section"
+import { DecisionBar } from "@/components/review/decision-bar"
 import {
   ApproveDialog,
   ExportDialog,
@@ -27,7 +43,6 @@ import {
 } from "@/components/review/decision-dialogs"
 import { ErrorPanel } from "@/components/review/error-panel"
 import { MissingDocumentationPanel } from "@/components/review/missing-documentation-panel"
-import { PrintButton } from "@/components/review/print-button"
 import { ProposalHeader } from "@/components/review/proposal-header"
 import { RuleCoverageBanner } from "@/components/review/rule-coverage-banner"
 import { WarningsPanel } from "@/components/review/warnings-panel"
@@ -374,47 +389,63 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
 
       {proposal && coding && auditTrail ? (
         <>
+          {/*
+            First, and sticky: what is being decided stays on screen while the positions scroll past
+            it. The decision used to sit in a card here and be several screens above the reader by
+            the time they had read the ninth position.
+          */}
+          <DecisionBar
+            proposal={proposal}
+            decision={
+              <>
+                <ApproveDialog
+                  disabled={!isDraft || pending !== "idle"}
+                  pending={pending === "approving"}
+                  onApprove={approve}
+                />
+                <RejectDialog
+                  disabled={!isDraft || pending !== "idle"}
+                  pending={pending === "rejecting"}
+                  onReject={reject}
+                />
+              </>
+            }
+          >
+            <ExportDialog
+              status={proposal.status}
+              pending={pending === "exporting"}
+              onExport={exportProposal}
+            />
+          </DecisionBar>
+
+          {exported ? (
+            <Alert className="print:hidden">
+              <DownloadIcon />
+              <AlertTitle>Export heruntergeladen</AlertTitle>
+              <AlertDescription>
+                <span className="font-mono text-xs">{exported}</span>
+              </AlertDescription>
+            </Alert>
+          ) : !isDraft ? (
+            <Alert className="print:hidden">
+              <LockIcon />
+              <AlertTitle>Bereits entschieden</AlertTitle>
+              <AlertDescription>
+                Der Status dieses Vorschlags steht fest. Ein erneuter Statuswechsel wird von der
+                Engine mit HTTP 409 abgelehnt — Freigeben und Ablehnen sind deshalb deaktiviert.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           <ProposalHeader proposal={proposal} />
           <RuleCoverageBanner proposal={proposal} />
-
-          <Card className="print:hidden">
-            <CardContent className="flex flex-wrap items-center gap-3">
-              <ApproveDialog
-                disabled={!isDraft || pending !== "idle"}
-                pending={pending === "approving"}
-                onApprove={approve}
-              />
-              <RejectDialog
-                disabled={!isDraft || pending !== "idle"}
-                pending={pending === "rejecting"}
-                onReject={reject}
-              />
-              <Separator orientation="vertical" className="h-6" />
-              <ExportDialog
-                status={proposal.status}
-                pending={pending === "exporting"}
-                onExport={exportProposal}
-              />
-              <PrintButton />
-              {exported ? (
-                <p className="text-muted-foreground text-sm">
-                  Heruntergeladen: <span className="font-mono text-xs">{exported}</span>
-                </p>
-              ) : !isDraft ? (
-                <p className="text-muted-foreground text-sm">
-                  Dieser Vorschlag ist bereits entschieden. Ein erneuter Statuswechsel wird von der
-                  Engine mit HTTP 409 abgelehnt.
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
 
           {/*
             3:2 rather than 1:1. The accepted table carries five columns and every amount on the
             screen; the blocked table carries three and is read one row at a time. Splitting the
             width evenly would have squeezed the invoice to give room to the exceptions.
           */}
-          <div className="grid gap-6 xl:grid-cols-5">
+          <div className="grid items-start gap-6 xl:grid-cols-5">
             <Section
               title="Akzeptierte Positionen"
               description="Berechnungsfähig nach den durchgesetzten Regeln. Beträge und Faktoren stammen unverändert aus der Engine."
@@ -440,7 +471,7 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
             </Section>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div className="grid items-start gap-6 xl:grid-cols-2">
             <Section
               title="Dokumentationslücken"
               description="Keine Abrechnungsempfehlung — abgerechnet wird immer der angesetzte Faktor."
@@ -481,13 +512,17 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
         is never told there is nothing here before the fetch has answered.
       */}
       {!proposal && !shownError && !loadingDeepLink ? (
-        <Card>
-          <CardContent className="text-muted-foreground text-sm">
-            Noch kein Vorschlag. Fall auswählen und <strong>Engine ausführen</strong> — die Engine muss
-            dafür unter <span className="font-mono text-xs">ENGINE_BASE_URL</span> erreichbar sein
-            (Standard <span className="font-mono text-xs">http://localhost:8000</span>).
-          </CardContent>
-        </Card>
+        <Empty className="border">
+          <EmptyMedia variant="icon">
+            <PlayIcon />
+          </EmptyMedia>
+          <EmptyTitle>Noch kein Vorschlag</EmptyTitle>
+          <EmptyDescription>
+            Fall oben auswählen und <strong>Engine ausführen</strong>. Die Engine muss dafür unter{" "}
+            <span className="font-mono text-xs">ENGINE_BASE_URL</span> erreichbar sein (Standard{" "}
+            <span className="font-mono text-xs">http://localhost:8000</span>).
+          </EmptyDescription>
+        </Empty>
       ) : null}
     </div>
   )

@@ -1,4 +1,12 @@
+import { ShieldCheckIcon } from "lucide-react"
+
 import { Badge } from "@workspace/ui/components/badge"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyMedia,
+  EmptyTitle,
+} from "@workspace/ui/components/empty"
 import {
   Table,
   TableBody,
@@ -67,9 +75,16 @@ export function BlockedPositionsTable({ coding }: { coding: Coding }) {
 
   if (blocked.length === 0) {
     return (
-      <p className="text-muted-foreground px-6 text-sm">
-        Keine Position wurde durch eine Regel unterdrückt.
-      </p>
+      <Empty className="mx-6 border">
+        <EmptyMedia variant="icon">
+          <ShieldCheckIcon />
+        </EmptyMedia>
+        <EmptyTitle>Keine Position unterdrückt</EmptyTitle>
+        <EmptyDescription>
+          Keine der durchgesetzten Regeln hat eine Position entfernt. Bei unvollständiger
+          Regelabdeckung heißt das nicht, dass keine zu entfernen gewesen wäre.
+        </EmptyDescription>
+      </Empty>
     )
   }
 

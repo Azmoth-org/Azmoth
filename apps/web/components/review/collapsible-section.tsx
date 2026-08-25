@@ -5,6 +5,11 @@ import * as React from "react"
 
 import { Badge } from "@workspace/ui/components/badge"
 import { Card } from "@workspace/ui/components/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@workspace/ui/components/collapsible"
 import { cn } from "@workspace/ui/lib/utils"
 
 /**
@@ -16,29 +21,33 @@ import { cn } from "@workspace/ui/lib/utils"
  * version strings that make the result reproducible and that a reader glancing at an amount does not
  * need in their way.
  *
- * Both are collapsed, and by default **neither is collapsed on paper**. A printed proposal that
- * quietly omitted the versions it was produced under would be exactly the document this system
- * exists not to make: the receipt hash means nothing without the catalog and rule versions it hashes
- * over. So the closed state is `hidden print:block!` rather than an unmounted subtree — the content
- * is in the DOM, the screen just is not showing it.
+ * Both are the shared `Collapsible`, which is where the open state, the `aria-expanded` /
+ * `aria-controls` wiring and the height transition come from. Two things are added on top, and both
+ * are about paper.
  *
- * `printOpen={false}` is the exception, for the one kind of detail that is genuinely not part of the
- * document: measured stage timings and raw JSON, which are excluded from the receipt hash precisely
+ * **`keepMounted`.** By default the panel unmounts when closed, and an unmounted subtree cannot be
+ * printed. With it the content stays in the DOM behind the `hidden` attribute, where the print
+ * stylesheet can reach it. A printed proposal that quietly omitted the versions it was produced
+ * under would be exactly the document this system exists not to make: the receipt hash means nothing
+ * without the catalog and rule versions it hashes over.
+ *
+ * **`data-print` rather than a `print:block!` class.** It was the class first, and it silently did
+ * nothing. Tailwind's preflight carries `[hidden] { display: none !important }` in `@layer base`, and
+ * for *important* declarations the cascade reverses layer order — the earlier layer wins — so an
+ * important utility in `@layer utilities` cannot beat it at any specificity. The rule lives in the
+ * print stylesheet in `@workspace/ui` instead; this marks which panels it applies to.
+ *
+ * **`printOpen={false}`** is the exception, for the one kind of detail that is genuinely not part of
+ * the document: measured stage timings and raw JSON, excluded from the receipt hash precisely
  * because they are not evidence. Several pages of them behind a physician's signature would be noise
  * asserting itself as record.
  *
- * Native `<details>` was the obvious first choice and cannot do any of this: a closed `<details>`
- * hides its content through the browser's own machinery, which a print stylesheet cannot reach.
+ * `hiddenUntilFound` would also keep the content mounted, and would additionally let the browser's
+ * find-in-page open it — but it hides through `content-visibility`, which a print stylesheet cannot
+ * override either, so it is the wrong half of the trade here.
  */
-function useDisclosure(defaultOpen: boolean) {
-  const [open, setOpen] = React.useState(defaultOpen)
-  const contentId = React.useId()
-  return { open, toggle: () => setOpen((value) => !value), contentId }
-}
-
-/** Hidden on screen; shown on paper unless this is the section that does not belong on paper. */
-function contentClass(open: boolean, printOpen: boolean, className?: string) {
-  return cn(open ? (printOpen ? null : "print:hidden") : printOpen ? "hidden print:block!" : "hidden", className)
+function printMode(printOpen: boolean): "expand" | "omit" {
+  return printOpen ? "expand" : "omit"
 }
 
 export function CollapsibleSection({
@@ -60,47 +69,45 @@ export function CollapsibleSection({
   printOpen?: boolean
   children: React.ReactNode
 }) {
-  const { open, toggle, contentId } = useDisclosure(defaultOpen)
-
   return (
+    // `<Card>` wrapping `<Collapsible>`, rather than `render={<Card />}`. Base UI's `useRender` merges
+    // the two elements' props and the primitive's own `data-slot="collapsible"` wins — which silently
+    // costs the section every rule keyed on `[data-slot="card"]`, including the print stylesheet's, so
+    // this one card would have printed with a screen shadow. Nesting keeps both slots.
     <Card>
-      <button
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        aria-controls={contentId}
-        className="focus-visible:ring-ring flex w-full cursor-pointer items-center gap-3 px-(--card-spacing) text-left focus-visible:ring-2 focus-visible:outline-none"
-      >
-        {Icon ? <Icon className="text-muted-foreground size-4 shrink-0" /> : null}
-        <span className="min-w-0 flex-1">
-          <span className="font-heading block text-base font-medium">{title}</span>
-          {description ? (
-            <span className="text-muted-foreground block text-sm">{description}</span>
-          ) : null}
-        </span>
-        {count !== undefined ? (
-          <Badge variant="secondary" className="tabular-nums">
-            {count}
-          </Badge>
-        ) : null}
-        <span className="text-muted-foreground shrink-0 text-xs print:hidden">
-          {open ? "einklappen" : "ausklappen"}
-        </span>
-        <ChevronDownIcon
-          aria-hidden
+      <Collapsible defaultOpen={defaultOpen} className="flex flex-col gap-(--card-spacing)">
+        {/*
+          `group` so the chevron can read the trigger's own state: Base UI puts `data-panel-open` on
+          the trigger while the panel is open, and the shadcn wrapper adds no group class of its own.
+        */}
+        <CollapsibleTrigger
           className={cn(
-            "text-muted-foreground size-4 shrink-0 transition-transform print:hidden",
-            open ? "rotate-180" : null,
+            "group focus-visible:ring-ring flex w-full cursor-pointer items-center gap-3",
+            "px-(--card-spacing) text-left focus-visible:ring-2 focus-visible:outline-none",
           )}
-        />
-      </button>
+        >
+          {Icon ? <Icon className="text-muted-foreground size-4 shrink-0" /> : null}
+          <span className="min-w-0 flex-1">
+            <span className="font-heading block text-base font-medium">{title}</span>
+            {description ? (
+              <span className="text-muted-foreground block text-sm">{description}</span>
+            ) : null}
+          </span>
+          {count !== undefined ? (
+            <Badge variant="secondary" className="tabular-nums">
+              {count}
+            </Badge>
+          ) : null}
+          <ChevronDownIcon
+            aria-hidden
+            className="text-muted-foreground size-4 shrink-0 transition-transform group-data-[panel-open]:rotate-180 print:hidden"
+          />
+        </CollapsibleTrigger>
 
-      <div
-        id={contentId}
-        className={contentClass(open, printOpen, "border-t px-(--card-spacing) pt-(--card-spacing)")}
-      >
-        {children}
-      </div>
+        <CollapsibleContent keepMounted data-print={printMode(printOpen)}>
+          <div className="border-t px-(--card-spacing) pt-(--card-spacing)">{children}</div>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   )
 }
@@ -121,30 +128,24 @@ export function Disclosure({
   printOpen?: boolean
   children: React.ReactNode
 }) {
-  const { open, toggle, contentId } = useDisclosure(defaultOpen)
-
   return (
-    <div>
-      <button
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        aria-controls={contentId}
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded text-xs font-medium focus-visible:ring-2 focus-visible:outline-none print:hidden"
-      >
+    <Collapsible defaultOpen={defaultOpen}>
+      <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded text-xs font-medium focus-visible:ring-2 focus-visible:outline-none print:hidden">
         <ChevronDownIcon
           aria-hidden
-          className={cn("size-3.5 transition-transform", open ? "rotate-180" : null)}
+          className="size-3.5 transition-transform group-data-[panel-open]:rotate-180"
         />
         {label}
-      </button>
+      </CollapsibleTrigger>
+
       {/* The trigger is a control and does not print; the label it carries still has to. */}
       {printOpen ? (
         <span className="text-muted-foreground hidden text-xs font-medium print:block">{label}</span>
       ) : null}
-      <div id={contentId} className={contentClass(open, printOpen, "pt-3")}>
-        {children}
-      </div>
-    </div>
+
+      <CollapsibleContent keepMounted data-print={printMode(printOpen)}>
+        <div className="pt-3">{children}</div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
