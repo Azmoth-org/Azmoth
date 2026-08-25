@@ -24,9 +24,18 @@ const STATUS_VARIANT: Record<ProposalStatus, "default" | "secondary" | "destruct
  * that is the wrong shape.
  *
  * So it is `sticky` under the top bar, and it carries the three things that have to be true at the
- * moment of the click: **which** proposal, **what** it comes to, and **what state** it is in. The
- * amount is repeated from the header deliberately — this is the one repetition on the screen that
- * earns itself, because it is the number being signed for and it must be legible from the button.
+ * moment of the click: **which** proposal, **what** it comes to, and **what state** it is in.
+ *
+ * ## The amount is the hero, and it is on the left
+ *
+ * It was 20px, tucked beside a proposal id, and it lost every contest for attention on this screen
+ * to the section headings around it. It is the number the physician is signing under and the only
+ * figure on the page a reader can be said to have *come for*, so it is now 48px, bold, first in
+ * reading order, and labelled — a bare figure that large is ambiguous about what it counts.
+ *
+ * Repeating it in the details card below is the one repetition on this screen that earns itself:
+ * this copy is the one that has to be legible from the button at the moment of the decision, and it
+ * is the only one still on screen once the reader has scrolled to the positions.
  *
  * **Two `ButtonGroup`s rather than one, or four loose buttons.** Approve and reject are one decision
  * with two outcomes and belong welded together; export and print are what you do *after* a decision
@@ -52,21 +61,32 @@ export function DecisionBar({
   const total = proposal.solver_result.coding.total
 
   return (
-    <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-10 -mx-4 border-b px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 print:hidden">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex min-w-0 items-baseline gap-3">
-          <span className="shrink-0 text-xl font-semibold tabular-nums">
+    <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-10 -mx-4 border-b px-4 backdrop-blur sm:-mx-6 sm:px-6 print:hidden">
+      <div className="flex min-h-20 flex-wrap items-center gap-x-8 gap-y-3 py-3">
+        <div className="min-w-0">
+          <div className="text-muted-foreground text-xs font-medium">Gesamtbetrag</div>
+          <div className="mt-1 text-4xl leading-none font-bold tracking-tight tabular-nums sm:text-5xl">
             {eur(total?.amount_eur)}
-          </span>
+          </div>
+        </div>
+
+        {/*
+          Three siblings rather than two nested groups, and `ml-auto` on both of the trailing ones.
+          On a wide screen the identity and the buttons are flushed right together, which is where
+          they belong — the amount is the subject, they are what you do about it. On a phone the
+          badge stays on the amount's own line instead of dragging the buttons up with it, and only
+          the buttons wrap: four of them do not fit 390px and never will, but three stacked rows of
+          sticky chrome above a scrolling invoice is most of the screen.
+        */}
+        <div className="ml-auto flex min-w-0 items-center gap-2">
           {/* Hidden on a phone: the amount and the status are what the button needs beside it. */}
           <span className="text-muted-foreground hidden truncate font-mono text-xs sm:inline">
             {proposal.proposal_id}
           </span>
+          <Badge variant={STATUS_VARIANT[status]}>{PROPOSAL_STATUS_LABEL[status]}</Badge>
         </div>
 
-        <Badge variant={STATUS_VARIANT[status]}>{PROPOSAL_STATUS_LABEL[status]}</Badge>
-
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <ButtonGroup>{decision}</ButtonGroup>
           <ButtonGroup>
             {children}

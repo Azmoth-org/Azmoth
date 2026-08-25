@@ -90,7 +90,7 @@ function Section({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           {Icon ? <Icon className={`size-4 shrink-0 ${iconColor}`} /> : null}
           <span className="min-w-0 flex-1">{title}</span>
           {count !== undefined ? (
@@ -116,7 +116,7 @@ function Section({
  */
 function ProposalSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Card>
         <CardContent className="space-y-4">
           <span className="sr-only" role="status">
@@ -359,7 +359,7 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
   const shownError = malformedError ?? error
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Picking and running a case is an input to the screen, not part of the document it produces. */}
       <div className="print:hidden">
         <CaseSelector
@@ -471,10 +471,10 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
             </Section>
           </div>
 
-          <div className="grid items-start gap-6 xl:grid-cols-2">
+          <div className="grid items-start gap-6 lg:grid-cols-2">
             <Section
               title="Dokumentationslücken"
-              description="Keine Abrechnungsempfehlung — abgerechnet wird immer der angesetzte Faktor."
+              description="Positionen, deren angesetzter Faktor unter der gesetzlichen Obergrenze liegt."
               count={missing.length}
               icon={FileTextIcon}
             >

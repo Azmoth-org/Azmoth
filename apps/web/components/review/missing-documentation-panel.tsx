@@ -1,21 +1,14 @@
-import { FileTextIcon, ShieldCheckIcon } from "lucide-react"
+import { FileTextIcon, ShieldCheckIcon, TriangleAlertIcon } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
-import { Badge } from "@workspace/ui/components/badge"
 import {
   Empty,
   EmptyDescription,
   EmptyMedia,
   EmptyTitle,
 } from "@workspace/ui/components/empty"
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemTitle,
-} from "@workspace/ui/components/item"
 
+import { ExpandableItem } from "@/components/review/expandable-item"
 import { factor } from "@/lib/review/format"
 import type { MissingDocumentation } from "@/lib/review/types"
 
@@ -37,6 +30,17 @@ import type { MissingDocumentation } from "@/lib/review/types"
  * The alert above the list stays, and stays first. It is the only thing standing between this panel
  * and being read as "here is how much more you could have charged", and a reader who scrolls past it
  * to the rows has already been given the wrong frame.
+ *
+ * ## The row says which position; the disclosure says why
+ *
+ * `GOÄ 3: 2.3-fach → max 3.5-fach` is the whole of what a reader needs to scan the list: which
+ * position, what it charges, and what the ceiling would be. The sentence explaining what is missing
+ * from the record is the part they read once they have picked a row — and the part that, rendered
+ * inline on six entries, turned this panel into six paragraphs. It is unconditionally open on paper.
+ *
+ * The amber is the panel's only colour and it means "unresolved", not "wrong": a documentation gap is
+ * a normal state of a draft, and the § 12 Abs. 3 badge in the positions table is where an actually
+ * missing justification is called out in red.
  */
 export function MissingDocumentationPanel({ entries }: { entries: readonly MissingDocumentation[] }) {
   if (entries.length === 0) {
@@ -55,14 +59,14 @@ export function MissingDocumentationPanel({ entries }: { entries: readonly Missi
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Alert>
         <FileTextIcon />
         <AlertTitle>Dokumentationslücken — keine Abrechnungsempfehlung</AlertTitle>
         <AlertDescription>
           <p>
-            Abgerechnet wird <strong>immer der Spalteninhalt „angesetzt“</strong>. Die Spalte „nach § 5
-            Abs. 2 GOÄ möglich“ zeigt lediglich die gesetzliche Obergrenze, die eine{" "}
+            Abgerechnet wird <strong>immer der angesetzte Faktor</strong>. Der Wert hinter dem Pfeil
+            zeigt lediglich die gesetzliche Obergrenze, die eine{" "}
             <strong>schriftliche Begründung nach § 12 Abs. 3 GOÄ</strong> eröffnen würde. Sie ist{" "}
             <strong>kein Vorschlag, den Faktor zu erhöhen</strong>. Ob eine besondere Schwierigkeit,
             ein erhöhter Zeitaufwand oder erschwerende Umstände vorlagen, kann ausschließlich die
@@ -71,27 +75,36 @@ export function MissingDocumentationPanel({ entries }: { entries: readonly Missi
         </AlertDescription>
       </Alert>
 
-      <ItemGroup className="gap-2">
+      <ul className="space-y-2">
         {entries.map((entry, index) => (
-          <Item key={`${entry.ziffer}-${index}`} variant="outline" size="sm">
-            <ItemContent>
-              <ItemTitle className="flex flex-wrap items-center gap-2">
+          <ExpandableItem
+            key={`${entry.ziffer}-${index}`}
+            icon={<TriangleAlertIcon className="text-amber-600 dark:text-amber-400" />}
+            title={
+              <span className="tabular-nums">
                 <span className="font-mono">GOÄ {entry.ziffer}</span>
-                <Badge variant="secondary">angesetzt: {factor(entry.current_factor)}</Badge>
-                <Badge variant="outline">
-                  nach § 5 Abs. 2 GOÄ möglich: {factor(entry.possible_factor)}
-                </Badge>
-                {entry.legal_basis ? (
-                  <span className="text-muted-foreground text-xs font-normal">
-                    {entry.legal_basis}
-                  </span>
-                ) : null}
-              </ItemTitle>
-              <ItemDescription className="line-clamp-none">{entry.missing}</ItemDescription>
-            </ItemContent>
-          </Item>
+                {": "}
+                {factor(entry.current_factor)}
+                <span className="text-muted-foreground"> → max </span>
+                {factor(entry.possible_factor)}
+              </span>
+            }
+            meta={
+              entry.legal_basis ? (
+                <span className="text-muted-foreground text-xs">{entry.legal_basis}</span>
+              ) : null
+            }
+          >
+            <p>
+              <span className="text-foreground font-medium">Angesetzt</span>{" "}
+              {factor(entry.current_factor)} ·{" "}
+              <span className="text-foreground font-medium">nach § 5 Abs. 2 GOÄ möglich</span>{" "}
+              {factor(entry.possible_factor)}
+            </p>
+            <p>{entry.missing}</p>
+          </ExpandableItem>
         ))}
-      </ItemGroup>
+      </ul>
     </div>
   )
 }

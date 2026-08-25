@@ -7,16 +7,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@workspace/ui/components/empty"
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@workspace/ui/components/item"
 
-import { SEVERITY_LABEL, bySeverity, isProminentWarning } from "@/lib/review/format"
+import { ExpandableItem } from "@/components/review/expandable-item"
+import { SEVERITY_LABEL, bySeverity, isProminentWarning, warningTitle } from "@/lib/review/format"
 import type { EngineWarning, WarningSeverity } from "@/lib/review/types"
 
 const SEVERITY_BADGE_VARIANT: Record<WarningSeverity, "destructive" | "secondary" | "outline"> = {
@@ -28,8 +21,10 @@ const SEVERITY_BADGE_VARIANT: Record<WarningSeverity, "destructive" | "secondary
 function SeverityIcon({ severity, timeout }: { severity: WarningSeverity; timeout: boolean }) {
   if (timeout) return <TimerOffIcon className="text-destructive" />
   if (severity === "error") return <OctagonAlertIcon className="text-destructive" />
-  if (severity === "warning") return <AlertTriangleIcon className="text-amber-600" />
-  return <InfoIcon className="text-muted-foreground" />
+  if (severity === "warning") {
+    return <AlertTriangleIcon className="text-amber-600 dark:text-amber-400" />
+  }
+  return <InfoIcon className="text-blue-600 dark:text-blue-400" />
 }
 
 /**
@@ -39,11 +34,18 @@ function SeverityIcon({ severity, timeout }: { severity: WarningSeverity; timeou
  * cancelled and the returned model is the best found so far, not a proven optimum. Every hard rule
  * still held — but the choice among equally lawful alternatives may not be the best one.
  *
- * Rendered with the shared `Item`, which is what this list was reimplementing: a media slot for the
- * icon, a title row for the badges and a description for the message, aligned the same way in every
- * row. The prominent ones keep their tinted border, because "in order of severity" is only half the
- * signal — a reader scanning eleven rows needs the two that matter to be visibly different, not
- * merely first.
+ * ## A title, not an identifier
+ *
+ * Each row used to lead with `warning.type` in monospace — `factor_above_leistungslegende_cap` — and
+ * then print the whole message underneath. Eleven of those is a column of snake_case a reader has to
+ * parse one character at a time, followed by eleven paragraphs they have to read to find the two
+ * that matter. The row now leads with a German title (`warningTitle`) and the Ziffer it concerns,
+ * and the message, the identifier, the paragraph and the rule id are in the disclosure.
+ *
+ * The prominent ones keep their tinted border and stay first, because "in order of severity" is only
+ * half the signal — a reader scanning eleven rows needs the two that matter to be visibly different,
+ * not merely at the top. Their message is also the one part of the explanation that is *not* hidden:
+ * a warning nobody may scroll past is not a warning you have to click.
  */
 export function WarningsPanel({ warnings }: { warnings: readonly EngineWarning[] }) {
   if (warnings.length === 0) {
@@ -64,52 +66,51 @@ export function WarningsPanel({ warnings }: { warnings: readonly EngineWarning[]
   const sorted = [...warnings].sort(bySeverity)
 
   return (
-    <ItemGroup className="gap-2">
+    <ul className="space-y-2">
       {sorted.map((warning, index) => {
         const prominent = isProminentWarning(warning.type, warning.severity)
         const timeout = warning.type === "solver_timeout_partial"
 
         return (
-          <Item
+          <ExpandableItem
             key={`${warning.type}-${warning.ziffer ?? ""}-${index}`}
-            variant="outline"
-            size="sm"
             className={prominent ? "border-destructive/40 bg-destructive/5" : undefined}
-          >
-            <ItemMedia variant="icon">
-              <SeverityIcon severity={warning.severity} timeout={timeout} />
-            </ItemMedia>
-            <ItemContent>
-              <ItemTitle className="flex flex-wrap items-center gap-2">
-                <Badge variant={SEVERITY_BADGE_VARIANT[warning.severity]}>
-                  {SEVERITY_LABEL[warning.severity]}
-                </Badge>
-                <span className="font-mono text-xs font-normal">{warning.type}</span>
+            icon={<SeverityIcon severity={warning.severity} timeout={timeout} />}
+            title={warningTitle(warning.type)}
+            meta={
+              <>
                 {warning.ziffer ? (
                   <Badge variant="outline" className="font-mono">
                     GOÄ {warning.ziffer}
                   </Badge>
                 ) : null}
-                {warning.legal_basis ? (
-                  <span className="text-muted-foreground text-xs font-normal">
-                    {warning.legal_basis}
+                {warning.severity !== "info" ? (
+                  <Badge variant={SEVERITY_BADGE_VARIANT[warning.severity]}>
+                    {SEVERITY_LABEL[warning.severity]}
+                  </Badge>
+                ) : null}
+                {/*
+                  A warning a reader must not scroll past does not get to hide its message behind a
+                  click. The disclosure below still holds the identifier, the paragraph and the rule
+                  id — the parts you quote rather than read.
+                */}
+                {prominent ? (
+                  <span className="text-foreground w-full text-sm font-normal">
+                    {warning.message}
                   </span>
                 ) : null}
-                {warning.rule_id ? (
-                  <span className="text-muted-foreground font-mono text-xs font-normal">
-                    {warning.rule_id}
-                  </span>
-                ) : null}
-              </ItemTitle>
-              <ItemDescription
-                className={prominent ? "text-foreground line-clamp-none font-medium" : "line-clamp-none"}
-              >
-                {warning.message}
-              </ItemDescription>
-            </ItemContent>
-          </Item>
+              </>
+            }
+          >
+            {prominent ? null : <p className="text-foreground">{warning.message}</p>}
+            <p className="flex flex-wrap gap-x-2 text-xs">
+              <span className="font-mono break-all">{warning.type}</span>
+              {warning.legal_basis ? <span>· {warning.legal_basis}</span> : null}
+              {warning.rule_id ? <span className="font-mono break-all">· {warning.rule_id}</span> : null}
+            </p>
+          </ExpandableItem>
         )
       })}
-    </ItemGroup>
+    </ul>
   )
 }
