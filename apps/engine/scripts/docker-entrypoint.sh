@@ -11,8 +11,19 @@
 #
 # Set RUN_MIGRATIONS=false to skip the migration step — for `docker compose run engine python -m
 # pytest` (the suite manages its own schema) or when a deploy pipeline migrates in a separate job.
+#
+# Set CHECK_DEPS=false to skip the staleness check below.
 
 set -e
+
+# Before anything else, because it is the failure that costs the most time to read. compose mounts
+# the working tree over /srv/app, so the code is current while site-packages are as old as the last
+# `--build`; check_deps.py turns the resulting import crash-loop into one line naming the package.
+# Ordered ahead of the migration deliberately: a stale image is a stale migration history too, and
+# `alembic upgrade head` is the more alarming thing to fail.
+if [ "${CHECK_DEPS:-true}" = "true" ]; then
+    python /srv/scripts/check_deps.py
+fi
 
 if [ "${RUN_MIGRATIONS:-true}" != "true" ]; then
     echo "entrypoint: RUN_MIGRATIONS=$RUN_MIGRATIONS — skipping alembic upgrade head" >&2

@@ -109,6 +109,11 @@ services:
       - ../../apps/engine/app:/srv/app:ro
       - ../../apps/engine/tests:/srv/tests:ro
       - ../../apps/engine/scripts:/srv/scripts:ro
+      # Mounted so the entrypoint's staleness check compares the pins the WORKING TREE declares
+      # against the packages the IMAGE actually has. Without this mount it would read the image's
+      # own baked copy and compare it against the packages installed from it — always a match, and
+      # blind to exactly the drift it exists to catch. Read-only; nothing installs at runtime.
+      - ../../apps/engine/requirements.txt:/srv/requirements.txt:ro
       # Mounted too, so a migration added while the stack is up is picked up by a restart rather
       # than needing a rebuild. Read-only: a container must not be able to rewrite its own history.
       - ../../apps/engine/alembic:/srv/alembic:ro

@@ -72,6 +72,11 @@ it only through the Next route handlers under `/api/engine/*`.
 `govatax-postgres-data` volume, which holds approval records — a decision, not a side effect of
 stopping. Ports are overridable with `WEB_PORT` and `POSTGRES_PORT`.
 
+Keep the `--build`. The engine bind-mounts `apps/engine/app`, so a plain `up` runs the working
+tree's code inside whatever image was last built — and after a pull that adds a dependency, that
+image no longer has it. The container's entrypoint checks for this and stops with the package name
+and this command rather than crash-looping on the import; `CHECK_DEPS=false` skips the check.
+
 ### Working on one tier at a time
 
 ```bash
