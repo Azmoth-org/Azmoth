@@ -1,24 +1,31 @@
-# PRODUCTION stack — standalone file, run it by itself:
+# DEVELOPMENT stack — standalone file, run it by itself:
 #
-#     docker compose -f infra/docker/docker-compose.yml up --build
+#     docker compose -f infra/docker/docker-compose.dev.yml up --build
 #
-#     http://localhost:3000   the review and audit UI
-#     http://localhost:8000   the engine's API (and /docs)
+#     http://localhost:3000   the review and audit UI (Turbopack dev server, hot-reloading)
+#     http://localhost:8000   the engine's API (and /docs), uvicorn --reload
 #
-# Builds and runs the images that actually ship: the standalone Next.js bundle, no bind mounts, no
-# --reload. For local development use docker-compose.dev.yml instead — a separate, equally standalone
-# file (do not pass both `-f` flags together; see that file's header for why it is a full copy of
-# this one rather than an override layered on top).
+# This is a full copy of the stack in docker-compose.yml, not an override layered on top of it —
+# deliberately, after an IDE "compose up" task pointed at this file alone failed with "service ...
+# has neither an image nor a build context specified": any tool or shortcut that runs a single
+# compose file (which is the common case — a right-click "Compose Up" in an editor, a task runner
+# entry, someone typing the obvious `-f` for the file they have open) needs this file to be complete
+# on its own. `docker-compose.yml` is the PRODUCTION stack: same idea, no bind mounts, no --reload,
+# the standalone web build. Use whichever one matches what you're doing; do not pass both `-f` flags
+# together — that used to be required here and no longer is.
 #
-# The build context of both images is the repo root, because each needs files from outside its own
-# app directory: the engine needs `logic/` and `data/`, the web app needs the pnpm lockfile and the
-# `packages/*` it consumes as source.
+# `engine`'s image tag is deliberately the SAME in both files (govatax-engine:0.3.0): it is built from
+# the identical Dockerfile and context either way — see apps/engine/Dockerfile's header for why that
+# Dockerfile is not itself split in two — so this file's `engine` build and the prod file's produce
+# the same image, and sharing the tag avoids storing it twice. `web` differs: this file builds
+# apps/web/Dockerfile.dev (the `next dev` image), which is a genuinely different image from
+# apps/web/Dockerfile (the traced standalone bundle), so it gets its own tag, govatax-web:dev.
 #
-# Three services, started in that order by their healthchecks. `postgres` holds the proposals and
-# the immutable audit log; `engine` migrates it on start (`alembic upgrade head`, in the image's
-# entrypoint) and then serves the API; `web` serves the UI and is the only tier a browser talks to.
-# There is no in-memory fallback: the engine refuses to start under APP_ENV=production without a
-# Postgres DATABASE_URL, which is the point of this stack existing rather than a bare `uvicorn`.
+# Both stacks use the SAME named Postgres volume (govatax-postgres-data, declared in both files with
+# an explicit `name:`) and the same default project name (both compose files live in this directory),
+# so switching between `docker-compose.yml` and this file reuses one local database and one set of
+# containers — matching the point of `docker compose down` keeping data across runs. Do not run both
+# stacks at once: their engine/web/postgres container names collide.
 
 services:
   postgres:
@@ -75,7 +82,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      APP_ENV: "${APP_ENV:-production}"
+      APP_ENV: "${APP_ENV:-development}"
       DEBUG: "${DEBUG:-false}"
       EXTRACTION_MODE: "manual"
       UNVERIFIED_RULE_POLICY: "${UNVERIFIED_RULE_POLICY:-warn}"
@@ -105,9 +112,28 @@ services:
       # Refusing production data is the default and should stay that way. See
       # docs/compliance/PRIVATE_DATA_WARNING.md before changing it.
       PADNEXT_ALLOW_REAL_DATA: "false"
-    # No `volumes:` and no `command:` override here — this service runs exactly the image apps/engine/
-    # Dockerfile bakes: app/logic/data/migrations as COPYd at build time, uvicorn with no --reload.
-    # The dev overlay adds both; see infra/docker/docker-compose.dev.yml.
+    volumes:
+      # Live-edit the rules while developing: change goae_rules.dl, goae_optimize.lp or any CSV in
+      # data/rules/ and the next request picks it up, no rebuild. Read-only, so a container cannot
+      # modify the committed catalog.
+      - ../../logic:/srv/logic:ro
+      - ../../data:/srv/data:ro
+      - ../../apps/engine/app:/srv/app:ro
+      - ../../apps/engine/tests:/srv/tests:ro
+      - ../../apps/engine/scripts:/srv/scripts:ro
+      # Mounted so the entrypoint's staleness check compares the pins the WORKING TREE declares
+      # against the packages the IMAGE actually has. Without this mount it would read the image's
+      # own baked copy and compare it against the packages installed from it — always a match, and
+      # blind to exactly the drift it exists to catch. Read-only; nothing installs at runtime.
+      - ../../apps/engine/requirements.txt:/srv/requirements.txt:ro
+      # Mounted too, so a migration added while the stack is up is picked up by a restart rather
+      # than needing a rebuild. Read-only: a container must not be able to rewrite its own history.
+      - ../../apps/engine/alembic:/srv/alembic:ro
+      - ../../apps/engine/alembic.ini:/srv/alembic.ini:ro
+    # Only the server command. The entrypoint runs the migration first whatever this says — which is
+    # why it is an ENTRYPOINT and not part of the CMD (see apps/engine/scripts/docker-entrypoint.sh).
+    command:
+      ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     healthcheck:
       test:
         [
@@ -125,8 +151,8 @@ services:
   web:
     build:
       context: ../..
-      dockerfile: apps/web/Dockerfile
-    image: govatax-web:0.3.0
+      dockerfile: apps/web/Dockerfile.dev
+    image: govatax-web:dev
     # No `container_name`, for the same reason the other two have none.
     depends_on:
       engine:
@@ -146,9 +172,28 @@ services:
       # `engine` is the compose service name, resolved on the default network. Overridable so the
       # same image can be pointed at an engine outside this stack.
       ENGINE_BASE_URL: "${ENGINE_BASE_URL:-http://engine:8000}"
-    # No `volumes:` here — this service runs the standalone bundle apps/web/Dockerfile traces at
-    # build time, nothing else. The dev overlay swaps the Dockerfile and adds the bind mounts; see
-    # infra/docker/docker-compose.dev.yml.
+    volumes:
+      # Live-edit the app while developing, same idea as the engine's mounts above: change a file
+      # under any of these and Next's dev server picks it up, no rebuild. `@workspace/ui` and
+      # `@workspace/contracts` are consumed as source (see their `exports` maps), so both need to be
+      # mounted too, not just apps/web — editing a shared component would otherwise still need one.
+      # `@workspace/typescript-config` is not consumed by the app itself, but apps/web/tsconfig.json
+      # `extends` its nextjs.json, which only lands in the image via a full source COPY (see
+      # apps/web/Dockerfile.dev) — without this mount an edit to the config package itself would need
+      # a rebuild to show up, same as any other unmounted package.
+      - ../../apps/web:/repo/apps/web
+      - ../../packages/ui:/repo/packages/ui
+      - ../../packages/contracts:/repo/packages/contracts
+      - ../../packages/typescript-config:/repo/packages/typescript-config
+      # Anonymous volumes, listed with no host path, so each masks the bind mount above just for
+      # that one subdirectory. Without these, the bind mounts would shadow the node_modules and
+      # .next that `pnpm install`/first boot produced *inside* the image with whatever (or nothing)
+      # exists on the host, which is a broken or missing install rather than a live-reload win.
+      - /repo/node_modules
+      - /repo/apps/web/node_modules
+      - /repo/apps/web/.next
+      - /repo/packages/ui/node_modules
+      - /repo/packages/contracts/node_modules
     healthcheck:
       # Asks the Next.js server whether it can serve a request. Deliberately NOT a page and not a
       # proxy to the engine: `/` renders live engine data, so a healthcheck pointed at it would mark
@@ -169,5 +214,6 @@ services:
 volumes:
   postgres-data:
     # Named so it survives `docker compose down` and is removed only by `down -v`. It holds
-    # approvals; deleting it is a decision, not a side effect of stopping the stack.
+    # approvals; deleting it is a decision, not a side effect of stopping the stack. Same explicit
+    # name as docker-compose.yml's volume, deliberately: dev and prod share one local database.
     name: govatax-postgres-data

@@ -1,5 +1,9 @@
 # syntax=docker/dockerfile:1
 #
+# PRODUCTION image. For local development see apps/web/Dockerfile.dev instead — this one has no
+# bind-mount story and rebuilds on every source change, which is correct for what ships and wrong for
+# iterating.
+#
 # Build context is the MONOREPO ROOT, not this directory — the same rule as the engine's Dockerfile
 # and for the same kind of reason: this app imports `@workspace/ui` and `@workspace/contracts`, which
 # live outside apps/web, and the pnpm lockfile that pins the whole graph lives at the root. From the

@@ -13,7 +13,7 @@ packages/
 logic/         the symbolic layer: Clingo ASP + Soufflé Datalog + golden cases
 data/          the GOÄ catalog, rule tables and mappings, with provenance
 docs/          architecture, compliance, migration
-infra/docker/  compose file for the whole stack: Postgres + engine + web
+infra/docker/  compose files for the whole stack: Postgres + engine + web, prod base + dev overlay
 ```
 
 > ⚠️ **Synthetic data only.** The engine implements no access control, no audit logging and no PHI
@@ -51,13 +51,31 @@ in an append-only audit log, and re-deciding a decided proposal is refused with 
 
 ### The whole application, one command
 
+For local development — both `engine` (`uvicorn --reload`) and `web` (`next dev`) run against the
+working tree, bind-mounted in, so editing code is a save, not a rebuild:
+
+```bash
+docker compose -f infra/docker/docker-compose.dev.yml up --build
+```
+
+`--build` is only needed again after a dependency changes (`requirements.txt`, `package.json`, the
+lockfile) or a Dockerfile itself changes — not for application code.
+
+For a production-parity smoke test — the standalone Next.js build and the engine image exactly as
+they'd ship, no bind mounts, no reload — use the other file instead:
+
 ```bash
 docker compose -f infra/docker/docker-compose.yml up --build
 ```
 
-That starts three services in order — Postgres, then the engine (which migrates the database with
-`alembic upgrade head` before serving), then the web app, each gated on the previous one's
-healthcheck:
+These are two independent, standalone files (not a base + override — pass one `-f`, not both), so
+either one to run alone with whatever tooling you use, an IDE task included. They share one local
+Postgres volume, so switching between them keeps your data; just don't run both at once, since their
+container names collide.
+
+Either way it starts three services in order — Postgres, then the engine (which migrates the
+database with `alembic upgrade head` before serving), then the web app, each gated on the previous
+one's healthcheck:
 
 | | |
 | --- | --- |

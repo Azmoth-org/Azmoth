@@ -83,9 +83,9 @@ deep-link handling:
 pnpm test:e2e
 ```
 
-`PLAYWRIGHT_BASE_URL` points it somewhere else (a dev server on a spare port, or the container from
-`infra/docker/docker-compose.yml`, which brings up both tiers). With the engine down the test fails
-with a sentence saying so, rather than passing against a dashboard full of error states — see
+`PLAYWRIGHT_BASE_URL` points it somewhere else (a dev server on a spare port, or the containers from
+`infra/docker/docker-compose.dev.yml`, which brings up both tiers). With the engine down the test
+fails with a sentence saying so, rather than passing against a dashboard full of error states — see
 `apps/web/e2e/dashboard-smoke.spec.ts`.
 
 ### `souffle` missing makes tests *skip*, not fail
@@ -94,8 +94,12 @@ Rules-engine tests skip when the `souffle` binary is absent, so a green run on a
 tested almost nothing. Check the skip count, or run inside the engine image:
 
 ```bash
-docker compose -f infra/docker/docker-compose.yml run --rm engine python -m pytest -q
+docker compose -f infra/docker/docker-compose.dev.yml run --rm engine python -m pytest -q
 ```
+
+Use the dev file specifically — it's what mounts `apps/engine/tests` from the working tree; against
+`docker-compose.yml` (the production file) `run` would test whatever `tests/` looked like at the last
+`--build`.
 
 ### The four remaining skips are the Postgres dialect
 
@@ -178,7 +182,7 @@ packages/ui/      shadcn/ui components shared by the apps
 logic/            Clingo ASP + Soufflé Datalog programs, golden cases  ← see logic/README.md
 data/             GOÄ catalog, rule tables, mappings, raw snapshot + provenance
 docs/             architecture, compliance, migration record
-infra/docker/     compose file: Postgres + engine + web (`up --build` starts everything)
+infra/docker/     compose files: Postgres + engine + web, prod base + dev overlay (see README)
 ```
 
 Add a shadcn component with the CLI from the repo root, so it lands in `packages/ui`:
