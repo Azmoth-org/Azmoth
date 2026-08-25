@@ -13,6 +13,13 @@ node_modules
 # testing
 coverage
 
+# Playwright: the browser binaries live in ~/.cache/ms-playwright, but a run leaves its report and
+# its per-failure traces/screenshots in the app directory. Both are reproducible from the spec.
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
 # next.js
 .next/
 out/

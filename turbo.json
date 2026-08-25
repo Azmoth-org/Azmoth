@@ -44,6 +44,8 @@
     }
   },
   "globalPassThroughEnv": [
-    "ENGINE_BASE_URL"
+    "ENGINE_BASE_URL",
+    "PLAYWRIGHT_BASE_URL",
+    "CI"
   ]
 }
