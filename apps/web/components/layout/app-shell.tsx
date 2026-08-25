@@ -98,7 +98,7 @@ export function AppShell({
                 </span>
                 <span className="grid flex-1 text-left leading-tight">
                   <span className="truncate font-semibold">Govatax</span>
-                  <span className="text-muted-foreground truncate text-xs">GOÄ-Prüfung</span>
+                  <span className="text-sidebar-foreground/70 truncate text-xs">GOÄ-Prüfung</span>
                 </span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -214,8 +214,13 @@ function Disclaimer() {
     <Tooltip>
       <TooltipTrigger
         render={
-          <div className="text-muted-foreground cursor-default px-2 py-1 text-xs group-data-[collapsible=icon]:hidden">
-            <p className="text-foreground font-medium">Entwurf, keine Rechnung.</p>
+          <div className="text-sidebar-foreground/70 cursor-default px-2 py-1 text-xs group-data-[collapsible=icon]:hidden">
+            {/*
+              `text-sidebar-*`, not `text-foreground`. The rail is dark and the document is light,
+              so the page's own text tokens are gray-900 here — which was invisible the moment the
+              rail stopped being white.
+            */}
+            <p className="text-sidebar-foreground font-medium">Entwurf, keine Rechnung.</p>
             <p className="mt-1">
               Die ärztliche Prüfung ist zwingend erforderlich. Die Regelabdeckung ist unvollständig.
             </p>

@@ -46,7 +46,7 @@ export function ExpandableItem({
   children: React.ReactNode
 }) {
   return (
-    <li className={cn("overflow-hidden rounded-2xl border", className)}>
+    <li className={cn("bg-card overflow-hidden rounded-2xl border", className)}>
       <Collapsible>
         {/*
           `group` so the chevron can read the trigger's own state: Base UI puts `data-panel-open` on

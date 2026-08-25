@@ -1,7 +1,6 @@
 "use client"
 
 import { Badge } from "@workspace/ui/components/badge"
-import { ButtonGroup } from "@workspace/ui/components/button-group"
 
 import { PrintButton } from "@/components/review/print-button"
 import { PROPOSAL_STATUS_LABEL, eur } from "@/lib/review/format"
@@ -37,11 +36,22 @@ const STATUS_VARIANT: Record<ProposalStatus, "default" | "secondary" | "destruct
  * this copy is the one that has to be legible from the button at the moment of the decision, and it
  * is the only one still on screen once the reader has scrolled to the positions.
  *
- * **Two `ButtonGroup`s rather than one, or four loose buttons.** Approve and reject are one decision
- * with two outcomes and belong welded together; export and print are what you do *after* a decision
- * and are a separate control. One group of four was the first version and it does not fit a phone —
- * `ButtonGroup` is `w-fit` and does not wrap, so four buttons pushed the document 92px wider than
- * the viewport at 390px. Two groups wrap onto two lines instead, which is also the truer grouping.
+ * ## Three tiers, not four equal buttons
+ *
+ * These were four buttons of the same size in two welded `ButtonGroup`s, and the welding was the
+ * problem: approve and reject *are* one decision with two outcomes, but rendering them as two
+ * halves of one control said they were equally likely, and an irreversible approval should not look
+ * like a coin flip. So the group is gone and the weight carries the meaning instead.
+ *
+ * **Freigeben** is `lg` and filled blue — the only blue control on the screen. **Ablehnen** is `lg`
+ * and a red outline: available, deliberate, visibly not the default. **Exportieren** and **Drucken**
+ * are `sm` ghosts, because they are what you do *after* a decision rather than part of making one.
+ * A rule between the two groups was the first version and it was redundant: a ghost control beside a
+ * filled one is already visibly a different tier, and the hairline was one more mark on a bar whose
+ * whole job is to stay out of the way of the number beside it.
+ *
+ * `ButtonGroup` also could not wrap — it is `w-fit` — so four buttons in it pushed the document 92px
+ * past a 390px viewport. Plain flex rows wrap.
  *
  * Hidden from print. A sheet of paper has no buttons, and `position: sticky` is reprinted at the top
  * of every page by some engines.
@@ -86,12 +96,12 @@ export function DecisionBar({
           <Badge variant={STATUS_VARIANT[status]}>{PROPOSAL_STATUS_LABEL[status]}</Badge>
         </div>
 
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <ButtonGroup>{decision}</ButtonGroup>
-          <ButtonGroup>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+          <div className="flex items-center gap-1">
             {children}
             <PrintButton />
-          </ButtonGroup>
+          </div>
+          <div className="flex items-center gap-2">{decision}</div>
         </div>
       </div>
     </div>

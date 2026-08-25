@@ -34,7 +34,7 @@ import { AcceptedPositionsTable } from "@/components/review/accepted-positions-t
 import { AuditTrailPanel } from "@/components/review/audit-trail-panel"
 import { BlockedPositionsTable } from "@/components/review/blocked-positions-table"
 import { CaseSelector } from "@/components/review/case-selector"
-import { CollapsibleSection } from "@/components/review/collapsible-section"
+import { CollapsibleSection, Disclosure } from "@/components/review/collapsible-section"
 import { DecisionBar } from "@/components/review/decision-bar"
 import {
   ApproveDialog,
@@ -360,14 +360,23 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
 
   return (
     <div className="space-y-8">
-      {/* Picking and running a case is an input to the screen, not part of the document it produces. */}
-      <div className="print:hidden">
-        <CaseSelector
-          selected={selected}
-          onSelect={selectCase}
-          onRun={run}
-          pending={pending === "solving"}
-        />
+      {/*
+        Picking and running a fixture is an input to the screen, not part of the document it
+        produces — and it is a *development* input. It was the first card on the page, which meant
+        the screen a physician uses to approve a bill opened with a test-case picker. It is filed
+        under a collapsed disclosure now, in a dashed box that says at a glance it is tooling rather
+        than a step of the workflow. Everyone who arrives from `/proposals` or the dashboard has a
+        proposal already and never opens it.
+      */}
+      <div className="rounded-2xl border border-dashed px-4 py-3 print:hidden">
+        <Disclosure label="Entwicklerwerkzeuge — synthetischen Fall ausführen" printOpen={false}>
+          <CaseSelector
+            selected={selected}
+            onSelect={selectCase}
+            onRun={run}
+            pending={pending === "solving"}
+          />
+        </Disclosure>
       </div>
 
       {shownError ? (
@@ -516,11 +525,13 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
           <EmptyMedia variant="icon">
             <PlayIcon />
           </EmptyMedia>
-          <EmptyTitle>Noch kein Vorschlag</EmptyTitle>
+          <EmptyTitle>Kein Vorschlag ausgewählt</EmptyTitle>
           <EmptyDescription>
-            Fall oben auswählen und <strong>Engine ausführen</strong>. Die Engine muss dafür unter{" "}
-            <span className="font-mono text-xs">ENGINE_BASE_URL</span> erreichbar sein (Standard{" "}
-            <span className="font-mono text-xs">http://localhost:8000</span>).
+            Öffnen Sie eine Prüfung über <strong>Alle Prüfungen</strong> in der Navigation oder über
+            die Übersicht. Zum Ausprobieren lässt sich oben unter{" "}
+            <strong>Entwicklerwerkzeuge</strong> ein synthetischer Fall ausführen; die Engine muss
+            dafür unter <span className="font-mono text-xs">ENGINE_BASE_URL</span> erreichbar sein
+            (Standard <span className="font-mono text-xs">http://localhost:8000</span>).
           </EmptyDescription>
         </Empty>
       ) : null}

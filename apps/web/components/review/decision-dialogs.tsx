@@ -65,9 +65,15 @@ export function ApproveDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
+      {/*
+        `size="lg"` and the default (blue) variant. Approve and reject were two solid fills of equal
+        weight welded into one group, which made an irreversible approval look like a fifty-fifty
+        choice between two buttons. It is not: approving is what a reviewer does to almost every
+        proposal, rejecting is the exception. The size and the fill say which is the path.
+      */}
       <DialogTrigger
         render={
-          <Button disabled={disabled}>
+          <Button size="lg" disabled={disabled}>
             <CheckCircle2Icon />
             Freigeben
           </Button>
@@ -164,7 +170,12 @@ export function RejectDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="destructive" disabled={disabled}>
+          <Button
+            variant="outline"
+            size="lg"
+            disabled={disabled}
+            className="text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+          >
             <XCircleIcon />
             Ablehnen
           </Button>
@@ -275,7 +286,7 @@ export function ExportDialog({
       : "Export ist erst nach der Freigabe möglich. Ein Entwurf, den niemand freigegeben hat, ist kein Dokument."
 
   const button = (
-    <Button variant="outline" disabled={!approved || pending}>
+    <Button variant="ghost" size="sm" disabled={!approved || pending}>
       <DownloadIcon />
       Exportieren
     </Button>
