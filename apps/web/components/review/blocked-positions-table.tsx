@@ -149,10 +149,16 @@ export function BlockedPositionsTable({ coding }: { coding: Coding }) {
         <Table className={EDGE_PADDING}>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className={HEAD}>Ziffer</TableHead>
-              <TableHead className={cn(HEAD, "px-2")}>Beschreibung</TableHead>
-              {/* Bounded, so the legend beside it gets every pixel the badges do not need. */}
-              <TableHead className={cn(HEAD, "w-44 px-2")}>Grund</TableHead>
+              {/*
+                Two fixed ends and one elastic middle. Left to itself the browser sizes every column
+                from its content, so the Ziffer column widened for "5030" and the Grund column
+                widened for "Wechselausschluss" — both out of the legend, which is the column that
+                needed the room. `w-16` fits a five-digit Ziffer, `w-36` fits the longest reason
+                badge on one line, and Beschreibung takes everything left over.
+              */}
+              <TableHead className={cn(HEAD, "w-16")}>Ziffer</TableHead>
+              <TableHead className={cn(HEAD, "w-full px-2")}>Beschreibung</TableHead>
+              <TableHead className={cn(HEAD, "w-36 px-2")}>Grund</TableHead>
               <TableHead className={cn(HEAD, "w-10 text-right print:hidden")}>
                 <span className="sr-only">Details</span>
               </TableHead>
@@ -174,13 +180,13 @@ export function BlockedPositionsTable({ coding }: { coding: Coding }) {
                       expanded && "bg-muted/60 even:bg-muted/60",
                     )}
                   >
-                    <TableCell className="text-destructive align-middle font-mono text-sm font-medium">
+                    <TableCell className="text-destructive w-16 align-middle font-mono text-sm font-medium">
                       {entry.ziffer}
                     </TableCell>
-                    <TableCell className="w-full min-w-40 px-2 align-middle whitespace-normal">
+                    <TableCell className="w-full min-w-32 px-2 align-middle whitespace-normal">
                       <div className={cn("text-sm", CLAMP_2, WRAP)}>{entry.official_text || "—"}</div>
                     </TableCell>
-                    <TableCell className="w-44 px-2 align-middle whitespace-normal">
+                    <TableCell className="w-36 px-2 align-middle whitespace-normal">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Badge variant="destructive">{BLOCKED_REASON_SHORT[entry.reason]}</Badge>
                         {entry.reconciled_with_final_invoice === false ? (

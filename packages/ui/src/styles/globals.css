@@ -114,38 +114,74 @@
     --sidebar-ring: oklch(0.623 0.214 259.815);
 }
 
+/*
+ * Dark, as a designed surface rather than an inverted one.
+ *
+ * The old values were the scaffold's: pure-neutral greys at chroma 0, a near-black ground, pure
+ * white text, and translucent-white borders. Three things were wrong with that, and they are the
+ * three things that make a dark mode read as a terminal instead of a product.
+ *
+ * **Chroma 0 is not a colour, it is the absence of one.** The light palette is Tailwind's `gray`,
+ * which carries a slight cool cast (chroma ~0.03 around hue 260). Switching to neutral grey in dark
+ * mode changed the product's temperature between modes for no reason. These are the same family,
+ * two ends of the same ramp: gray-950 / gray-900 / gray-800 / gray-700.
+ *
+ * **Three surfaces, three values.** The rail is gray-950, the page ground is gray-900, and cards are
+ * gray-800 — the same *stack* the light mode has (dark rail, gray-50 ground, white cards), so the
+ * layout reads identically in both. When card and ground were 0.145 and 0.205 of a neutral ramp, the
+ * step existed but carried no hue to help the eye find the edge.
+ *
+ * **Borders are opaque and text is off-white.** `oklch(1 0 0 / 10%)` composites to something the eye
+ * loses against a card at any size below a full panel edge; gray-700 is a line you can actually see.
+ * And `#fff` on a dark ground vibrates — gray-100 is the off-white that every mature dark theme
+ * lands on, with gray-400 under it for secondary text at about 5.5:1 on a card.
+ *
+ * Written in oklch, like the rest of this file. A prescription elsewhere suggested HSL; mixing two
+ * colour spaces in one token set means two different meanings for "the same grey", and the light
+ * palette above is already oklch Tailwind defaults. The intent — nuanced greys, no pure black, no
+ * pure white — is what carries over, not the notation.
+ */
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.623 0.214 259.815);   /* blue-500 — the same accent, lifted for a dark ground */
+    --background: oklch(0.21 0.034 264.665);   /* gray-900 */
+    --foreground: oklch(0.967 0.003 264.542);  /* gray-100 — off-white, not #fff */
+    --card: oklch(0.278 0.033 256.848);        /* gray-800 */
+    --card-foreground: oklch(0.967 0.003 264.542);
+    --popover: oklch(0.278 0.033 256.848);
+    --popover-foreground: oklch(0.967 0.003 264.542);
+    /*
+     * blue-600, the same value light mode uses, not the blue-500 a dark theme reaches for by
+     * reflex. Lifting the accent makes the *fill* read better against a dark card and the *label*
+     * read worse: white on blue-500 measures 3.76:1, under AA for the one control on this screen
+     * that commits a physician to an invoice. blue-600 puts it at 5.25:1, and the primary action
+     * then looks identical in both modes — which is the right answer for a button whose meaning
+     * must never be in question. The focus ring stays blue-500, where nothing has to be read.
+     */
+    --primary: oklch(0.546 0.245 262.881);     /* blue-600 */
     --primary-foreground: oklch(1 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
+    --secondary: oklch(0.373 0.034 259.733);   /* gray-700 */
+    --secondary-foreground: oklch(0.967 0.003 264.542);
+    --muted: oklch(0.373 0.034 259.733);
+    --muted-foreground: oklch(0.707 0.022 261.325);  /* gray-400 */
+    --accent: oklch(0.373 0.034 259.733);
+    --accent-foreground: oklch(0.967 0.003 264.542);
+    --destructive: oklch(0.704 0.191 22.216);  /* red-400 — red-600 is unreadable on gray-800 */
+    --border: oklch(0.373 0.034 259.733);      /* gray-700, opaque */
+    --input: oklch(0.373 0.034 259.733);
     --ring: oklch(0.623 0.214 259.815);
     --chart-1: oklch(0.623 0.214 259.815);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.623 0.214 259.815);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --chart-2: oklch(0.707 0.165 254.624);
+    --chart-3: oklch(0.707 0.022 261.325);
+    --chart-4: oklch(0.551 0.027 264.364);
+    --chart-5: oklch(0.373 0.034 259.733);
+    /* Darker than the page, as in light mode — the rail is the frame, not another panel. */
+    --sidebar: oklch(0.13 0.028 261.692);      /* gray-950 */
+    --sidebar-foreground: oklch(0.872 0.01 258.338);   /* gray-300 */
+    --sidebar-primary: oklch(0.546 0.245 262.881);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.278 0.033 256.848);      /* gray-800 */
+    --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
+    --sidebar-border: oklch(0.278 0.033 256.848);
+    --sidebar-ring: oklch(0.623 0.214 259.815);
 }
 
 @layer base {
