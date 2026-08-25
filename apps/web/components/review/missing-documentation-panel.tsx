@@ -1,7 +1,20 @@
-import { FileTextIcon } from "lucide-react"
+import { FileTextIcon, ShieldCheckIcon } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyMedia,
+  EmptyTitle,
+} from "@workspace/ui/components/empty"
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@workspace/ui/components/item"
 
 import { factor } from "@/lib/review/format"
 import type { MissingDocumentation } from "@/lib/review/types"
@@ -20,14 +33,24 @@ import type { MissingDocumentation } from "@/lib/review/types"
  * The engine derives this from decisions it already made (the chosen factor, the § 5 band, the
  * Leistungslegende cap, whether a reason is present). Its optimisation objective is untouched: it
  * does not and must not maximise revenue.
+ *
+ * The alert above the list stays, and stays first. It is the only thing standing between this panel
+ * and being read as "here is how much more you could have charged", and a reader who scrolls past it
+ * to the rows has already been given the wrong frame.
  */
 export function MissingDocumentationPanel({ entries }: { entries: readonly MissingDocumentation[] }) {
   if (entries.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        Keine Dokumentationslücke festgestellt: für jede berechnete Position ist der angesetzte Faktor
-        entweder durch die Dokumentation gedeckt oder es besteht kein Spielraum nach oben.
-      </p>
+      <Empty className="border">
+        <EmptyMedia variant="icon">
+          <ShieldCheckIcon />
+        </EmptyMedia>
+        <EmptyTitle>Keine Dokumentationslücke</EmptyTitle>
+        <EmptyDescription>
+          Für jede berechnete Position ist der angesetzte Faktor entweder durch die Dokumentation
+          gedeckt oder es besteht kein Spielraum nach oben.
+        </EmptyDescription>
+      </Empty>
     )
   }
 
@@ -48,23 +71,27 @@ export function MissingDocumentationPanel({ entries }: { entries: readonly Missi
         </AlertDescription>
       </Alert>
 
-      <ul className="space-y-3">
+      <ItemGroup className="gap-2">
         {entries.map((entry, index) => (
-          <li key={`${entry.ziffer}-${index}`} className="rounded-xl border p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="font-mono font-medium">GOÄ {entry.ziffer}</span>
-              <Badge variant="secondary">angesetzt: {factor(entry.current_factor)}</Badge>
-              <Badge variant="outline">
-                nach § 5 Abs. 2 GOÄ möglich: {factor(entry.possible_factor)}
-              </Badge>
-              {entry.legal_basis ? (
-                <span className="text-muted-foreground text-xs">{entry.legal_basis}</span>
-              ) : null}
-            </div>
-            <p className="text-muted-foreground mt-2 text-sm">{entry.missing}</p>
-          </li>
+          <Item key={`${entry.ziffer}-${index}`} variant="outline" size="sm">
+            <ItemContent>
+              <ItemTitle className="flex flex-wrap items-center gap-2">
+                <span className="font-mono">GOÄ {entry.ziffer}</span>
+                <Badge variant="secondary">angesetzt: {factor(entry.current_factor)}</Badge>
+                <Badge variant="outline">
+                  nach § 5 Abs. 2 GOÄ möglich: {factor(entry.possible_factor)}
+                </Badge>
+                {entry.legal_basis ? (
+                  <span className="text-muted-foreground text-xs font-normal">
+                    {entry.legal_basis}
+                  </span>
+                ) : null}
+              </ItemTitle>
+              <ItemDescription className="line-clamp-none">{entry.missing}</ItemDescription>
+            </ItemContent>
+          </Item>
         ))}
-      </ul>
+      </ItemGroup>
     </div>
   )
 }

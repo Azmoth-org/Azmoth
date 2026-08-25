@@ -4,28 +4,76 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { Badge } from "@workspace/ui/components/badge"
-import { cn } from "@workspace/ui/lib/utils"
+import { Separator } from "@workspace/ui/components/separator"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from "@workspace/ui/components/sidebar"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@workspace/ui/components/tooltip"
 
 import { NAV_ITEMS, activeHref, type NavItem } from "@/components/layout/nav"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 /**
- * The frame every screen sits in: a persistent sidebar, a top bar, and one content column.
+ * The frame every screen sits in.
  *
  * It exists for two reasons that have nothing to do with decoration.
  *
- * **Navigation.** The four screens previously did not link to each other. `/rules` and
- * `/padnext/batch` were reachable only by typing their URLs, which meant that in practice nobody
- * found them — including the reviewer whose job the rule queue exists to support.
+ * **Navigation.** The screens did not link to each other. `/rules` and `/padnext/batch` were
+ * reachable only by typing their URLs, which meant that in practice nobody found them — including
+ * the reviewer whose job the rule queue exists to support.
  *
  * **One page frame instead of four.** `<main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8
  * sm:px-6">` was copy-pasted into each page. Four copies of a layout drift, and on a screen where a
  * warning banner has to appear above the fold that drift is not cosmetic.
  *
- * A client component, because the active entry depends on the path. The pages inside it stay server
- * components — this wraps `children`, it does not render them.
+ * ## Built on the shared `Sidebar`
+ *
+ * This was a hand-rolled `<aside>` plus, below `lg`, a horizontal strip of links that scrolled
+ * sideways in the top bar. The strip was the compromise: "a drawer needs a portal, a focus trap and
+ * state, and four links do not justify any of it." There are seven links now, and
+ * `@workspace/ui/components/sidebar` brings the portal, the focus trap and the state with it — so
+ * the compromise is no longer worth its cost. Narrow screens get a real off-canvas sheet, and wide
+ * ones get something the hand-rolled version never had:
+ *
+ * - **A collapse.** `collapsible="icon"` narrows the rail to icons, which matters on `/review`,
+ *   where two position tables compete for horizontal space and 16rem of navigation is 16rem the
+ *   invoice does not get. The state persists in a cookie, so it survives a reload.
+ * - **`SidebarRail`** — the whole edge is a drag target for that collapse, not just a small button.
+ * - **⌘B / Ctrl+B**, which is what a reader who lives in editors will try first.
+ * - **Tooltips on the collapsed rail**, so an icon-only entry still says its name.
+ *
+ * `variant="inset"` is what makes the content a floating panel on a tinted ground rather than a
+ * column butted against a border: on a screen this dense it is the cheapest way to say where the
+ * document ends and the application begins.
+ *
+ * `defaultOpen` comes from the server, read out of the same cookie the provider writes. Without it
+ * the first paint is always the expanded rail, which then snaps shut for anyone who collapsed it.
  */
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  defaultOpen = true,
+}: {
+  children: React.ReactNode
+  /** The persisted rail state, read from the `sidebar_state` cookie in the root layout. */
+  defaultOpen?: boolean
+}) {
   const pathname = usePathname()
   const active = activeHref(pathname)
 
@@ -33,130 +81,105 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const internal = NAV_ITEMS.filter((item) => item.internal)
 
   return (
-    <div className="bg-background flex min-h-svh flex-col lg:flex-row">
+    <SidebarProvider defaultOpen={defaultOpen}>
       {/*
-        Sidebar on a wide screen. Below `lg` it collapses to the horizontal strip in the top bar
-        instead of a drawer: a drawer needs a portal, a focus trap and state, and four links do not
-        justify any of it.
+        Navigation is not part of the document — `/review` prints a billing proposal, not the
+        application it was read in — but that is not arranged here. `Sidebar` puts this `className` on
+        its inner container, which leaves the outer wrapper and the spacer reserving 16rem of page
+        width behind; the print stylesheet in `@workspace/ui` hides `[data-slot="sidebar"]` instead.
       */}
-      <aside className="bg-sidebar text-sidebar-foreground border-sidebar-border hidden w-64 shrink-0 border-r lg:flex lg:flex-col">
-        <Brand />
-        <nav aria-label="Hauptnavigation" className="flex flex-1 flex-col gap-6 px-3 py-4">
-          <NavGroup items={workflow} active={active} />
-          <NavGroup items={internal} active={active} heading="Intern" />
-        </nav>
-        <SidebarFooter />
-      </aside>
+      <Sidebar collapsible="icon" variant="inset">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" render={<Link href="/" />}>
+                <span className="bg-primary text-primary-foreground grid size-8 shrink-0 place-items-center rounded-lg font-mono text-[11px] font-medium">
+                  GO
+                </span>
+                <span className="grid flex-1 text-left leading-tight">
+                  <span className="truncate font-semibold">Govatax</span>
+                  <span className="text-muted-foreground truncate text-xs">GOÄ-Prüfung</span>
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="bg-background/95 border-border supports-[backdrop-filter]:bg-background/80 sticky top-0 z-20 border-b backdrop-blur">
-          <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
-            <div className="lg:hidden">
-              <Brand compact />
-            </div>
-            <div className="hidden min-w-0 flex-1 lg:block">
-              <CurrentScreen active={active} />
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              {/*
-                The environment is stated in the chrome, on every screen, because this build must
-                never be mistaken for one cleared to hold real data. The disclaimer banners say it in
-                prose; this says it where a glance lands.
-              */}
-              <Badge variant="outline" className="hidden sm:inline-flex">
-                Nur synthetische Daten
-              </Badge>
-              <ThemeToggle />
-            </div>
+        <SidebarContent>
+          <NavGroup items={workflow} active={active} label="Arbeitsablauf" />
+          <NavGroup items={internal} active={active} label="Intern" />
+        </SidebarContent>
+
+        <SidebarFooter>
+          <Disclaimer />
+        </SidebarFooter>
+
+        <SidebarRail />
+      </Sidebar>
+
+      <SidebarInset>
+        <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 rounded-t-xl border-b px-4 backdrop-blur print:hidden">
+          <SidebarTrigger />
+          <Separator orientation="vertical" className="mr-1 h-4" />
+          <CurrentScreen active={active} />
+          <div className="ml-auto flex items-center gap-2">
+            {/*
+              The environment is stated in the chrome, on every screen, because this build must never
+              be mistaken for one cleared to hold real data. The disclaimer banners say it in prose;
+              this says it where a glance lands.
+            */}
+            <Badge variant="outline" className="hidden sm:inline-flex">
+              Nur synthetische Daten
+            </Badge>
+            <ThemeToggle />
           </div>
-
-          {/* The same links, as a scrollable strip, for narrow screens. */}
-          <nav
-            aria-label="Hauptnavigation"
-            className="border-border flex gap-1 overflow-x-auto border-t px-2 py-2 lg:hidden"
-          >
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active === item.href ? "page" : undefined}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm whitespace-nowrap transition-colors",
-                  active === item.href
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-8 sm:px-6">
+        <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-8 sm:px-6 print:max-w-none print:space-y-4 print:p-0">
           {children}
         </main>
-      </div>
-    </div>
-  )
-}
-
-function Brand({ compact = false }: { compact?: boolean }) {
-  return (
-    <Link
-      href="/"
-      className={cn(
-        "flex items-center gap-2 font-semibold tracking-tight",
-        compact ? "text-sm" : "border-sidebar-border h-14 shrink-0 border-b px-4 text-sm",
-      )}
-    >
-      <span className="bg-primary text-primary-foreground grid size-6 place-items-center rounded font-mono text-[11px]">
-        GO
-      </span>
-      <span>Govatax</span>
-      <span className="text-muted-foreground font-normal">GOÄ</span>
-    </Link>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
 
 function NavGroup({
   items,
   active,
-  heading,
+  label,
 }: {
   items: readonly NavItem[]
   active: string | null
-  heading?: string
+  label: string
 }) {
   if (items.length === 0) return null
+
   return (
-    <div className="space-y-1">
-      {heading ? (
-        <div className="text-muted-foreground px-3 pb-1 text-xs font-medium tracking-wide uppercase">
-          {heading}
-        </div>
-      ) : null}
-      {items.map((item) => {
-        const Icon = item.icon
-        const current = active === item.href
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={current ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
-              current
-                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-            )}
-          >
-            <Icon className="size-4 shrink-0" aria-hidden />
-            {item.label}
-          </Link>
-        )
-      })}
-    </div>
+    <SidebarGroup>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => {
+            const Icon = item.icon
+            const current = active === item.href
+            return (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  isActive={current}
+                  // The name, for the collapsed rail — where the label is not rendered at all and an
+                  // icon on its own is a guess.
+                  tooltip={item.label}
+                  render={<Link href={item.href} aria-current={current ? "page" : undefined} />}
+                >
+                  <Icon />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
   )
 }
 
@@ -164,9 +187,10 @@ function NavGroup({
 function CurrentScreen({ active }: { active: string | null }) {
   const item = NAV_ITEMS.find((entry) => entry.href === active)
   if (!item) return <span className="text-muted-foreground text-sm">Übersicht</span>
+
   return (
     <div className="flex min-w-0 items-center gap-2 text-sm">
-      <span className="font-medium">{item.label}</span>
+      <span className="truncate font-medium">{item.label}</span>
       {item.internal ? (
         <Badge variant="secondary" className="shrink-0">
           Intern
@@ -180,15 +204,28 @@ function CurrentScreen({ active }: { active: string | null }) {
  * The standing statement, in the chrome rather than only in a banner.
  *
  * A draft is not an invoice, and that has to be true of the whole application and not only of the
- * screen that happens to be showing a proposal.
+ * screen that happens to be showing a proposal. Collapsed to its first sentence when the rail is —
+ * `group-data-[collapsible=icon]` is how the sidebar tells its contents which state it is in — with
+ * the full text kept in a tooltip rather than dropped, because the reason this build must not be
+ * trusted with real data does not stop being true when the rail is narrow.
  */
-function SidebarFooter() {
+function Disclaimer() {
   return (
-    <div className="border-sidebar-border text-muted-foreground border-t px-4 py-3 text-xs">
-      <p className="font-medium">Entwurf, keine Rechnung.</p>
-      <p className="mt-1">
-        Die ärztliche Prüfung ist zwingend erforderlich. Die Regelabdeckung ist unvollständig.
-      </p>
-    </div>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <div className="text-muted-foreground cursor-default px-2 py-1 text-xs group-data-[collapsible=icon]:hidden">
+            <p className="text-foreground font-medium">Entwurf, keine Rechnung.</p>
+            <p className="mt-1">
+              Die ärztliche Prüfung ist zwingend erforderlich. Die Regelabdeckung ist unvollständig.
+            </p>
+          </div>
+        }
+      />
+      <TooltipContent side="right" className="max-w-64">
+        Entwurf, keine Rechnung. Die ärztliche Prüfung ist zwingend erforderlich. Die Regelabdeckung
+        ist unvollständig.
+      </TooltipContent>
+    </Tooltip>
   )
 }

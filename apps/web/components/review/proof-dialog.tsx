@@ -23,27 +23,44 @@ import type { ProofStep } from "@/lib/review/types"
  * row, and the paragraph of the GOÄ it rests on. The steps are rendered as a list *and* as raw JSON:
  * the list is what a reviewer reads, the JSON is what an auditor copies, and neither is derived from
  * the other.
+ *
+ * `compact` is for the position tables, where the word "Beweis" cost more than twice the width of
+ * the icon and the count — width the GOÄ legend text next to it needed to be readable at all. The
+ * count stays visible, because "this position rests on seven steps" is worth seeing without opening
+ * anything; the word moves into the accessible name, which is where a screen reader was reading it
+ * from regardless.
  */
 export function ProofDialog({
   ziffer,
   officialText,
   steps,
   triggerLabel = "Beweis",
+  compact = false,
 }: {
   ziffer: string
   officialText?: string
   steps: readonly ProofStep[]
   triggerLabel?: string
+  compact?: boolean
 }) {
   const hasSteps = steps.length > 0
+  const accessibleName = hasSteps
+    ? `Beweisbaum für GOÄ ${ziffer} öffnen — ${steps.length} ${steps.length === 1 ? "Schritt" : "Schritte"}`
+    : `Kein Beweisbaum für GOÄ ${ziffer}`
 
   return (
     <Dialog>
       <DialogTrigger
         render={
-          <Button variant="ghost" size="xs" disabled={!hasSteps}>
+          <Button
+            variant="ghost"
+            size="xs"
+            disabled={!hasSteps}
+            aria-label={compact ? accessibleName : undefined}
+            className={compact ? "px-1.5" : undefined}
+          >
             <FileSearchIcon />
-            {triggerLabel}
+            {compact ? null : triggerLabel}
             {hasSteps ? <span className="tabular-nums">({steps.length})</span> : null}
           </Button>
         }

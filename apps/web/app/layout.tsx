@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { cookies } from "next/headers"
 import { Geist_Mono, Inter } from "next/font/google"
 
 import "@workspace/ui/globals.css"
@@ -31,11 +32,28 @@ export const metadata: Metadata = {
     "Interne Anwendung, nur synthetische Daten.",
 }
 
-export default function RootLayout({
+/**
+ * `defaultOpen` for the sidebar, read on the server.
+ *
+ * `SidebarProvider` writes `sidebar_state` when the rail is toggled but cannot read it during the
+ * server render, so without this every first paint is the expanded rail — which then snaps shut for
+ * anyone who collapsed it. Reading the cookie here makes the server render the state the reader left
+ * behind. Any value other than a literal `"false"` means open, including a missing cookie.
+ *
+ * This is what makes the layout dynamic, which is correct: the rendered frame depends on the request.
+ */
+async function sidebarDefaultOpen(): Promise<boolean> {
+  const store = await cookies()
+  return store.get("sidebar_state")?.value !== "false"
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const defaultOpen = await sidebarDefaultOpen()
+
   return (
     // `lang="de"` because every string in this application is German. It was `en`, which makes a
     // screen reader pronounce "Abrechnungsvorschlag" with English phonemes and tells the browser to
@@ -47,7 +65,7 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <AppShell>{children}</AppShell>
+          <AppShell defaultOpen={defaultOpen}>{children}</AppShell>
         </ThemeProvider>
       </body>
     </html>

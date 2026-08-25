@@ -1,21 +1,29 @@
-import { ChevronRightIcon } from "lucide-react"
 import Link from "next/link"
+import * as React from "react"
+
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@workspace/ui/components/breadcrumb"
 
 /**
  * Where the reader is, and one click back up.
  *
- * Built here rather than pulled in as a primitive: `packages/ui` has no breadcrumb, and what this
- * needs is an ordered list, a separator and one `aria-current` — a dependency for that would be more
- * code to review than the component.
+ * This used to be a hand-written `<nav><ol>` with its own separator and its own `aria-current`,
+ * because `packages/ui` had no breadcrumb. It has one now, so this is a thin adapter over it: the
+ * `trail` shape the two call sites already pass, rendered with the shared primitive.
  *
- * The semantics are the part worth getting right, because a breadcrumb rendered as a row of `<div>`s
- * is decoration that a screen reader announces as noise. `<nav aria-label>` names the landmark, the
- * `<ol>` says these are ordered steps, the separators are `aria-hidden` so "chevron right" is not
- * read between every level, and the last item is plain text with `aria-current="page"` rather than a
- * link to where the reader already is.
+ * The semantics are the part worth getting right, and they are the reason the primitive is worth
+ * using rather than reproducing. `Breadcrumb` renders `<nav aria-label="breadcrumb">`,
+ * `BreadcrumbList` an `<ol>`, `BreadcrumbSeparator` a `role="presentation" aria-hidden` list item so
+ * "chevron right" is not announced between every level, and `BreadcrumbPage` a
+ * `role="link" aria-disabled aria-current="page"` — the page the reader is on is not a link.
  *
- * A server component. It has no state and takes no interaction, so there is nothing here worth a
- * client boundary — which also means it renders in the same pass as the page around it.
+ * A server component: no state, no interaction, so it renders in the same pass as the page around it.
  */
 export type Crumb = {
   label: string
@@ -27,31 +35,26 @@ export function Breadcrumbs({ trail }: { trail: readonly Crumb[] }) {
   if (trail.length === 0) return null
 
   return (
-    <nav aria-label="Brotkrumen">
-      <ol className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
+    <Breadcrumb>
+      <BreadcrumbList>
         {trail.map((crumb, index) => {
           const last = index === trail.length - 1
           return (
-            <li key={`${crumb.label}-${index}`} className="flex items-center gap-1.5">
-              {index > 0 ? (
-                <ChevronRightIcon className="size-3 shrink-0 opacity-60" aria-hidden />
-              ) : null}
-              {crumb.href && !last ? (
-                <Link
-                  href={crumb.href}
-                  className="hover:text-foreground rounded transition-colors hover:underline"
-                >
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span aria-current={last ? "page" : undefined} className="text-foreground">
-                  {crumb.label}
-                </span>
-              )}
-            </li>
+            <React.Fragment key={`${crumb.label}-${index}`}>
+              {index > 0 ? <BreadcrumbSeparator /> : null}
+              <BreadcrumbItem>
+                {crumb.href && !last ? (
+                  // `render` rather than `asChild`: this registry is built on Base UI, which takes
+                  // the element to render as a prop. Next's `Link` keeps client-side navigation.
+                  <BreadcrumbLink render={<Link href={crumb.href} />}>{crumb.label}</BreadcrumbLink>
+                ) : (
+                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                )}
+              </BreadcrumbItem>
+            </React.Fragment>
           )
         })}
-      </ol>
-    </nav>
+      </BreadcrumbList>
+    </Breadcrumb>
   )
 }
