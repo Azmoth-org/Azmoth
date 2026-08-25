@@ -127,3 +127,91 @@
     @apply bg-background text-foreground;
     }
 }
+
+/*
+ * Print.
+ *
+ * A GOÄ-Abrechnungsvorschlag leaves the screen on paper — signed by the physician who is legally
+ * responsible for it, or attached as a PDF to a dispute with a Rechnungsprüfer. Three things have to
+ * be true for that to be worth anything.
+ *
+ * **The dark theme must not reach the printer.** Browsers drop background colours from a print job
+ * by default but keep foreground ones, so a page printed from dark mode is near-white text on white
+ * paper: perfectly legible on screen, blank on the page. The light palette is therefore restored
+ * here for every print job, whatever theme the reader is using. The block sits last in the file, so
+ * it wins over `.dark` on source order without needing `!important` on twenty custom properties.
+ *
+ * **A row is a record, and a total is not a running header.** A position split across a page break
+ * reads as two half-positions, with the Betrag on a different sheet from the Ziffer it belongs to,
+ * so rows, alerts and list items are kept whole. Cards are deliberately *not* — a nine-row table that
+ * will not fit on the rest of a sheet would jump to the next one whole and leave half a page blank.
+ * Column headers repeat on every sheet, which is what makes a continued table readable; the totals
+ * row must not, and `tfoot` repeats by default. A "Gesamt 222,21 €" printed under the first eight of
+ * nine positions is a sum the page is not entitled to claim, so it is demoted to a normal row group
+ * and prints once, at the end, under everything it adds up.
+ *
+ * **Screen chrome is not evidence.** Shadows and rings are cues about depth that a sheet of paper
+ * does not have; a hairline says the same thing in ink. What each screen hides beyond this — its
+ * navigation, its buttons — it hides itself with `print:hidden`, because only the screen knows which
+ * of its parts are controls.
+ */
+@media print {
+  :root,
+  .dark {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.45 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.51 0.21 27.325);
+    --border: oklch(0.85 0 0);
+    --input: oklch(0.85 0 0);
+  }
+
+  @page {
+    margin: 14mm;
+  }
+
+  html {
+    font-size: 10.5pt;
+  }
+
+  body {
+    background: white;
+  }
+
+  /* Depth cues become a hairline. `ring-*` is a box-shadow in Tailwind v4, so this clears both. */
+  [data-slot="card"] {
+    box-shadow: none !important;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+  }
+
+  [data-slot="table-row"],
+  [data-slot="alert"],
+  li {
+    break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-row-group;
+  }
+
+  /* A scroll container has no meaning on paper — it would clip the columns it cannot fit. */
+  [data-slot="table-container"] {
+    overflow: visible !important;
+  }
+}

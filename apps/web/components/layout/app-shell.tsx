@@ -39,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         instead of a drawer: a drawer needs a portal, a focus trap and state, and four links do not
         justify any of it.
       */}
-      <aside className="bg-sidebar text-sidebar-foreground border-sidebar-border hidden w-64 shrink-0 border-r lg:flex lg:flex-col">
+      <aside className="bg-sidebar text-sidebar-foreground border-sidebar-border hidden w-64 shrink-0 border-r lg:flex lg:flex-col print:hidden">
         <Brand />
         <nav aria-label="Hauptnavigation" className="flex flex-1 flex-col gap-6 px-3 py-4">
           <NavGroup items={workflow} active={active} />
@@ -49,7 +49,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="bg-background/95 border-border supports-[backdrop-filter]:bg-background/80 sticky top-0 z-20 border-b backdrop-blur">
+        {/*
+          Hidden from a print job: navigation and a theme toggle are controls, and a `sticky` element
+          is reprinted at the top of every sheet by some engines. What the page is stays on the page
+          itself — the review screen prints its own identity block.
+        */}
+        <header className="bg-background/95 border-border supports-[backdrop-filter]:bg-background/80 sticky top-0 z-20 border-b backdrop-blur print:hidden">
           <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
             <div className="lg:hidden">
               <Brand compact />
@@ -93,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-8 sm:px-6">
+        <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-8 sm:px-6 print:max-w-none print:space-y-4 print:p-0">
           {children}
         </main>
       </div>

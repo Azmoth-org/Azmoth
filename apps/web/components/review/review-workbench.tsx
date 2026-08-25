@@ -1,23 +1,25 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { BanIcon, CheckCircle2Icon, FileTextIcon, InfoIcon, ScrollTextIcon } from "lucide-react"
 import * as React from "react"
 
 import { Badge } from "@workspace/ui/components/badge"
-import { Card, CardContent } from "@workspace/ui/components/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card"
 import { Separator } from "@workspace/ui/components/separator"
 import { Skeleton } from "@workspace/ui/components/skeleton"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@workspace/ui/components/tabs"
 
 import { AcceptedPositionsTable } from "@/components/review/accepted-positions-table"
 import { AuditTrailPanel } from "@/components/review/audit-trail-panel"
 import { BlockedPositionsTable } from "@/components/review/blocked-positions-table"
 import { CaseSelector } from "@/components/review/case-selector"
+import { CollapsibleSection } from "@/components/review/collapsible-section"
 import {
   ApproveDialog,
   ExportDialog,
@@ -25,6 +27,7 @@ import {
 } from "@/components/review/decision-dialogs"
 import { ErrorPanel } from "@/components/review/error-panel"
 import { MissingDocumentationPanel } from "@/components/review/missing-documentation-panel"
+import { PrintButton } from "@/components/review/print-button"
 import { ProposalHeader } from "@/components/review/proposal-header"
 import { RuleCoverageBanner } from "@/components/review/rule-coverage-banner"
 import { WarningsPanel } from "@/components/review/warnings-panel"
@@ -36,16 +39,55 @@ import type { Proposal, ReviewError } from "@/lib/review/types"
 
 type Pending = "idle" | "solving" | "approving" | "rejecting" | "exporting"
 
-function TabLabel({ label, count }: { label: string; count: number }) {
+/**
+ * One titled region of the proposal.
+ *
+ * `flush` drops the horizontal padding so a table can run to the card's edge — the zebra stripes and
+ * the header rule read as the table's own structure that way, instead of as a box floating inside a
+ * box. Prose sections keep their padding.
+ */
+function Section({
+  title,
+  description,
+  count,
+  icon: Icon,
+  tone = "neutral",
+  flush = false,
+  className,
+  children,
+}: {
+  title: string
+  description?: string
+  count?: number
+  icon?: React.ComponentType<{ className?: string }>
+  tone?: "neutral" | "accepted" | "blocked"
+  flush?: boolean
+  className?: string
+  children: React.ReactNode
+}) {
+  const iconColor =
+    tone === "accepted"
+      ? "text-emerald-700 dark:text-emerald-400"
+      : tone === "blocked"
+        ? "text-destructive"
+        : "text-muted-foreground"
+
   return (
-    <span className="flex items-center gap-1.5">
-      {label}
-      {count > 0 ? (
-        <Badge variant="secondary" className="tabular-nums">
-          {count}
-        </Badge>
-      ) : null}
-    </span>
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {Icon ? <Icon className={`size-4 shrink-0 ${iconColor}`} /> : null}
+          <span className="min-w-0 flex-1">{title}</span>
+          {count !== undefined ? (
+            <Badge variant="secondary" className="tabular-nums">
+              {count}
+            </Badge>
+          ) : null}
+        </CardTitle>
+        {description ? <CardDescription>{description}</CardDescription> : null}
+      </CardHeader>
+      <CardContent className={flush ? "px-0" : undefined}>{children}</CardContent>
+    </Card>
   )
 }
 
@@ -54,26 +96,37 @@ function TabLabel({ label, count }: { label: string; count: number }) {
  *
  * Bars, never a number-shaped placeholder: this screen renders money and Steigerungsfaktoren, and a
  * grey rectangle where a figure belongs is the one placeholder a reader can mistake for a rendered
- * zero. Shaped like the header and the tab strip that are about to replace it, so the layout does
- * not jump when they arrive.
+ * zero. Shaped like the header and the two position cards that are about to replace it, so the
+ * layout does not jump when they arrive.
  */
 function ProposalSkeleton() {
   return (
-    <Card>
-      <CardContent className="space-y-4 pt-6">
-        <span className="sr-only" role="status">
-          Prüfung wird geladen …
-        </span>
-        <Skeleton className="h-5 w-64" />
-        <Skeleton className="h-4 w-40" />
-        <div className="flex gap-2 pt-2">
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-8 w-32" />
-        </div>
-        <Skeleton className="h-32 w-full" />
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="space-y-4">
+          <span className="sr-only" role="status">
+            Prüfung wird geladen …
+          </span>
+          <Skeleton className="h-5 w-64" />
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-24 w-full" />
+        </CardContent>
+      </Card>
+      <div className="grid gap-6 xl:grid-cols-5">
+        <Card className="xl:col-span-3">
+          <CardContent className="space-y-3">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-40 w-full" />
+          </CardContent>
+        </Card>
+        <Card className="xl:col-span-2">
+          <CardContent className="space-y-3">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-40 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }
 
@@ -83,6 +136,21 @@ function ProposalSkeleton() {
  * State is deliberately shallow: one proposal, one error, one pending flag. There is no client-side
  * cache and no optimistic update — a decision changes the engine's record, and the screen shows what
  * the engine returned rather than what it hoped would happen.
+ *
+ * ## Layout: sections, not tabs
+ *
+ * The five parts of a proposal used to be five tabs, which meant that at any moment four fifths of
+ * the result were not on the screen — including, by default, every blocked position. A tab strip is
+ * right when the panels are alternatives; these are not alternatives, they are one document. What a
+ * reviewer is doing is comparing them: this Ziffer was charged, that one was suppressed, and the
+ * question is whether the suppression is correct.
+ *
+ * So the two tables sit side by side from `xl` up, at 3:2 — the accepted table carries the money and
+ * five columns, the blocked table three — and stack below it. The two prose panels follow, and the
+ * audit trail is last and collapsed: it is the longest section by far and it is consulted, not read.
+ *
+ * It also makes the screen printable in one pass, which a tab strip cannot be: a printed proposal
+ * that silently omitted the blocked positions would be a misleading document.
  *
  * ## `deepLinkId` — arriving from a link rather than from the case selector
  *
@@ -277,12 +345,15 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
 
   return (
     <div className="space-y-6">
-      <CaseSelector
-        selected={selected}
-        onSelect={selectCase}
-        onRun={run}
-        pending={pending === "solving"}
-      />
+      {/* Picking and running a case is an input to the screen, not part of the document it produces. */}
+      <div className="print:hidden">
+        <CaseSelector
+          selected={selected}
+          onSelect={selectCase}
+          onRun={run}
+          pending={pending === "solving"}
+        />
+      </div>
 
       {shownError ? (
         <ErrorPanel
@@ -306,7 +377,7 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
           <ProposalHeader proposal={proposal} />
           <RuleCoverageBanner proposal={proposal} />
 
-          <Card>
+          <Card className="print:hidden">
             <CardContent className="flex flex-wrap items-center gap-3">
               <ApproveDialog
                 disabled={!isDraft || pending !== "idle"}
@@ -324,6 +395,7 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
                 pending={pending === "exporting"}
                 onExport={exportProposal}
               />
+              <PrintButton />
               {exported ? (
                 <p className="text-muted-foreground text-sm">
                   Heruntergeladen: <span className="font-mono text-xs">{exported}</span>
@@ -337,41 +409,69 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
             </CardContent>
           </Card>
 
-          <Tabs defaultValue="accepted">
-            <TabsList>
-              <TabsTrigger value="accepted">
-                <TabLabel label="Berechnet" count={accepted.length} />
-              </TabsTrigger>
-              <TabsTrigger value="blocked">
-                <TabLabel label="Gesperrt" count={blocked.length} />
-              </TabsTrigger>
-              <TabsTrigger value="documentation">
-                <TabLabel label="Dokumentationslücken" count={missing.length} />
-              </TabsTrigger>
-              <TabsTrigger value="warnings">
-                <TabLabel label="Hinweise" count={warnings.length} />
-              </TabsTrigger>
-              <TabsTrigger value="audit">
-                <TabLabel label="Beweis / Audit-Trail" count={0} />
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="accepted" className="pt-4">
+          {/*
+            3:2 rather than 1:1. The accepted table carries five columns and every amount on the
+            screen; the blocked table carries three and is read one row at a time. Splitting the
+            width evenly would have squeezed the invoice to give room to the exceptions.
+          */}
+          <div className="grid gap-6 xl:grid-cols-5">
+            <Section
+              title="Akzeptierte Positionen"
+              description="Berechnungsfähig nach den durchgesetzten Regeln. Beträge und Faktoren stammen unverändert aus der Engine."
+              count={accepted.length}
+              icon={CheckCircle2Icon}
+              tone="accepted"
+              flush
+              className="xl:col-span-3"
+            >
               <AcceptedPositionsTable coding={coding} />
-            </TabsContent>
-            <TabsContent value="blocked" className="pt-4">
+            </Section>
+
+            <Section
+              title="Blockierte Positionen"
+              description="Von einer durchgesetzten Regel unterdrückt — mit Regel-ID und Rechtsgrundlage."
+              count={blocked.length}
+              icon={BanIcon}
+              tone="blocked"
+              flush
+              className="xl:col-span-2"
+            >
               <BlockedPositionsTable coding={coding} />
-            </TabsContent>
-            <TabsContent value="documentation" className="pt-4">
+            </Section>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <Section
+              title="Dokumentationslücken"
+              description="Keine Abrechnungsempfehlung — abgerechnet wird immer der angesetzte Faktor."
+              count={missing.length}
+              icon={FileTextIcon}
+            >
               <MissingDocumentationPanel entries={missing} />
-            </TabsContent>
-            <TabsContent value="warnings" className="pt-4">
+            </Section>
+
+            <Section
+              title="Hinweise der Engine"
+              description="Nach Dringlichkeit sortiert. Fehler und markierte Typen stehen oben."
+              count={warnings.length}
+              icon={InfoIcon}
+            >
               <WarningsPanel warnings={warnings} />
-            </TabsContent>
-            <TabsContent value="audit" className="pt-4">
-              <AuditTrailPanel auditTrail={auditTrail} />
-            </TabsContent>
-          </Tabs>
+            </Section>
+          </div>
+
+          {/*
+            Collapsed on screen, expanded on paper. It is the longest section on the page and the one
+            nobody reads until they are disputing something — but a printed proposal whose proof
+            trees were silently missing would be the wrong document entirely.
+          */}
+          <CollapsibleSection
+            title="Beweis und Audit-Trail"
+            description="Was geprüft wurde, welche Regeln liefen, und der Beweisbaum je Position."
+            icon={ScrollTextIcon}
+          >
+            <AuditTrailPanel auditTrail={auditTrail} />
+          </CollapsibleSection>
         </>
       ) : null}
 
