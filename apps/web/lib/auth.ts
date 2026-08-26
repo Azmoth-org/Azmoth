@@ -7,11 +7,16 @@
  *
  * ## What is enabled, and what is deliberately not
  *
- * **Email and password, and nothing else.** No social provider, because there is no organisation
- * behind this build to federate with, and an OAuth button is a redirect to a third party that would
- * then learn which practice is auditing invoices. No magic links, because they need an SMTP
- * relay — a piece of infrastructure that does not exist here yet and that would silently become a
- * dependency of signing in.
+ * **Email and password always; Google only where a deployment has configured it.** The password
+ * flow is the one that must work everywhere, so it is unconditional. Google is registered only when
+ * `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are both set — an OAuth button is a redirect to a
+ * third party that then learns which practice is auditing invoices at what time, which is a real
+ * disclosure to make on this application and therefore a per-deployment decision rather than a
+ * default. `lib/auth-google.ts` holds that switch and the reasoning behind it, and the two auth
+ * screens ask the same function, so the button appears exactly where the endpoint behind it does.
+ *
+ * No magic links, because they need an SMTP relay — a piece of infrastructure that does not exist
+ * here yet and that would silently become a dependency of signing in.
  *
  * **`requireEmailVerification` is off.** It is the right setting for a public sign-up and the wrong
  * one here: with no mail transport configured, turning it on would create accounts nobody could
@@ -47,6 +52,7 @@ import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
 
 import { authDatabase, optionalEnv } from "@/lib/auth-db"
+import { googleCredentials } from "@/lib/auth-google"
 
 /**
  * The key every session cookie and every password reset token is signed with.
@@ -72,6 +78,8 @@ function authSecret(): string {
 }
 
 function buildAuth() {
+  const google = googleCredentials()
+
   return betterAuth({
     database: authDatabase(),
 
@@ -142,6 +150,55 @@ function buildAuth() {
       minPasswordLength: 12,
       requireEmailVerification: false,
     },
+
+    /**
+     * Google, when this deployment has an OAuth client. `undefined` — not `{}` — when it does not,
+     * so `/api/auth/sign-in/social` refuses `google` outright instead of half-answering with
+     * credentials that are empty strings.
+     *
+     * ## The redirect URI Google must be told about
+     *
+     * Better Auth serves the callback at **`/api/auth/callback/google`**, and Google refuses any
+     * `redirect_uri` that is not registered against the client character for character — scheme,
+     * host, port and path. So every origin this application is reached by needs its own entry under
+     * *Authorised redirect URIs* in the Google Cloud console:
+     *
+     *     http://localhost:3000/api/auth/callback/google      pnpm dev, and the Docker stack
+     *     https://<deployment-host>/api/auth/callback/google  each deployed origin
+     *
+     * The path is Better Auth's and is not configurable here; what varies is the origin, which
+     * Better Auth derives per request unless `BETTER_AUTH_URL` states it. A proxy that terminates
+     * TLS on a different hostname than this process sees is exactly the case where that variable
+     * has to be set — otherwise the `redirect_uri` sent to Google is the internal origin, which is
+     * not the one registered, and the flow dies at Google with `redirect_uri_mismatch`.
+     *
+     * ## Account linking is deliberately not loosened
+     *
+     * Somebody who registered with a password and later clicks "Mit Google anmelden" at the same
+     * address is **not** signed in: Better Auth refuses to attach a Google identity to a local user
+     * whose own email address was never verified, and redirects to `?error=account_not_linked`.
+     * That looks like a bug and is the correct behaviour. `requireEmailVerification` is off here
+     * (there is no mail transport — see above), so *every* password account in this database has
+     * `emailVerified: false`, and relaxing the gate would mean anyone who registers an account at a
+     * colleague's address gets handed that colleague's Google identity the first time they sign in.
+     * `components/auth/auth-messages.ts` turns that redirect into a sentence that says to use the
+     * password instead, which is the honest answer until there is an SMTP relay to verify with.
+     */
+    socialProviders: google
+      ? {
+          google: {
+            clientId: google.clientId,
+            clientSecret: google.clientSecret,
+            /**
+             * Always ask which account, rather than silently reusing whichever Google session the
+             * browser already has. A reviewer signing in to a clinical tool from a machine with a
+             * personal Google account logged in is the common case, and the default — straight
+             * through, no prompt — is how the audit log ends up naming the wrong person.
+             */
+            prompt: "select_account",
+          },
+        }
+      : undefined,
 
     session: {
       expiresIn: 60 * 60 * 24 * 7,

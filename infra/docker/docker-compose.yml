@@ -206,6 +206,17 @@ services:
       # Only needed when a proxy terminates TLS on a different hostname than the container sees.
       # Same-origin use — which is all this application does — needs nothing here.
       BETTER_AUTH_URL: "${BETTER_AUTH_URL:-}"
+      #
+      # OPTIONAL, and off unless BOTH are set: with neither, the Google provider is not registered
+      # and no button is rendered — email and password remain the way in. Setting one alone logs a
+      # warning and counts as unset, so a typo here cannot take down sign-in generally.
+      #
+      # Google must be told the exact callback, character for character, under "Authorised redirect
+      # URIs" — for this stack that is http://localhost:${WEB_PORT:-3000}/api/auth/callback/google.
+      # Change WEB_PORT and the registered URI has to change with it. The secret belongs in the
+      # deployment's secret store, never in a committed file; see apps/web/.env.example.
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
     # No `volumes:` here — this service runs the standalone bundle apps/web/Dockerfile traces at
     # build time, nothing else. The dev overlay swaps the Dockerfile and adds the bind mounts; see
     # infra/docker/docker-compose.dev.yml.

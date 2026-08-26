@@ -93,6 +93,17 @@ behind it is written into the audit log for everything you do (`audit_events.act
 is one of the gaps [`docs/compliance/PRIVATE_DATA_WARNING.md`](docs/compliance/PRIVATE_DATA_WARNING.md)
 tracks.
 
+**Google sign-in is optional and off.** Set `GOOGLE_CLIENT_ID` *and* `GOOGLE_CLIENT_SECRET` and a
+*Mit Google anmelden* button appears on both auth screens; leave them unset and the provider is
+never registered and no button is rendered. Register
+`http://localhost:3000/api/auth/callback/google` under *Authorised redirect URIs* on the OAuth
+client — Google matches it character for character — and read the section in
+[`apps/web/.env.example`](apps/web/.env.example) first: it is a redirect to a third party that then
+knows who signed in to this deployment and when, which is a decision to make per deployment rather
+than a default. Note that an account created here with a password cannot then sign in with Google at
+the same address; Better Auth will not link the two while the local address is unverified, and with
+no mail transport configured none of them is.
+
 The production-parity stack needs one thing set, and refuses to start without it rather than
 defaulting: `BETTER_AUTH_SECRET`, which signs the session cookies. A value that changes between
 boots signs sessions the next container cannot verify.
