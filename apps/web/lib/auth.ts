@@ -46,7 +46,7 @@
 import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
 
-import { authDatabase } from "@/lib/auth-db"
+import { authDatabase, optionalEnv } from "@/lib/auth-db"
 
 /**
  * The key every session cookie and every password reset token is signed with.
@@ -58,8 +58,8 @@ import { authDatabase } from "@/lib/auth-db"
  * repository is not a secret and pretending otherwise is worse than saying so.
  */
 function authSecret(): string {
-  const configured = process.env.BETTER_AUTH_SECRET
-  if (configured && configured.length > 0) return configured
+  const configured = optionalEnv("BETTER_AUTH_SECRET")
+  if (configured) return configured
 
   if (process.env.NODE_ENV === "production") {
     throw new Error(
@@ -79,10 +79,60 @@ function buildAuth() {
      * Where the auth endpoints live, for the links Better Auth generates.
      *
      * Unset is fine for same-origin use, which is all this application does — every call to
-     * `/api/auth/*` comes from the same host that served the page. It is read from the environment
-     * so a deployment behind a proxy that terminates TLS on another hostname can state its origin.
+     * `/api/auth/*` comes from the same host that served the page, and Better Auth then derives the
+     * origin from the incoming request. It is read from the environment so a deployment behind a
+     * proxy that terminates TLS on another hostname can state its public origin.
+     *
+     * **`optionalEnv`, not `process.env` directly, and the difference is not cosmetic.** Compose
+     * passes an unset variable through as `""` (`BETTER_AUTH_URL: "${BETTER_AUTH_URL:-}"`), and an
+     * empty string here is not the same as `undefined`: Better Auth takes it as a *configured* base
+     * URL, derives `trustedOrigins` from it, and then rejects every request whose `Origin` header
+     * does not match — which is every browser sign-in, since a browser always sends `Origin` on a
+     * POST. The symptom is a login form answering `403 INVALID_ORIGIN` while `curl` (which sends no
+     * `Origin`) works fine, and nothing about it points at an empty environment variable.
      */
-    baseURL: process.env.BETTER_AUTH_URL,
+    baseURL: optionalEnv("BETTER_AUTH_URL"),
+
+    /**
+     * The CSRF check: a state-changing request is accepted only if its `Origin` is the host the
+     * browser actually addressed.
+     *
+     * Better Auth's default is to trust `baseURL` alone, and with `baseURL` unset it derives one
+     * per request from `request.url`. That derivation is what breaks in a container: `next dev`
+     * binds `0.0.0.0`, so `request.url` is `http://0.0.0.0:3000/…` while the browser's `Origin` is
+     * `http://localhost:3000` — the two never match, and every sign-in answers `403 INVALID_ORIGIN`
+     * while `curl` (which sends no `Origin`, so the check is skipped) works perfectly. The same
+     * mismatch appears behind any proxy, and under any hostname a developer reaches the app by.
+     *
+     * `Host` is the right thing to compare against instead, and comparing it to `Origin` *is* the
+     * classic same-origin CSRF check rather than a weakening of one. A browser sets both headers
+     * itself and a page cannot forge either: a cross-site POST from `evil.example` carries
+     * `Origin: https://evil.example` against our own `Host`, and is refused. A non-browser client
+     * can set both to anything, which is irrelevant — CSRF is about a browser attaching the
+     * victim's cookie to somebody else's request, and a client writing its own headers has no
+     * cookie to attach.
+     *
+     * `x-forwarded-host` wins when present, because behind a proxy that is the host the browser
+     * used and `Host` is the internal one. When the proxy does not say which scheme it terminated,
+     * both are accepted for that exact host: guessing wrong would reject every request, and the
+     * scheme is not what this check is protecting.
+     *
+     * A configured `BETTER_AUTH_URL` still applies on top of this — it is what a deployment states
+     * when its public origin is not something the request headers can reveal.
+     */
+    trustedOrigins: (request?: Request) => {
+      // Called without a request during initialisation, and once per request afterwards. An empty
+      // list is the right answer to "which origins does this instance trust in the abstract": with
+      // no request there is no host to compare against, and inventing one would trust it forever.
+      const headers = request?.headers
+      if (!headers) return []
+
+      const host = headers.get("x-forwarded-host") ?? headers.get("host")
+      if (!host) return []
+
+      const proto = headers.get("x-forwarded-proto")
+      return proto ? [`${proto}://${host}`] : [`https://${host}`, `http://${host}`]
+    },
 
     secret: authSecret(),
 

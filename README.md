@@ -106,10 +106,25 @@ BETTER_AUTH_SECRET=$(openssl rand -base64 32) \
 `govatax-postgres-data` volume, which holds approval records — a decision, not a side effect of
 stopping. Ports are overridable with `WEB_PORT` and `POSTGRES_PORT`.
 
-Keep the `--build`. The engine bind-mounts `apps/engine/app`, so a plain `up` runs the working
-tree's code inside whatever image was last built — and after a pull that adds a dependency, that
-image no longer has it. The container's entrypoint checks for this and stops with the package name
-and this command rather than crash-looping on the import; `CHECK_DEPS=false` skips the check.
+Keep the `--build`, and after a pull that adds a dependency add `--renew-anon-volumes` too:
+
+```bash
+docker compose -f infra/docker/docker-compose.dev.yml up --build --renew-anon-volumes
+```
+
+Both services bind-mount the working tree, so a plain `up` runs current code inside whatever was
+installed the last time their packages were built — and after a pull that adds a dependency, that
+install no longer has it. The two need different flags to fix, which is the whole reason this
+paragraph exists. The engine keeps its packages in an image layer, so `--build` refreshes them. The
+web app's `node_modules` is an **anonymous volume**, which compose *keeps* when it recreates a
+container: a fresh image gets the same stale volume mounted back over it, and `--build` alone
+changes nothing. `--renew-anon-volumes` replaces it. Named volumes are untouched by that flag, so
+the Postgres data survives it.
+
+Both containers check for this on start and stop with the missing package names and the right
+command rather than failing obscurely — the engine would otherwise crash-loop on an import, and the
+web app would answer 404 to every request while reporting itself `Up (unhealthy)`.
+`CHECK_DEPS=false` skips either check.
 
 ### Working on one tier at a time
 

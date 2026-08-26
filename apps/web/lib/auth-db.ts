@@ -68,6 +68,21 @@ type Resolved =
  */
 const DEVELOPMENT_SQLITE_FILE = path.join(process.cwd(), "..", "engine", "test.db")
 
+/**
+ * One environment variable, or `undefined` when it is missing **or blank**.
+ *
+ * The blank half is the point. Compose writes an unconfigured variable through as an empty string
+ * (`BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-}"`), as do Kubernetes manifests and most `.env`
+ * loaders, so `process.env.X ?? fallback` reads a variable nobody set as *set to nothing* and skips
+ * the fallback. Every caller here treats "not configured" as a real state with a defined behaviour —
+ * derive the origin from the request, fall back to `DATABASE_URL`, refuse in production — and this
+ * is what makes that state reachable from inside a container.
+ */
+export function optionalEnv(name: string): string | undefined {
+  const value = process.env[name]
+  return value !== undefined && value.trim() !== "" ? value : undefined
+}
+
 /** `postgresql+asyncpg://…` → `postgresql://…`; `sqlite+aiosqlite:///x` → `sqlite:///x`. */
 export function normaliseDatabaseUrl(raw: string): string {
   return raw.replace(/^([a-z0-9]+)\+[a-z0-9_]+:/i, "$1:")
@@ -114,7 +129,7 @@ export function parseDatabaseUrl(raw: string): Resolved {
  * default rather than a deployment target.
  */
 export function authDatabase(): AuthDatabase {
-  const configured = process.env.AUTH_DATABASE_URL ?? process.env.DATABASE_URL
+  const configured = optionalEnv("AUTH_DATABASE_URL") ?? optionalEnv("DATABASE_URL")
 
   if (!configured) {
     if (process.env.NODE_ENV === "production") {
