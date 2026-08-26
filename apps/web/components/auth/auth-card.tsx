@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { Card, CardContent, CardDescription, CardHeader } from "@workspace/ui/components/card"
+import { Separator } from "@workspace/ui/components/separator"
 
 /**
  * The frame both auth screens sit in: the wordmark, one card, and the standing disclaimer.
@@ -22,12 +23,22 @@ import { Card, CardContent, CardDescription, CardHeader } from "@workspace/ui/co
 export function AuthCard({
   title,
   description,
+  alert,
   children,
+  social,
   footer,
 }: {
   title: string
   description: string
+  /**
+   * A failure that happened before this render — the `?error=` an OAuth round-trip came back with.
+   * Above the form rather than beside the button that caused it, because by the time it is read the
+   * reader has been to Google and back and no longer has that button in view.
+   */
+  alert?: React.ReactNode
   children: React.ReactNode
+  /** The Google button, on deployments that have one. Omitted entirely on those that do not. */
+  social?: React.ReactNode
   /** The link to the other screen — "Noch kein Konto?" and its counterpart. */
   footer: React.ReactNode
 }) {
@@ -49,7 +60,32 @@ export function AuthCard({
           <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {alert}
           {children}
+          {social ? (
+            <div className="space-y-6">
+              {/*
+                The labelled rule, in the one arrangement that survives a long label and a narrow
+                phone: the line is absolutely positioned behind the text, and the text carries the
+                card's own background so it punches a hole in it. Two <Separator>s flanking a span
+                is the other common spelling, and it collapses the moment the label wraps.
+
+                `bg-card` has to stay in step with <Card>'s own background — this is the one place
+                in the application where a token is repeated in order to erase what is behind it.
+                aria-hidden because the rule is decoration and the label names nothing a
+                screen-reader user needs; the button below it already says what it does.
+              */}
+              <div className="relative" aria-hidden="true">
+                <Separator className="absolute inset-x-0 top-1/2" />
+                <div className="relative flex justify-center">
+                  <span className="bg-card text-muted-foreground px-3 text-xs">
+                    Oder fortfahren mit
+                  </span>
+                </div>
+              </div>
+              {social}
+            </div>
+          ) : null}
           <p className="text-muted-foreground text-center text-sm">{footer}</p>
         </CardContent>
       </Card>

@@ -41,6 +41,29 @@ test("die Anmeldeseite selbst ist öffentlich", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Registrieren" })).toBeVisible()
 })
 
+/**
+ * A failed Google sign-in comes back as a redirect carrying `?error=<code>`, which is the only way
+ * that failure can be reported — there is no response for a component to catch. Two properties are
+ * worth holding: the code becomes a German sentence, and the code itself never reaches the page.
+ *
+ * The second one is the reason this test exists at all. That parameter is in a URL anyone can send,
+ * and part of its vocabulary comes from Google rather than from us; a login screen that rendered it
+ * verbatim would display whatever a phishing link put there. Both cases run without any Google
+ * configuration, because the page reads the parameter regardless of whether the button is shown.
+ */
+test("eine fehlgeschlagene Google-Anmeldung wird auf Deutsch erklärt", async ({ page }) => {
+  await page.goto("/login?error=account_not_linked")
+
+  await expect(page.getByRole("alert")).toContainText("Passwort")
+})
+
+test("ein unbekannter Fehlercode wird nicht in die Seite geschrieben", async ({ page }) => {
+  await page.goto(`/login?error=${encodeURIComponent("<b>nicht-echt</b>")}`)
+
+  await expect(page.getByRole("alert")).toContainText("Anmeldung mit Google ist fehlgeschlagen")
+  await expect(page.getByText("nicht-echt")).toHaveCount(0)
+})
+
 test("ein API-Aufruf ohne Sitzung wird abgelehnt, nicht umgeleitet", async ({ request }) => {
   // A redirect here would be worse than a refusal: `fetch` follows it, receives the login page's
   // HTML with status 200, and the caller reports "invalid JSON from the engine" — a wrong answer to

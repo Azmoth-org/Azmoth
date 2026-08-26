@@ -37,7 +37,11 @@ setup("angemeldet", async ({ page, request }) => {
   await page.goto("/login")
   await page.getByLabel("E-Mail").fill(EMAIL)
   await page.getByLabel("Passwort").fill(PASSWORD)
-  await page.getByRole("button", { name: "Anmelden" }).click()
+  // `exact`, because Playwright matches an accessible name by substring by default and the Google
+  // button next to this one is labelled "Mit Google anmelden". Without it the locator resolves to
+  // two elements on any deployment that has GOOGLE_CLIENT_ID set, and the suite fails on strict
+  // mode rather than on anything real.
+  await page.getByRole("button", { name: "Anmelden", exact: true }).click()
 
   // The dashboard, not merely "not the login page": the redirect after sign-in is what makes the
   // session usable, and landing back on `/login` is exactly the failure this must not pass through.
