@@ -29,6 +29,7 @@ import {
 
 import { NAV_ITEMS, activeHref, type NavItem } from "@/components/layout/nav"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { UserMenu, type SessionUser } from "@/components/layout/user-menu"
 
 /**
  * The frame every screen sits in.
@@ -65,14 +66,23 @@ import { ThemeToggle } from "@/components/layout/theme-toggle"
  *
  * `defaultOpen` comes from the server, read out of the same cookie the provider writes. Without it
  * the first paint is always the expanded rail, which then snaps shut for anyone who collapsed it.
+ *
+ * So does `user`. The shell is only ever rendered by `app/(app)/layout.tsx`, which has already
+ * resolved the Better Auth session — that resolution is what decides whether any of this renders at
+ * all — so who is signed in arrives as a prop rather than being fetched again from the browser. It
+ * is optional because one caller has no session to hand it: `app/not-found.tsx`, which is served for
+ * a URL that matches no route and therefore never ran the layout.
  */
 export function AppShell({
   children,
   defaultOpen = true,
+  user,
 }: {
   children: React.ReactNode
-  /** The persisted rail state, read from the `sidebar_state` cookie in the root layout. */
+  /** The persisted rail state, read from the `sidebar_state` cookie in `(app)/layout.tsx`. */
   defaultOpen?: boolean
+  /** The signed-in person, for the account menu in the top bar. */
+  user?: SessionUser
 }) {
   const pathname = usePathname()
   const active = activeHref(pathname)
@@ -132,6 +142,17 @@ export function AppShell({
               Nur synthetische Daten
             </Badge>
             <ThemeToggle />
+            {user ? (
+              <>
+                {/*
+                  A rule between the tooling and the identity. The theme toggle changes how this
+                  screen looks; the menu beside it ends the session — two very different weights of
+                  action, and on a bar this narrow a separator is the cheapest way to say so.
+                */}
+                <Separator orientation="vertical" className="mx-0.5 h-4" />
+                <UserMenu user={user} />
+              </>
+            ) : null}
           </div>
         </header>
 

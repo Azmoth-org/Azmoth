@@ -17,6 +17,11 @@ import { Button } from "@workspace/ui/components/button"
  *
  * `digest` is included because it is the only handle that ties what the reader saw to the line in
  * the server log — the message itself is redacted in production builds.
+ *
+ * It stays at the root rather than moving into `(app)` with the screens, so that a render error on
+ * `/login` gets this page too — a German explanation and a way back — instead of the Next.js
+ * default. The cost is that it no longer inherits the shell's `<main>`, which is why it now brings
+ * its own page frame; the alert itself is self-contained and reads correctly without a sidebar.
  */
 export default function GlobalError({
   error,
@@ -32,26 +37,28 @@ export default function GlobalError({
   }, [error])
 
   return (
-    <Alert variant="destructive">
-      <AlertOctagonIcon />
-      <AlertTitle>Diese Ansicht konnte nicht dargestellt werden</AlertTitle>
-      <AlertDescription className="space-y-3">
-        <p>
-          Das ist ein Fehler in der Oberfläche, nicht ein Befund zu einer Rechnung. Es wurde nichts
-          freigegeben, abgelehnt oder exportiert — Statuswechsel finden ausschließlich in der Engine
-          statt und werden dort protokolliert.
-        </p>
-        {error.digest ? (
-          <p className="text-xs">
-            Kennung für das Server-Log: <span className="font-mono">{error.digest}</span>
+    <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
+      <Alert variant="destructive">
+        <AlertOctagonIcon />
+        <AlertTitle>Diese Ansicht konnte nicht dargestellt werden</AlertTitle>
+        <AlertDescription className="space-y-3">
+          <p>
+            Das ist ein Fehler in der Oberfläche, nicht ein Befund zu einer Rechnung. Es wurde nichts
+            freigegeben, abgelehnt oder exportiert — Statuswechsel finden ausschließlich in der Engine
+            statt und werden dort protokolliert.
           </p>
-        ) : null}
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={reset}>
-            Erneut versuchen
-          </Button>
-        </div>
-      </AlertDescription>
-    </Alert>
+          {error.digest ? (
+            <p className="text-xs">
+              Kennung für das Server-Log: <span className="font-mono">{error.digest}</span>
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={reset}>
+              Erneut versuchen
+            </Button>
+          </div>
+        </AlertDescription>
+      </Alert>
+    </main>
   )
 }

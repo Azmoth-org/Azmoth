@@ -1,12 +1,21 @@
 import { defineConfig, devices } from "@playwright/test"
 
+import { STORAGE_STATE } from "./e2e/storage-state"
+
 /**
  * Playwright, for the one thing this repository has no other way of catching: a frontend that
  * builds, typechecks and lints cleanly and still renders a broken screen.
  *
- * Deliberately small. There is exactly one spec — `e2e/dashboard-smoke.spec.ts` — and it walks the
- * core path a reader takes, dashboard to a stored proposal. It is a regression tripwire, not a test
- * suite, and it is configured like one: one browser, no retries, no fixtures of its own.
+ * Deliberately small. Two specs — `e2e/dashboard-smoke.spec.ts` walks the core path a reader takes,
+ * dashboard to a stored proposal, and `e2e/auth-guard.spec.ts` checks that a signed-out visitor
+ * cannot walk it at all. It is a regression tripwire, not a test suite, and it is configured like
+ * one: one browser, no retries.
+ *
+ * ## Two projects, because the suite needs a session
+ *
+ * Every screen is behind Better Auth. `setup` signs in once and parks the cookie in
+ * `e2e/.auth/state.json`; `chromium` depends on it and starts every test from that state. The one
+ * spec that must run signed out overrides `storageState` for itself — see `auth-guard.spec.ts`.
  *
  * ## What has to be running
  *
@@ -19,6 +28,10 @@ import { defineConfig, devices } from "@playwright/test"
  *   `http://localhost:8000`) — NOT started here. Playwright cannot bring up Soufflé, Clingo and a
  *   database, and a smoke test that silently passed against a dead engine would be worse than no
  *   smoke test: the dashboard renders "Engine nicht erreichbar" perfectly well.
+ *
+ * The web app also needs its accounts database to exist — `pnpm --filter web auth:migrate` once,
+ * against whatever `AUTH_DATABASE_URL` points at. The `setup` project creates its own account there
+ * on the first run and reuses it afterwards.
  *
  * The spec fails with a sentence naming the missing engine rather than a locator timeout, so the
  * distinction between "the UI regressed" and "you forgot to start the backend" survives to the
@@ -68,8 +81,20 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
 
-  /** Chromium only. A second engine doubles the run for a test that asserts on text and links. */
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  /**
+   * Chromium only. A second browser doubles the run for a test that asserts on text and links.
+   *
+   * `setup` is a project rather than a global hook so that its failure is reported as a named test
+   * — "angemeldet" — instead of as an unexplained collapse of everything that depends on it.
+   */
+  projects: [
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"], storageState: STORAGE_STATE },
+      dependencies: ["setup"],
+    },
+  ],
 
   /**
    * `reuseExistingServer` is unconditional, CI included. The app is also what the Docker stack

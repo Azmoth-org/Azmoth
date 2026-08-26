@@ -44,6 +44,24 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+#: Tables in this database that Alembic does not own.
+#:
+#: Better Auth keeps its sessions and credentials in the same database as the proposals, and
+#: creates them from the Next.js app with its own migrator (`pnpm --filter web auth:migrate`) —
+#: see `apps/web/lib/auth.ts`. They are therefore absent from `Base.metadata`, and without this
+#: filter the first `alembic revision --autogenerate` run against a real deployment would produce a
+#: migration that drops every user account in it.
+#:
+#: A denylist rather than "only manage what is in the metadata", because the latter is what
+#: autogenerate is *for*: a table that disappears from `app/db/models.py` should still produce a
+#: drop. This names the four tables that are somebody else's.
+BETTER_AUTH_TABLES = frozenset({"user", "session", "account", "verification"})
+
+
+def _include_object(_object, name, type_, _reflected, _compare_to) -> bool:
+    """Keep Better Auth's tables out of autogenerate. No effect on `upgrade`/`downgrade`."""
+    return not (type_ == "table" and name in BETTER_AUTH_TABLES)
+
 
 def _url() -> str:
     return get_settings().database_url
@@ -54,6 +72,7 @@ def _configure(**kwargs) -> None:
         target_metadata=target_metadata,
         compare_type=True,
         compare_server_default=True,
+        include_object=_include_object,
         # SQLite cannot ALTER a column in place. Batch mode rewrites the table instead, so a future
         # migration written against Postgres still applies to a local SQLite database.
         render_as_batch=_url().startswith("sqlite"),

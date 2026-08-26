@@ -44,8 +44,17 @@ COPY packages/ui packages/ui
 ENV NEXT_TELEMETRY_DISABLED=1
 EXPOSE 3000
 
+# COPYd on its own, after the source, so that it exists at the image path the ENTRYPOINT names even
+# though compose will shadow apps/web with the working tree a moment later. Both copies are the same
+# file; the mounted one is what actually runs, which is correct — the check should describe the tree
+# it is checking.
+COPY --chmod=755 apps/web/scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
 # `--hostname 0.0.0.0`, not the dev server's localhost default: inside a container that means nothing
 # outside it can connect, the same fact apps/web/Dockerfile's runner stage documents for `next start`.
 # `pnpm --filter web exec` rather than `pnpm --filter web dev`, so a caller can still override the
 # command (e.g. a shell for debugging) without fighting the `dev` script's own argv.
+#
+# The entrypoint above runs before this, and before any override of it.
 CMD ["pnpm", "--filter", "web", "exec", "next", "dev", "--hostname", "0.0.0.0", "--port", "3000"]

@@ -14,19 +14,20 @@ audit log. All of its bundled data is synthetic: three hand-written clinical cas
 hand-written PADnext delivery, each stating in its own text that it is synthetic, with a test that
 fails if a fixture starts to look like a real record.
 
-**The database changes what is missing, not whether real data may be processed.** Two items below
-moved; every other one is untouched, and the answer to "can we try one real invoice" is still no.
+**Neither the database nor the login changes whether real data may be processed.** Three items below
+have moved since this file was written; every other one is untouched, and the answer to "can we try
+one real invoice" is still no.
 
 ## What is NOT implemented
 
 | Missing | Consequence |
 | --- | --- |
-| **Access control** | every endpoint answers unauthenticated. There is no user, no role, no tenant, no session. `approved_by` is a string the caller supplies, not an identity the service verified, and the audit log therefore records reads as `anonymous` |
-| **Audit logging** | **partially closed.** `audit_events` is an append-only log of every create, read, approval, rejection and export, with an actor and a timestamp, written in the same transaction as the change it records. What is still missing is the part that depends on access control — the actor is self-declared, not authenticated — and a defined retention period. `REVOKE UPDATE, DELETE` for the application role is documented in the migration and belongs to the deployment's grants |
+| **Access control** | **partially closed.** The web application requires a Better Auth session — email and password, sessions in the same Postgres — and every screen and every `/api/engine/*` proxy route refuses a request without one. Four things are still missing. **Sign-up is open**: anyone who can reach `/signup` can make an account, so there is authentication but no *authorisation* to be here at all; an invite flow or an SSO integration is what closes it. **There are no roles**: every account can approve, reject and export, so there is no separation between a reviewer and an administrator and no tenant boundary. **The engine itself authenticates nobody**: it trusts an `X-User-ID` header the web tier sets, which is sound only because the engine is not published to a browser and that proxy is its only caller — a Bearer token the engine verifies is the next step (`apps/engine/app/api/identity.py` says so at the point where it would go). And **`approved_by` is still a typed string**, not the session identity: the person who signs an approval and the account that was signed in are recorded separately and are not required to match |
+| **Audit logging** | **partially closed.** `audit_events` is an append-only log of every create, read, approval, rejection and export, with an actor and a timestamp, written in the same transaction as the change it records. The actor is now a real `user.id` for anything done through the UI — resolvable to a person by a join, and mirrored onto `proposals.created_by` and `batch_jobs.created_by` for the queries a data-subject request actually asks — rather than the `anonymous` it used to be. What is still missing is a defined retention period, and the caveat above about the engine trusting a header rather than verifying a token. `REVOKE UPDATE, DELETE` for the application role is documented in the migration and belongs to the deployment's grants |
 | **Encryption at rest** | none. There is a database now (Postgres), and nothing encrypts it — not the volume, not a column, and there is no key management. Cached results still live in process memory |
-| **Encryption in transit** | the service speaks plain HTTP; TLS is the deployment's job and no deployment exists |
+| **Encryption in transit** | the service speaks plain HTTP; TLS is the deployment's job and no deployment exists. Note that this now carries a session cookie and a password on the sign-in request, so plain HTTP is a credential exposure and not only a data one. The cookie is marked `Secure` and `HttpOnly` under `NODE_ENV=production`, which is the half the application can enforce |
 | **Pseudonymisation / anonymisation** | none. The input contract happens to carry no identifiers, which is not the same as a pseudonymisation scheme |
-| **Retention and deletion** | no policy, no mechanism, no way to answer an erasure request |
+| **Retention and deletion** | no policy, no mechanism, no way to answer an erasure request. Note that there is now a `user` table holding names and email addresses, and that `audit_events` is append-only by construction — so an erasure request touching an actor id is a question this schema currently has no answer to |
 | **Data minimisation review** | never done against a real record |
 | **§ 203 StGB workflow** | **nothing.** No consent capture, no Schweigepflichtentbindung, no processor-role documentation, no vendor obligation chain |
 | **AVV (Auftragsverarbeitungsvertrag, Art. 28 GDPR)** | none exists with anybody |

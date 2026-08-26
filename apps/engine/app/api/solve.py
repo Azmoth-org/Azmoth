@@ -19,6 +19,7 @@ from fastapi import APIRouter
 from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import pipeline, proposals
+from app.api.identity import RequestActor
 from app.schemas import Proposal, SolveRequest
 
 log = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ router = APIRouter(tags=["solve"])
 
 
 @router.post("/solve", response_model=Proposal)
-async def solve(request: SolveRequest) -> Proposal:
+async def solve(request: SolveRequest, actor: RequestActor) -> Proposal:
     """Run the deterministic pipeline and store the result as a DRAFT proposal.
 
     The response is a proposal, never an invoice: `status` is `DRAFT` and stays there until a
@@ -59,4 +60,8 @@ async def solve(request: SolveRequest) -> Proposal:
     # Read back off the row that was written, not echoed from the object in hand: if persisting
     # ever lost or mangled a field, the first request would say so instead of the first restart.
     # The `CREATED` audit event is written in the same transaction.
-    return await proposals().create_proposal(proposal)
+    #
+    # `actor` is the Better Auth user id the web tier forwarded, or `anonymous` for a call with no
+    # session — a direct `curl`, `/docs`, the test suite. It lands on `proposals.created_by` and on
+    # the `CREATED` event; see `app.api.identity` for why the header is recorded but not trusted.
+    return await proposals().create_proposal(proposal, actor=actor)

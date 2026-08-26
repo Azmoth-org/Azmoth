@@ -69,6 +69,9 @@ from app.schemas.batch import (
 from app.schemas.padnext import PadnextAuditReport
 from app.services.export import build_batch_zip
 
+# The actor vocabulary is defined once, next to the audit log that gave it meaning.
+from app.services.proposal_store import SYSTEM_ACTOR
+
 log = logging.getLogger(__name__)
 
 #: Public batch handle: `batch_<16 hex>`. The same shape and the same 64 bits of entropy as
@@ -306,12 +309,20 @@ class BatchAuditService:
 
     # -- create ----------------------------------------------------------------------------
 
-    async def create_batch(self, uploads: Sequence[Upload]) -> tuple[BatchAuditAccepted, list[Upload]]:
+    async def create_batch(
+        self, uploads: Sequence[Upload], *, actor: str = SYSTEM_ACTOR
+    ) -> tuple[BatchAuditAccepted, list[Upload]]:
         """Write the job and one row per file, all `PENDING`, in one transaction.
 
         Returns the `202` body together with the uploads re-keyed to the rows that were written, so
         the background task walks database rows it knows exist rather than re-deriving them from
         filenames — which are not unique within a batch and could not identify a row.
+
+        `actor` is the Better Auth user id the web tier forwarded (`app.api.identity`), or `system`
+        for a call that carried no session. It is stored on the job rather than in an audit event
+        because `batch_jobs` has no audit log and should not grow one: a batch is a computation the
+        engine ran, not a decision somebody took, and the only attribution question it raises is
+        "whose queue is this".
         """
         if not uploads:
             raise EmptyBatch("A batch needs at least one file.")
@@ -322,6 +333,7 @@ class BatchAuditService:
             batch_id=batch_id,
             status=str(BatchJobStatus.PENDING),
             created_at=created_at,
+            created_by=actor or SYSTEM_ACTOR,
         )
         records = [
             BatchFileRecord(job=job, filename=filename, status=str(BatchFileStatus.PENDING))

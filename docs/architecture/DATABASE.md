@@ -144,9 +144,30 @@ with the deployment's role definitions.
 
 ### `actor`, and what it does not mean
 
-There is no authentication in this service. `approved_by` is a string the caller supplies, and a
-read cannot be attributed at all — so a `VIEWED` event carries `anonymous`, and a `CREATED` event
-carries `system` because a solve is not a person.
+This service authenticates nobody, and that has not changed. What has changed is that it is no
+longer the only tier: the Next.js application in front of it holds a Better Auth session and
+forwards the signed-in user's id in `X-User-ID` on every call it proxies (`app/api/identity.py`).
+So a `CREATED` event and a `VIEWED` event now carry a real `user.id` — one that resolves to a person
+by joining Better Auth's own `user` table, which lives in this same database. A call that arrives
+without that header still carries `anonymous`, which is the truthful record for a `curl`, for
+`/docs`, and for anything reaching the engine around the proxy.
+
+The header is *recorded*, not *verified*. Nothing here checks a signature; what makes it worth
+believing is the deployment shape — the engine is not published to a browser, and the web tier is
+its only caller — rather than the header itself. A Better Auth JWT this service verifies is the next
+step, and `app/api/identity.py` is where it goes.
+
+`approved_by` is still a string the caller supplies, and it is deliberately a *different* fact from
+the session identity: the log records both who signed the approval and which account was signed in,
+and nothing requires them to agree. That is the honest shape until the identity is proven rather
+than asserted.
+
+Alongside the log, two columns answer the same question in a form that can be filtered:
+`proposals.created_by` and `batch_jobs.created_by`. "Every draft this user produced" is a query
+against the proposals table, and answering it by scanning an append-only log for `CREATED` rows
+would be the wrong shape for the one query a data-subject request actually asks. Neither is a
+foreign key to `user`: that table belongs to Better Auth and is created by its own migrator, so a
+constraint here would make this schema depend on a table `alembic upgrade head` does not create.
 
 `EXPORTED` carries whatever `exported_by` the export request supplied, and that field is required
 for the same reason `approved_by` is: an export is a thing a person or a named integration did, and
