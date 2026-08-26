@@ -16,6 +16,10 @@ coverage
 # Playwright: the browser binaries live in ~/.cache/ms-playwright, but a run leaves its report and
 # its per-failure traces/screenshots in the app directory. Both are reproducible from the spec.
 test-results/
+
+# The signed-in cookie Playwright's `setup` project parks for the rest of the run. A live
+# credential for a live application, and machine-local by construction — see apps/web/e2e/auth.setup.ts.
+apps/web/e2e/.auth/
 playwright-report/
 blob-report/
 .playwright/

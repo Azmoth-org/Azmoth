@@ -33,6 +33,16 @@ WORKDIR /repo
 # changes and reused when application code changes. Copying the source first would make every edit
 # re-run a full install.
 FROM base AS deps
+# node-gyp's toolchain, for `better-sqlite3`. Its published prebuilds are glibc binaries and this is
+# a musl image, so `prebuild-install` misses and it compiles from source — without these three the
+# install fails outright. They cost a layer that is never shipped: `runner` starts from a clean base
+# and copies only the traced bundle.
+#
+# It is here for the development path rather than for this image's own use: `lib/auth-db.ts` refuses
+# a SQLite `AUTH_DATABASE_URL` under NODE_ENV=production, so what actually runs here is `pg`. Making
+# the driver optional to save the layer would mean an install that succeeds or fails depending on
+# the host's libc, which is a worse trade than two minutes of compile in a discarded stage.
+RUN apk add --no-cache python3 make g++
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/web/package.json apps/web/
 COPY packages/contracts/package.json packages/contracts/
@@ -73,6 +83,13 @@ ENV NODE_ENV=production \
 # container — there is no engine on the container's own loopback. The deployment supplies it
 # (docker-compose.yml sets http://engine:8000); getting it wrong then shows up as the engine being
 # unreachable on a screen that says so, rather than as a silent fallback to a host that cannot exist.
+#
+# For the same reason there is no AUTH_DATABASE_URL and no BETTER_AUTH_SECRET default. Both are
+# required at run time and both are refused rather than defaulted under NODE_ENV=production (see
+# `lib/auth-db.ts` and `lib/auth.ts`): a generated-per-boot signing key invalidates every session on
+# every deploy, and a defaulted database silently writes password hashes to a file in the container.
+# The schema those two need is created by `pnpm --filter web auth:migrate`, which compose runs as a
+# one-shot service before this one starts.
 
 WORKDIR /srv
 

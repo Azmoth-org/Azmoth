@@ -73,18 +73,34 @@ either one to run alone with whatever tooling you use, an IDE task included. The
 Postgres volume, so switching between them keeps your data; just don't run both at once, since their
 container names collide.
 
-Either way it starts three services in order — Postgres, then the engine (which migrates the
-database with `alembic upgrade head` before serving), then the web app, each gated on the previous
-one's healthcheck:
+Either way it starts four services in order — Postgres, then the engine (which migrates the
+proposals and the audit log with `alembic upgrade head` before serving) and a one-shot that creates
+Better Auth's tables in the same database, then the web app, each gated on the previous one:
 
 | | |
 | --- | --- |
 | <http://localhost:3000> | the UI — Prüfung, Rechnungsprüfung, Stapelprüfung, Regelprüfung |
 | <http://localhost:8000/api/v1/health> | the engine's API, and `/docs` for the OpenAPI explorer |
 
-Nothing needs configuring first. `ENGINE_BASE_URL` is set to `http://engine:8000` inside the stack,
-and it is deliberately server-side only — the browser never learns the engine's address and talks to
-it only through the Next route handlers under `/api/engine/*`.
+Nothing needs configuring first for the dev stack. `ENGINE_BASE_URL` is set to
+`http://engine:8000` inside it, and it is deliberately server-side only — the browser never learns
+the engine's address and talks to it only through the Next route handlers under `/api/engine/*`.
+
+**Every screen is behind a login.** Open <http://localhost:3000>, get sent to `/login`, and use
+*Registrieren* once to create an account; the session cookie then carries you, and the user id
+behind it is written into the audit log for everything you do (`audit_events.actor`,
+`proposals.created_by`). Sign-up is open — that is fine for a build holding only synthetic data and
+is one of the gaps [`docs/compliance/PRIVATE_DATA_WARNING.md`](docs/compliance/PRIVATE_DATA_WARNING.md)
+tracks.
+
+The production-parity stack needs one thing set, and refuses to start without it rather than
+defaulting: `BETTER_AUTH_SECRET`, which signs the session cookies. A value that changes between
+boots signs sessions the next container cannot verify.
+
+```bash
+BETTER_AUTH_SECRET=$(openssl rand -base64 32) \
+  docker compose -f infra/docker/docker-compose.yml up --build
+```
 
 `docker compose down` stops the stack and keeps the data; `down -v` deletes the
 `govatax-postgres-data` volume, which holds approval records — a decision, not a side effect of
@@ -99,7 +115,9 @@ and this command rather than crash-looping on the import; `CHECK_DEPS=false` ski
 
 ```bash
 # the web app against an engine you are already running
-pnpm install && pnpm dev                         # → localhost:3000
+pnpm install                                     # → localhost:3000
+pnpm --filter web auth:migrate                   # once: Better Auth's user/session/account tables
+pnpm dev
 
 # the engine on the host — needs Python 3.11 and the Soufflé 2.5 binary
 cd apps/engine
@@ -110,6 +128,13 @@ python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 See [`apps/engine/README.md`](apps/engine/README.md#install) for the Soufflé install.
+
+`auth:migrate` is idempotent and needs running only when Better Auth's schema changes. With nothing
+configured it targets the same SQLite file the engine defaults to (`apps/engine/test.db`), so the
+accounts and the proposals stay in one database — which is the point, since an audit row's actor is
+a `user.id` that has to resolve by a join. Set `AUTH_DATABASE_URL` to point both at Postgres; the
+engine's SQLAlchemy spelling (`postgresql+asyncpg://…`) is accepted and normalised, so one value can
+be shared verbatim. `--dry` prints the SQL and changes nothing.
 
 ## Shared types
 

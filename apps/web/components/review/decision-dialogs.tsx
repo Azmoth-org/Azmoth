@@ -36,9 +36,12 @@ import type { Proposal } from "@/lib/review/types"
  * reviewer who does not trust the record will re-approve, and two approvals of one proposal is
  * exactly what the status lifecycle exists to prevent.
  *
- * What the dialog still does NOT claim is that the approver's identity was *verified*. The engine
- * takes `approved_by` as a string; there is no authentication in front of it yet. So the copy below
- * says what the approval means — responsibility, recorded permanently — and says the name is
+ * What the dialog still does NOT claim is that the approver's identity was *verified*. There is a
+ * login in front of this screen now, and the session's user id travels to the engine and lands in
+ * the audit row — but `approved_by` is a separate fact: a name this dialog asks for and the engine
+ * stores as a string, with nothing requiring it to match the account that is signed in. That is
+ * deliberate rather than an oversight (a locum signing on a colleague's open workstation is a real
+ * thing, and the log records both facts), and it is why the copy below still says the name is
  * recorded, not proven.
  */
 export function ApproveDialog({
@@ -248,7 +251,8 @@ export function RejectDialog({
  *
  * `exported_by` is required for the same reason `approved_by` is — the export is a thing a person
  * did, and the log has to be able to say who. The copy below says the name is *recorded*, not
- * verified, because there is still no authentication in front of any of this.
+ * verified: reaching this screen needs a session, but the typed name is a separate fact from the
+ * account that is signed in and nothing requires the two to match. See `ApproveDialog` above.
  *
  * The export is also **once**. `EXPORTED` is terminal, so a second attempt is refused with a 409,
  * and the dialog says so before the user commits rather than after.

@@ -148,6 +148,39 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # A one-shot: create Better Auth's `user`, `session`, `account` and `verification` tables,
+  # then exit. `web` waits for it to succeed.
+  #
+  # It exists because this database has two migrators with disjoint table sets. The engine's
+  # entrypoint runs `alembic upgrade head` for the proposals and the audit log; Better Auth's
+  # schema is the library's own to define, so it is created by `apps/web/scripts/auth-migrate.ts`
+  # from the very instance `apps/web/lib/auth.ts` configures. `apps/engine/alembic/env.py`
+  # excludes those four tables from autogenerate, so the two migrators can never fight over them.
+  #
+  # It runs the dev image, which carries the whole workspace — pnpm, the script and tsx — so
+  # there is nothing extra to build.
+  #
+  # Idempotent. On every `up` after the first it finds the tables present and says it has nothing
+  # to do, which is why it belongs in the startup path rather than in a README step people miss.
+  web-auth-migrate:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile.dev
+    image: govatax-web:dev
+    command: ["pnpm", "--filter", "web", "auth:migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # The same database the engine writes proposals to, and the same credentials — the whole
+      # point is that `audit_events.actor` and `proposals.created_by` hold a `user.id` a join can
+      # resolve. The `+asyncpg` suffix is SQLAlchemy's and means nothing to `pg`;
+      # `apps/web/lib/auth-db.ts` strips it, so one value is shared verbatim between the tiers.
+      AUTH_DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-govatax}:${POSTGRES_PASSWORD:-govatax}@postgres:5432/${POSTGRES_DB:-govatax}}"
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-}"
+    # A migration that fails must fail the stack, not be retried forever by a restart policy.
+    restart: "no"
+
   web:
     build:
       context: ../..
@@ -161,17 +194,42 @@ services:
         # either works or reports a real problem — rather than showing "Engine nicht erreichbar"
         # for the twenty seconds the engine spends migrating and loading the catalog.
         condition: service_healthy
+      web-auth-migrate:
+        # Every screen is behind a login now, so a web container that came up before its `session`
+        # table existed would serve nothing but a 500 on the sign-in form.
+        condition: service_completed_successfully
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
       # Server-side ONLY, and deliberately not NEXT_PUBLIC_: the browser must never learn the
-      # engine's address. Every call goes through a Next route handler under /api/engine/*, which is
-      # also the seam authentication will eventually sit in (there is none today — see
-      # docs/compliance/PRIVATE_DATA_WARNING.md).
+      # engine's address. Every call goes through a Next route handler under /api/engine/*, and that
+      # is the seam authentication sits in — those routes refuse a request without a Better Auth
+      # session and forward the signed-in user's id to the engine, which records it in the audit log.
       #
       # `engine` is the compose service name, resolved on the default network. Overridable so the
       # same image can be pointed at an engine outside this stack.
       ENGINE_BASE_URL: "${ENGINE_BASE_URL:-http://engine:8000}"
+
+      # -- authentication ---------------------------------------------------------------------
+      # Better Auth runs inside this Next.js app, at /api/auth/*. Its tables live in the same
+      # Postgres as the proposals, so an audit row's actor resolves to a person by a join rather
+      # than by correlating two systems — see apps/web/lib/auth-db.ts.
+      AUTH_DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-govatax}:${POSTGRES_PASSWORD:-govatax}@postgres:5432/${POSTGRES_DB:-govatax}}"
+      #
+      # REQUIRED, and deliberately without a default. It signs every session cookie, so a value that
+      # changes between boots signs sessions the next container cannot verify — which presents as
+      # "everyone is randomly logged out" and is diagnosed as anything but a missing variable. The
+      # app refuses to start without it under NODE_ENV=production rather than generating one.
+      #
+      #     openssl rand -base64 32
+      #
+      # It belongs in the deployment's secret store. Nothing in this repository should ever hold a
+      # real one, and CI fails the build if a credential-shaped string is committed.
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-}"
+      #
+      # Only needed when a proxy terminates TLS on a different hostname than the container sees.
+      # Same-origin use — which is all this application does — needs nothing here.
+      BETTER_AUTH_URL: "${BETTER_AUTH_URL:-}"
     volumes:
       # Live-edit the app while developing, same idea as the engine's mounts above: change a file
       # under any of these and Next's dev server picks it up, no rebuild. `@workspace/ui` and

@@ -41,6 +41,7 @@ from fastapi import (
 )
 
 from app.api.deps import batches, pipeline
+from app.api.identity import RequestActor
 from app.errors import EmptyRequestBody, UnknownZifferError
 from app.padnext import audit_delivery, read_delivery
 from app.schemas import (
@@ -189,6 +190,7 @@ def _batch_not_found(batch_id: str) -> HTTPException:
 )
 async def padnext_batch(
     background_tasks: BackgroundTasks,
+    actor: RequestActor,
     files: list[UploadFile] = File(
         ...,
         description=(
@@ -284,7 +286,7 @@ async def padnext_batch(
 
     service = batches()
     try:
-        accepted, payloads = await service.create_batch(uploads)
+        accepted, payloads = await service.create_batch(uploads, actor=actor)
     except EmptyBatch as exc:  # pragma: no cover - guarded above; belt and braces
         raise HTTPException(status_code=400, detail={"error": "empty_batch", "message": str(exc)}) from exc
 

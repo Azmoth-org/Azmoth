@@ -3,11 +3,73 @@
  *
  * `ENGINE_BASE_URL` stays server-only on purpose: it is not `NEXT_PUBLIC_`, so the browser never
  * learns where the engine lives and cannot reach it directly. Every call goes through a route
- * handler under `/api/engine/*`, which is also the seam where authentication will eventually sit —
- * there is none today (see `docs/compliance/PRIVATE_DATA_WARNING.md`).
+ * handler under `/api/engine/*`, and that is the seam authentication sits in: `middleware.ts`
+ * refuses those routes without a session, and every function here forwards the resulting user id to
+ * the engine so its audit log can name a person.
+ *
+ * ## The session is resolved here, and a call without one is refused here
+ *
+ * There are four ways out of this module — JSON, raw bytes, multipart and a file download — and
+ * they are used by a dozen route handlers. Neither half of what the session is for can be left to
+ * the call site: a `X-User-ID` header attached per handler is one somebody forgets, and the failure
+ * is silent (the request succeeds and the audit row says `anonymous`); an access check written per
+ * handler is one somebody forgets, and *that* failure is a proposal served to whoever asked. So
+ * `requireIdentity()` is called by all four, and both properties belong to *talking to the engine*
+ * rather than to remembering to.
+ *
+ * This is the authoritative check. `middleware.ts` refuses `/api/engine/*` without a session cookie
+ * and cannot do better — it has no database and cannot verify one — so a cookie that is present but
+ * forged, expired or **revoked by a sign-out** gets past it. It does not get past here: this
+ * resolves the token against the `session` table, and a `null` answer is a 401 rather than a proxied
+ * request. Without this, signing out would stop the screens rendering while leaving the data behind
+ * them readable to a replayed cookie.
+ *
+ * Only the id travels to the engine. Not the name, not the address: the engine writes what it is
+ * given into an append-only log on a service that handles clinical data, and a record that by
+ * construction cannot be corrected or deleted is the wrong place to put a person's contact details.
+ * The id resolves to them through Better Auth's own `user` table, in the same database.
+ *
+ * The engine does not verify the header, and `apps/engine/app/api/identity.py` says so at length.
+ * What makes it trustworthy is the deployment shape — the engine is not published to the browser,
+ * and this proxy is its only caller — together with the fact that nothing reaches the engine from
+ * here without a session that was checked against the database first. A Bearer token the engine
+ * verifies itself is the next step, and `requireIdentity` is where it goes.
  */
 
+import { headers } from "next/headers"
+
+import { getAuth } from "@/lib/auth"
+
 const DEFAULT_ENGINE_BASE_URL = "http://localhost:8000"
+
+/** The header name the engine reads. Must match `USER_ID_HEADER` in `app/api/identity.py`. */
+const USER_ID_HEADER = "X-User-ID"
+
+/** What the caller must have before anything is proxied: a session the database recognises. */
+type Identity =
+  | { ok: true; headers: Record<string, string> }
+  | { ok: false; failure: EngineProxyFailure }
+
+/**
+ * The signed-in caller's identity headers, or the 401 to answer with.
+ *
+ * The message is German and says what to do about it, because it is rendered: a session can expire
+ * while a reviewer has `/review` open, and the next action they take lands here.
+ */
+async function requireIdentity(): Promise<Identity> {
+  const session = await getAuth().api.getSession({ headers: await headers() })
+  if (!session) {
+    return {
+      ok: false,
+      failure: {
+        error: "unauthenticated",
+        message: "Die Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+        status: 401,
+      },
+    }
+  }
+  return { ok: true, headers: { [USER_ID_HEADER]: session.user.id } }
+}
 
 /** How long to wait on the engine. Above its own 5 s solver timeout, so a 504 comes from the engine. */
 const ENGINE_TIMEOUT_MS = 30_000
@@ -41,11 +103,17 @@ export async function callEngine(
   const url = `${engineBaseUrl()}${path}`
   const method = init?.method ?? "GET"
 
+  const identity = await requireIdentity()
+  if (!identity.ok) return { ok: false, failure: identity.failure }
+
   let response: Response
   try {
     response = await fetch(url, {
       method,
-      headers: init?.body === undefined ? undefined : { "Content-Type": "application/json" },
+      headers: {
+        ...identity.headers,
+        ...(init?.body === undefined ? {} : { "Content-Type": "application/json" }),
+      },
       body: init?.body === undefined ? undefined : JSON.stringify(init.body),
       // A billing draft must never be served from a cache the UI does not control.
       cache: "no-store",
@@ -117,12 +185,15 @@ export async function callEngineBytes(
   { body, filename, contentType }: { body: ArrayBuffer; filename?: string; contentType?: string },
 ): Promise<EngineProxyResult> {
   const url = `${engineBaseUrl()}${path}`
+  const identity = await requireIdentity()
+  if (!identity.ok) return { ok: false, failure: identity.failure }
 
   let response: Response
   try {
     response = await fetch(url, {
       method: "POST",
       headers: {
+        ...identity.headers,
         "Content-Type": contentType ?? "application/octet-stream",
         ...(filename ? { "x-padnext-filename": filename } : {}),
       },
@@ -197,13 +268,17 @@ export async function callEngineFormData(
   form: FormData,
 ): Promise<EngineProxyResult> {
   const url = `${engineBaseUrl()}${path}`
+  const identity = await requireIdentity()
+  if (!identity.ok) return { ok: false, failure: identity.failure }
 
   let response: Response
   try {
     response = await fetch(url, {
       method: "POST",
       // No Content-Type header: `fetch` sets it from the FormData, including the boundary. Setting
-      // it by hand is the classic way to send a multipart body the far end cannot split.
+      // it by hand is the classic way to send a multipart body the far end cannot split. The
+      // identity headers are safe to set here for the same reason: they name one header, not that one.
+      headers: identity.headers,
       body: form,
       cache: "no-store",
       signal: AbortSignal.timeout(BATCH_TIMEOUT_MS),
@@ -277,12 +352,22 @@ export async function proxyEngineDownload(
 ): Promise<Response> {
   const url = `${engineBaseUrl()}${path}`
   const method = init?.method ?? "POST"
+  const identity = await requireIdentity()
+  if (!identity.ok) {
+    // A `Response`, not an `EngineProxyResult`: this function's contract is bytes-or-refusal, so
+    // the refusal has to be shaped like every other one it can produce.
+    const { status, ...failure } = identity.failure
+    return Response.json(failure, { status })
+  }
 
   let response: Response
   try {
     response = await fetch(url, {
       method,
-      headers: init?.body === undefined ? undefined : { "Content-Type": "application/json" },
+      headers: {
+        ...identity.headers,
+        ...(init?.body === undefined ? {} : { "Content-Type": "application/json" }),
+      },
       body: init?.body === undefined ? undefined : JSON.stringify(init.body),
       cache: "no-store",
       // Above `ENGINE_TIMEOUT_MS`: a batch export renders every position of every file in the

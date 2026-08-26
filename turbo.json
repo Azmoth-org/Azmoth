@@ -46,6 +46,11 @@
   "globalPassThroughEnv": [
     "ENGINE_BASE_URL",
     "PLAYWRIGHT_BASE_URL",
-    "CI"
+    "CI",
+    "NODE_ENV",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "AUTH_DATABASE_URL",
+    "DATABASE_URL"
   ]
 }

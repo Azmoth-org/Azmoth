@@ -6,11 +6,14 @@ boundary, and they are the reason `ProposalStatus` exists rather than a boolean:
 
 The record is durable and every decision is logged: the store writes the status change and its
 audit row in one transaction against Postgres (`app.services.proposal_store`), so an approval
-survives a restart and can be shown to have been made by a named person at a stated time. Two
-things are still missing before this endpoint means what a regulator would want it to mean:
-**authentication** — `approved_by` is a string the caller supplies, not an identity the service
-verified — and a **retention policy**. Both are tracked in
-`docs/compliance/PRIVATE_DATA_WARNING.md`.
+survives a restart and can be shown to have been made by a named person at a stated time.
+
+Two things are still missing before this endpoint means what a regulator would want it to mean.
+**The identity is asserted, not proven.** `approved_by` is a string the caller supplies, and the
+`X-User-ID` the web tier now forwards (`app.api.identity`) is a header this service records without
+verifying — so the log holds both "who signed" and "which account was signed in", and nothing here
+requires them to agree. A Better Auth JWT the engine verifies itself is what closes that. And there
+is still no **retention policy**. Both are tracked in `docs/compliance/PRIVATE_DATA_WARNING.md`.
 
 These path functions are `async def`, unlike `/solve`. They do database I/O and nothing else, so
 awaiting is exactly right; dispatching them to the threadpool would only add a hop.
@@ -28,6 +31,7 @@ import json
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from app.api.deps import proposals
+from app.api.identity import RequestActor
 from app.schemas import (
     ApprovalRequest,
     ExportRequest,
@@ -122,16 +126,22 @@ async def list_proposals(
 
 
 @router.get("/{proposal_id}", response_model=Proposal)
-async def get_proposal(proposal_id: str) -> Proposal:
+async def get_proposal(proposal_id: str, actor: RequestActor) -> Proposal:
     # Reads one proposal and records a VIEWED event: who looked is part of the audit question.
     #
     # A comment rather than a docstring, deliberately. FastAPI publishes a path function's docstring
     # as the operation's `description`, so adding one here would change the committed OpenAPI
     # document — and this migration's contract with the frontend is that the document does not move.
-    # The actor is `anonymous`, because this service authenticates nobody; see `ANONYMOUS_ACTOR` in
-    # the store for why that value is deliberately conspicuous rather than plausible.
+    # `actor` is a `Depends` on the request object rather than a declared header, for that same
+    # reason: it stays out of the document.
+    #
+    # It is the Better Auth user id the web tier forwarded, and it falls back to `anonymous` for a
+    # call that carried no session — see `ANONYMOUS_ACTOR` in the store for why that value is
+    # deliberately conspicuous rather than plausible. A `VIEWED` row now names a person for every
+    # read that came through the UI, which is the half of "who looked at this record" that a
+    # clinical audit log has to be able to answer.
     try:
-        return await proposals().get_proposal(proposal_id, record_view=True)
+        return await proposals().get_proposal(proposal_id, record_view=True, actor=actor)
     except ProposalNotFound as exc:
         raise _not_found(proposal_id) from exc
 

@@ -18,6 +18,17 @@ const nextConfig: NextConfig = {
    */
   output: "standalone",
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
+
+  /**
+   * Kept out of the bundler and `require`d at run time instead.
+   *
+   * Both are the drivers Better Auth reaches the accounts database through (`lib/auth-db.ts`).
+   * `better-sqlite3` is a native addon — a `.node` binary that cannot be bundled at all — and `pg`
+   * resolves its own optional native accelerator at run time, which a bundler either inlines
+   * incorrectly or warns about on every build. Naming them here also makes the standalone trace
+   * copy them, so the container has the driver it needs.
+   */
+  serverExternalPackages: ["better-sqlite3", "pg"],
 }
 
 export default nextConfig

@@ -163,6 +163,20 @@ class ProposalRecord(Base):
 
     created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
 
+    #: The authenticated user who ran the solve that produced this draft — a Better Auth `user.id`
+    #: forwarded by the web tier in `X-User-ID` (see `app.api.identity`), or `system` when the call
+    #: carried no session.
+    #:
+    #: Write-once, like everything above it: who produced a draft is part of what the draft *is*,
+    #: not part of what was later decided about it. Deliberately **not** a foreign key — the `user`
+    #: table is Better Auth's and is created by its own migrations, so a constraint here would make
+    #: this schema depend on a table `alembic upgrade head` does not create. The id is opaque and
+    #: stable, which is all a join needs.
+    #:
+    #: Nullable because every row written before this column existed has no answer, and inventing
+    #: one would be worse than admitting it. New rows always carry a value.
+    created_by: Mapped[str | None] = mapped_column(String(256), index=True, default=None)
+
     approved_at: Mapped[datetime | None] = mapped_column(TimestampVariant, default=None)
     approved_by: Mapped[str | None] = mapped_column(String(256), default=None)
 
@@ -251,6 +265,12 @@ class BatchJobRecord(Base):
 
     created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(TimestampVariant, default=None)
+
+    #: Who uploaded the batch — the same forwarded Better Auth `user.id` as
+    #: `ProposalRecord.created_by`, and nullable for the same reason. A batch is the one action here
+    #: that costs real compute on somebody's behalf, so "who asked for this" is the question an
+    #: operator looking at a busy queue actually has.
+    created_by: Mapped[str | None] = mapped_column(String(256), index=True, default=None)
 
     #: The serialised `BatchAggregateSummary`. Stored rather than recomputed on every read: it is
     #: the answer to "what did this batch conclude", and recomputing it from the per-file reports
@@ -359,7 +379,8 @@ class RuleReviewRecord(Base):
     status: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
 
     #: Who decided. Nullable only because a `PENDING` row can precede a decision; the API requires
-    #: it for VERIFIED and REJECTED. Recorded, never authenticated — this service has no login.
+    #: it for VERIFIED and REJECTED. Recorded, never authenticated: it is a name the caller typed,
+    #: not the `X-User-ID` the web tier forwards, and this service verifies neither.
     reviewed_by: Mapped[str | None] = mapped_column(String(256), default=None)
     reviewed_at: Mapped[datetime | None] = mapped_column(TimestampVariant, default=None)
 

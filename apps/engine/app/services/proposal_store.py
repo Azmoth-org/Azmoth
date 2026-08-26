@@ -55,12 +55,16 @@ T = TypeVar("T")
 
 log = logging.getLogger(__name__)
 
-#: The actor recorded for an action no authenticated identity was attached to.
+#: The actor recorded for a request that carried no identity at all.
 #:
-#: There is no authentication in this service, so a read cannot be attributed and this is what a
-#: `VIEWED` event carries. It is a deliberately conspicuous value: an audit log full of
-#: `anonymous` is a visible statement that access control is still missing, which is exactly the
-#: gap `docs/compliance/PRIVATE_DATA_WARNING.md` lists. Writing a plausible-looking name here
+#: This service still authenticates nobody. What it now receives is an `X-User-ID` header set by the
+#: web tier from a Better Auth session it verified (`app.api.identity`), and this is the fallback for
+#: a request that arrived without one — a direct `curl`, `/docs`, the test suite, or anything that
+#: reached the engine around the proxy.
+#:
+#: It stays a deliberately conspicuous value. An audit row reading `anonymous` is a visible statement
+#: that *this particular call* could not be attributed, and a log with many of them is a visible
+#: statement that something is reaching the engine directly. Writing a plausible-looking name here
 #: instead would be the one genuinely dangerous option.
 ANONYMOUS_ACTOR = "anonymous"
 
@@ -407,8 +411,15 @@ class ProposalStore:
         The returned value is read back off the row rather than echoed from the argument, so the
         response a caller gets is the record that was actually written. A serialisation that lost a
         field would then fail the first request instead of the first restart.
+
+        `actor` is written to two places on purpose: the `CREATED` event, which is the audit
+        answer, and `proposals.created_by`, which is the queryable one. "Every draft this user
+        produced" is a question about the proposals table, and answering it by scanning an
+        append-only log for `CREATED` rows would be the wrong shape for the one query a data-subject
+        request actually asks.
         """
         record = _to_record(proposal)
+        record.created_by = actor or SYSTEM_ACTOR
         async with self.database.session() as session:
             session.add(record)
             self._add_event(
