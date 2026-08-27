@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
@@ -12,7 +11,8 @@ import { googleSignInEnabled } from "@/lib/auth-google"
 
 export const metadata: Metadata = {
   title: "Registrieren",
-  description: "Konto für die GOÄ-Prüfung anlegen. Interne Anwendung, nur synthetische Daten.",
+  description:
+    "Konto für die GOÄ-Prüfung anlegen. Interne Anwendung, nur synthetische Daten.",
 }
 
 /**
@@ -24,10 +24,14 @@ export const metadata: Metadata = {
  * Google does not narrow that gap and is not a substitute for closing it: any Google account can
  * register here, not only one from a particular Workspace domain.
  *
- * The Google button is the same component `/login` renders and reaches the same endpoint — OAuth
- * has one door, and whether it registers or signs in depends on the account rather than on which
- * screen was clicked. Only the label differs, because "Mit Google anmelden" under a heading that
- * says *Registrieren* reads as the wrong button.
+ * A new account belongs to no organisation. The rail's header says so ("Keine Organisation") and
+ * offers to create one — registering does not silently make a practice on somebody's behalf, because
+ * an organisation is a boundary and inventing one would be inventing the wrong one.
+ *
+ * The Google button is the same component `/login` renders and reaches the same endpoint — OAuth has
+ * one door, and whether it registers or signs in depends on the account rather than on which screen
+ * was clicked. Only the label differs, because "Mit Google anmelden" under a heading that says
+ * *Registrieren* reads as the wrong button.
  */
 export default async function SignupPage({
   searchParams,
@@ -40,38 +44,27 @@ export default async function SignupPage({
   const back = `/signup${next ? `?next=${encodeURIComponent(destination)}` : ""}`
 
   return (
-    <AuthCard
-      title="Registrieren"
-      description="Legen Sie ein Konto für die Prüfung von GOÄ-Abrechnungen an."
-      alert={
-        failure ? (
-          <Alert variant="destructive" role="alert">
-            <AlertDescription>{failure}</AlertDescription>
-          </Alert>
-        ) : null
-      }
-      social={
-        googleSignInEnabled() ? (
-          <GoogleButton
-            label="Mit Google registrieren"
-            callbackURL={destination}
-            errorCallbackURL={back}
-          />
-        ) : null
-      }
-      footer={
-        <>
-          Bereits ein Konto?{" "}
-          <Link
-            href={`/login${next ? `?next=${encodeURIComponent(destination)}` : ""}`}
-            className="text-foreground font-medium underline underline-offset-4"
-          >
-            Anmelden
-          </Link>
-        </>
-      }
-    >
-      <SignupForm next={destination} />
+    <AuthCard>
+      <SignupForm
+        next={destination}
+        loginHref={`/login${next ? `?next=${encodeURIComponent(destination)}` : ""}`}
+        alert={
+          failure ? (
+            <Alert variant="destructive" role="alert">
+              <AlertDescription>{failure}</AlertDescription>
+            </Alert>
+          ) : null
+        }
+        social={
+          googleSignInEnabled() ? (
+            <GoogleButton
+              label="Mit Google registrieren"
+              callbackURL={destination}
+              errorCallbackURL={back}
+            />
+          ) : null
+        }
+      />
     </AuthCard>
   )
 }

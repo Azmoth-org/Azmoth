@@ -100,7 +100,7 @@ def download(url: str, timeout: float) -> Path:
     target = RAW_DIR / "goae_source.zip"
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "govatax-goae-fetcher/0.3 (+official GOÄ snapshot fetcher)"},
+        headers={"User-Agent": "azmoth-goae-fetcher/0.3 (+official GOÄ snapshot fetcher)"},
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:

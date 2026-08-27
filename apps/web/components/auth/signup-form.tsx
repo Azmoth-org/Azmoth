@@ -1,48 +1,75 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
-import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
-import { Label } from "@workspace/ui/components/label"
+import { SignupForm as SignupFormTemplate } from "@workspace/ui/components/signup-form"
 
-import { NETWORK_ERROR_MESSAGE, authErrorMessage } from "@/components/auth/auth-messages"
+import {
+  NETWORK_ERROR_MESSAGE,
+  authErrorMessage,
+} from "@/components/auth/auth-messages"
 import { authClient } from "@/lib/auth-client"
 
 /**
- * Create an account, and be signed in by it.
+ * The password floor, stated in three places that must not disagree.
  *
- * `signUp.email` establishes the session itself — `requireEmailVerification` is off, see
- * `lib/auth.ts` — so there is no second sign-in call here and the new account lands on the screen
- * it was headed for.
- *
- * **The name is required, and that is a product decision rather than a schema one.** Better Auth
- * would accept an empty string. Every audit row this person then writes would be attributed to an
- * id with no human beside it, and the first time somebody has to answer "who approved this" the
- * answer would be a lookup that goes nowhere useful.
- *
- * The password floor is checked here *and* in `lib/auth.ts`. The server's check is the one that
- * matters; this one exists so that "too short" is said before the round-trip rather than after it,
- * and the number is stated in the hint rather than only in the error.
+ * `lib/auth.ts` enforces it, the template hands it to the browser's own `minLength`, and the sentence
+ * under the field says it. 12 rather than Better Auth's default 8 — see the note in `lib/auth.ts`.
  */
 const MIN_PASSWORD_LENGTH = 12
 
-export function SignupForm({ next }: { next: string }) {
+/**
+ * Create an account.
+ *
+ * The layout is `@workspace/ui`'s `SignupForm` template, and the confirmation field is new with it —
+ * the form this replaced had one password box, so a typo produced an account nobody could sign in to
+ * and no way to find out why. The comparison happens here rather than in the package, because the
+ * message it produces is German and the package has no language.
+ *
+ * See `components/auth/login-form.tsx` for why the fields are uncontrolled, why `router.refresh()`
+ * precedes the push, and why a returned `{ error }` and a thrown exception produce different
+ * sentences. All three apply identically here.
+ */
+export function SignupForm({
+  next,
+  social,
+  loginHref,
+  alert,
+}: {
+  /** Where a successful registration lands. Already passed through `safeNext` by the page. */
+  next: string
+  /** The Google button, on deployments that have one. */
+  social?: React.ReactNode
+  /** `/login`, carrying the same destination so the reader does not lose their place. */
+  loginHref: string
+  /** A failure from a previous render — the `?error=` an OAuth round-trip came back with. */
+  alert?: React.ReactNode
+}) {
   const router = useRouter()
-  const [name, setName] = React.useState("")
-  const [email, setEmail] = React.useState("")
-  const [password, setPassword] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (pending) return
 
+    const form = new FormData(event.currentTarget)
+    const name = String(form.get("name") ?? "").trim()
+    const email = String(form.get("email") ?? "").trim()
+    const password = String(form.get("password") ?? "")
+    const confirmation = String(form.get("confirm-password") ?? "")
+
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Das Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein.`)
+      setError(
+        `Das Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein.`
+      )
+      return
+    }
+    if (password !== confirmation) {
+      setError("Die beiden Passwörter stimmen nicht überein.")
       return
     }
 
@@ -50,8 +77,8 @@ export function SignupForm({ next }: { next: string }) {
     setPending(true)
     try {
       const { error: failure } = await authClient.signUp.email({
-        name: name.trim(),
-        email: email.trim(),
+        name,
+        email,
         password,
       })
       if (failure) {
@@ -68,68 +95,44 @@ export function SignupForm({ next }: { next: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4" noValidate>
-      {error ? (
-        <Alert variant="destructive" role="alert">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
-        <Input
-          id="name"
-          name="name"
-          autoComplete="name"
-          autoFocus
-          required
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Dr. med. Maria Muster"
-          disabled={pending}
-        />
-        <p className="text-muted-foreground text-xs">
-          Erscheint im Prüfprotokoll neben jeder Freigabe.
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="email">E-Mail</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          inputMode="email"
-          autoComplete="username"
-          required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="name@praxis.de"
-          disabled={pending}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="password">Passwort</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={MIN_PASSWORD_LENGTH}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          disabled={pending}
-        />
-        <p className="text-muted-foreground text-xs">
-          Mindestens {MIN_PASSWORD_LENGTH} Zeichen.
-        </p>
-      </div>
-
-      <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Konto wird erstellt…" : "Registrieren"}
-      </Button>
-    </form>
+    <SignupFormTemplate
+      onSubmit={submit}
+      noValidate
+      pending={pending}
+      minPasswordLength={MIN_PASSWORD_LENGTH}
+      title="Registrieren"
+      description="Legen Sie ein Konto für die Prüfung von GOÄ-Abrechnungen an."
+      nameLabel="Name"
+      namePlaceholder="Dr. med. Maria Muster"
+      nameHint="Erscheint im Prüfprotokoll neben jeder Freigabe."
+      emailLabel="E-Mail"
+      emailPlaceholder="name@praxis.de"
+      passwordLabel="Passwort"
+      passwordHint={`Mindestens ${MIN_PASSWORD_LENGTH} Zeichen.`}
+      confirmLabel="Passwort bestätigen"
+      submitLabel={pending ? "Konto wird erstellt…" : "Registrieren"}
+      separatorLabel="Oder fortfahren mit"
+      social={social}
+      alert={
+        error ? (
+          <Alert variant="destructive" role="alert">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : (
+          alert
+        )
+      }
+      footer={
+        <>
+          Bereits ein Konto?{" "}
+          <Link
+            href={loginHref}
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            Anmelden
+          </Link>
+        </>
+      }
+    />
   )
 }

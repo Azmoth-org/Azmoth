@@ -1,22 +1,21 @@
 "use client"
 
+import { LogOutIcon } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import * as React from "react"
 
 import { Badge } from "@workspace/ui/components/badge"
+import { DropdownMenuItem } from "@workspace/ui/components/dropdown-menu"
+import { NavMain, type NavMainItem } from "@workspace/ui/components/nav-main"
+import { NavUser } from "@workspace/ui/components/nav-user"
 import { Separator } from "@workspace/ui/components/separator"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
@@ -27,9 +26,19 @@ import {
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip"
 
-import { NAV_ITEMS, activeHref, type NavItem } from "@/components/layout/nav"
+import { NAV_ITEMS, activeHref } from "@/components/layout/nav"
+import {
+  OrganisationSwitcher,
+  type OrganisationSnapshot,
+} from "@/components/layout/organisation-switcher"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
-import { UserMenu, type SessionUser } from "@/components/layout/user-menu"
+import { authClient } from "@/lib/auth-client"
+
+/** What the shell knows about the signed-in person. Resolved on the server, passed down as props. */
+export type SessionUser = {
+  name: string
+  email: string
+}
 
 /**
  * The frame every screen sits in.
@@ -44,51 +53,63 @@ import { UserMenu, type SessionUser } from "@/components/layout/user-menu"
  * sm:px-6">` was copy-pasted into each page. Four copies of a layout drift, and on a screen where a
  * warning banner has to appear above the fold that drift is not cosmetic.
  *
- * ## Built on the shared `Sidebar`
+ * ## Composed from the shared sidebar templates
  *
- * This was a hand-rolled `<aside>` plus, below `lg`, a horizontal strip of links that scrolled
- * sideways in the top bar. The strip was the compromise: "a drawer needs a portal, a focus trap and
- * state, and four links do not justify any of it." There are seven links now, and
- * `@workspace/ui/components/sidebar` brings the portal, the focus trap and the state with it — so
- * the compromise is no longer worth its cost. Narrow screens get a real off-canvas sheet, and wide
- * ones get something the hand-rolled version never had:
+ * The rail's three parts — header, body, footer — are now `OrgSwitcher`, `NavMain` and `NavUser`
+ * from `@workspace/ui`, rather than the `SidebarMenu` markup this file used to spell out itself. The
+ * markup was not wrong; what it could not do was hold an organisation. The header used to be a fixed
+ * wordmark tile, and the practice a reviewer works on behalf of has to be *selectable* — which is a
+ * dropdown, a list, an active item and a mutation, and none of that is worth hand-writing when the
+ * package has it.
  *
- * - **A collapse.** `collapsible="icon"` narrows the rail to icons, which matters on `/review`,
- *   where two position tables compete for horizontal space and 16rem of navigation is 16rem the
- *   invoice does not get. The state persists in a cookie, so it survives a reload.
- * - **`SidebarRail`** — the whole edge is a drag target for that collapse, not just a small button.
- * - **⌘B / Ctrl+B**, which is what a reader who lives in editors will try first.
- * - **Tooltips on the collapsed rail**, so an icon-only entry still says its name.
+ * The identity moved with it. It was a menu in the top bar beside the theme toggle; it is now the
+ * rail's footer, which is where every screen in this shape puts it and which frees the bar for the
+ * things that describe the *screen* rather than the session.
+ *
+ * `collapsible="icon"` narrows the rail to icons, which matters on `/review`, where two position
+ * tables compete for horizontal space and 16rem of navigation is 16rem the invoice does not get. The
+ * state persists in a cookie, so it survives a reload. `SidebarRail` makes the whole edge a drag
+ * target for that collapse, ⌘B / Ctrl+B does it from the keyboard, and the collapsed rail keeps
+ * tooltips so an icon-only entry still says its name.
  *
  * `variant="inset"` is what makes the content a floating panel on a tinted ground rather than a
  * column butted against a border: on a screen this dense it is the cheapest way to say where the
  * document ends and the application begins.
  *
- * `defaultOpen` comes from the server, read out of the same cookie the provider writes. Without it
- * the first paint is always the expanded rail, which then snaps shut for anyone who collapsed it.
- *
- * So does `user`. The shell is only ever rendered by `app/(app)/layout.tsx`, which has already
- * resolved the Better Auth session — that resolution is what decides whether any of this renders at
- * all — so who is signed in arrives as a prop rather than being fetched again from the browser. It
- * is optional because one caller has no session to hand it: `app/not-found.tsx`, which is served for
- * a URL that matches no route and therefore never ran the layout.
+ * `defaultOpen`, `user` and `organisations` all come from the server. `app/(app)/layout.tsx` has
+ * already resolved the Better Auth session — that resolution is what decides whether any of this
+ * renders at all — so who is signed in and which practices they belong to arrive as props rather
+ * than being fetched again from the browser.
  */
 export function AppShell({
   children,
   defaultOpen = true,
   user,
+  organisations,
 }: {
   children: React.ReactNode
   /** The persisted rail state, read from the `sidebar_state` cookie in `(app)/layout.tsx`. */
   defaultOpen?: boolean
-  /** The signed-in person, for the account menu in the top bar. */
+  /** The signed-in person, for the rail's footer. */
   user?: SessionUser
+  /** The organisations the session can switch between, resolved server-side. */
+  organisations?: OrganisationSnapshot
 }) {
   const pathname = usePathname()
   const active = activeHref(pathname)
 
-  const workflow = NAV_ITEMS.filter((item) => !item.internal)
-  const internal = NAV_ITEMS.filter((item) => item.internal)
+  const toNavItem = (item: (typeof NAV_ITEMS)[number]): NavMainItem => {
+    const Icon = item.icon
+    return {
+      title: item.label,
+      url: item.href,
+      icon: <Icon />,
+      isActive: active === item.href,
+    }
+  }
+
+  const workflow = NAV_ITEMS.filter((item) => !item.internal).map(toNavItem)
+  const internal = NAV_ITEMS.filter((item) => item.internal).map(toNavItem)
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
@@ -100,35 +121,32 @@ export function AppShell({
       */}
       <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" render={<Link href="/" />}>
-                <span className="bg-primary text-primary-foreground grid size-8 shrink-0 place-items-center rounded-lg font-mono text-[11px] font-medium">
-                  GO
-                </span>
-                <span className="grid flex-1 text-left leading-tight">
-                  <span className="truncate font-semibold">Govatax</span>
-                  <span className="text-sidebar-foreground/70 truncate text-xs">GOÄ-Prüfung</span>
-                </span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+          {organisations ? (
+            <OrganisationSwitcher snapshot={organisations} />
+          ) : (
+            <Wordmark />
+          )}
         </SidebarHeader>
 
         <SidebarContent>
-          <NavGroup items={workflow} active={active} label="Arbeitsablauf" />
-          <NavGroup items={internal} active={active} label="Intern" />
+          <NavMain
+            label="Arbeitsablauf"
+            items={workflow}
+            linkRender={navLink}
+          />
+          <NavMain label="Intern" items={internal} linkRender={navLink} />
         </SidebarContent>
 
         <SidebarFooter>
           <Disclaimer />
+          {user ? <AccountMenu user={user} /> : null}
         </SidebarFooter>
 
         <SidebarRail />
       </Sidebar>
 
       <SidebarInset>
-        <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 rounded-t-xl border-b px-4 backdrop-blur print:hidden">
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 rounded-t-xl border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
           <SidebarTrigger />
           <Separator orientation="vertical" className="mr-1 h-4" />
           <CurrentScreen active={active} />
@@ -142,17 +160,6 @@ export function AppShell({
               Nur synthetische Daten
             </Badge>
             <ThemeToggle />
-            {user ? (
-              <>
-                {/*
-                  A rule between the tooling and the identity. The theme toggle changes how this
-                  screen looks; the menu beside it ends the session — two very different weights of
-                  action, and on a bar this narrow a separator is the cheapest way to say so.
-                */}
-                <Separator orientation="vertical" className="mx-0.5 h-4" />
-                <UserMenu user={user} />
-              </>
-            ) : null}
           </div>
         </header>
 
@@ -164,50 +171,120 @@ export function AppShell({
   )
 }
 
-function NavGroup({
-  items,
-  active,
-  label,
-}: {
-  items: readonly NavItem[]
-  active: string | null
-  label: string
-}) {
-  if (items.length === 0) return null
+/**
+ * A `next/link` for a rail entry.
+ *
+ * `NavMain` cannot build this itself — `@workspace/ui` has no router — so it asks for the element and
+ * merges its own props onto it. `aria-current` is set here rather than there because the package
+ * knows which row is highlighted but not that "page" is the right token for it.
+ */
+function navLink(item: { url: string; isActive?: boolean }) {
+  return (
+    <Link href={item.url} aria-current={item.isActive ? "page" : undefined} />
+  )
+}
+
+/**
+ * The product's mark, for the one caller that has no session to switch organisations with.
+ *
+ * `organisations` is optional on this shell, and the fallback has to be *something* — a rail whose
+ * header is blank reads as a component that failed to load rather than one that was not given data.
+ */
+function Wordmark() {
+  return (
+    <Link
+      href="/"
+      className="flex items-center gap-2 px-1.5 py-1.5"
+      aria-label="Azmoth — GOÄ-Prüfung"
+    >
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary font-mono text-[11px] font-medium text-primary-foreground">
+        AZ
+      </span>
+      <span className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
+        <span className="truncate font-semibold">Azmoth</span>
+        <span className="truncate text-xs text-sidebar-foreground/70">
+          GOÄ-Prüfung
+        </span>
+      </span>
+    </Link>
+  )
+}
+
+/**
+ * Who is signed in, and the way out, in the rail's footer.
+ *
+ * ## The identity is a prop, not a hook
+ *
+ * `authClient.useSession()` would work and is one line shorter. It also means the footer renders
+ * empty, then fills in after a round-trip — a name appearing a moment after the page does, on every
+ * navigation. `app/(app)/layout.tsx` has already resolved the session (it is the check that decides
+ * whether this screen renders at all), so passing the two fields it read is both cheaper and
+ * flicker-free.
+ *
+ * ## Signing out is a full navigation, not a router push
+ *
+ * `router.push` alone would leave the React Router cache holding the rendered proposals of the person
+ * who just left — visible again with the back button, because a client-side navigation does not
+ * re-render a server component it already has. `router.refresh()` discards that cache, and the push
+ * then lands on a `/login` the middleware will not bounce, because the cookie is gone by then.
+ *
+ * The entry is disabled while the call is in flight. Not for the network's sake: a second click races
+ * the first, the second request arrives without a cookie and fails — which would show an error to
+ * somebody whose sign-out actually worked.
+ */
+function AccountMenu({ user }: { user: SessionUser }) {
+  const router = useRouter()
+  const [pending, setPending] = React.useState(false)
+
+  async function abmelden() {
+    if (pending) return
+    setPending(true)
+    try {
+      await authClient.signOut()
+    } finally {
+      // Even if the call failed, get off this screen: a sign-out that appears to do nothing is the
+      // one failure mode where a reviewer walks away from an open session.
+      router.refresh()
+      router.push("/login")
+    }
+  }
 
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>{label}</SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {items.map((item) => {
-            const Icon = item.icon
-            const current = active === item.href
-            return (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  isActive={current}
-                  // The name, for the collapsed rail — where the label is not rendered at all and an
-                  // icon on its own is a guess.
-                  tooltip={item.label}
-                  render={<Link href={item.href} aria-current={current ? "page" : undefined} />}
-                >
-                  <Icon />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )
-          })}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+    <NavUser
+      // The email under the name, not a second copy of it. Two colleagues can share a display name
+      // and an audit log cannot; the address is what `audit_events.actor` resolves back to.
+      name={user.name || "Konto"}
+      email={user.email}
+      initials={initials(user.name, user.email)}
+      menuLabel={`Angemeldet als ${user.email}. Kontomenü öffnen`}
+    >
+      <DropdownMenuItem disabled={pending} onClick={abmelden}>
+        <LogOutIcon />
+        {pending ? "Wird abgemeldet…" : "Abmelden"}
+      </DropdownMenuItem>
+    </NavUser>
   )
+}
+
+/**
+ * Up to two letters for the avatar.
+ *
+ * From the name when there is one, from the email otherwise — a signed-up account always has an
+ * address and may have left the name blank, so falling back to the address is what keeps the circle
+ * from being empty.
+ */
+function initials(name: string, email: string): string {
+  const source = name.trim() || email.trim()
+  const parts = source.split(/[\s.@_-]+/).filter(Boolean)
+  const letters = parts.slice(0, 2).map((part) => part[0] ?? "")
+  return (letters.join("") || source.slice(0, 2)).toUpperCase()
 }
 
 /** The screen's name in the top bar, so the tab and the page agree about where the reader is. */
 function CurrentScreen({ active }: { active: string | null }) {
   const item = NAV_ITEMS.find((entry) => entry.href === active)
-  if (!item) return <span className="text-muted-foreground text-sm">Übersicht</span>
+  if (!item)
+    return <span className="text-sm text-muted-foreground">Übersicht</span>
 
   return (
     <div className="flex min-w-0 items-center gap-2 text-sm">
@@ -225,7 +302,7 @@ function CurrentScreen({ active }: { active: string | null }) {
  * The standing statement, in the chrome rather than only in a banner.
  *
  * A draft is not an invoice, and that has to be true of the whole application and not only of the
- * screen that happens to be showing a proposal. Collapsed to its first sentence when the rail is —
+ * screen that happens to be showing a proposal. Hidden when the rail is collapsed —
  * `group-data-[collapsible=icon]` is how the sidebar tells its contents which state it is in — with
  * the full text kept in a tooltip rather than dropped, because the reason this build must not be
  * trusted with real data does not stop being true when the rail is narrow.
@@ -235,23 +312,26 @@ function Disclaimer() {
     <Tooltip>
       <TooltipTrigger
         render={
-          <div className="text-sidebar-foreground/70 cursor-default px-2 py-1 text-xs group-data-[collapsible=icon]:hidden">
+          <div className="cursor-default px-2 py-1 text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
             {/*
               `text-sidebar-*`, not `text-foreground`. The rail carries its own light/dark pair, and
               nothing guarantees it resolves to the same surface as the document — it is one step
               darker in both modes today. Reading the rail's own tokens is what keeps this legible
               whichever theme is on, and whatever the rail's ground becomes next.
             */}
-            <p className="text-sidebar-foreground font-medium">Entwurf, keine Rechnung.</p>
+            <p className="font-medium text-sidebar-foreground">
+              Entwurf, keine Rechnung.
+            </p>
             <p className="mt-1">
-              Die ärztliche Prüfung ist zwingend erforderlich. Die Regelabdeckung ist unvollständig.
+              Die ärztliche Prüfung ist zwingend erforderlich. Die
+              Regelabdeckung ist unvollständig.
             </p>
           </div>
         }
       />
       <TooltipContent side="right" className="max-w-64">
-        Entwurf, keine Rechnung. Die ärztliche Prüfung ist zwingend erforderlich. Die Regelabdeckung
-        ist unvollständig.
+        Entwurf, keine Rechnung. Die ärztliche Prüfung ist zwingend
+        erforderlich. Die Regelabdeckung ist unvollständig.
       </TooltipContent>
     </Tooltip>
   )

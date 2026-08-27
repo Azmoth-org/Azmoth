@@ -1,4 +1,4 @@
-# Govatax
+# Azmoth
 
 A monorepo holding a deterministic **GOÄ coding engine** and the Next.js app that fronts it.
 
@@ -114,7 +114,7 @@ BETTER_AUTH_SECRET=$(openssl rand -base64 32) \
 ```
 
 `docker compose down` stops the stack and keeps the data; `down -v` deletes the
-`govatax-postgres-data` volume, which holds approval records — a decision, not a side effect of
+`azmoth-postgres-data` volume, which holds approval records — a decision, not a side effect of
 stopping. Ports are overridable with `WEB_PORT` and `POSTGRES_PORT`.
 
 Keep the `--build`, and after a pull that adds a dependency add `--renew-anon-volumes` too:

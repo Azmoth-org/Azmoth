@@ -468,7 +468,7 @@ no rollback, and its migration history claims a revision it is not at.
 docker compose -f infra/docker/docker-compose.yml up -d postgres
 
 cd apps/engine
-export DATABASE_URL=postgresql+asyncpg://govatax:govatax@localhost:5432/govatax
+export DATABASE_URL=postgresql+asyncpg://azmoth:azmoth@localhost:5432/azmoth
 python scripts/migrate.py            # waits for the server, then upgrades to head
 python scripts/migrate.py --check    # report the revision, change nothing; exit 1 if behind
 ```
@@ -511,7 +511,7 @@ docker compose -f infra/docker/docker-compose.yml up --build
 ```
 
 Postgres comes up, its healthcheck passes, the engine migrates and starts. `docker compose down`
-stops the stack and keeps the data; `down -v` deletes the `govatax-postgres-data` volume, which
+stops the stack and keeps the data; `down -v` deletes the `azmoth-postgres-data` volume, which
 holds approval records — a decision, not a side effect of stopping.
 
 ### Adding a migration

@@ -9,7 +9,7 @@
 # live outside apps/web, and the pnpm lockfile that pins the whole graph lives at the root. From the
 # repo root:
 #
-#     docker build -f apps/web/Dockerfile -t govatax-web:0.3.0 .
+#     docker build -f apps/web/Dockerfile -t azmoth-web:0.3.0 .
 #
 # or use infra/docker/docker-compose.yml, which sets the context correctly.
 #

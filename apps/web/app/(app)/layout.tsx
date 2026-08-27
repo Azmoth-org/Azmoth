@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { AppShell } from "@/components/layout/app-shell"
+import type { OrganisationSnapshot } from "@/components/layout/organisation-switcher"
 import { getAuth } from "@/lib/auth"
 
 /**
@@ -26,6 +27,13 @@ import { getAuth } from "@/lib/auth"
  * `sidebar_state` describes the rail, and the rail only exists in this group. Reading it in the root
  * layout made `/login` — which has no sidebar — a dynamic render that depended on a cookie about a
  * component it does not have.
+ *
+ * ## Why the organisations are resolved here too
+ *
+ * The rail's header is a switcher, and a switcher that renders empty and then fills in is a header
+ * that changes shape on every navigation. The session is already resolved at this point and the
+ * connection is already open, so listing the organisations costs one more query in a pass that had
+ * to happen anyway — and the first paint is then correct rather than corrected.
  */
 export default async function AppLayout({
   children,
@@ -50,8 +58,47 @@ export default async function AppLayout({
     <AppShell
       defaultOpen={defaultOpen}
       user={{ name: session.user.name, email: session.user.email }}
+      organisations={await organisationSnapshot(
+        requestHeaders,
+        session.session.activeOrganizationId ?? null
+      )}
     >
       {children}
     </AppShell>
   )
+}
+
+/**
+ * The organisations this session can switch between, and which one it is in.
+ *
+ * Wrapped in a `try` on purpose, and the reason is a specific failure worth naming: the organisation
+ * tables arrive with a migration, so anybody who pulls this branch and starts the app before running
+ * `pnpm --filter web auth:migrate` has a database where this query cannot succeed. That must not
+ * blank out the entire application — the rail falls back to the wordmark and every screen behind it
+ * keeps working, which is a far better failure than a stack trace on `/`.
+ *
+ * `activeId` is passed in rather than re-read. It is the plugin's own field on the session row, added
+ * there by `organization()` in `lib/auth.ts`, and the caller already has the session in hand — asking
+ * for it again would be a second query for a value that is one property away.
+ */
+async function organisationSnapshot(
+  requestHeaders: Headers,
+  activeId: string | null
+): Promise<OrganisationSnapshot> {
+  try {
+    const organisations = await getAuth().api.listOrganizations({
+      headers: requestHeaders,
+    })
+
+    return {
+      items: organisations.map((organisation) => ({
+        id: organisation.id,
+        name: organisation.name,
+        meta: organisation.slug,
+      })),
+      activeId,
+    }
+  } catch {
+    return { items: [], activeId: null }
+  }
 }

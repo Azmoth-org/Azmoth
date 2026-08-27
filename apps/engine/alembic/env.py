@@ -54,8 +54,25 @@ target_metadata = Base.metadata
 #:
 #: A denylist rather than "only manage what is in the metadata", because the latter is what
 #: autogenerate is *for*: a table that disappears from `app/db/models.py` should still produce a
-#: drop. This names the four tables that are somebody else's.
-BETTER_AUTH_TABLES = frozenset({"user", "session", "account", "verification"})
+#: drop. This names the tables that are somebody else's.
+#:
+#: **This list grows with every Better Auth plugin.** `organization`, `member` and `invitation` came
+#: with the `organization()` plugin, and a plugin enabled without an entry added here is not a quiet
+#: omission: the next `alembic revision --autogenerate` emits a `drop_table` for it, and the review
+#: that should catch that is reviewing a file nobody associates with authentication. If you turn on
+#: another plugin, run `pnpm --filter web auth:migrate --dry` to see which tables it declares and add
+#: them here in the same change.
+BETTER_AUTH_TABLES = frozenset(
+    {
+        "user",
+        "session",
+        "account",
+        "verification",
+        "organization",
+        "member",
+        "invitation",
+    }
+)
 
 
 def _include_object(_object, name, type_, _reflected, _compare_to) -> bool:

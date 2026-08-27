@@ -119,7 +119,7 @@ created on first start:
 ```bash
 docker compose -f ../../infra/docker/docker-compose.yml up -d postgres
 
-export DATABASE_URL=postgresql+asyncpg://govatax:govatax@localhost:5432/govatax
+export DATABASE_URL=postgresql+asyncpg://azmoth:azmoth@localhost:5432/azmoth
 .venv/bin/python scripts/migrate.py           # waits for the server, then upgrades to head
 .venv/bin/python scripts/migrate.py --check   # report the revision; exit 1 if behind
 .venv/bin/alembic upgrade head                # the same thing, via alembic directly
@@ -212,7 +212,7 @@ pnpm --filter @workspace/contracts generate           # → packages/contracts/t
 
 ```bash
 # from the MONOREPO ROOT — the image needs logic/ and data/, which live outside apps/engine
-docker build -f apps/engine/Dockerfile -t govatax-engine:0.3.0 .
+docker build -f apps/engine/Dockerfile -t azmoth-engine:0.3.0 .
 
 # the whole stack: Postgres, then the engine, which migrates it and serves the API.
 # The rules and the catalog are mounted read-only, so editing a .dl / .lp / CSV needs no rebuild.
@@ -231,21 +231,21 @@ whatever command it was given — so migrations happen even though `docker-compo
 its own job.
 
 The image sets **no** `DATABASE_URL`, deliberately, so a bare
-`docker run -p 8000:8000 govatax-engine:0.3.0` refuses to start rather than quietly running on a
+`docker run -p 8000:8000 azmoth-engine:0.3.0` refuses to start rather than quietly running on a
 store it cannot keep records in — the image sets `APP_ENV=production`, and production requires
 Postgres. To run the container against a database directly:
 
 ```bash
 docker run --rm -p 8000:8000 \
-  -e DATABASE_URL=postgresql+asyncpg://govatax:govatax@host.docker.internal:5432/govatax \
-  govatax-engine:0.3.0
+  -e DATABASE_URL=postgresql+asyncpg://azmoth:azmoth@host.docker.internal:5432/azmoth \
+  azmoth-engine:0.3.0
 ```
 
 One-off commands need no database and skip the migration on their own:
 
 ```bash
-docker run --rm govatax-engine:0.3.0 python scripts/engine_cli.py check
-docker run --rm -e REQUIRE_ENGINES=1 govatax-engine:0.3.0 python -m pytest -rs
+docker run --rm azmoth-engine:0.3.0 python scripts/engine_cli.py check
+docker run --rm -e REQUIRE_ENGINES=1 azmoth-engine:0.3.0 python -m pytest -rs
 ```
 
 ## Environment variables

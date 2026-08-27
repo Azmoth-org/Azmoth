@@ -14,14 +14,14 @@
 # the standalone web build. Use whichever one matches what you're doing; do not pass both `-f` flags
 # together — that used to be required here and no longer is.
 #
-# `engine`'s image tag is deliberately the SAME in both files (govatax-engine:0.3.0): it is built from
+# `engine`'s image tag is deliberately the SAME in both files (azmoth-engine:0.3.0): it is built from
 # the identical Dockerfile and context either way — see apps/engine/Dockerfile's header for why that
 # Dockerfile is not itself split in two — so this file's `engine` build and the prod file's produce
 # the same image, and sharing the tag avoids storing it twice. `web` differs: this file builds
 # apps/web/Dockerfile.dev (the `next dev` image), which is a genuinely different image from
-# apps/web/Dockerfile (the traced standalone bundle), so it gets its own tag, govatax-web:dev.
+# apps/web/Dockerfile (the traced standalone bundle), so it gets its own tag, azmoth-web:dev.
 #
-# Both stacks use the SAME named Postgres volume (govatax-postgres-data, declared in both files with
+# Both stacks use the SAME named Postgres volume (azmoth-postgres-data, declared in both files with
 # an explicit `name:`) and the same default project name (both compose files live in this directory),
 # so switching between `docker-compose.yml` and this file reuses one local database and one set of
 # containers — matching the point of `docker compose down` keeping data across runs. Do not run both
@@ -33,9 +33,9 @@ services:
     # No `container_name`, for the same reason the engine has none: a fixed name collides with
     # `docker compose run`.
     environment:
-      POSTGRES_USER: "${POSTGRES_USER:-govatax}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-govatax}"
-      POSTGRES_DB: "${POSTGRES_DB:-govatax}"
+      POSTGRES_USER: "${POSTGRES_USER:-azmoth}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-azmoth}"
+      POSTGRES_DB: "${POSTGRES_DB:-azmoth}"
       # Deterministic collation and encoding for a fresh cluster. Not cosmetic: `ORDER BY` on a
       # Ziffer or a name is locale-dependent, and a database initialised under a different locale
       # sorts differently — which would make a listing's order depend on the machine it was created
@@ -56,7 +56,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-govatax} -d ${POSTGRES_DB:-govatax}",
+          "pg_isready -U ${POSTGRES_USER:-azmoth} -d ${POSTGRES_DB:-azmoth}",
         ]
       interval: 5s
       timeout: 5s
@@ -68,7 +68,7 @@ services:
     build:
       context: ../..
       dockerfile: apps/engine/Dockerfile
-    image: govatax-engine:0.3.0
+    image: azmoth-engine:0.3.0
     # Deliberately no `container_name`: a fixed name makes `docker compose run` collide with the
     # already-running service and shut it down, which breaks running the tests in a second shell
     # while the API is up.
@@ -100,7 +100,7 @@ services:
       # The credentials here are the compose defaults and are development credentials. A real
       # deployment supplies DATABASE_URL from its secret store; nothing in this repository should
       # ever hold a production one, and CI fails the build if a credential-shaped string appears.
-      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-govatax}:${POSTGRES_PASSWORD:-govatax}@postgres:5432/${POSTGRES_DB:-govatax}}"
+      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-azmoth}:${POSTGRES_PASSWORD:-azmoth}@postgres:5432/${POSTGRES_DB:-azmoth}}"
       # The schema comes from `alembic upgrade head`, run by the entrypoint. Never create_all.
       DATABASE_AUTO_CREATE: "false"
       DATABASE_ECHO: "${DATABASE_ECHO:-false}"
@@ -148,14 +148,15 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # A one-shot: create Better Auth's `user`, `session`, `account` and `verification` tables,
-  # then exit. `web` waits for it to succeed.
+  # A one-shot: create Better Auth's tables — `user`, `session`, `account`, `verification`, and
+  # `organization`, `member`, `invitation` from the organization plugin — then exit. `web` waits for
+  # it to succeed.
   #
   # It exists because this database has two migrators with disjoint table sets. The engine's
   # entrypoint runs `alembic upgrade head` for the proposals and the audit log; Better Auth's
   # schema is the library's own to define, so it is created by `apps/web/scripts/auth-migrate.ts`
   # from the very instance `apps/web/lib/auth.ts` configures. `apps/engine/alembic/env.py`
-  # excludes those four tables from autogenerate, so the two migrators can never fight over them.
+  # excludes all of them from autogenerate, so the two migrators can never fight over them.
   #
   # It runs the dev image, which carries the whole workspace — pnpm, the script and tsx — so
   # there is nothing extra to build.
@@ -166,7 +167,7 @@ services:
     build:
       context: ../..
       dockerfile: apps/web/Dockerfile.dev
-    image: govatax-web:dev
+    image: azmoth-web:dev
     command: ["pnpm", "--filter", "web", "auth:migrate"]
     depends_on:
       postgres:
@@ -176,7 +177,7 @@ services:
       # point is that `audit_events.actor` and `proposals.created_by` hold a `user.id` a join can
       # resolve. The `+asyncpg` suffix is SQLAlchemy's and means nothing to `pg`;
       # `apps/web/lib/auth-db.ts` strips it, so one value is shared verbatim between the tiers.
-      AUTH_DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-govatax}:${POSTGRES_PASSWORD:-govatax}@postgres:5432/${POSTGRES_DB:-govatax}}"
+      AUTH_DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-azmoth}:${POSTGRES_PASSWORD:-azmoth}@postgres:5432/${POSTGRES_DB:-azmoth}}"
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-}"
     # A migration that fails must fail the stack, not be retried forever by a restart policy.
     restart: "no"
@@ -185,7 +186,7 @@ services:
     build:
       context: ../..
       dockerfile: apps/web/Dockerfile.dev
-    image: govatax-web:dev
+    image: azmoth-web:dev
     # No `container_name`, for the same reason the other two have none.
     depends_on:
       engine:
@@ -214,7 +215,7 @@ services:
       # Better Auth runs inside this Next.js app, at /api/auth/*. Its tables live in the same
       # Postgres as the proposals, so an audit row's actor resolves to a person by a join rather
       # than by correlating two systems — see apps/web/lib/auth-db.ts.
-      AUTH_DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-govatax}:${POSTGRES_PASSWORD:-govatax}@postgres:5432/${POSTGRES_DB:-govatax}}"
+      AUTH_DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-azmoth}:${POSTGRES_PASSWORD:-azmoth}@postgres:5432/${POSTGRES_DB:-azmoth}}"
       #
       # REQUIRED, and deliberately without a default. It signs every session cookie, so a value that
       # changes between boots signs sessions the next container cannot verify — which presents as
@@ -285,4 +286,4 @@ volumes:
     # Named so it survives `docker compose down` and is removed only by `down -v`. It holds
     # approvals; deleting it is a decision, not a side effect of stopping the stack. Same explicit
     # name as docker-compose.yml's volume, deliberately: dev and prod share one local database.
-    name: govatax-postgres-data
+    name: azmoth-postgres-data
