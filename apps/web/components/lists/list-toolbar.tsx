@@ -94,7 +94,8 @@ export function ListToolbar({
           */}
           <SelectTrigger id="status-filter" className="w-48">
             <span className="flex-1 text-left">
-              {statuses.find((option) => (option.value ?? ALL) === selected)?.label ?? "Alle"}
+              {statuses.find((option) => (option.value ?? ALL) === selected)
+                ?.label ?? "Alle"}
             </span>
           </SelectTrigger>
           <SelectContent>
@@ -137,7 +138,7 @@ export function ListToolbar({
             </Button>
           </div>
           {search.hint ? (
-            <p id="list-search-hint" className="text-muted-foreground text-xs">
+            <p id="list-search-hint" className="text-xs text-muted-foreground">
               {search.hint}
             </p>
           ) : null}

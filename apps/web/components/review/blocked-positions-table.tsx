@@ -1,6 +1,10 @@
 "use client"
 
-import { ChevronDownIcon, ShieldCheckIcon, TriangleAlertIcon } from "lucide-react"
+import {
+  ChevronDownIcon,
+  ShieldCheckIcon,
+  TriangleAlertIcon,
+} from "lucide-react"
 import * as React from "react"
 
 import { Badge } from "@workspace/ui/components/badge"
@@ -48,20 +52,27 @@ function keyOf(entry: BlockedCode, index: number): string {
 function BlockedDetail({ entry }: { entry: BlockedCode }) {
   return (
     <div className={cn("space-y-2 text-sm", WRAP)}>
-      <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-        <span className="text-foreground font-medium">{BLOCKED_REASON_LABEL[entry.reason]}</span>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">
+          {BLOCKED_REASON_LABEL[entry.reason]}
+        </span>
         {entry.blocked_by ? (
           <span>
-            · verdrängt durch <span className="font-mono">GOÄ {entry.blocked_by}</span>
+            · verdrängt durch{" "}
+            <span className="font-mono">GOÄ {entry.blocked_by}</span>
           </span>
         ) : null}
       </div>
 
-      {entry.explanation || entry.detail ? <p>{entry.explanation || entry.detail}</p> : null}
+      {entry.explanation || entry.detail ? (
+        <p>{entry.explanation || entry.detail}</p>
+      ) : null}
 
       {entry.rule_id || entry.legal_basis ? (
-        <p className="text-muted-foreground text-xs">
-          {entry.rule_id ? <span className="font-mono break-all">{entry.rule_id}</span> : null}
+        <p className="text-xs text-muted-foreground">
+          {entry.rule_id ? (
+            <span className="font-mono break-all">{entry.rule_id}</span>
+          ) : null}
           {entry.rule_id && entry.legal_basis ? " · " : null}
           {entry.legal_basis}
         </p>
@@ -136,8 +147,9 @@ export function BlockedPositionsTable({ coding }: { coding: Coding }) {
         </EmptyMedia>
         <EmptyTitle>Keine Position unterdrückt</EmptyTitle>
         <EmptyDescription>
-          Keine der durchgesetzten Regeln hat eine Position entfernt. Bei unvollständiger
-          Regelabdeckung heißt das nicht, dass keine zu entfernen gewesen wäre.
+          Keine der durchgesetzten Regeln hat eine Position entfernt. Bei
+          unvollständiger Regelabdeckung heißt das nicht, dass keine zu
+          entfernen gewesen wäre.
         </EmptyDescription>
       </Empty>
     )
@@ -157,7 +169,9 @@ export function BlockedPositionsTable({ coding }: { coding: Coding }) {
                 badge on one line, and Beschreibung takes everything left over.
               */}
               <TableHead className={cn(HEAD, "w-16")}>Ziffer</TableHead>
-              <TableHead className={cn(HEAD, "w-full px-2")}>Beschreibung</TableHead>
+              <TableHead className={cn(HEAD, "w-full px-2")}>
+                Beschreibung
+              </TableHead>
               <TableHead className={cn(HEAD, "w-36 px-2")}>Grund</TableHead>
               <TableHead className={cn(HEAD, "w-10 text-right print:hidden")}>
                 <span className="sr-only">Details</span>
@@ -176,19 +190,23 @@ export function BlockedPositionsTable({ coding }: { coding: Coding }) {
                     onClick={() => toggle(key)}
                     className={cn(
                       ROW,
-                      "even:bg-muted/30 hover:bg-muted/60 cursor-pointer",
-                      expanded && "bg-muted/60 even:bg-muted/60",
+                      "cursor-pointer even:bg-muted/30 hover:bg-muted/60",
+                      expanded && "bg-muted/60 even:bg-muted/60"
                     )}
                   >
-                    <TableCell className="text-destructive w-16 align-middle font-mono text-sm font-medium">
+                    <TableCell className="w-16 align-middle font-mono text-sm font-medium text-destructive">
                       {entry.ziffer}
                     </TableCell>
                     <TableCell className="w-full min-w-32 px-2 align-middle whitespace-normal">
-                      <div className={cn("text-sm", CLAMP_2, WRAP)}>{entry.official_text || "—"}</div>
+                      <div className={cn("text-sm", CLAMP_2, WRAP)}>
+                        {entry.official_text || "—"}
+                      </div>
                     </TableCell>
                     <TableCell className="w-36 px-2 align-middle whitespace-normal">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant="destructive">{BLOCKED_REASON_SHORT[entry.reason]}</Badge>
+                        <Badge variant="destructive">
+                          {BLOCKED_REASON_SHORT[entry.reason]}
+                        </Badge>
                         {entry.reconciled_with_final_invoice === false ? (
                           <Badge variant="destructive" className="gap-1">
                             <TriangleAlertIcon />
@@ -208,11 +226,14 @@ export function BlockedPositionsTable({ coding }: { coding: Coding }) {
                         aria-expanded={expanded}
                         aria-controls={rowId}
                         aria-label={`Details zu GOÄ ${entry.ziffer} ${expanded ? "schließen" : "öffnen"}`}
-                        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring cursor-pointer rounded p-1 focus-visible:ring-2 focus-visible:outline-none"
+                        className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                       >
                         <ChevronDownIcon
                           aria-hidden
-                          className={cn("size-4 transition-transform", expanded && "rotate-180")}
+                          className={cn(
+                            "size-4 transition-transform",
+                            expanded && "rotate-180"
+                          )}
                         />
                       </button>
                     </TableCell>
@@ -222,10 +243,13 @@ export function BlockedPositionsTable({ coding }: { coding: Coding }) {
                     id={rowId}
                     className={cn(
                       "hover:bg-transparent",
-                      expanded ? "bg-muted/30" : "hidden print:table-row",
+                      expanded ? "bg-muted/30" : "hidden print:table-row"
                     )}
                   >
-                    <TableCell colSpan={4} className="pt-0 pb-4 whitespace-normal">
+                    <TableCell
+                      colSpan={4}
+                      className="pt-0 pb-4 whitespace-normal"
+                    >
                       <BlockedDetail entry={entry} />
                     </TableCell>
                   </TableRow>
@@ -238,12 +262,21 @@ export function BlockedPositionsTable({ coding }: { coding: Coding }) {
 
       <ul className={cn(CARDS_ONLY, "space-y-3 px-6")}>
         {blocked.map((entry, index) => (
-          <li key={keyOf(entry, index)} className="border-destructive/30 rounded-2xl border p-4">
+          <li
+            key={keyOf(entry, index)}
+            className="rounded-2xl border border-destructive/30 p-4"
+          >
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-destructive font-mono text-sm font-medium">{entry.ziffer}</span>
-              <Badge variant="destructive">{BLOCKED_REASON_SHORT[entry.reason]}</Badge>
+              <span className="font-mono text-sm font-medium text-destructive">
+                {entry.ziffer}
+              </span>
+              <Badge variant="destructive">
+                {BLOCKED_REASON_SHORT[entry.reason]}
+              </Badge>
             </div>
-            <p className={cn("mt-2 text-sm", WRAP)}>{entry.official_text || "—"}</p>
+            <p className={cn("mt-2 text-sm", WRAP)}>
+              {entry.official_text || "—"}
+            </p>
             <div className="mt-3 border-t pt-3">
               <BlockedDetail entry={entry} />
             </div>

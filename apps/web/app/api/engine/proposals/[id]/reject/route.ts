@@ -8,7 +8,7 @@ import { callEngine, proxyResponse } from "@/lib/engine"
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   const { id } = await params
 
@@ -17,8 +17,11 @@ export async function POST(
     body = await request.json()
   } catch {
     return Response.json(
-      { error: "invalid_request_body", message: "Der Request-Body ist kein gültiges JSON." },
-      { status: 400 },
+      {
+        error: "invalid_request_body",
+        message: "Der Request-Body ist kein gültiges JSON.",
+      },
+      { status: 400 }
     )
   }
 
@@ -26,6 +29,6 @@ export async function POST(
     await callEngine(`/api/v1/proposals/${encodeURIComponent(id)}/reject`, {
       method: "POST",
       body,
-    }),
+    })
   )
 }

@@ -96,7 +96,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
  * reintroduce it one entry at a time.
  */
 export const WORKSPACE_ITEMS: readonly NavItem[] = NAV_ITEMS.filter(
-  (item) => item.href !== DASHBOARD_HREF,
+  (item) => item.href !== DASHBOARD_HREF
 )
 
 /**
@@ -118,8 +118,10 @@ export const WORKSPACE_ITEMS: readonly NavItem[] = NAV_ITEMS.filter(
  */
 export function activeHref(pathname: string): string | null {
   const matches = NAV_ITEMS.filter(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
   )
   if (matches.length === 0) return null
-  return matches.reduce((best, item) => (item.href.length > best.href.length ? item : best)).href
+  return matches.reduce((best, item) =>
+    item.href.length > best.href.length ? item : best
+  ).href
 }

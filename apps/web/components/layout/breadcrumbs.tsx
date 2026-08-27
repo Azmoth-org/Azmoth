@@ -46,7 +46,9 @@ export function Breadcrumbs({ trail }: { trail: readonly Crumb[] }) {
                 {crumb.href && !last ? (
                   // `render` rather than `asChild`: this registry is built on Base UI, which takes
                   // the element to render as a prop. Next's `Link` keeps client-side navigation.
-                  <BreadcrumbLink render={<Link href={crumb.href} />}>{crumb.label}</BreadcrumbLink>
+                  <BreadcrumbLink render={<Link href={crumb.href} />}>
+                    {crumb.label}
+                  </BreadcrumbLink>
                 ) : (
                   <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
                 )}

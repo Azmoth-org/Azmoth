@@ -2,7 +2,11 @@
 
 import { CircleAlertIcon, Loader2Icon } from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 import { Card, CardContent } from "@workspace/ui/components/card"
 
 import type { BatchAuditJob } from "@/lib/padnext/batch-types"
@@ -39,13 +43,13 @@ export function BatchProgress({ job }: { job: BatchAuditJob }) {
             )}
             {done} von {total} Dateien geprüft
           </span>
-          <span className="text-muted-foreground font-mono text-xs">
+          <span className="font-mono text-xs text-muted-foreground">
             {job.batch_id} · {STATUS_LABEL[job.status]}
           </span>
         </div>
 
         <div
-          className="bg-muted h-2 w-full overflow-hidden rounded-full"
+          className="h-2 w-full overflow-hidden rounded-full bg-muted"
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={total}
@@ -53,14 +57,14 @@ export function BatchProgress({ job }: { job: BatchAuditJob }) {
           aria-label={`${done} von ${total} Dateien geprüft`}
         >
           <div
-            className="bg-primary h-full transition-[width] duration-300"
+            className="h-full bg-primary transition-[width] duration-300"
             style={{ width: `${percent}%` }}
           />
         </div>
 
-        <p className="text-muted-foreground text-xs">
-          {job.completed_file_count} erfolgreich · {job.failed_file_count} fehlgeschlagen. Der
-          Fortschritt zählt Dateien, nicht Beträge.
+        <p className="text-xs text-muted-foreground">
+          {job.completed_file_count} erfolgreich · {job.failed_file_count}{" "}
+          fehlgeschlagen. Der Fortschritt zählt Dateien, nicht Beträge.
         </p>
       </CardContent>
     </Card>
@@ -83,18 +87,21 @@ export function FailedFilesNotice({ job }: { job: BatchAuditJob }) {
       <CircleAlertIcon />
       <AlertTitle>
         {job.failed_file_count} von {job.file_count} Dateien{" "}
-        {job.failed_file_count === 1 ? "konnte" : "konnten"} nicht geprüft werden
+        {job.failed_file_count === 1 ? "konnte" : "konnten"} nicht geprüft
+        werden
       </AlertTitle>
       <AlertDescription>
         {all ? (
           <p>
-            Keine der hochgeladenen Dateien war lesbar, daher enthält die Auswertung unten keine
-            Beträge. Die Gründe stehen je Datei in der Tabelle.
+            Keine der hochgeladenen Dateien war lesbar, daher enthält die
+            Auswertung unten keine Beträge. Die Gründe stehen je Datei in der
+            Tabelle.
           </p>
         ) : (
           <p>
-            Die Auswertung unten umfasst nur die {job.completed_file_count} geprüften Dateien. Die
-            übrigen sind in der Tabelle mit ihrem Fehler aufgeführt und gehen in keine Summe ein.
+            Die Auswertung unten umfasst nur die {job.completed_file_count}{" "}
+            geprüften Dateien. Die übrigen sind in der Tabelle mit ihrem Fehler
+            aufgeführt und gehen in keine Summe ein.
           </p>
         )}
       </AlertDescription>

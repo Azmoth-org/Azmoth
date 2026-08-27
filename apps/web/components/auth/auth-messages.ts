@@ -18,16 +18,22 @@ const MESSAGES: Record<string, string> = {
   USER_NOT_FOUND: "E-Mail-Adresse oder Passwort ist falsch.",
   USER_ALREADY_EXISTS: "Für diese E-Mail-Adresse besteht bereits ein Konto.",
   USER_EMAIL_NOT_FOUND: "E-Mail-Adresse oder Passwort ist falsch.",
-  PASSWORD_TOO_SHORT: "Das Passwort ist zu kurz. Es sind mindestens 12 Zeichen erforderlich.",
+  PASSWORD_TOO_SHORT:
+    "Das Passwort ist zu kurz. Es sind mindestens 12 Zeichen erforderlich.",
   PASSWORD_TOO_LONG: "Das Passwort ist zu lang.",
   EMAIL_NOT_VERIFIED: "Diese E-Mail-Adresse ist noch nicht bestätigt.",
-  SESSION_EXPIRED: "Die Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
-  PROVIDER_NOT_FOUND: "Die Anmeldung mit Google ist auf diesem Server nicht eingerichtet.",
-  SOCIAL_ACCOUNT_ALREADY_LINKED: "Dieses Google-Konto ist bereits mit einem anderen Konto verknüpft.",
+  SESSION_EXPIRED:
+    "Die Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+  PROVIDER_NOT_FOUND:
+    "Die Anmeldung mit Google ist auf diesem Server nicht eingerichtet.",
+  SOCIAL_ACCOUNT_ALREADY_LINKED:
+    "Dieses Google-Konto ist bereits mit einem anderen Konto verknüpft.",
 }
 
 /** The German sentence for a Better Auth failure, or a truthful fallback when the code is new. */
-export function authErrorMessage(error: { code?: string; message?: string } | null | undefined): string {
+export function authErrorMessage(
+  error: { code?: string; message?: string } | null | undefined
+): string {
   const code = error?.code
   if (code && code in MESSAGES) return MESSAGES[code]!
   // Not the library's English message: a sentence in the wrong language reads as a bug in the
@@ -71,10 +77,14 @@ const OAUTH_MESSAGES: Record<string, string> = {
     "Dieses Google-Konto ist bereits mit einem anderen Konto verknüpft.",
   email_does_not_match:
     "Die E-Mail-Adresse des Google-Kontos stimmt nicht mit der des vorhandenen Kontos überein.",
-  email_not_found: "Google hat keine E-Mail-Adresse übermittelt. Eine Anmeldung ist so nicht möglich.",
-  email_not_verified: "Die E-Mail-Adresse dieses Google-Kontos ist nicht bestätigt.",
-  signup_disabled: "Für diese E-Mail-Adresse besteht noch kein Konto, und die Registrierung über Google ist deaktiviert.",
-  unable_to_create_user: "Das Konto konnte nicht angelegt werden. Bitte versuchen Sie es erneut.",
+  email_not_found:
+    "Google hat keine E-Mail-Adresse übermittelt. Eine Anmeldung ist so nicht möglich.",
+  email_not_verified:
+    "Die E-Mail-Adresse dieses Google-Kontos ist nicht bestätigt.",
+  signup_disabled:
+    "Für diese E-Mail-Adresse besteht noch kein Konto, und die Registrierung über Google ist deaktiviert.",
+  unable_to_create_user:
+    "Das Konto konnte nicht angelegt werden. Bitte versuchen Sie es erneut.",
   unable_to_create_session:
     "Die Anmeldung war erfolgreich, die Sitzung konnte aber nicht erstellt werden. Bitte versuchen Sie es erneut.",
   // The state cookie is how the callback proves the response belongs to the request that started
@@ -82,11 +92,16 @@ const OAUTH_MESSAGES: Record<string, string> = {
   // genuinely the fix, so the sentence says that rather than blaming anyone.
   state_not_found:
     "Die Anmeldung mit Google ist abgelaufen. Bitte starten Sie sie erneut.",
-  invalid_callback_request: "Die Antwort von Google war unvollständig. Bitte versuchen Sie es erneut.",
-  no_code: "Die Antwort von Google war unvollständig. Bitte versuchen Sie es erneut.",
-  invalid_code: "Die Antwort von Google konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
-  oauth_provider_not_found: "Die Anmeldung mit Google ist auf diesem Server nicht eingerichtet.",
-  unable_to_get_user_info: "Die Kontodaten konnten nicht von Google abgerufen werden.",
+  invalid_callback_request:
+    "Die Antwort von Google war unvollständig. Bitte versuchen Sie es erneut.",
+  no_code:
+    "Die Antwort von Google war unvollständig. Bitte versuchen Sie es erneut.",
+  invalid_code:
+    "Die Antwort von Google konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
+  oauth_provider_not_found:
+    "Die Anmeldung mit Google ist auf diesem Server nicht eingerichtet.",
+  unable_to_get_user_info:
+    "Die Kontodaten konnten nicht von Google abgerufen werden.",
 }
 
 /**
@@ -100,7 +115,9 @@ const OAUTH_MESSAGES: Record<string, string> = {
  * it partly comes from Google, and putting attacker-influenced text from a URL into the page is how
  * a login screen ends up displaying whatever a phishing link put there.
  */
-export function oauthErrorMessage(code: string | undefined | null): string | null {
+export function oauthErrorMessage(
+  code: string | undefined | null
+): string | null {
   if (!code) return null
   if (code in OAUTH_MESSAGES) return OAUTH_MESSAGES[code]!
   return "Die Anmeldung mit Google ist fehlgeschlagen. Bitte versuchen Sie es erneut."

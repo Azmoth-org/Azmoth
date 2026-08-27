@@ -1,4 +1,9 @@
-import { AlertTriangleIcon, InfoIcon, OctagonAlertIcon, TimerOffIcon } from "lucide-react"
+import {
+  AlertTriangleIcon,
+  InfoIcon,
+  OctagonAlertIcon,
+  TimerOffIcon,
+} from "lucide-react"
 
 import { Badge } from "@workspace/ui/components/badge"
 import {
@@ -9,18 +14,33 @@ import {
 } from "@workspace/ui/components/empty"
 
 import { ExpandableItem } from "@/components/review/expandable-item"
-import { SEVERITY_LABEL, bySeverity, isProminentWarning, warningTitle } from "@/lib/review/format"
+import {
+  SEVERITY_LABEL,
+  bySeverity,
+  isProminentWarning,
+  warningTitle,
+} from "@/lib/review/format"
 import type { EngineWarning, WarningSeverity } from "@/lib/review/types"
 
-const SEVERITY_BADGE_VARIANT: Record<WarningSeverity, "destructive" | "secondary" | "outline"> = {
+const SEVERITY_BADGE_VARIANT: Record<
+  WarningSeverity,
+  "destructive" | "secondary" | "outline"
+> = {
   error: "destructive",
   warning: "secondary",
   info: "outline",
 }
 
-function SeverityIcon({ severity, timeout }: { severity: WarningSeverity; timeout: boolean }) {
+function SeverityIcon({
+  severity,
+  timeout,
+}: {
+  severity: WarningSeverity
+  timeout: boolean
+}) {
   if (timeout) return <TimerOffIcon className="text-destructive" />
-  if (severity === "error") return <OctagonAlertIcon className="text-destructive" />
+  if (severity === "error")
+    return <OctagonAlertIcon className="text-destructive" />
   if (severity === "warning") {
     return <AlertTriangleIcon className="text-amber-600 dark:text-amber-400" />
   }
@@ -47,7 +67,11 @@ function SeverityIcon({ severity, timeout }: { severity: WarningSeverity; timeou
  * not merely at the top. Their message is also the one part of the explanation that is *not* hidden:
  * a warning nobody may scroll past is not a warning you have to click.
  */
-export function WarningsPanel({ warnings }: { warnings: readonly EngineWarning[] }) {
+export function WarningsPanel({
+  warnings,
+}: {
+  warnings: readonly EngineWarning[]
+}) {
   if (warnings.length === 0) {
     return (
       <Empty className="border">
@@ -56,8 +80,9 @@ export function WarningsPanel({ warnings }: { warnings: readonly EngineWarning[]
         </EmptyMedia>
         <EmptyTitle>Keine Hinweise</EmptyTitle>
         <EmptyDescription>
-          Die Engine hat zu diesem Vorschlag nichts angemerkt. Das ist kein Freigabesignal — es
-          bedeutet nur, dass keine der durchgesetzten Regeln etwas zu melden hatte.
+          Die Engine hat zu diesem Vorschlag nichts angemerkt. Das ist kein
+          Freigabesignal — es bedeutet nur, dass keine der durchgesetzten Regeln
+          etwas zu melden hatte.
         </EmptyDescription>
       </Empty>
     )
@@ -74,8 +99,12 @@ export function WarningsPanel({ warnings }: { warnings: readonly EngineWarning[]
         return (
           <ExpandableItem
             key={`${warning.type}-${warning.ziffer ?? ""}-${index}`}
-            className={prominent ? "border-destructive/40 bg-destructive/5" : undefined}
-            icon={<SeverityIcon severity={warning.severity} timeout={timeout} />}
+            className={
+              prominent ? "border-destructive/40 bg-destructive/5" : undefined
+            }
+            icon={
+              <SeverityIcon severity={warning.severity} timeout={timeout} />
+            }
             title={warningTitle(warning.type)}
             meta={
               <>
@@ -95,18 +124,24 @@ export function WarningsPanel({ warnings }: { warnings: readonly EngineWarning[]
                   id — the parts you quote rather than read.
                 */}
                 {prominent ? (
-                  <span className="text-foreground w-full text-sm font-normal">
+                  <span className="w-full text-sm font-normal text-foreground">
                     {warning.message}
                   </span>
                 ) : null}
               </>
             }
           >
-            {prominent ? null : <p className="text-foreground">{warning.message}</p>}
+            {prominent ? null : (
+              <p className="text-foreground">{warning.message}</p>
+            )}
             <p className="flex flex-wrap gap-x-2 text-xs">
               <span className="font-mono break-all">{warning.type}</span>
-              {warning.legal_basis ? <span>· {warning.legal_basis}</span> : null}
-              {warning.rule_id ? <span className="font-mono break-all">· {warning.rule_id}</span> : null}
+              {warning.legal_basis ? (
+                <span>· {warning.legal_basis}</span>
+              ) : null}
+              {warning.rule_id ? (
+                <span className="font-mono break-all">· {warning.rule_id}</span>
+              ) : null}
             </p>
           </ExpandableItem>
         )

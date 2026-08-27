@@ -54,7 +54,12 @@ const STATUS_OPTIONS: readonly StatusOption[] = [
   { value: "EXPORTED", label: "Exportiert" },
 ]
 
-export const PROPOSAL_STATUS_VALUES = ["DRAFT", "APPROVED", "REJECTED", "EXPORTED"] as const
+export const PROPOSAL_STATUS_VALUES = [
+  "DRAFT",
+  "APPROVED",
+  "REJECTED",
+  "EXPORTED",
+] as const
 
 /**
  * Every billing draft this database holds, filtered and paged.
@@ -103,7 +108,11 @@ export async function ProposalsTable({ params }: { params: ListParams }) {
             "Fall-ID, die der Aufrufer beim Lösen mitgegeben hat — nach einer Vorschlags-ID kann " +
             "die Engine ihre Liste noch nicht filtern."
           }
-          reset={nextHref(PROPOSALS_PATH, params, { status: null, query: null, page: 1 })}
+          reset={nextHref(PROPOSALS_PATH, params, {
+            status: null,
+            query: null,
+            page: 1,
+          })}
         />
       </Shell>
     )
@@ -114,7 +123,7 @@ export async function ProposalsTable({ params }: { params: ListParams }) {
       page: params.page,
       status: params.status,
       caseId: params.query,
-    })}`,
+    })}`
   )
 
   if (!result.ok) {
@@ -145,7 +154,11 @@ export async function ProposalsTable({ params }: { params: ListParams }) {
   const items = result.body.items ?? []
   const total = totalOrPageLength(result.body.total, items.length)
   const filtered = params.status !== null || params.query !== null
-  const reset = nextHref(PROPOSALS_PATH, params, { status: null, query: null, page: 1 })
+  const reset = nextHref(PROPOSALS_PATH, params, {
+    status: null,
+    query: null,
+    page: 1,
+  })
 
   if (items.length === 0) {
     return (
@@ -215,26 +228,39 @@ export async function ProposalsTable({ params }: { params: ListParams }) {
                   {/* A proposal without a `case_id` is normal — it travels on the request and
                       nothing requires the caller to send one — so the absence is labelled. */}
                   {proposal.case_id ? (
-                    <span className="font-mono text-xs">{proposal.case_id}</span>
+                    <span className="font-mono text-xs">
+                      {proposal.case_id}
+                    </span>
                   ) : (
-                    <span className="text-muted-foreground text-xs">ohne Fall-ID</span>
+                    <span className="text-xs text-muted-foreground">
+                      ohne Fall-ID
+                    </span>
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={status.variant} className={cn(status.className)}>
+                  <Badge
+                    variant={status.variant}
+                    className={cn(status.className)}
+                  >
                     {status.label}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-xs tabular-nums">
+                <TableCell className="text-xs text-muted-foreground tabular-nums">
                   {timestamp(proposal.created_at)}
                 </TableCell>
                 <TableCell>
-                  <CopyableHash value={proposal.receipt_hash} length={12} label="Receipt-Hash" />
+                  <CopyableHash
+                    value={proposal.receipt_hash}
+                    length={12}
+                    label="Receipt-Hash"
+                  />
                 </TableCell>
                 <TableCell className="text-right">
                   <Link
                     href={`/review?id=${encodeURIComponent(proposal.proposal_id)}`}
-                    className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "sm" })
+                    )}
                   >
                     Ansehen
                   </Link>
@@ -245,7 +271,12 @@ export async function ProposalsTable({ params }: { params: ListParams }) {
         </TableBody>
       </Table>
 
-      <Pagination pathname={PROPOSALS_PATH} params={params} total={total} shown={items.length} />
+      <Pagination
+        pathname={PROPOSALS_PATH}
+        params={params}
+        total={total}
+        shown={items.length}
+      />
     </Shell>
   )
 }
@@ -262,7 +293,7 @@ function Shell({
     <Card>
       <CardContent className="space-y-4 pt-6">
         {toolbar}
-        <div className="border-border border-t pt-2">{children}</div>
+        <div className="border-t border-border pt-2">{children}</div>
       </CardContent>
     </Card>
   )

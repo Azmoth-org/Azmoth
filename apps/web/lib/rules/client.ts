@@ -46,7 +46,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 async function readJson(
-  response: Response,
+  response: Response
 ): Promise<{ ok: true; body: unknown } | { ok: false; error: ReviewError }> {
   const raw = await response.text()
 
@@ -76,7 +76,8 @@ async function readJson(
     }
   }
 
-  if (!response.ok) return { ok: false, error: toReviewError(response.status, body) }
+  if (!response.ok)
+    return { ok: false, error: toReviewError(response.status, body) }
   return { ok: true, body }
 }
 
@@ -92,7 +93,11 @@ function unreachable(cause: unknown): { kind: "error"; error: ReviewError } {
   }
 }
 
-function skew(status: number, body: unknown, what: string): { kind: "error"; error: ReviewError } {
+function skew(
+  status: number,
+  body: unknown,
+  what: string
+): { kind: "error"; error: ReviewError } {
   return {
     kind: "error",
     error: {
@@ -137,7 +142,7 @@ function isCoverageShape(value: unknown): value is RuleCoverage {
 }
 
 export async function fetchReviewQueue(
-  options: { kind?: RuleKind | null; limit?: number } = {},
+  options: { kind?: RuleKind | null; limit?: number } = {}
 ): Promise<QueueResult> {
   const params = new URLSearchParams()
   if (options.kind) params.set("kind", options.kind)
@@ -146,9 +151,12 @@ export async function fetchReviewQueue(
 
   let response: Response
   try {
-    response = await fetch(`/api/engine/rules/review-queue${query ? `?${query}` : ""}`, {
-      cache: "no-store",
-    })
+    response = await fetch(
+      `/api/engine/rules/review-queue${query ? `?${query}` : ""}`,
+      {
+        cache: "no-store",
+      }
+    )
   } catch (cause) {
     return unreachable(cause)
   }
@@ -179,15 +187,18 @@ export async function fetchRuleCoverage(): Promise<CoverageResult> {
 
 export async function submitRuleReview(
   ruleId: string,
-  payload: RuleReviewRequest,
+  payload: RuleReviewRequest
 ): Promise<ReviewResult> {
   let response: Response
   try {
-    response = await fetch(`/api/engine/rules/${encodeURIComponent(ruleId)}/review`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
+    response = await fetch(
+      `/api/engine/rules/${encodeURIComponent(ruleId)}/review`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    )
   } catch (cause) {
     return unreachable(cause)
   }

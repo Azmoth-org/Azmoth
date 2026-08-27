@@ -50,12 +50,15 @@ export default async function BatchHistoryPage({
       />
 
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Stapel-Historie</h1>
-        <p className="text-muted-foreground max-w-3xl text-sm">
-          Jede Stapelprüfung bleibt mit ihrer Zusammenfassung gespeichert, auch wenn die Stapel-ID im
-          Browser längst verloren ist. Ein <strong>fehlgeschlagener</strong> Stapel hat keine
-          Auswertung: entweder brach der Lauf ab, oder er wurde beim Neustart der Engine geschlossen —
-          der Grund steht in der Statusspalte.
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Stapel-Historie
+        </h1>
+        <p className="max-w-3xl text-sm text-muted-foreground">
+          Jede Stapelprüfung bleibt mit ihrer Zusammenfassung gespeichert, auch
+          wenn die Stapel-ID im Browser längst verloren ist. Ein{" "}
+          <strong>fehlgeschlagener</strong> Stapel hat keine Auswertung:
+          entweder brach der Lauf ab, oder er wurde beim Neustart der Engine
+          geschlossen — der Grund steht in der Statusspalte.
         </p>
       </header>
 

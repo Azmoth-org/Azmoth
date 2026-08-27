@@ -99,7 +99,12 @@ function JustificationBadge({ line }: { line: InvoiceLine }) {
         begründet
       </Badge>
       {line.justification ? (
-        <p className={cn("text-muted-foreground hidden text-xs print:block", WRAP)}>
+        <p
+          className={cn(
+            "hidden text-xs text-muted-foreground print:block",
+            WRAP
+          )}
+        >
           {line.justification}
         </p>
       ) : null}
@@ -129,7 +134,7 @@ function TextQualityBadge({ line }: { line: InvoiceLine }) {
  */
 function Classification({ line }: { line: InvoiceLine }) {
   return (
-    <div className="text-muted-foreground hidden flex-wrap gap-x-2 text-xs print:flex">
+    <div className="hidden flex-wrap gap-x-2 text-xs text-muted-foreground print:flex">
       <span>{lineStatus(line.status)}</span>
       {line.category ? <span>· Abschnitt {line.category}</span> : null}
       {line.analog_for ? <span>· analog für {line.analog_for}</span> : null}
@@ -139,7 +144,9 @@ function Classification({ line }: { line: InvoiceLine }) {
 
 /** The badges a row only carries when something about it needs acting on. */
 function Signals({ line }: { line: InvoiceLine }) {
-  const hasSignal = line.justification_required || (line.text_quality && line.text_quality !== "ok")
+  const hasSignal =
+    line.justification_required ||
+    (line.text_quality && line.text_quality !== "ok")
   if (!hasSignal) return null
 
   return (
@@ -188,9 +195,9 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
         </EmptyMedia>
         <EmptyTitle>Keine berechnungsfähige Position</EmptyTitle>
         <EmptyDescription>
-          Ein gültiges Ergebnis, kein Fehler: die dokumentierten Leistungen ließen sich keiner
-          durchsetzbaren Position zuordnen. Die gesperrten Positionen und die Hinweise der Engine
-          stehen daneben.
+          Ein gültiges Ergebnis, kein Fehler: die dokumentierten Leistungen
+          ließen sich keiner durchsetzbaren Position zuordnen. Die gesperrten
+          Positionen und die Hinweise der Engine stehen daneben.
         </EmptyDescription>
       </Empty>
     )
@@ -220,7 +227,9 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
               <TableHead className={HEAD_FIGURE}>Faktor</TableHead>
               <TableHead className={HEAD_FIGURE}>Betrag</TableHead>
               {/* A dialog trigger is useless on paper; the whole column goes with it. */}
-              <TableHead className={cn(HEAD, "text-right print:hidden")}>Beweis</TableHead>
+              <TableHead className={cn(HEAD, "text-right print:hidden")}>
+                Beweis
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -245,14 +254,14 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
                 <TableCell className={FIGURE}>{line.punkte}</TableCell>
                 <TableCell className={cn(FIGURE, "max-w-28 whitespace-normal")}>
                   <div>{factor(line.factor)}</div>
-                  <div className="text-muted-foreground text-xs">
+                  <div className="text-xs text-muted-foreground">
                     {factorBasis(line.factor_basis)}
                   </div>
                 </TableCell>
                 <TableCell className={FIGURE}>
                   <div className="font-medium">{eur(line.amount_eur)}</div>
                   {line.minderung_applied ? (
-                    <div className="text-muted-foreground text-xs">
+                    <div className="text-xs text-muted-foreground">
                       vor § 6a: {eur(line.amount_eur_before_minderung)}
                     </div>
                   ) : null}
@@ -273,14 +282,19 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
               <TableRow className={cn(ROW, "hover:bg-transparent")}>
                 <TableCell colSpan={2} className="whitespace-normal">
                   <div className="text-base font-semibold">Gesamt</div>
-                  <div className="text-muted-foreground text-xs font-normal">
+                  <div className="text-xs font-normal text-muted-foreground">
                     Von der Engine ausgewiesen, nicht im Frontend berechnet.
                   </div>
                 </TableCell>
                 <TableCell className={cn(FIGURE, "text-base font-semibold")}>
                   {total.punkte}
                 </TableCell>
-                <TableCell className={cn(FIGURE, "text-muted-foreground text-xs font-normal")}>
+                <TableCell
+                  className={cn(
+                    FIGURE,
+                    "text-xs font-normal text-muted-foreground"
+                  )}
+                >
                   Punktwert
                   <br />
                   {total.punktwert_cent} ct
@@ -294,7 +308,7 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
                 <TableRow className="hover:bg-transparent">
                   <TableCell
                     colSpan={6}
-                    className="text-muted-foreground text-xs font-normal whitespace-normal"
+                    className="text-xs font-normal whitespace-normal text-muted-foreground"
                   >
                     {footnote}
                   </TableCell>
@@ -307,11 +321,18 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
 
       <ul className={cn(CARDS_ONLY, "space-y-3 px-6")}>
         {lines.map((line) => (
-          <li key={`${line.ziffer}-${line.status ?? ""}`} className="rounded-2xl border p-4">
+          <li
+            key={`${line.ziffer}-${line.status ?? ""}`}
+            className="rounded-2xl border p-4"
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
-                <span className="font-mono text-sm font-medium">{line.ziffer}</span>
-                {line.is_analog ? <Badge variant="outline">analog</Badge> : null}
+                <span className="font-mono text-sm font-medium">
+                  {line.ziffer}
+                </span>
+                {line.is_analog ? (
+                  <Badge variant="outline">analog</Badge>
+                ) : null}
               </div>
               <span className="shrink-0 text-lg font-semibold tabular-nums">
                 {eur(line.amount_eur)}
@@ -320,14 +341,16 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
 
             <p className={cn("mt-2 text-sm", WRAP)}>{line.official_text}</p>
 
-            <dl className="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t pt-3 text-xs">
+            <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
               <div className="flex gap-1">
                 <dt>Punkte</dt>
                 <dd className="text-foreground tabular-nums">{line.punkte}</dd>
               </div>
               <div className="flex gap-1">
                 <dt>Faktor</dt>
-                <dd className="text-foreground tabular-nums">{factor(line.factor)}</dd>
+                <dd className="text-foreground tabular-nums">
+                  {factor(line.factor)}
+                </dd>
               </div>
               <div className="flex gap-1">
                 <dt className="sr-only">Faktorgrundlage</dt>
@@ -348,16 +371,20 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
         ))}
 
         {total ? (
-          <li className="bg-muted/40 rounded-2xl border p-4">
+          <li className="rounded-2xl border bg-muted/40 p-4">
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-base font-semibold">Gesamt</span>
-              <span className="text-2xl font-bold tabular-nums">{eur(total.amount_eur)}</span>
+              <span className="text-2xl font-bold tabular-nums">
+                {eur(total.amount_eur)}
+              </span>
             </div>
-            <p className="text-muted-foreground mt-1 text-xs">
-              {total.punkte} Punkte · Punktwert {total.punktwert_cent} ct · von der Engine
-              ausgewiesen, nicht im Frontend berechnet.
+            <p className="mt-1 text-xs text-muted-foreground">
+              {total.punkte} Punkte · Punktwert {total.punktwert_cent} ct · von
+              der Engine ausgewiesen, nicht im Frontend berechnet.
             </p>
-            {footnote ? <p className="text-muted-foreground mt-1 text-xs">{footnote}</p> : null}
+            {footnote ? (
+              <p className="mt-1 text-xs text-muted-foreground">{footnote}</p>
+            ) : null}
           </li>
         ) : null}
       </ul>

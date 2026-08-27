@@ -4,7 +4,13 @@ import Link from "next/link"
 import { buttonVariants } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 
-import { PAGE_SIZE, nextHref, offsetOf, pageCount, type ListParams } from "@/lib/lists/params"
+import {
+  PAGE_SIZE,
+  nextHref,
+  offsetOf,
+  pageCount,
+  type ListParams,
+} from "@/lib/lists/params"
 
 /**
  * Previous / Next and "Seite 2 von 5", as links.
@@ -49,7 +55,7 @@ export function Pagination({
       aria-label="Seitennavigation"
       className="flex flex-wrap items-center justify-between gap-3 pt-2"
     >
-      <p className="text-muted-foreground text-xs">
+      <p className="text-xs text-muted-foreground">
         {total === 0 ? (
           "Keine Einträge"
         ) : (
@@ -57,7 +63,8 @@ export function Pagination({
             <span className="tabular-nums">
               {from}–{to}
             </span>{" "}
-            von <span className="tabular-nums">{total}</span> · {PAGE_SIZE} pro Seite
+            von <span className="tabular-nums">{total}</span> · {PAGE_SIZE} pro
+            Seite
           </>
         )}
       </p>
@@ -116,7 +123,10 @@ function Step({
 
   if (!enabled) {
     return (
-      <span aria-disabled="true" className={cn(className, "pointer-events-none opacity-50")}>
+      <span
+        aria-disabled="true"
+        className={cn(className, "pointer-events-none opacity-50")}
+      >
         {content}
       </span>
     )

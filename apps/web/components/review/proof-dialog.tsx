@@ -61,7 +61,9 @@ export function ProofDialog({
           >
             <FileSearchIcon />
             {compact ? null : triggerLabel}
-            {hasSteps ? <span className="tabular-nums">({steps.length})</span> : null}
+            {hasSteps ? (
+              <span className="tabular-nums">({steps.length})</span>
+            ) : null}
           </Button>
         }
       />
@@ -81,17 +83,23 @@ export function ProofDialog({
                 className="rounded-lg border p-3"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-muted-foreground text-xs tabular-nums">{index + 1}.</span>
-                  <span className="font-mono text-sm font-medium">{step.rule}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {index + 1}.
+                  </span>
+                  <span className="font-mono text-sm font-medium">
+                    {step.rule}
+                  </span>
                   {step.rule_id ? (
                     <Badge variant="outline" className="font-mono">
                       {step.rule_id}
                     </Badge>
                   ) : null}
-                  {step.legal_basis ? <Badge variant="secondary">{step.legal_basis}</Badge> : null}
+                  {step.legal_basis ? (
+                    <Badge variant="secondary">{step.legal_basis}</Badge>
+                  ) : null}
                 </div>
                 {step.detail ? (
-                  <div className="text-muted-foreground mt-1 font-mono text-xs break-words">
+                  <div className="mt-1 font-mono text-xs break-words text-muted-foreground">
                     {step.detail}
                   </div>
                 ) : null}

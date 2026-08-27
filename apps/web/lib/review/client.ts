@@ -6,11 +6,22 @@
  * error with the raw details attached.
  */
 
-import type { ApprovalRequest, RejectionRequest, SolveRequest } from "@workspace/contracts"
+import type {
+  ApprovalRequest,
+  RejectionRequest,
+  SolveRequest,
+} from "@workspace/contracts"
 
-import { isProposalShape, toReviewError, type ReviewResult } from "@/lib/review/types"
+import {
+  isProposalShape,
+  toReviewError,
+  type ReviewResult,
+} from "@/lib/review/types"
 
-async function request(path: string, init?: RequestInit): Promise<ReviewResult> {
+async function request(
+  path: string,
+  init?: RequestInit
+): Promise<ReviewResult> {
   let response: Response
   try {
     response = await fetch(path, init)
@@ -92,22 +103,28 @@ export function fetchProposal(proposalId: string): Promise<ReviewResult> {
 
 export function approveProposal(
   proposalId: string,
-  payload: ApprovalRequest,
+  payload: ApprovalRequest
 ): Promise<ReviewResult> {
-  return request(`/api/engine/proposals/${encodeURIComponent(proposalId)}/approve`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  })
+  return request(
+    `/api/engine/proposals/${encodeURIComponent(proposalId)}/approve`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  )
 }
 
 export function rejectProposal(
   proposalId: string,
-  payload: RejectionRequest,
+  payload: RejectionRequest
 ): Promise<ReviewResult> {
-  return request(`/api/engine/proposals/${encodeURIComponent(proposalId)}/reject`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  })
+  return request(
+    `/api/engine/proposals/${encodeURIComponent(proposalId)}/reject`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  )
 }

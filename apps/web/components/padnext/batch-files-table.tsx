@@ -29,9 +29,21 @@ const STATUS_BADGE: Record<
   BatchFileResult["status"],
   { label: string; icon: typeof CircleCheckIcon; className: string }
 > = {
-  COMPLETED: { label: "geprüft", icon: CircleCheckIcon, className: BUCKET_TONE_CLASS.fine.badge },
-  FAILED: { label: "nicht lesbar", icon: CircleSlashIcon, className: BUCKET_TONE_CLASS.wrong.badge },
-  PENDING: { label: "ausstehend", icon: ClockIcon, className: BUCKET_TONE_CLASS.unknown.badge },
+  COMPLETED: {
+    label: "geprüft",
+    icon: CircleCheckIcon,
+    className: BUCKET_TONE_CLASS.fine.badge,
+  },
+  FAILED: {
+    label: "nicht lesbar",
+    icon: CircleSlashIcon,
+    className: BUCKET_TONE_CLASS.wrong.badge,
+  },
+  PENDING: {
+    label: "ausstehend",
+    icon: ClockIcon,
+    className: BUCKET_TONE_CLASS.unknown.badge,
+  },
 }
 
 function StatusBadge({ status }: { status: BatchFileResult["status"] }) {
@@ -58,13 +70,15 @@ function FileDetail({ file }: { file: BatchFileResult }) {
   if (file.status === "FAILED") {
     return (
       <div className="space-y-2 py-2">
-        <p className="text-sm font-medium">Diese Datei konnte nicht geprüft werden.</p>
-        <p className="text-muted-foreground font-mono text-xs break-all">
+        <p className="text-sm font-medium">
+          Diese Datei konnte nicht geprüft werden.
+        </p>
+        <p className="font-mono text-xs break-all text-muted-foreground">
           {file.error_message ?? "Kein Grund angegeben."}
         </p>
-        <p className="text-muted-foreground text-xs">
-          Sie geht in keine der Summen oben ein. Eine nicht lesbare Datei ist kein Befund gegen die
-          Praxis.
+        <p className="text-xs text-muted-foreground">
+          Sie geht in keine der Summen oben ein. Eine nicht lesbare Datei ist
+          kein Befund gegen die Praxis.
         </p>
       </div>
     )
@@ -72,7 +86,7 @@ function FileDetail({ file }: { file: BatchFileResult }) {
 
   if (!file.report) {
     return (
-      <p className="text-muted-foreground py-2 text-sm">
+      <p className="py-2 text-sm text-muted-foreground">
         Für diese Datei liegt noch kein Bericht vor.
       </p>
     )
@@ -102,12 +116,16 @@ export function BatchFilesTable({ job }: { job: BatchAuditJob }) {
   return (
     <section className="space-y-4" aria-labelledby="batch-files-heading">
       <div className="space-y-1">
-        <h2 id="batch-files-heading" className="text-lg font-semibold tracking-tight">
+        <h2
+          id="batch-files-heading"
+          className="text-lg font-semibold tracking-tight"
+        >
           Dateien ({files.length})
         </h2>
-        <p className="text-muted-foreground text-sm">
-          Sortiert nach <strong>nachweislich falsch</strong>, absteigend — die Rechnungen mit dem
-          größten belastbaren Befund zuerst. Eine Zeile anklicken zeigt die Einzelprüfung.
+        <p className="text-sm text-muted-foreground">
+          Sortiert nach <strong>nachweislich falsch</strong>, absteigend — die
+          Rechnungen mit dem größten belastbaren Befund zuerst. Eine Zeile
+          anklicken zeigt die Einzelprüfung.
         </p>
       </div>
 
@@ -131,14 +149,18 @@ export function BatchFilesTable({ job }: { job: BatchAuditJob }) {
             return [
               <TableRow
                 key={`row-${index}`}
-                className="hover:bg-muted/50 cursor-pointer"
+                className="cursor-pointer hover:bg-muted/50"
                 onClick={() => setExpanded(open ? null : index)}
               >
                 <TableCell>
                   <button
                     type="button"
                     aria-expanded={open}
-                    aria-label={open ? `${file.filename} einklappen` : `${file.filename} aufklappen`}
+                    aria-label={
+                      open
+                        ? `${file.filename} einklappen`
+                        : `${file.filename} aufklappen`
+                    }
                     className="text-muted-foreground"
                     onClick={(event) => {
                       event.stopPropagation()
@@ -179,12 +201,15 @@ export function BatchFilesTable({ job }: { job: BatchAuditJob }) {
                 </TableCell>
               </TableRow>,
               open ? (
-                <TableRow key={`detail-${index}`} className="hover:bg-transparent">
+                <TableRow
+                  key={`detail-${index}`}
+                  className="hover:bg-transparent"
+                >
                   {/* `max-w-0` stops the nested audit tables from setting this table's width.
                       Without it, opening a row makes the summary columns above scroll sideways out
                       of view; with it the detail's own container scrolls instead — which is what
                       should happen, since the detail is the wide thing. */}
-                  <TableCell colSpan={8} className="bg-muted/30 max-w-0">
+                  <TableCell colSpan={8} className="max-w-0 bg-muted/30">
                     <FileDetail file={file} />
                   </TableCell>
                 </TableRow>
@@ -195,10 +220,10 @@ export function BatchFilesTable({ job }: { job: BatchAuditJob }) {
       </Table>
 
       {files.some((file) => file.status === "FAILED") ? (
-        <p className="text-muted-foreground flex items-start gap-2 text-xs">
+        <p className="flex items-start gap-2 text-xs text-muted-foreground">
           <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-          Nicht lesbare Dateien stehen am Ende und tragen zu keiner Summe bei — sie haben keinen
-          Risikowert, nach dem sie einsortiert werden könnten.
+          Nicht lesbare Dateien stehen am Ende und tragen zu keiner Summe bei —
+          sie haben keinen Risikowert, nach dem sie einsortiert werden könnten.
         </p>
       ) : null}
     </section>

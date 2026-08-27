@@ -3,7 +3,11 @@
 import * as React from "react"
 import { CheckCircle2Icon, XCircleIcon } from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -19,7 +23,12 @@ import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
 import { Textarea } from "@workspace/ui/components/textarea"
 
-import { KIND, ROLE_LABEL, directionLabel, sourceLabel } from "@/lib/rules/format"
+import {
+  KIND,
+  ROLE_LABEL,
+  directionLabel,
+  sourceLabel,
+} from "@/lib/rules/format"
 import type { ReviewableRule } from "@/lib/rules/client"
 
 /**
@@ -49,7 +58,7 @@ export function ReviewDialog({
     rule: ReviewableRule,
     status: "VERIFIED" | "REJECTED" | "PENDING",
     reviewedBy: string,
-    notes: string,
+    notes: string
   ) => Promise<void>
 }) {
   const [reviewedBy, setReviewedBy] = React.useState("")
@@ -86,7 +95,9 @@ export function ReviewDialog({
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-sm">{rule.rule_id}</span>
-            <Badge className={presentation.className}>{presentation.label}</Badge>
+            <Badge className={presentation.className}>
+              {presentation.label}
+            </Badge>
           </DialogTitle>
           <DialogDescription>{presentation.hint}</DialogDescription>
         </DialogHeader>
@@ -96,15 +107,19 @@ export function ReviewDialog({
             {Object.entries(rule.ziffer_roles ?? {}).map(([role, ziffer]) =>
               ziffer ? (
                 <div key={role}>
-                  <div className="text-muted-foreground">{ROLE_LABEL[role] ?? role}</div>
+                  <div className="text-muted-foreground">
+                    {ROLE_LABEL[role] ?? role}
+                  </div>
                   <div className="font-mono text-sm">GOÄ {ziffer}</div>
                 </div>
-              ) : null,
+              ) : null
             )}
             {direction ? (
               <div>
                 <div className="text-muted-foreground">Richtung</div>
-                <div className="font-mono text-sm">{directionLabel(direction)}</div>
+                <div className="font-mono text-sm">
+                  {directionLabel(direction)}
+                </div>
               </div>
             ) : null}
             {maxFactor ? (
@@ -117,7 +132,9 @@ export function ReviewDialog({
               <div className="text-muted-foreground">Herkunft</div>
               {/* `break-words`, not `break-all`: the value is prose with one token in it, and
                   `break-all` splits "automatisch extrahiert" across lines mid-word. */}
-              <div className="font-mono text-sm break-words">{sourceLabel(rule.source)}</div>
+              <div className="font-mono text-sm break-words">
+                {sourceLabel(rule.source)}
+              </div>
             </div>
             <div className="col-span-2 sm:col-span-3">
               <div className="text-muted-foreground">Rechtsgrundlage</div>
@@ -126,14 +143,15 @@ export function ReviewDialog({
           </div>
 
           <div className="space-y-1">
-            <div className="text-muted-foreground text-xs">
+            <div className="text-xs text-muted-foreground">
               Quelltext, aus dem die Regel extrahiert wurde
             </div>
             {/* Never truncated. This sentence is the decision. */}
-            <blockquote className="border-border bg-muted/40 rounded-md border-l-2 p-3 text-sm">
+            <blockquote className="rounded-md border-l-2 border-border bg-muted/40 p-3 text-sm">
               {rule.quote || (
                 <span className="text-muted-foreground italic">
-                  Kein Quelltext hinterlegt — ohne Beleg lässt sich diese Regel nicht verifizieren.
+                  Kein Quelltext hinterlegt — ohne Beleg lässt sich diese Regel
+                  nicht verifizieren.
                 </span>
               )}
             </blockquote>
@@ -150,14 +168,16 @@ export function ReviewDialog({
               placeholder="Name der prüfenden Person"
               autoComplete="off"
             />
-            <p className="text-muted-foreground text-xs">
-              Pflichtfeld für Verifizieren und Ablehnen. Der Name wird protokolliert, aber technisch
-              nicht überprüft.
+            <p className="text-xs text-muted-foreground">
+              Pflichtfeld für Verifizieren und Ablehnen. Der Name wird
+              protokolliert, aber technisch nicht überprüft.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="review-notes">Notiz (optional, aber sehr erwünscht)</Label>
+            <Label htmlFor="review-notes">
+              Notiz (optional, aber sehr erwünscht)
+            </Label>
             <Textarea
               id="review-notes"
               value={notes}
@@ -168,18 +188,27 @@ export function ReviewDialog({
           </div>
 
           <Alert>
-            <AlertTitle>Eine Verifizierung wirkt sofort auf alle künftigen Prüfungen</AlertTitle>
+            <AlertTitle>
+              Eine Verifizierung wirkt sofort auf alle künftigen Prüfungen
+            </AlertTitle>
             <AlertDescription>
-              Eine verifizierte Regel kann ab sofort Positionen entfernen und verschiebt Beträge aus
-              der Gruppe <strong>unbestätigt</strong>. Eine abgelehnte Regel wird unter keiner
-              Policy mehr durchgesetzt. Beides ist korrigierbar — die Entscheidung kann später
-              geändert werden.
+              Eine verifizierte Regel kann ab sofort Positionen entfernen und
+              verschiebt Beträge aus der Gruppe <strong>unbestätigt</strong>.
+              Eine abgelehnte Regel wird unter keiner Policy mehr durchgesetzt.
+              Beides ist korrigierbar — die Entscheidung kann später geändert
+              werden.
             </AlertDescription>
           </Alert>
         </div>
 
         <DialogFooter className="flex-wrap gap-2">
-          <DialogClose render={<Button type="button" variant="ghost">Abbrechen</Button>} />
+          <DialogClose
+            render={
+              <Button type="button" variant="ghost">
+                Abbrechen
+              </Button>
+            }
+          />
           <Button
             type="button"
             variant="outline"
@@ -197,7 +226,11 @@ export function ReviewDialog({
             <XCircleIcon />
             Regel ablehnen
           </Button>
-          <Button type="button" disabled={busy || !named} onClick={() => void decide("VERIFIED")}>
+          <Button
+            type="button"
+            disabled={busy || !named}
+            onClick={() => void decide("VERIFIED")}
+          >
             <CheckCircle2Icon />
             {busy ? "Wird gespeichert…" : "Regel verifizieren"}
           </Button>

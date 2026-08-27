@@ -34,11 +34,16 @@ import { NextResponse, type NextRequest } from "next/server"
  * here for a different reason: it is what the container's healthcheck calls, and a healthcheck that
  * needed a session would report every container as unhealthy forever.
  */
-const PUBLIC_PREFIXES = ["/login", "/signup", "/api/auth", "/api/health"] as const
+const PUBLIC_PREFIXES = [
+  "/login",
+  "/signup",
+  "/api/auth",
+  "/api/health",
+] as const
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   )
 }
 
@@ -69,7 +74,7 @@ export function middleware(request: NextRequest) {
         error: "unauthenticated",
         message: "Nicht angemeldet. Bitte melden Sie sich erneut an.",
       },
-      { status: 401 },
+      { status: 401 }
     )
   }
 

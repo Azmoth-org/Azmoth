@@ -75,7 +75,10 @@ async function requireIdentity(): Promise<Identity> {
 const ENGINE_TIMEOUT_MS = 30_000
 
 export function engineBaseUrl(): string {
-  return (process.env.ENGINE_BASE_URL ?? DEFAULT_ENGINE_BASE_URL).replace(/\/+$/, "")
+  return (process.env.ENGINE_BASE_URL ?? DEFAULT_ENGINE_BASE_URL).replace(
+    /\/+$/,
+    ""
+  )
 }
 
 /** A failure the browser can render. `status` is what the proxy route will answer with. */
@@ -98,7 +101,7 @@ export type EngineProxyResult =
  */
 export async function callEngine(
   path: string,
-  init?: { method?: "GET" | "POST"; body?: unknown },
+  init?: { method?: "GET" | "POST"; body?: unknown }
 ): Promise<EngineProxyResult> {
   const url = `${engineBaseUrl()}${path}`
   const method = init?.method ?? "GET"
@@ -112,7 +115,9 @@ export async function callEngine(
       method,
       headers: {
         ...identity.headers,
-        ...(init?.body === undefined ? {} : { "Content-Type": "application/json" }),
+        ...(init?.body === undefined
+          ? {}
+          : { "Content-Type": "application/json" }),
       },
       body: init?.body === undefined ? undefined : JSON.stringify(init.body),
       // A billing draft must never be served from a cache the UI does not control.
@@ -129,7 +134,11 @@ export async function callEngine(
           ? `Die Engine hat innerhalb von ${ENGINE_TIMEOUT_MS / 1000} s nicht geantwortet.`
           : "Die Engine ist nicht erreichbar. Läuft sie auf ENGINE_BASE_URL?",
         status: 503,
-        details: { url, method, cause: cause instanceof Error ? cause.message : String(cause) },
+        details: {
+          url,
+          method,
+          cause: cause instanceof Error ? cause.message : String(cause),
+        },
       },
     }
   }
@@ -160,7 +169,12 @@ export async function callEngine(
         error: "unparsable_response",
         message: "Die Antwort der Engine ist kein gültiges JSON.",
         status: 502,
-        details: { url, method, status: response.status, raw: raw.slice(0, 4000) },
+        details: {
+          url,
+          method,
+          status: response.status,
+          raw: raw.slice(0, 4000),
+        },
       },
     }
   }
@@ -182,7 +196,11 @@ export async function callEngine(
  */
 export async function callEngineBytes(
   path: string,
-  { body, filename, contentType }: { body: ArrayBuffer; filename?: string; contentType?: string },
+  {
+    body,
+    filename,
+    contentType,
+  }: { body: ArrayBuffer; filename?: string; contentType?: string }
 ): Promise<EngineProxyResult> {
   const url = `${engineBaseUrl()}${path}`
   const identity = await requireIdentity()
@@ -211,7 +229,11 @@ export async function callEngineBytes(
           ? `Die Engine hat innerhalb von ${ENGINE_TIMEOUT_MS / 1000} s nicht geantwortet.`
           : "Die Engine ist nicht erreichbar. Läuft sie auf ENGINE_BASE_URL?",
         status: 503,
-        details: { url, method: "POST", cause: cause instanceof Error ? cause.message : String(cause) },
+        details: {
+          url,
+          method: "POST",
+          cause: cause instanceof Error ? cause.message : String(cause),
+        },
       },
     }
   }
@@ -240,7 +262,12 @@ export async function callEngineBytes(
         error: "unparsable_response",
         message: "Die Antwort der Engine ist kein gültiges JSON.",
         status: 502,
-        details: { url, method: "POST", status: response.status, raw: raw.slice(0, 4000) },
+        details: {
+          url,
+          method: "POST",
+          status: response.status,
+          raw: raw.slice(0, 4000),
+        },
       },
     }
   }
@@ -265,7 +292,7 @@ const BATCH_TIMEOUT_MS = 120_000
 
 export async function callEngineFormData(
   path: string,
-  form: FormData,
+  form: FormData
 ): Promise<EngineProxyResult> {
   const url = `${engineBaseUrl()}${path}`
   const identity = await requireIdentity()
@@ -293,7 +320,11 @@ export async function callEngineFormData(
           ? `Die Engine hat den Upload innerhalb von ${BATCH_TIMEOUT_MS / 1000} s nicht angenommen.`
           : "Die Engine ist nicht erreichbar. Läuft sie auf ENGINE_BASE_URL?",
         status: 503,
-        details: { url, method: "POST", cause: cause instanceof Error ? cause.message : String(cause) },
+        details: {
+          url,
+          method: "POST",
+          cause: cause instanceof Error ? cause.message : String(cause),
+        },
       },
     }
   }
@@ -322,7 +353,12 @@ export async function callEngineFormData(
         error: "unparsable_response",
         message: "Die Antwort der Engine ist kein gültiges JSON.",
         status: 502,
-        details: { url, method: "POST", status: response.status, raw: raw.slice(0, 4000) },
+        details: {
+          url,
+          method: "POST",
+          status: response.status,
+          raw: raw.slice(0, 4000),
+        },
       },
     }
   }
@@ -348,7 +384,7 @@ export async function callEngineFormData(
  */
 export async function proxyEngineDownload(
   path: string,
-  init?: { method?: "GET" | "POST"; body?: unknown },
+  init?: { method?: "GET" | "POST"; body?: unknown }
 ): Promise<Response> {
   const url = `${engineBaseUrl()}${path}`
   const method = init?.method ?? "POST"
@@ -366,7 +402,9 @@ export async function proxyEngineDownload(
       method,
       headers: {
         ...identity.headers,
-        ...(init?.body === undefined ? {} : { "Content-Type": "application/json" }),
+        ...(init?.body === undefined
+          ? {}
+          : { "Content-Type": "application/json" }),
       },
       body: init?.body === undefined ? undefined : JSON.stringify(init.body),
       cache: "no-store",
@@ -382,9 +420,13 @@ export async function proxyEngineDownload(
         message: timedOut
           ? "Die Engine hat den Export nicht innerhalb von 60 s geliefert."
           : "Die Engine ist nicht erreichbar. Läuft sie auf ENGINE_BASE_URL?",
-        details: { url, method, cause: cause instanceof Error ? cause.message : String(cause) },
+        details: {
+          url,
+          method,
+          cause: cause instanceof Error ? cause.message : String(cause),
+        },
       },
-      { status: 503 },
+      { status: 503 }
     )
   }
 

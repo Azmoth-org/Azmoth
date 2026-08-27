@@ -69,12 +69,13 @@ export default function DashboardPage() {
     <>
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Übersicht</h1>
-        <p className="text-muted-foreground max-w-3xl text-sm">
-          Die Kodierung ist deterministisch und symbolisch: ein Datalog-Programm entscheidet, was
-          sicher berechnungsfähig ist, ein ASP-Programm löst die verbleibenden Wahlmöglichkeiten,
-          eine unabhängige Validierung rechnet nach. Jede Position trägt einen Beweisbaum, jedes
-          Ergebnis einen Receipt-Hash über Katalog, Regeltabellen, Logikprogramme, Solver-Versionen
-          und Eingabe. Es läuft kein Modell in diesem System.
+        <p className="max-w-3xl text-sm text-muted-foreground">
+          Die Kodierung ist deterministisch und symbolisch: ein Datalog-Programm
+          entscheidet, was sicher berechnungsfähig ist, ein ASP-Programm löst
+          die verbleibenden Wahlmöglichkeiten, eine unabhängige Validierung
+          rechnet nach. Jede Position trägt einen Beweisbaum, jedes Ergebnis
+          einen Receipt-Hash über Katalog, Regeltabellen, Logikprogramme,
+          Solver-Versionen und Eingabe. Es läuft kein Modell in diesem System.
         </p>
       </header>
 
@@ -99,7 +100,9 @@ export default function DashboardPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold tracking-tight">Arbeitsbereiche</h2>
+        <h2 className="text-lg font-semibold tracking-tight">
+          Arbeitsbereiche
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {/*
             `WORKSPACE_ITEMS`, not `NAV_ITEMS`: the dashboard is now a nav entry, and a card here
@@ -108,12 +111,17 @@ export default function DashboardPage() {
           {WORKSPACE_ITEMS.map((item) => {
             const Icon = item.icon
             return (
-              <Card key={item.href} className="hover:border-foreground/20 transition-colors">
+              <Card
+                key={item.href}
+                className="transition-colors hover:border-foreground/20"
+              >
                 <CardHeader>
                   <CardTitle className="flex flex-wrap items-center gap-2 text-base">
                     <Icon className="size-4 shrink-0" aria-hidden />
                     {item.label}
-                    {item.internal ? <Badge variant="secondary">Intern</Badge> : null}
+                    {item.internal ? (
+                      <Badge variant="secondary">Intern</Badge>
+                    ) : null}
                   </CardTitle>
                   {/* The screen's own metadata description, so the card and the tab agree. */}
                   <CardDescription>{item.description}</CardDescription>

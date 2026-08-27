@@ -55,7 +55,8 @@ export function googleCredentials(): GoogleCredentials | undefined {
 
   if (clientId && clientSecret) return { clientId, clientSecret }
 
-  if (clientId || clientSecret) warnOnce(clientId ? "GOOGLE_CLIENT_SECRET" : "GOOGLE_CLIENT_ID")
+  if (clientId || clientSecret)
+    warnOnce(clientId ? "GOOGLE_CLIENT_SECRET" : "GOOGLE_CLIENT_ID")
   return undefined
 }
 
@@ -74,7 +75,7 @@ function warnOnce(missing: string): void {
   warned = true
   console.warn(
     `Google sign-in is disabled: ${missing} is not set, and both halves are required. The button ` +
-      "will not be shown and email/password sign-in is unaffected. See apps/web/.env.example.",
+      "will not be shown and email/password sign-in is unaffected. See apps/web/.env.example."
   )
 }
 

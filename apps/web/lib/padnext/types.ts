@@ -41,7 +41,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * an engine old enough to still be sending `at_risk_eur` would otherwise render every bucket as
  * `undefined` — three dashes where the money should be, with no indication anything was wrong.
  */
-export function isAuditReportShape(value: unknown): value is PadnextAuditReport {
+export function isAuditReportShape(
+  value: unknown
+): value is PadnextAuditReport {
   if (!isRecord(value)) return false
   if (!Array.isArray(value.positions)) return false
   if (!Array.isArray(value.findings)) return false

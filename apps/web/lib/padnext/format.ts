@@ -11,7 +11,9 @@ import type { PadnextPositionBucket, PadnextVerdict } from "@/lib/padnext/types"
 
 /** `"130.39"` → `"130.39 €"`. The digits are untouched. */
 export function eur(amount: string | null | undefined): string {
-  return amount === null || amount === undefined || amount === "" ? "—" : `${amount} €`
+  return amount === null || amount === undefined || amount === ""
+    ? "—"
+    : `${amount} €`
 }
 
 /** `0.4482` → `"44.8 %"`. The engine's own ratio; never recomputed from the amounts. */
@@ -70,7 +72,8 @@ export const BUCKET: Record<PadnextPositionBucket, BucketPresentation> = {
   confirmed_wrong: {
     label: "nachweislich falsch",
     headline: "Verifizierte Regel verletzt",
-    action: "Handlungsbedarf: Diese Positionen sind so nicht berechnungsfähig. Rückforderung wahrscheinlich.",
+    action:
+      "Handlungsbedarf: Diese Positionen sind so nicht berechnungsfähig. Rückforderung wahrscheinlich.",
     tone: "wrong",
   },
   confirmed_fine: {
@@ -96,7 +99,10 @@ export const BUCKET: Record<PadnextPositionBucket, BucketPresentation> = {
  * explicit `dark:` variant — the app is theme-aware and an amber that only works on white would
  * read as a different bucket at night.
  */
-export const BUCKET_TONE_CLASS: Record<BucketTone, { text: string; badge: string; bar: string }> = {
+export const BUCKET_TONE_CLASS: Record<
+  BucketTone,
+  { text: string; badge: string; bar: string }
+> = {
   wrong: {
     text: "text-destructive",
     badge: "bg-destructive/10 text-destructive dark:bg-destructive/20",
@@ -104,12 +110,14 @@ export const BUCKET_TONE_CLASS: Record<BucketTone, { text: string; badge: string
   },
   fine: {
     text: "text-emerald-700 dark:text-emerald-400",
-    badge: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
+    badge:
+      "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
     bar: "bg-emerald-600 dark:bg-emerald-500",
   },
   unknown: {
     text: "text-amber-700 dark:text-amber-400",
-    badge: "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
+    badge:
+      "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
     bar: "bg-amber-500",
   },
 }
@@ -130,9 +138,7 @@ export const BUCKET_TONE_CLASS: Record<BucketTone, { text: string; badge: string
  * Falls back to equal-looking zero widths when the total is not a usable positive number, so a
  * zero-total delivery renders an empty track instead of `NaN%`.
  */
-export function segmentWidths(
-  amounts: readonly string[],
-): number[] {
+export function segmentWidths(amounts: readonly string[]): number[] {
   const values = amounts.map((amount) => {
     const parsed = Number(amount)
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
@@ -179,7 +185,7 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2 }
 
 export function bySeverity(
   a: { severity: string },
-  b: { severity: string },
+  b: { severity: string }
 ): number {
   return (SEVERITY_ORDER[a.severity] ?? 3) - (SEVERITY_ORDER[b.severity] ?? 3)
 }

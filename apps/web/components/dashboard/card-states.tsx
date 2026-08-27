@@ -29,7 +29,13 @@ import { Skeleton } from "@workspace/ui/components/skeleton"
  * page shell, the header and the two cards that are already resolved are streamed immediately;
  * whichever engine call is slowest holds up only its own card.
  */
-export function CardSkeleton({ title, rows = 3 }: { title: string; rows?: number }) {
+export function CardSkeleton({
+  title,
+  rows = 3,
+}: {
+  title: string
+  rows?: number
+}) {
   return (
     <Card>
       <CardHeader>
@@ -55,9 +61,15 @@ export function CardSkeleton({ title, rows = 3 }: { title: string; rows?: number
  * "Keine Daten" would leave a reader on a new checkout unable to tell an empty table from a broken
  * read, which is precisely the distinction this screen exists to make.
  */
-export function EmptyState({ message, hint }: { message: string; hint?: string }) {
+export function EmptyState({
+  message,
+  hint,
+}: {
+  message: string
+  hint?: string
+}) {
   return (
-    <div className="text-muted-foreground flex flex-col items-center gap-2 py-8 text-center">
+    <div className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground">
       <InboxIcon className="size-5 opacity-60" aria-hidden />
       <p className="text-sm">{message}</p>
       {hint ? <p className="max-w-xs text-xs">{hint}</p> : null}
@@ -74,10 +86,16 @@ export function EmptyState({ message, hint }: { message: string; hint?: string }
  * information a reader can act on. The headline names which card failed, so a reader with one broken
  * card out of three knows which figure not to trust.
  */
-export function ErrorState({ headline, message }: { headline: string; message: string }) {
+export function ErrorState({
+  headline,
+  message,
+}: {
+  headline: string
+  message: string
+}) {
   return (
-    <div className="text-muted-foreground space-y-2 py-6 text-sm">
-      <p className="text-destructive flex items-center gap-2 font-medium">
+    <div className="space-y-2 py-6 text-sm text-muted-foreground">
+      <p className="flex items-center gap-2 font-medium text-destructive">
         <CircleAlertIcon className="size-4 shrink-0" aria-hidden />
         {headline}
       </p>

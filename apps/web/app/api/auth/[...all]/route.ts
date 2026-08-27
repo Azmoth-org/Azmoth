@@ -22,4 +22,6 @@ import { getAuth } from "@/lib/auth"
  * collect its page data — so building the instance at module scope would make a container image
  * impossible to build without the deployment's database credentials in hand. See `lib/auth.ts`.
  */
-export const { GET, POST } = toNextJsHandler((request: Request) => getAuth().handler(request))
+export const { GET, POST } = toNextJsHandler((request: Request) =>
+  getAuth().handler(request)
+)

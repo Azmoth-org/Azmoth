@@ -51,24 +51,34 @@ test("die Anmeldeseite selbst ist öffentlich", async ({ page }) => {
  * verbatim would display whatever a phishing link put there. Both cases run without any Google
  * configuration, because the page reads the parameter regardless of whether the button is shown.
  */
-test("eine fehlgeschlagene Google-Anmeldung wird auf Deutsch erklärt", async ({ page }) => {
+test("eine fehlgeschlagene Google-Anmeldung wird auf Deutsch erklärt", async ({
+  page,
+}) => {
   await page.goto("/login?error=account_not_linked")
 
   await expect(page.getByRole("alert")).toContainText("Passwort")
 })
 
-test("ein unbekannter Fehlercode wird nicht in die Seite geschrieben", async ({ page }) => {
+test("ein unbekannter Fehlercode wird nicht in die Seite geschrieben", async ({
+  page,
+}) => {
   await page.goto(`/login?error=${encodeURIComponent("<b>nicht-echt</b>")}`)
 
-  await expect(page.getByRole("alert")).toContainText("Anmeldung mit Google ist fehlgeschlagen")
+  await expect(page.getByRole("alert")).toContainText(
+    "Anmeldung mit Google ist fehlgeschlagen"
+  )
   await expect(page.getByText("nicht-echt")).toHaveCount(0)
 })
 
-test("ein API-Aufruf ohne Sitzung wird abgelehnt, nicht umgeleitet", async ({ request }) => {
+test("ein API-Aufruf ohne Sitzung wird abgelehnt, nicht umgeleitet", async ({
+  request,
+}) => {
   // A redirect here would be worse than a refusal: `fetch` follows it, receives the login page's
   // HTML with status 200, and the caller reports "invalid JSON from the engine" — a wrong answer to
   // a question that has a right one.
-  const response = await request.get("/api/engine/rules/coverage", { maxRedirects: 0 })
+  const response = await request.get("/api/engine/rules/coverage", {
+    maxRedirects: 0,
+  })
 
   expect(response.status()).toBe(401)
   expect(await response.json()).toMatchObject({ error: "unauthenticated" })

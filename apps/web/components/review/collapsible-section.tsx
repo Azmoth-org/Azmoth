@@ -75,22 +75,31 @@ export function CollapsibleSection({
     // costs the section every rule keyed on `[data-slot="card"]`, including the print stylesheet's, so
     // this one card would have printed with a screen shadow. Nesting keeps both slots.
     <Card>
-      <Collapsible defaultOpen={defaultOpen} className="flex flex-col gap-(--card-spacing)">
+      <Collapsible
+        defaultOpen={defaultOpen}
+        className="flex flex-col gap-(--card-spacing)"
+      >
         {/*
           `group` so the chevron can read the trigger's own state: Base UI puts `data-panel-open` on
           the trigger while the panel is open, and the shadcn wrapper adds no group class of its own.
         */}
         <CollapsibleTrigger
           className={cn(
-            "group focus-visible:ring-ring flex w-full cursor-pointer items-center gap-3",
-            "px-(--card-spacing) text-left focus-visible:ring-2 focus-visible:outline-none",
+            "group flex w-full cursor-pointer items-center gap-3 focus-visible:ring-ring",
+            "px-(--card-spacing) text-left focus-visible:ring-2 focus-visible:outline-none"
           )}
         >
-          {Icon ? <Icon className="text-muted-foreground size-4 shrink-0" /> : null}
+          {Icon ? (
+            <Icon className="size-4 shrink-0 text-muted-foreground" />
+          ) : null}
           <span className="min-w-0 flex-1">
-            <span className="font-heading block text-base font-medium">{title}</span>
+            <span className="block font-heading text-base font-medium">
+              {title}
+            </span>
             {description ? (
-              <span className="text-muted-foreground block text-sm">{description}</span>
+              <span className="block text-sm text-muted-foreground">
+                {description}
+              </span>
             ) : null}
           </span>
           {count !== undefined ? (
@@ -100,12 +109,14 @@ export function CollapsibleSection({
           ) : null}
           <ChevronDownIcon
             aria-hidden
-            className="text-muted-foreground size-4 shrink-0 transition-transform group-data-[panel-open]:rotate-180 print:hidden"
+            className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180 print:hidden"
           />
         </CollapsibleTrigger>
 
         <CollapsibleContent keepMounted data-print={printMode(printOpen)}>
-          <div className="border-t px-(--card-spacing) pt-(--card-spacing)">{children}</div>
+          <div className="border-t px-(--card-spacing) pt-(--card-spacing)">
+            {children}
+          </div>
         </CollapsibleContent>
       </Collapsible>
     </Card>
@@ -130,7 +141,7 @@ export function Disclosure({
 }) {
   return (
     <Collapsible defaultOpen={defaultOpen}>
-      <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded text-xs font-medium focus-visible:ring-2 focus-visible:outline-none print:hidden">
+      <CollapsibleTrigger className="group flex cursor-pointer items-center gap-1.5 rounded text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none print:hidden">
         <ChevronDownIcon
           aria-hidden
           className="size-3.5 transition-transform group-data-[panel-open]:rotate-180"
@@ -140,7 +151,9 @@ export function Disclosure({
 
       {/* The trigger is a control and does not print; the label it carries still has to. */}
       {printOpen ? (
-        <span className="text-muted-foreground hidden text-xs font-medium print:block">{label}</span>
+        <span className="hidden text-xs font-medium text-muted-foreground print:block">
+          {label}
+        </span>
       ) : null}
 
       <CollapsibleContent keepMounted data-print={printMode(printOpen)}>

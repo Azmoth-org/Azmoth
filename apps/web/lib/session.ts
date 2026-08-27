@@ -29,6 +29,7 @@ export async function requireSession(next?: string): Promise<Session> {
   const session = await currentSession()
   if (session) return session
 
-  const target = next && next.startsWith("/") ? `?next=${encodeURIComponent(next)}` : ""
+  const target =
+    next && next.startsWith("/") ? `?next=${encodeURIComponent(next)}` : ""
   redirect(`/login${target}`)
 }

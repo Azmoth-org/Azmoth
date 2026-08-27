@@ -41,9 +41,9 @@ export function CaseSelector({
 }) {
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground text-xs">
-        Fixtures aus <span className="font-mono">logic/tests/cases/</span> — dieselben Fälle, gegen
-        die die Golden-Tests der Engine laufen.
+      <p className="text-xs text-muted-foreground">
+        Fixtures aus <span className="font-mono">logic/tests/cases/</span> —
+        dieselben Fälle, gegen die die Golden-Tests der Engine laufen.
       </p>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -83,7 +83,7 @@ export function CaseSelector({
         </Button>
       </div>
 
-      <p className="text-muted-foreground text-xs">{selected.description}</p>
+      <p className="text-xs text-muted-foreground">{selected.description}</p>
     </div>
   )
 }

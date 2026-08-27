@@ -3,7 +3,11 @@
 import * as React from "react"
 import { ClockIcon, Loader2Icon } from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
@@ -76,7 +80,7 @@ export function RuleReviewWorkbench() {
     rule: ReviewableRule,
     status: "VERIFIED" | "REJECTED" | "PENDING",
     reviewedBy: string,
-    notes: string,
+    notes: string
   ) {
     setSaving(true)
     const result = await submitRuleReview(rule.rule_id, {
@@ -105,14 +109,17 @@ export function RuleReviewWorkbench() {
   return (
     <div className="space-y-6">
       {coverage ? (
-        <CoverageHeader coverage={coverage} pendingCount={queue?.pending_rule_count} />
+        <CoverageHeader
+          coverage={coverage}
+          pendingCount={queue?.pending_rule_count}
+        />
       ) : null}
 
       {error ? <ErrorPanel error={error} /> : null}
 
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 pt-6">
-          <span className="text-muted-foreground mr-1 text-sm">Filter:</span>
+          <span className="mr-1 text-sm text-muted-foreground">Filter:</span>
           <Button
             size="sm"
             variant={kind === null ? "default" : "outline"}
@@ -131,7 +138,7 @@ export function RuleReviewWorkbench() {
             </Button>
           ))}
           {decided ? (
-            <span className="text-muted-foreground ml-auto text-xs">
+            <span className="ml-auto text-xs text-muted-foreground">
               Zuletzt entschieden: <span className="font-mono">{decided}</span>
             </span>
           ) : null}
@@ -140,31 +147,38 @@ export function RuleReviewWorkbench() {
 
       {kind === "zielleistung" ? (
         <Alert>
-          <AlertTitle>Zielleistungsregeln zuerst — und am sorgfältigsten</AlertTitle>
+          <AlertTitle>
+            Zielleistungsregeln zuerst — und am sorgfältigsten
+          </AlertTitle>
           <AlertDescription>
-            Eine falsch verifizierte Zielleistungsregel entfernt eine Position, die die Praxis
-            berechnen durfte. Von allen Regeltypen hier ist das der teuerste Fehler: er macht aus
-            Umsatz einen falschen Befund.
+            Eine falsch verifizierte Zielleistungsregel entfernt eine Position,
+            die die Praxis berechnen durfte. Von allen Regeltypen hier ist das
+            der teuerste Fehler: er macht aus Umsatz einen falschen Befund.
           </AlertDescription>
         </Alert>
       ) : null}
 
       <section className="space-y-3" aria-labelledby="rules-queue-heading">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="rules-queue-heading" className="text-lg font-semibold tracking-tight">
+          <h2
+            id="rules-queue-heading"
+            className="text-lg font-semibold tracking-tight"
+          >
             Prüfliste
           </h2>
           {queue ? (
-            <span className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-xs text-muted-foreground tabular-nums">
               {rules.length} angezeigt
-              {queue.truncated ? ` · ${queue.pending_rule_count} insgesamt offen` : ""}
+              {queue.truncated
+                ? ` · ${queue.pending_rule_count} insgesamt offen`
+                : ""}
             </span>
           ) : null}
         </div>
 
         {loading && !queue ? (
           <Card>
-            <CardContent className="text-muted-foreground flex items-center gap-2 pt-6 text-sm">
+            <CardContent className="flex items-center gap-2 pt-6 text-sm text-muted-foreground">
               <Loader2Icon className="size-4 animate-spin" aria-hidden />
               Prüfliste wird geladen…
             </CardContent>
@@ -193,14 +207,17 @@ export function RuleReviewWorkbench() {
               {rules.map((rule) => (
                 <TableRow
                   key={rule.rule_id}
-                  className="hover:bg-muted/50 cursor-pointer"
+                  className="cursor-pointer hover:bg-muted/50"
                   onClick={() => setSelected(rule)}
                 >
                   <TableCell className="font-mono text-xs">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {rule.rule_id}
                       {rule.review_status === "PENDING" ? (
-                        <Badge variant="outline" className="gap-1 text-[0.7rem]">
+                        <Badge
+                          variant="outline"
+                          className="gap-1 text-[0.7rem]"
+                        >
                           <ClockIcon className="size-3" aria-hidden />
                           zurückgestellt
                         </Badge>
@@ -208,15 +225,19 @@ export function RuleReviewWorkbench() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={KIND[rule.kind].className}>{KIND[rule.kind].label}</Badge>
+                    <Badge className={KIND[rule.kind].className}>
+                      {KIND[rule.kind].label}
+                    </Badge>
                   </TableCell>
                   <TableCell className="font-mono text-xs whitespace-nowrap">
-                    {(rule.ziffern ?? []).join(` ${KIND[rule.kind].connector} `.replace(/\s+/g, " "))}
+                    {(rule.ziffern ?? []).join(
+                      ` ${KIND[rule.kind].connector} `.replace(/\s+/g, " ")
+                    )}
                   </TableCell>
                   <TableCell className="max-w-[14rem] truncate text-xs">
                     {rule.legal_basis || "—"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground max-w-md truncate text-xs">
+                  <TableCell className="max-w-md truncate text-xs text-muted-foreground">
                     {rule.quote || "—"}
                   </TableCell>
                   <TableCell>
@@ -238,9 +259,10 @@ export function RuleReviewWorkbench() {
         )}
 
         {queue?.truncated ? (
-          <p className="text-muted-foreground text-xs">
-            Es werden {PAGE_SIZE} von {queue.pending_rule_count} offenen Regeln angezeigt. Die Liste
-            füllt sich nach, sobald Regeln entschieden sind.
+          <p className="text-xs text-muted-foreground">
+            Es werden {PAGE_SIZE} von {queue.pending_rule_count} offenen Regeln
+            angezeigt. Die Liste füllt sich nach, sobald Regeln entschieden
+            sind.
           </p>
         ) : null}
       </section>

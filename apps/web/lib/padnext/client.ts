@@ -5,7 +5,11 @@
  * either a report whose fields it can trust to exist, or a named error with the raw details attached.
  */
 
-import { isAuditReportShape, toReviewError, type PadnextResult } from "@/lib/padnext/types"
+import {
+  isAuditReportShape,
+  toReviewError,
+  type PadnextResult,
+} from "@/lib/padnext/types"
 
 export async function auditPadnextFile(file: File): Promise<PadnextResult> {
   let response: Response
@@ -14,7 +18,9 @@ export async function auditPadnextFile(file: File): Promise<PadnextResult> {
       method: "POST",
       headers: {
         // The engine sniffs the container by magic bytes, so this is a hint, not a contract.
-        "Content-Type": file.name.endsWith(".xml") ? "application/xml" : "application/octet-stream",
+        "Content-Type": file.name.endsWith(".xml")
+          ? "application/xml"
+          : "application/octet-stream",
         "x-padnext-filename": file.name,
       },
       body: file,

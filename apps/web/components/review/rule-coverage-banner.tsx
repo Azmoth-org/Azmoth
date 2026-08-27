@@ -3,7 +3,12 @@
 import { ScaleIcon } from "lucide-react"
 
 import { Badge } from "@workspace/ui/components/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card"
 import {
   Progress,
   ProgressLabel,
@@ -27,13 +32,16 @@ import type { Proposal } from "@/lib/review/types"
  * `b > 0` returns null and the meter is not drawn, because a bar at an unknown position is worse
  * than no bar.
  */
-function verifiedFraction(share: string | null | undefined): { done: number; total: number } | null {
+function verifiedFraction(
+  share: string | null | undefined
+): { done: number; total: number } | null {
   if (!share) return null
   const match = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(share)
   if (!match) return null
   const done = Number(match[1])
   const total = Number(match[2])
-  if (!Number.isFinite(done) || !Number.isFinite(total) || total <= 0) return null
+  if (!Number.isFinite(done) || !Number.isFinite(total) || total <= 0)
+    return null
   return { done, total }
 }
 
@@ -72,16 +80,30 @@ function Count({
         <TooltipTrigger
           render={
             <div className="w-fit cursor-help">
-              <div className={cn("text-2xl font-bold tabular-nums", TONE_COLOR[tone])}>{value}</div>
-              <div className="text-muted-foreground mt-0.5 text-xs font-medium">{label}</div>
+              <div
+                className={cn(
+                  "text-2xl font-bold tabular-nums",
+                  TONE_COLOR[tone]
+                )}
+              >
+                {value}
+              </div>
+              <div className="mt-0.5 text-xs font-medium text-muted-foreground">
+                {label}
+              </div>
             </div>
           }
         />
-        <TooltipContent side="bottom" className="max-w-xs text-left leading-relaxed">
+        <TooltipContent
+          side="bottom"
+          className="max-w-xs text-left leading-relaxed"
+        >
           {hint}
         </TooltipContent>
       </Tooltip>
-      <p className="text-muted-foreground mt-1 hidden text-xs print:block">{hint}</p>
+      <p className="mt-1 hidden text-xs text-muted-foreground print:block">
+        {hint}
+      </p>
     </div>
   )
 }
@@ -110,13 +132,19 @@ function Count({
  */
 export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
   const coverage = proposal.rule_coverage
-  const enforced = coverage?.enforced_rule_count ?? proposal.enforced_rule_count ?? 0
-  const advisory = coverage?.advisory_rule_count ?? proposal.advisory_rule_count ?? 0
+  const enforced =
+    coverage?.enforced_rule_count ?? proposal.enforced_rule_count ?? 0
+  const advisory =
+    coverage?.advisory_rule_count ?? proposal.advisory_rule_count ?? 0
   const suppressed =
-    coverage?.suppressed_unverified_rule_count ?? proposal.suppressed_unverified_rule_count ?? 0
-  const analogCandidates = coverage?.analog_candidate_count ?? proposal.analog_candidate_count ?? 0
+    coverage?.suppressed_unverified_rule_count ??
+    proposal.suppressed_unverified_rule_count ??
+    0
+  const analogCandidates =
+    coverage?.analog_candidate_count ?? proposal.analog_candidate_count ?? 0
   const policy = coverage?.policy_for_unverified_rules
-  const ruleCoverage = coverage?.rule_coverage ?? proposal.solver_result.audit_trail.rule_coverage
+  const ruleCoverage =
+    coverage?.rule_coverage ?? proposal.solver_result.audit_trail.rule_coverage
   const verifiedShare = coverage?.verified_share
   const verified = verifiedFraction(verifiedShare)
 
@@ -124,11 +152,15 @@ export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2 text-lg font-semibold">
-          <ScaleIcon className="text-muted-foreground size-4 shrink-0" />
+          <ScaleIcon className="size-4 shrink-0 text-muted-foreground" />
           <span>Regelabdeckung</span>
           {ruleCoverage ? (
-            <Badge variant={ruleCoverage === "full" ? "default" : "destructive"}>
-              {ruleCoverage === "full" ? "vollständig" : `unvollständig (${ruleCoverage})`}
+            <Badge
+              variant={ruleCoverage === "full" ? "default" : "destructive"}
+            >
+              {ruleCoverage === "full"
+                ? "vollständig"
+                : `unvollständig (${ruleCoverage})`}
             </Badge>
           ) : null}
           {policy ? (
@@ -151,8 +183,11 @@ export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
           this card exists, so the label says which one this is.
         */}
         {verified ? (
-          <Progress value={(verified.done / verified.total) * 100} className="max-w-md">
-            <ProgressLabel className="text-foreground text-xs font-medium">
+          <Progress
+            value={(verified.done / verified.total) * 100}
+            className="max-w-md"
+          >
+            <ProgressLabel className="text-xs font-medium text-foreground">
               Manuell verifizierte Regeln geprüft
             </ProgressLabel>
             {/*
@@ -198,17 +233,19 @@ export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
           />
         </div>
 
-        <div className="bg-muted/40 space-y-2 rounded-2xl border p-4 text-sm print:rounded-lg">
+        <div className="space-y-2 rounded-2xl border bg-muted/40 p-4 text-sm print:rounded-lg">
           <p>
-            <strong>Die Regelabdeckung ist unvollständig.</strong> Die Engine setzt eine Teilmenge der
-            GOÄ durch. Die nicht verifizierten Regeln wurden automatisch aus dem Verordnungstext
-            extrahiert und sind ungeprüft; sie blockieren daher nicht. Ein fehlender Befund bedeutet
-            somit <strong>nicht</strong>, dass eine Position geprüft und bestätigt wurde.
+            <strong>Die Regelabdeckung ist unvollständig.</strong> Die Engine
+            setzt eine Teilmenge der GOÄ durch. Die nicht verifizierten Regeln
+            wurden automatisch aus dem Verordnungstext extrahiert und sind
+            ungeprüft; sie blockieren daher nicht. Ein fehlender Befund bedeutet
+            somit <strong>nicht</strong>, dass eine Position geprüft und
+            bestätigt wurde.
           </p>
           <p>
-            <strong>Die ärztliche Prüfung ist zwingend erforderlich.</strong> Insbesondere das
-            Zielleistungsprinzip (§ 4 Abs. 2a GOÄ) ist nur mit wenigen, manuell verifizierten
-            Regelpaaren abgedeckt.
+            <strong>Die ärztliche Prüfung ist zwingend erforderlich.</strong>{" "}
+            Insbesondere das Zielleistungsprinzip (§ 4 Abs. 2a GOÄ) ist nur mit
+            wenigen, manuell verifizierten Regelpaaren abgedeckt.
           </p>
         </div>
       </CardContent>

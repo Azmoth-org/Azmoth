@@ -17,7 +17,10 @@ import {
   VERDICT_LABEL,
   eur,
 } from "@/lib/padnext/format"
-import type { PadnextAuditReport, PadnextAuditedPosition } from "@/lib/padnext/types"
+import type {
+  PadnextAuditReport,
+  PadnextAuditedPosition,
+} from "@/lib/padnext/types"
 
 const BUCKET_ICON = {
   confirmed_wrong: CircleAlertIcon,
@@ -42,13 +45,22 @@ function RuleIds({ position }: { position: PadnextAuditedPosition }) {
   const advisory = position.advisory_rule_ids ?? []
 
   if (verified.length === 0 && advisory.length === 0) {
-    return <span className="text-muted-foreground text-xs">keine Regel anwendbar</span>
+    return (
+      <span className="text-xs text-muted-foreground">
+        keine Regel anwendbar
+      </span>
+    )
   }
 
   return (
     <div className="flex flex-wrap gap-1">
       {verified.map((id) => (
-        <Badge key={id} variant="outline" className="font-mono text-[0.7rem]" title="verifizierte Regel">
+        <Badge
+          key={id}
+          variant="outline"
+          className="font-mono text-[0.7rem]"
+          title="verifizierte Regel"
+        >
           ✓ {id}
         </Badge>
       ))}
@@ -56,7 +68,7 @@ function RuleIds({ position }: { position: PadnextAuditedPosition }) {
         <Badge
           key={id}
           variant="outline"
-          className="text-muted-foreground font-mono text-[0.7rem]"
+          className="font-mono text-[0.7rem] text-muted-foreground"
           title="nicht verifiziert — blockiert unter der aktuellen Policy nicht"
         >
           ? {id}
@@ -79,7 +91,10 @@ export function PositionsTable({ report }: { report: PadnextAuditReport }) {
 
   return (
     <section className="space-y-4" aria-labelledby="padnext-positions-heading">
-      <h2 id="padnext-positions-heading" className="text-lg font-semibold tracking-tight">
+      <h2
+        id="padnext-positions-heading"
+        className="text-lg font-semibold tracking-tight"
+      >
         Positionen ({positions.length})
       </h2>
 
@@ -103,13 +118,15 @@ export function PositionsTable({ report }: { report: PadnextAuditReport }) {
                 .filter((position) => position.bucket === bucket)
                 .map((position) => (
                   <TableRow key={`${position.positionsnr}-${position.ziffer}`}>
-                    <TableCell className="font-mono text-xs">{position.positionsnr}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {position.positionsnr}
+                    </TableCell>
                     <TableCell>
                       <div className="font-mono text-sm">
                         {position.go} {position.ziffer}
                       </div>
                       {position.official_text ? (
-                        <div className="text-muted-foreground max-w-xs truncate text-xs">
+                        <div className="max-w-xs truncate text-xs text-muted-foreground">
                           {position.official_text}
                         </div>
                       ) : null}
@@ -127,7 +144,7 @@ export function PositionsTable({ report }: { report: PadnextAuditReport }) {
                       <div className="space-y-1">
                         <BucketBadge bucket={position.bucket} />
                         {position.bucket_reason ? (
-                          <p className="text-muted-foreground max-w-xs text-xs">
+                          <p className="max-w-xs text-xs text-muted-foreground">
                             {position.bucket_reason}
                           </p>
                         ) : null}
@@ -136,7 +153,7 @@ export function PositionsTable({ report }: { report: PadnextAuditReport }) {
                     <TableCell className="text-xs">
                       {VERDICT_LABEL[position.verdict]}
                       {position.blocked_by ? (
-                        <div className="text-muted-foreground font-mono text-[0.7rem]">
+                        <div className="font-mono text-[0.7rem] text-muted-foreground">
                           neben {position.blocked_by}
                         </div>
                       ) : null}
@@ -145,17 +162,17 @@ export function PositionsTable({ report }: { report: PadnextAuditReport }) {
                       <RuleIds position={position} />
                     </TableCell>
                   </TableRow>
-                )),
+                ))
             )}
           </TableBody>
         </Table>
       </div>
 
-      <p className="text-muted-foreground text-xs">
+      <p className="text-xs text-muted-foreground">
         <span className="font-mono">✓</span> verifizierte Regel ·{" "}
-        <span className="font-mono">?</span> nicht verifiziert, blockiert unter der aktuellen Policy
-        nicht. Eine Position ohne verifizierte Regel kann nicht als bestätigt gelten, auch wenn an ihr
-        nichts auffällig ist.
+        <span className="font-mono">?</span> nicht verifiziert, blockiert unter
+        der aktuellen Policy nicht. Eine Position ohne verifizierte Regel kann
+        nicht als bestätigt gelten, auch wenn an ihr nichts auffällig ist.
       </p>
     </section>
   )

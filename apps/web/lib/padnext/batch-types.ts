@@ -43,8 +43,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** The `202` body: only the handle matters, and it is the only thing checked. */
-export function isBatchAcceptedShape(value: unknown): value is BatchAuditAccepted {
-  return isRecord(value) && typeof value.batch_id === "string" && value.batch_id.length > 0
+export function isBatchAcceptedShape(
+  value: unknown
+): value is BatchAuditAccepted {
+  return (
+    isRecord(value) &&
+    typeof value.batch_id === "string" &&
+    value.batch_id.length > 0
+  )
 }
 
 /**
@@ -59,7 +65,12 @@ export function isBatchJobShape(value: unknown): value is BatchAuditJob {
   if (typeof value.batch_id !== "string") return false
   if (typeof value.status !== "string") return false
   if (!Array.isArray(value.files)) return false
-  for (const field of ["file_count", "processed_file_count", "completed_file_count", "failed_file_count"]) {
+  for (const field of [
+    "file_count",
+    "processed_file_count",
+    "completed_file_count",
+    "failed_file_count",
+  ]) {
     if (typeof value[field] !== "number") return false
   }
   return true
@@ -72,7 +83,9 @@ export function isBatchJobShape(value: unknown): value is BatchAuditJob {
  * engine old enough to send a single `at_risk_eur` would pass the job check and then render three
  * empty cards. Checked at the moment the dashboard is about to be drawn.
  */
-export function hasBucketFields(summary: unknown): summary is BatchAggregateSummary {
+export function hasBucketFields(
+  summary: unknown
+): summary is BatchAggregateSummary {
   if (!isRecord(summary)) return false
   for (const field of [
     "claimed_total_eur",

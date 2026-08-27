@@ -23,7 +23,7 @@ export async function POST(request: Request): Promise<Response> {
           "Kein Inhalt empfangen. Bitte eine PADnext-Datei senden — einen .padx-Container oder " +
           "eine *_padx.xml-Nutzdatei.",
       },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
@@ -33,7 +33,7 @@ export async function POST(request: Request): Promise<Response> {
         error: "upload_too_large",
         message: `Die Datei ist größer als ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`,
       },
-      { status: 413 },
+      { status: 413 }
     )
   }
 
@@ -42,6 +42,6 @@ export async function POST(request: Request): Promise<Response> {
       body,
       filename: request.headers.get("x-padnext-filename") ?? undefined,
       contentType: request.headers.get("content-type") ?? undefined,
-    }),
+    })
   )
 }

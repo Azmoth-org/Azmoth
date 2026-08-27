@@ -33,8 +33,13 @@ import { getAuth } from "../lib/auth"
 async function main(): Promise<void> {
   const dry = process.argv.includes("--dry")
 
-  const { toBeCreated, toBeAdded, unsafeChanges, runMigrations, compileMigrations } =
-    await getMigrations(getAuth().options, { throwOnUnsafe: !dry })
+  const {
+    toBeCreated,
+    toBeAdded,
+    unsafeChanges,
+    runMigrations,
+    compileMigrations,
+  } = await getMigrations(getAuth().options, { throwOnUnsafe: !dry })
 
   if (toBeCreated.length === 0 && toBeAdded.length === 0) {
     console.log("Better Auth: schema is already up to date. Nothing to do.")
@@ -69,5 +74,5 @@ main().then(
   (error: unknown) => {
     console.error(error)
     process.exit(1)
-  },
+  }
 )

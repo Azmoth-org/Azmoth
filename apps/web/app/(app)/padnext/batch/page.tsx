@@ -39,22 +39,25 @@ export default async function PadnextBatchPage({
   return (
     <>
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">PADnext-Stapel prüfen</h1>
-        <p className="text-muted-foreground text-sm">
-          Mehrere bereits kodierte PADnext-Lieferungen auf einmal. Jede Datei durchläuft dieselbe
-          Prüfung wie in der{" "}
+        <h1 className="text-2xl font-semibold tracking-tight">
+          PADnext-Stapel prüfen
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Mehrere bereits kodierte PADnext-Lieferungen auf einmal. Jede Datei
+          durchläuft dieselbe Prüfung wie in der{" "}
           <Link href="/padnext" className="underline">
             Einzelprüfung
           </Link>{" "}
-          — dieselben Datalog-Regeln, derselbe versionierte Katalog — und die Ergebnisse werden
-          anschließend über alle Rechnungen zusammengefasst.
+          — dieselben Datalog-Regeln, derselbe versionierte Katalog — und die
+          Ergebnisse werden anschließend über alle Rechnungen zusammengefasst.
         </p>
-        <p className="text-muted-foreground text-sm">
-          Die Zusammenfassung behält die drei Gruppen der Einzelprüfung bei, statt sie zu einer Summe
-          „strittig“ zu verrechnen. Das ist im Stapel wichtiger als in der Einzelprüfung: über ein
-          Jahr Rechnungen summiert wäre <strong>unbestätigt</strong> ein sechsstelliger Vorwurf
-          gegen eine Praxis, die möglicherweise korrekt abrechnet — dabei ist es die Grenze unserer
-          eigenen Regelabdeckung.
+        <p className="text-sm text-muted-foreground">
+          Die Zusammenfassung behält die drei Gruppen der Einzelprüfung bei,
+          statt sie zu einer Summe „strittig“ zu verrechnen. Das ist im Stapel
+          wichtiger als in der Einzelprüfung: über ein Jahr Rechnungen summiert
+          wäre <strong>unbestätigt</strong> ein sechsstelliger Vorwurf gegen
+          eine Praxis, die möglicherweise korrekt abrechnet — dabei ist es die
+          Grenze unserer eigenen Regelabdeckung.
         </p>
       </header>
 

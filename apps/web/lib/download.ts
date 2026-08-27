@@ -60,13 +60,14 @@ function save(blob: Blob, filename: string): void {
  */
 export async function downloadPost(
   path: string,
-  { body, fallbackFilename }: { body?: unknown; fallbackFilename: string },
+  { body, fallbackFilename }: { body?: unknown; fallbackFilename: string }
 ): Promise<DownloadResult> {
   let response: Response
   try {
     response = await fetch(path, {
       method: "POST",
-      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      headers:
+        body === undefined ? undefined : { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
       cache: "no-store",
     })
@@ -107,7 +108,10 @@ export async function downloadPost(
     }
   }
 
-  const filename = filenameFrom(response.headers.get("content-disposition"), fallbackFilename)
+  const filename = filenameFrom(
+    response.headers.get("content-disposition"),
+    fallbackFilename
+  )
   save(blob, filename)
   return { kind: "saved", filename }
 }
@@ -115,17 +119,23 @@ export async function downloadPost(
 /** `POST /api/engine/proposals/{id}/export` — the approved proposal, as JSON. */
 export function downloadProposalExport(
   proposalId: string,
-  payload: { exported_by: string; note: string },
+  payload: { exported_by: string; note: string }
 ): Promise<DownloadResult> {
-  return downloadPost(`/api/engine/proposals/${encodeURIComponent(proposalId)}/export`, {
-    body: payload,
-    fallbackFilename: `${proposalId}.json`,
-  })
+  return downloadPost(
+    `/api/engine/proposals/${encodeURIComponent(proposalId)}/export`,
+    {
+      body: payload,
+      fallbackFilename: `${proposalId}.json`,
+    }
+  )
 }
 
 /** `POST /api/engine/padnext/batch/{id}/export` — the completed batch, as a ZIP of CSVs. */
 export function downloadBatchExport(batchId: string): Promise<DownloadResult> {
-  return downloadPost(`/api/engine/padnext/batch/${encodeURIComponent(batchId)}/export`, {
-    fallbackFilename: `${batchId}_export.zip`,
-  })
+  return downloadPost(
+    `/api/engine/padnext/batch/${encodeURIComponent(batchId)}/export`,
+    {
+      fallbackFilename: `${batchId}_export.zip`,
+    }
+  )
 }

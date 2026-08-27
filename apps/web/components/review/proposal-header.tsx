@@ -1,4 +1,9 @@
-import { BanIcon, CalendarClockIcon, CheckCircle2Icon, DatabaseZapIcon } from "lucide-react"
+import {
+  BanIcon,
+  CalendarClockIcon,
+  CheckCircle2Icon,
+  DatabaseZapIcon,
+} from "lucide-react"
 import type * as React from "react"
 
 import { Badge } from "@workspace/ui/components/badge"
@@ -15,7 +20,10 @@ import { Disclosure } from "@/components/review/collapsible-section"
 import { PROPOSAL_STATUS_LABEL, timestamp } from "@/lib/review/format"
 import type { Proposal, ProposalStatus } from "@/lib/review/types"
 
-const STATUS_VARIANT: Record<ProposalStatus, "default" | "secondary" | "destructive" | "outline"> = {
+const STATUS_VARIANT: Record<
+  ProposalStatus,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
   DRAFT: "secondary",
   APPROVED: "default",
   REJECTED: "destructive",
@@ -40,7 +48,9 @@ function Field({
     <div className="min-w-0">
       <dt className={LABEL}>{label}</dt>
       <dd
-        className={mono ? "mt-1 truncate font-mono text-xs" : "mt-1 truncate text-sm"}
+        className={
+          mono ? "mt-1 truncate font-mono text-xs" : "mt-1 truncate text-sm"
+        }
         title={title ?? value}
       >
         {value}
@@ -104,9 +114,11 @@ function CountLine({
   return (
     <div className="flex items-baseline gap-2">
       <Icon className={`${color} size-4 shrink-0 translate-y-0.5`} />
-      <span className="text-muted-foreground text-sm">{label}</span>
-      <span className="text-foreground text-base font-semibold tabular-nums">{count}</span>
-      <span className="text-muted-foreground text-sm">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-base font-semibold text-foreground tabular-nums">
+        {count}
+      </span>
+      <span className="text-sm text-muted-foreground">
         {count === 1 ? "Position" : "Positionen"}
       </span>
     </div>
@@ -149,14 +161,18 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2 text-lg font-semibold">
-          <span className="text-muted-foreground text-sm font-normal">Vorschlag</span>
+          <span className="text-sm font-normal text-muted-foreground">
+            Vorschlag
+          </span>
           <CopyableHash
             value={proposal.proposal_id}
             length={32}
             label="Vorschlags-ID"
             className="text-sm"
           />
-          <Badge variant={STATUS_VARIANT[status]}>{PROPOSAL_STATUS_LABEL[status]}</Badge>
+          <Badge variant={STATUS_VARIANT[status]}>
+            {PROPOSAL_STATUS_LABEL[status]}
+          </Badge>
           {proposal.cached ? (
             <Badge variant="outline" className="gap-1">
               <DatabaseZapIcon />
@@ -164,7 +180,9 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
             </Badge>
           ) : null}
           {timedOut ? (
-            <Badge variant="destructive">Solver abgebrochen — Optimalität nicht bewiesen</Badge>
+            <Badge variant="destructive">
+              Solver abgebrochen — Optimalität nicht bewiesen
+            </Badge>
           ) : null}
         </CardTitle>
         {/*
@@ -212,7 +230,12 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
                 tone="accepted"
                 icon={CheckCircle2Icon}
               />
-              <CountLine label="Gesperrt" count={blockedCount} tone="blocked" icon={BanIcon} />
+              <CountLine
+                label="Gesperrt"
+                count={blockedCount}
+                tone="blocked"
+                icon={BanIcon}
+              />
             </dd>
           </div>
 
@@ -229,7 +252,11 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
             the record. These two are the ones a reader still has to be able to take with them.
           */}
           <Field label="Fall-ID" value={proposal.case_id || "—"} mono />
-          <HashField label="Receipt-Hash (SHA-256)" value={proposal.receipt_hash} length={24} />
+          <HashField
+            label="Receipt-Hash (SHA-256)"
+            value={proposal.receipt_hash}
+            length={24}
+          />
         </dl>
 
         {/*
@@ -242,17 +269,33 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
         <div className="mt-8 border-t pt-6">
           <Disclosure label="Technische Herkunft und Versionen">
             <dl className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
-              <Field label="Katalogversion" value={proposal.catalog_version} mono />
+              <Field
+                label="Katalogversion"
+                value={proposal.catalog_version}
+                mono
+              />
               <Field label="Regelversion" value={proposal.rules_version} mono />
-              <HashField label="Logic-Version" value={proposal.logic_version} length={12} />
-              <Field label="Solver (Clingo)" value={proposal.solver_version} mono />
+              <HashField
+                label="Logic-Version"
+                value={proposal.logic_version}
+                length={12}
+              />
+              <Field
+                label="Solver (Clingo)"
+                value={proposal.solver_version}
+                mono
+              />
               <Field
                 label="Regel-Engine (Soufflé)"
                 value={proposal.rules_engine_version || "—"}
                 mono
               />
               <Field label="Solver-Status" value={solverStatus || "—"} mono />
-              <HashField label="Katalog-SHA-256" value={proposal.catalog_sha256} length={12} />
+              <HashField
+                label="Katalog-SHA-256"
+                value={proposal.catalog_sha256}
+                length={12}
+              />
             </dl>
           </Disclosure>
         </div>

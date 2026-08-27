@@ -13,7 +13,7 @@ import { callEngine, proxyResponse } from "@/lib/engine"
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ ruleId: string }> },
+  { params }: { params: Promise<{ ruleId: string }> }
 ): Promise<Response> {
   const { ruleId } = await params
 
@@ -24,9 +24,10 @@ export async function POST(
     return Response.json(
       {
         error: "unreadable_request_body",
-        message: "Die Bewertung benötigt einen JSON-Body mit status und reviewed_by.",
+        message:
+          "Die Bewertung benötigt einen JSON-Body mit status und reviewed_by.",
       },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
@@ -34,6 +35,6 @@ export async function POST(
     await callEngine(`/api/v1/rules/${encodeURIComponent(ruleId)}/review`, {
       method: "POST",
       body,
-    }),
+    })
   )
 }

@@ -13,10 +13,15 @@ export async function POST(request: Request): Promise<Response> {
     body = await request.json()
   } catch {
     return Response.json(
-      { error: "invalid_request_body", message: "Der Request-Body ist kein gültiges JSON." },
-      { status: 400 },
+      {
+        error: "invalid_request_body",
+        message: "Der Request-Body ist kein gültiges JSON.",
+      },
+      { status: 400 }
     )
   }
 
-  return proxyResponse(await callEngine("/api/v1/solve", { method: "POST", body }))
+  return proxyResponse(
+    await callEngine("/api/v1/solve", { method: "POST", body })
+  )
 }

@@ -43,11 +43,14 @@ export default async function ReviewPage({
   return (
     <>
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">GOÄ-Abrechnungsvorschlag prüfen</h1>
-        <p className="text-muted-foreground text-sm">
-          Deterministische Kodierung: Datalog entscheidet, was sicher berechnungsfähig ist, ASP löst
-          die verbleibenden Wahlmöglichkeiten, eine unabhängige Validierung rechnet nach. Jede Position
-          trägt einen Beweisbaum.
+        <h1 className="text-2xl font-semibold tracking-tight">
+          GOÄ-Abrechnungsvorschlag prüfen
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Deterministische Kodierung: Datalog entscheidet, was sicher
+          berechnungsfähig ist, ASP löst die verbleibenden Wahlmöglichkeiten,
+          eine unabhängige Validierung rechnet nach. Jede Position trägt einen
+          Beweisbaum.
         </p>
       </header>
 

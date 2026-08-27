@@ -54,7 +54,7 @@ export async function RecentProposalsCard() {
         <CardAction>
           <Link
             href="/proposals"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Alle Prüfungen
             <ArrowRightIcon className="size-3" aria-hidden />
@@ -79,7 +79,8 @@ function Body({ result }: { result: Awaited<ReturnType<typeof callEngine>> }) {
   return (
     <>
       <span className="tabular-nums">{page}</span> von{" "}
-      <span className="tabular-nums">{total}</span> Abrechnungsvorschlägen, neueste zuerst.
+      <span className="tabular-nums">{total}</span> Abrechnungsvorschlägen,
+      neueste zuerst.
     </>
   )
 }
@@ -119,7 +120,7 @@ function Rows({ result }: { result: Awaited<ReturnType<typeof callEngine>> }) {
   }
 
   return (
-    <ul className="divide-border divide-y">
+    <ul className="divide-y divide-border">
       {items.map((proposal) => (
         <ActivityRow
           key={proposal.proposal_id}
@@ -128,7 +129,9 @@ function Rows({ result }: { result: Awaited<ReturnType<typeof callEngine>> }) {
             href: `/review?id=${encodeURIComponent(proposal.proposal_id)}`,
             // A proposal without a `case_id` is normal — it travels on the request, and nothing
             // requires the caller to send one — so the absence is labelled rather than left blank.
-            detail: proposal.case_id ? `Fall ${proposal.case_id}` : "ohne Fall-ID",
+            detail: proposal.case_id
+              ? `Fall ${proposal.case_id}`
+              : "ohne Fall-ID",
             createdAt: proposal.created_at,
           }}
           status={statusPresentation(PROPOSAL_STATUS, proposal.status)}

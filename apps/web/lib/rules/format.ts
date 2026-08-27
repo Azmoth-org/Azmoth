@@ -34,19 +34,22 @@ export const KIND: Record<RuleKind, KindPresentation> = {
     label: "Ausschluss",
     hint: "Die eine Leistung ist neben der anderen nicht berechnungsfähig. Richtung prüfen: einseitig oder wechselseitig.",
     connector: "schließt aus",
-    className: "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
+    className:
+      "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
   },
   specificity: {
     label: "Spezifität",
     hint: "Die spezifischere Ziffer verdrängt die allgemeinere.",
     connector: "vor",
-    className: "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
+    className:
+      "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
   },
   factor_cap: {
     label: "Faktor-Obergrenze",
     hint: "Die Leistungslegende begrenzt den Steigerungsfaktor unterhalb des § 5 Abs. 1 Höchstsatzes.",
     connector: "",
-    className: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
+    className:
+      "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
   },
 }
 
@@ -57,7 +60,12 @@ export const KIND: Record<RuleKind, KindPresentation> = {
  * it removes a position a practice was entitled to charge, so verifying a bad one turns revenue
  * into a false finding. Factor caps last because a wrong one only ever lowers a factor.
  */
-export const KIND_ORDER: RuleKind[] = ["zielleistung", "exclusion", "specificity", "factor_cap"]
+export const KIND_ORDER: RuleKind[] = [
+  "zielleistung",
+  "exclusion",
+  "specificity",
+  "factor_cap",
+]
 
 /** `{ from: "30", to: "4" }` → `["Von", "Bis"]`-ish labels a German reviewer reads. */
 export const ROLE_LABEL: Record<string, string> = {

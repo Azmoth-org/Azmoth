@@ -66,7 +66,12 @@ type Resolved =
  * there. A production stack that quietly wrote its user accounts to a SQLite file beside the
  * container's working directory would lose every one of them on the next deploy.
  */
-const DEVELOPMENT_SQLITE_FILE = path.join(process.cwd(), "..", "engine", "test.db")
+const DEVELOPMENT_SQLITE_FILE = path.join(
+  process.cwd(),
+  "..",
+  "engine",
+  "test.db"
+)
 
 /**
  * One environment variable, or `undefined` when it is missing **or blank**.
@@ -104,7 +109,7 @@ export function parseDatabaseUrl(raw: string): Resolved {
     if (file === ":memory:") {
       throw new Error(
         "AUTH_DATABASE_URL is an in-memory SQLite database. Sessions written to it vanish when " +
-          "the process restarts, so every user would be signed out by a deploy. Name a file.",
+          "the process restarts, so every user would be signed out by a deploy. Name a file."
       )
     }
     return { kind: "sqlite", file: path.resolve(file) }
@@ -116,7 +121,7 @@ export function parseDatabaseUrl(raw: string): Resolved {
   throw new Error(
     `AUTH_DATABASE_URL names the scheme "${scheme}". Better Auth speaks Postgres or SQLite here; ` +
       "the value must start with postgres://, postgresql:// or sqlite:/// (a SQLAlchemy +driver " +
-      "suffix, as the engine's DATABASE_URL carries, is stripped for you).",
+      "suffix, as the engine's DATABASE_URL carries, is stripped for you)."
   )
 }
 
@@ -129,14 +134,15 @@ export function parseDatabaseUrl(raw: string): Resolved {
  * default rather than a deployment target.
  */
 export function authDatabase(): AuthDatabase {
-  const configured = optionalEnv("AUTH_DATABASE_URL") ?? optionalEnv("DATABASE_URL")
+  const configured =
+    optionalEnv("AUTH_DATABASE_URL") ?? optionalEnv("DATABASE_URL")
 
   if (!configured) {
     if (process.env.NODE_ENV === "production") {
       throw new Error(
         "AUTH_DATABASE_URL is not set. In production the user accounts and sessions must live in " +
           "the same Postgres the engine writes proposals to — set it to the engine's DATABASE_URL " +
-          "(the +asyncpg suffix is stripped for you). There is deliberately no SQLite fallback here.",
+          "(the +asyncpg suffix is stripped for you). There is deliberately no SQLite fallback here."
       )
     }
     return new BetterSqlite3(DEVELOPMENT_SQLITE_FILE)
@@ -148,7 +154,7 @@ export function authDatabase(): AuthDatabase {
       throw new Error(
         "AUTH_DATABASE_URL names a SQLite file and NODE_ENV is production. One writer, one file, " +
           "no replication and no encryption at rest is not where password hashes belong — the " +
-          "engine refuses the same configuration for proposals. Point both at Postgres.",
+          "engine refuses the same configuration for proposals. Point both at Postgres."
       )
     }
     return new BetterSqlite3(resolved.file)

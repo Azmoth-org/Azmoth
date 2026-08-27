@@ -1,8 +1,17 @@
 import { AlertTriangleIcon, CheckCircle2Icon } from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card"
 
 import { CopyableHash } from "@/components/common/copyable-hash"
 import type { HealthResponse, RuleCoverage } from "@workspace/contracts"
@@ -41,7 +50,8 @@ export function SystemStatus({
         <AlertDescription className="space-y-2">
           <p>
             Der Systemstatus konnte nicht geladen werden. Die Engine muss unter{" "}
-            <span className="font-mono text-xs">ENGINE_BASE_URL</span> laufen (Standard{" "}
+            <span className="font-mono text-xs">ENGINE_BASE_URL</span> laufen
+            (Standard{" "}
             <span className="font-mono text-xs">http://localhost:8000</span>).
           </p>
           <p>
@@ -61,7 +71,8 @@ export function SystemStatus({
   // Guarded rather than tried: a total of zero means the rule tables did not load, and "0 %" is a
   // more honest rendering of that than a division error or a full bar.
   const share = total > 0 ? Math.min(100, (verified / total) * 100) : 0
-  const engineReady = health.status === "ok" && health.souffle_available === true
+  const engineReady =
+    health.status === "ok" && health.souffle_available === true
 
   return (
     <Card>
@@ -89,7 +100,7 @@ export function SystemStatus({
               <span className="tabular-nums">{verified}</span> von{" "}
               <span className="tabular-nums">{total}</span> Regeln verifiziert
             </span>
-            <span className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-xs text-muted-foreground tabular-nums">
               {share.toFixed(1)} %
             </span>
           </div>
@@ -101,28 +112,48 @@ export function SystemStatus({
             aria-valuemin={0}
             aria-valuemax={total}
             aria-label="Verifizierte GOÄ-Regeln"
-            className="bg-muted h-2 w-full overflow-hidden rounded-full"
+            className="h-2 w-full overflow-hidden rounded-full bg-muted"
           >
-            <div className="bg-primary h-full rounded-full" style={{ width: `${share}%` }} />
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${share}%` }}
+            />
           </div>
 
-          <p className="text-muted-foreground text-xs">
-            Nicht verifizierte Regeln setzen nichts durch — sie warnen nur. Genau das erzeugt die
-            Gruppe <strong>unbestätigt</strong> in jeder Rechnungsprüfung, und jede in der
-            Regelprüfung freigegebene Regel verkleinert sie.
+          <p className="text-xs text-muted-foreground">
+            Nicht verifizierte Regeln setzen nichts durch — sie warnen nur.
+            Genau das erzeugt die Gruppe <strong>unbestätigt</strong> in jeder
+            Rechnungsprüfung, und jede in der Regelprüfung freigegebene Regel
+            verkleinert sie.
           </p>
         </div>
 
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs sm:grid-cols-4">
-          <Figure label="Katalogversion" value={health.catalog_version || "—"} mono />
-          <Figure label="Ziffern im Katalog" value={String(health.catalog_ziffern ?? 0)} mono />
-          <Figure label="Regelabdeckung" value={health.rule_coverage || "—"} mono />
+          <Figure
+            label="Katalogversion"
+            value={health.catalog_version || "—"}
+            mono
+          />
+          <Figure
+            label="Ziffern im Katalog"
+            value={String(health.catalog_ziffern ?? 0)}
+            mono
+          />
+          <Figure
+            label="Regelabdeckung"
+            value={health.rule_coverage || "—"}
+            mono
+          />
           <Figure
             label="nur beratend"
             value={String(coverage.advisory_rule_count ?? 0)}
             mono
           />
-          <Figure label="Soufflé" value={health.souffle_version || "fehlt"} mono />
+          <Figure
+            label="Soufflé"
+            value={health.souffle_version || "fehlt"}
+            mono
+          />
           <Figure label="Clingo" value={health.clingo_version || "—"} mono />
           <Figure
             label="Regel-Policy"
@@ -132,7 +163,11 @@ export function SystemStatus({
           <div className="min-w-0">
             <dt className="text-muted-foreground">Logic-Version</dt>
             <dd className="mt-0.5">
-              <CopyableHash value={health.logic_version} length={12} label="Logic-Version" />
+              <CopyableHash
+                value={health.logic_version}
+                length={12}
+                label="Logic-Version"
+              />
             </dd>
           </div>
         </dl>
@@ -141,11 +176,22 @@ export function SystemStatus({
   )
 }
 
-function Figure({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Figure({
+  label,
+  value,
+  mono,
+}: {
+  label: string
+  value: string
+  mono?: boolean
+}) {
   return (
     <div className="min-w-0">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className={mono ? "mt-0.5 truncate font-mono" : "mt-0.5 truncate"} title={value}>
+      <dd
+        className={mono ? "mt-0.5 truncate font-mono" : "mt-0.5 truncate"}
+        title={value}
+      >
         {value}
       </dd>
     </div>

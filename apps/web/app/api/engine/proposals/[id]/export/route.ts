@@ -13,7 +13,7 @@ import { proxyEngineDownload } from "@/lib/engine"
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   const { id } = await params
 
@@ -24,14 +24,18 @@ export async function POST(
     return Response.json(
       {
         error: "unreadable_request_body",
-        message: "Der Export benötigt einen JSON-Body mit dem Feld exported_by.",
+        message:
+          "Der Export benötigt einen JSON-Body mit dem Feld exported_by.",
       },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
-  return proxyEngineDownload(`/api/v1/proposals/${encodeURIComponent(id)}/export`, {
-    method: "POST",
-    body,
-  })
+  return proxyEngineDownload(
+    `/api/v1/proposals/${encodeURIComponent(id)}/export`,
+    {
+      method: "POST",
+      body,
+    }
+  )
 }

@@ -38,23 +38,25 @@ export function ActivityRow({
         // `title` carries the untruncated identifier, so the value the row shows short is still
         // readable in full without leaving the page.
         title={row.id}
-        className="hover:bg-muted/50 focus-visible:ring-ring group -mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate font-mono text-xs">{shortId(row.id)}</span>
+            <span className="truncate font-mono text-xs">
+              {shortId(row.id)}
+            </span>
             <Badge variant={status.variant} className={cn(status.className)}>
               {status.label}
             </Badge>
           </div>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
             <span className="truncate">{row.detail}</span>
             <span aria-hidden>·</span>
             <span className="tabular-nums">{timestamp(row.createdAt)}</span>
           </div>
         </div>
         <ChevronRightIcon
-          className="text-muted-foreground/60 group-hover:text-foreground size-4 shrink-0 transition-colors"
+          className="size-4 shrink-0 text-muted-foreground/60 transition-colors group-hover:text-foreground"
           aria-hidden
         />
       </Link>

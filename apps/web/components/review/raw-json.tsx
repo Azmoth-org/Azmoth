@@ -14,9 +14,11 @@ export function RawJson({ value, label }: { value: unknown; label?: string }) {
   return (
     <div className="min-w-0">
       {label ? (
-        <div className="text-muted-foreground mb-1 text-xs font-medium">{label}</div>
+        <div className="mb-1 text-xs font-medium text-muted-foreground">
+          {label}
+        </div>
       ) : null}
-      <pre className="bg-muted/50 text-foreground max-h-96 overflow-auto rounded-lg border p-3 font-mono text-xs leading-relaxed">
+      <pre className="max-h-96 overflow-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs leading-relaxed text-foreground">
         {text}
       </pre>
     </div>

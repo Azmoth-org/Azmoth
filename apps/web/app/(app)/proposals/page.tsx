@@ -60,12 +60,16 @@ export default async function ProposalsPage({
       />
 
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Alle Prüfungen</h1>
-        <p className="text-muted-foreground max-w-3xl text-sm">
-          Jeder erzeugte Abrechnungsvorschlag bleibt dauerhaft gespeichert, mit seinem Status, dem
-          Zeitpunkt und dem Receipt-Hash über Katalog, Regeltabellen, Logikprogramme,
-          Solver-Versionen und Eingabe. <strong>Ein Entwurf ist keine Rechnung</strong> — nur ein
-          freigegebener Vorschlag ist von einer namentlich benannten Person verantwortet.
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Alle Prüfungen
+        </h1>
+        <p className="max-w-3xl text-sm text-muted-foreground">
+          Jeder erzeugte Abrechnungsvorschlag bleibt dauerhaft gespeichert, mit
+          seinem Status, dem Zeitpunkt und dem Receipt-Hash über Katalog,
+          Regeltabellen, Logikprogramme, Solver-Versionen und Eingabe.{" "}
+          <strong>Ein Entwurf ist keine Rechnung</strong> — nur ein
+          freigegebener Vorschlag ist von einer namentlich benannten Person
+          verantwortet.
         </p>
       </header>
 

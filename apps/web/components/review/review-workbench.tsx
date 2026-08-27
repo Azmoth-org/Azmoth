@@ -13,7 +13,11 @@ import {
 } from "lucide-react"
 import * as React from "react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import {
   Card,
@@ -34,7 +38,10 @@ import { AcceptedPositionsTable } from "@/components/review/accepted-positions-t
 import { AuditTrailPanel } from "@/components/review/audit-trail-panel"
 import { BlockedPositionsTable } from "@/components/review/blocked-positions-table"
 import { CaseSelector } from "@/components/review/case-selector"
-import { CollapsibleSection, Disclosure } from "@/components/review/collapsible-section"
+import {
+  CollapsibleSection,
+  Disclosure,
+} from "@/components/review/collapsible-section"
 import { DecisionBar } from "@/components/review/decision-bar"
 import {
   ApproveDialog,
@@ -46,10 +53,24 @@ import { MissingDocumentationPanel } from "@/components/review/missing-documenta
 import { ProposalHeader } from "@/components/review/proposal-header"
 import { RuleCoverageBanner } from "@/components/review/rule-coverage-banner"
 import { WarningsPanel } from "@/components/review/warnings-panel"
-import { isRetryable, isWellFormedId, malformedIdError, toDeepLinkError } from "@/lib/deep-link"
+import {
+  isRetryable,
+  isWellFormedId,
+  malformedIdError,
+  toDeepLinkError,
+} from "@/lib/deep-link"
 import { downloadProposalExport } from "@/lib/download"
-import { SYNTHETIC_CASES, findSyntheticCase, type SyntheticCase } from "@/lib/fixtures"
-import { approveProposal, fetchProposal, rejectProposal, solveCase } from "@/lib/review/client"
+import {
+  SYNTHETIC_CASES,
+  findSyntheticCase,
+  type SyntheticCase,
+} from "@/lib/fixtures"
+import {
+  approveProposal,
+  fetchProposal,
+  rejectProposal,
+  solveCase,
+} from "@/lib/review/client"
 import type { Proposal, ReviewError } from "@/lib/review/types"
 
 type Pending = "idle" | "solving" | "approving" | "rejecting" | "exporting"
@@ -101,7 +122,9 @@ function Section({
         </CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
-      <CardContent className={flush ? "px-0" : undefined}>{children}</CardContent>
+      <CardContent className={flush ? "px-0" : undefined}>
+        {children}
+      </CardContent>
     </Card>
   )
 }
@@ -185,8 +208,14 @@ function ProposalSkeleton() {
  * normal empty state is still reachable, because a stale bookmark should not turn `/review` into a
  * dead end — the reader who followed it is usually one click from doing something useful instead.
  */
-export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | null }) {
-  const [selected, setSelected] = React.useState<SyntheticCase>(SYNTHETIC_CASES[0])
+export function ReviewWorkbench({
+  deepLinkId = null,
+}: {
+  deepLinkId?: string | null
+}) {
+  const [selected, setSelected] = React.useState<SyntheticCase>(
+    SYNTHETIC_CASES[0]
+  )
   const [proposal, setProposal] = React.useState<Proposal | null>(null)
   const [error, setError] = React.useState<ReviewError | null>(null)
   const [pending, setPending] = React.useState<Pending>("idle")
@@ -203,7 +232,9 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
   // is a synchronous `setState` inside an effect body — a second render on every navigation, and
   // the thing `react-hooks/set-state-in-effect` exists to catch. Every write below happens in the
   // async continuation, after an `await`, which is the case the rule is fine with.
-  const [resolvedRequest, setResolvedRequest] = React.useState<string | null>(null)
+  const [resolvedRequest, setResolvedRequest] = React.useState<string | null>(
+    null
+  )
 
   const router = useRouter()
 
@@ -218,10 +249,13 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
       deepLinkId !== null && !isWellFormedId("proposal", deepLinkId)
         ? malformedIdError("proposal", deepLinkId)
         : null,
-    [deepLinkId],
+    [deepLinkId]
   )
 
-  const request = deepLinkId !== null && malformedError === null ? `${deepLinkId}#${reloads}` : null
+  const request =
+    deepLinkId !== null && malformedError === null
+      ? `${deepLinkId}#${reloads}`
+      : null
   const loadingDeepLink = request !== null && resolvedRequest !== request
 
   React.useEffect(() => {
@@ -354,7 +388,8 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
   const warnings = coding?.warnings ?? []
   // `Coding.missing_documentation` and `Proposal.missing_documentation` carry the same list; the
   // coding one is the invoice's own copy, so it is preferred and the proposal one is the fallback.
-  const missing = coding?.missing_documentation ?? proposal?.missing_documentation ?? []
+  const missing =
+    coding?.missing_documentation ?? proposal?.missing_documentation ?? []
   const isDraft = (proposal?.status ?? "DRAFT") === "DRAFT"
   // A malformed link outranks whatever the last engine call said, because it is the reason nothing
   // was asked of the engine in the first place.
@@ -371,7 +406,10 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
         proposal already and never opens it.
       */}
       <div className="rounded-2xl border border-dashed px-4 py-3 print:hidden">
-        <Disclosure label="Entwicklerwerkzeuge — synthetischen Fall ausführen" printOpen={false}>
+        <Disclosure
+          label="Entwicklerwerkzeuge — synthetischen Fall ausführen"
+          printOpen={false}
+        >
           <CaseSelector
             selected={selected}
             onSelect={selectCase}
@@ -442,8 +480,9 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
               <LockIcon />
               <AlertTitle>Bereits entschieden</AlertTitle>
               <AlertDescription>
-                Der Status dieses Vorschlags steht fest. Ein erneuter Statuswechsel wird von der
-                Engine mit HTTP 409 abgelehnt — Freigeben und Ablehnen sind deshalb deaktiviert.
+                Der Status dieses Vorschlags steht fest. Ein erneuter
+                Statuswechsel wird von der Engine mit HTTP 409 abgelehnt —
+                Freigeben und Ablehnen sind deshalb deaktiviert.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -539,11 +578,13 @@ export function ReviewWorkbench({ deepLinkId = null }: { deepLinkId?: string | n
           </EmptyMedia>
           <EmptyTitle>Kein Vorschlag ausgewählt</EmptyTitle>
           <EmptyDescription>
-            Öffnen Sie eine Prüfung über <strong>Alle Prüfungen</strong> in der Navigation oder über
-            die Übersicht. Zum Ausprobieren lässt sich oben unter{" "}
-            <strong>Entwicklerwerkzeuge</strong> ein synthetischer Fall ausführen; die Engine muss
-            dafür unter <span className="font-mono text-xs">ENGINE_BASE_URL</span> erreichbar sein
-            (Standard <span className="font-mono text-xs">http://localhost:8000</span>).
+            Öffnen Sie eine Prüfung über <strong>Alle Prüfungen</strong> in der
+            Navigation oder über die Übersicht. Zum Ausprobieren lässt sich oben
+            unter <strong>Entwicklerwerkzeuge</strong> ein synthetischer Fall
+            ausführen; die Engine muss dafür unter{" "}
+            <span className="font-mono text-xs">ENGINE_BASE_URL</span>{" "}
+            erreichbar sein (Standard{" "}
+            <span className="font-mono text-xs">http://localhost:8000</span>).
           </EmptyDescription>
         </Empty>
       ) : null}

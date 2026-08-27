@@ -42,14 +42,22 @@ export function CopyableHash({
 }) {
   const [copied, setCopied] = React.useState(false)
   const [failed, setFailed] = React.useState(false)
-  const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  )
 
   React.useEffect(() => () => clearTimeout(timer.current), [])
 
   // Nothing to copy, and nothing to pretend is copyable. An em dash reads as "not present", which
   // is what a missing hash means; a dead button next to it would read as broken.
   if (!value) {
-    return <span className={cn("text-muted-foreground font-mono text-xs", className)}>—</span>
+    return (
+      <span
+        className={cn("font-mono text-xs text-muted-foreground", className)}
+      >
+        —
+      </span>
+    )
   }
 
   // Bound to a const before the closure below. A narrowed *parameter* does not stay narrowed inside
@@ -88,7 +96,7 @@ export function CopyableHash({
         // The full value is in the accessible name because a screen-reader user cannot read the
         // truncation off the screen and then decide whether to copy it.
         aria-label={`${name} in die Zwischenablage kopieren: ${full}`}
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring shrink-0 cursor-pointer rounded focus-visible:ring-2 focus-visible:outline-none"
+        className="shrink-0 cursor-pointer rounded text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         {copied ? (
           <CheckIcon className="size-3.5" aria-hidden />
@@ -97,7 +105,7 @@ export function CopyableHash({
         )}
       </button>
       {/* Announced, not just shown: the icon swap alone is invisible to a screen reader. */}
-      <span aria-live="polite" className="text-muted-foreground text-xs">
+      <span aria-live="polite" className="text-xs text-muted-foreground">
         {copied ? "Kopiert" : failed ? "Kopieren nicht möglich" : null}
       </span>
     </span>

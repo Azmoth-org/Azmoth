@@ -3,7 +3,11 @@
 import { AlertOctagonIcon } from "lucide-react"
 import * as React from "react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 
 /**
@@ -43,13 +47,15 @@ export default function GlobalError({
         <AlertTitle>Diese Ansicht konnte nicht dargestellt werden</AlertTitle>
         <AlertDescription className="space-y-3">
           <p>
-            Das ist ein Fehler in der Oberfläche, nicht ein Befund zu einer Rechnung. Es wurde nichts
-            freigegeben, abgelehnt oder exportiert — Statuswechsel finden ausschließlich in der Engine
-            statt und werden dort protokolliert.
+            Das ist ein Fehler in der Oberfläche, nicht ein Befund zu einer
+            Rechnung. Es wurde nichts freigegeben, abgelehnt oder exportiert —
+            Statuswechsel finden ausschließlich in der Engine statt und werden
+            dort protokolliert.
           </p>
           {error.digest ? (
             <p className="text-xs">
-              Kennung für das Server-Log: <span className="font-mono">{error.digest}</span>
+              Kennung für das Server-Log:{" "}
+              <span className="font-mono">{error.digest}</span>
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">

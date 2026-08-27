@@ -10,8 +10,10 @@ import { callEngine, proxyResponse } from "@/lib/engine"
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   const { id } = await params
-  return proxyResponse(await callEngine(`/api/v1/proposals/${encodeURIComponent(id)}`))
+  return proxyResponse(
+    await callEngine(`/api/v1/proposals/${encodeURIComponent(id)}`)
+  )
 }

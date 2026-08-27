@@ -5,7 +5,10 @@ import * as React from "react"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 
-import { NETWORK_ERROR_MESSAGE, authErrorMessage } from "@/components/auth/auth-messages"
+import {
+  NETWORK_ERROR_MESSAGE,
+  authErrorMessage,
+} from "@/components/auth/auth-messages"
 import { authClient } from "@/lib/auth-client"
 
 /**

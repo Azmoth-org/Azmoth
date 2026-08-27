@@ -6,7 +6,10 @@ import { PrintButton } from "@/components/review/print-button"
 import { PROPOSAL_STATUS_LABEL, eur } from "@/lib/review/format"
 import type { Proposal, ProposalStatus } from "@/lib/review/types"
 
-const STATUS_VARIANT: Record<ProposalStatus, "default" | "secondary" | "destructive" | "outline"> = {
+const STATUS_VARIANT: Record<
+  ProposalStatus,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
   DRAFT: "secondary",
   APPROVED: "default",
   REJECTED: "destructive",
@@ -71,10 +74,12 @@ export function DecisionBar({
   const total = proposal.solver_result.coding.total
 
   return (
-    <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-10 -mx-4 border-b px-4 backdrop-blur sm:-mx-6 sm:px-6 print:hidden">
+    <div className="sticky top-14 z-10 -mx-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6 print:hidden">
       <div className="flex min-h-20 flex-wrap items-center gap-x-8 gap-y-3 py-3">
         <div className="min-w-0">
-          <div className="text-muted-foreground text-xs font-medium">Gesamtbetrag</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            Gesamtbetrag
+          </div>
           <div className="mt-1 text-4xl leading-none font-bold tracking-tight tabular-nums sm:text-5xl">
             {eur(total?.amount_eur)}
           </div>
@@ -90,10 +95,12 @@ export function DecisionBar({
         */}
         <div className="ml-auto flex min-w-0 items-center gap-2">
           {/* Hidden on a phone: the amount and the status are what the button needs beside it. */}
-          <span className="text-muted-foreground hidden truncate font-mono text-xs sm:inline">
+          <span className="hidden truncate font-mono text-xs text-muted-foreground sm:inline">
             {proposal.proposal_id}
           </span>
-          <Badge variant={STATUS_VARIANT[status]}>{PROPOSAL_STATUS_LABEL[status]}</Badge>
+          <Badge variant={STATUS_VARIANT[status]}>
+            {PROPOSAL_STATUS_LABEL[status]}
+          </Badge>
         </div>
 
         <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2">

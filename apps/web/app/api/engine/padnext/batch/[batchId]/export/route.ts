@@ -11,11 +11,11 @@ import { proxyEngineDownload } from "@/lib/engine"
 
 export async function POST(
   _request: Request,
-  { params }: { params: Promise<{ batchId: string }> },
+  { params }: { params: Promise<{ batchId: string }> }
 ): Promise<Response> {
   const { batchId } = await params
   return proxyEngineDownload(
     `/api/v1/padnext/batch/${encodeURIComponent(batchId)}/export`,
-    { method: "POST" },
+    { method: "POST" }
   )
 }

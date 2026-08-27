@@ -100,7 +100,12 @@ export function toReviewError(status: number, body: unknown): ReviewError {
   if (isRecord(body)) {
     // The proxy's own failures.
     if (typeof body.error === "string" && typeof body.message === "string") {
-      return { error: body.error, message: body.message, status, details: body.details }
+      return {
+        error: body.error,
+        message: body.message,
+        status,
+        details: body.details,
+      }
     }
     // FastAPI: `{"detail": ...}` — either our structured dict or a validation-error array.
     if ("detail" in body) {
@@ -108,7 +113,10 @@ export function toReviewError(status: number, body: unknown): ReviewError {
       if (isRecord(detail) && typeof detail.error === "string") {
         return {
           error: detail.error,
-          message: typeof detail.message === "string" ? detail.message : `HTTP ${status}`,
+          message:
+            typeof detail.message === "string"
+              ? detail.message
+              : `HTTP ${status}`,
           status,
           details: detail,
         }

@@ -58,7 +58,9 @@ test("Übersicht lädt und eine Prüfung lässt sich öffnen", async ({ page }) 
   // ---------------------------------------------------------------------------------------------
   await page.goto("/")
 
-  await expect(page.getByRole("heading", { name: "Übersicht", level: 1 })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Übersicht", level: 1 })
+  ).toBeVisible()
 
   await assertEngineIsUp(page)
 
@@ -100,21 +102,31 @@ test("Übersicht lädt und eine Prüfung lässt sich öffnen", async ({ page }) 
   // ---------------------------------------------------------------------------------------------
   const firstRow = rows.first()
   const href = await firstRow.getAttribute("href")
-  const proposalId = new URL(href ?? "", "http://localhost").searchParams.get("id")
+  const proposalId = new URL(href ?? "", "http://localhost").searchParams.get(
+    "id"
+  )
 
-  expect(proposalId, `Die erste Zeile trägt keine Vorschlags-ID: href=${href}`).toBeTruthy()
+  expect(
+    proposalId,
+    `Die erste Zeile trägt keine Vorschlags-ID: href=${href}`
+  ).toBeTruthy()
 
   await firstRow.click()
 
   await expect(page).toHaveURL(new RegExp(`/review\\?id=${proposalId}`))
   await expect(
-    page.getByRole("heading", { name: "GOÄ-Abrechnungsvorschlag prüfen", level: 1 }),
+    page.getByRole("heading", {
+      name: "GOÄ-Abrechnungsvorschlag prüfen",
+      level: 1,
+    })
   ).toBeVisible()
 
   // The proposal itself arrived, not just the shell. `ProposalHeader` renders the id through
   // `CopyableHash` with `length={32}`, and a `prop_<16 hex>` handle is 21 characters — so it is
   // shown whole and can be asserted on directly.
-  await expect(page.getByText(proposalId!, { exact: true }).first()).toBeVisible()
+  await expect(
+    page.getByText(proposalId!, { exact: true }).first()
+  ).toBeVisible()
 })
 
 /**
@@ -132,6 +144,6 @@ async function assertEngineIsUp(page: Page): Promise<void> {
   expect(
     await unreachable.isVisible(),
     "Die Engine ist nicht erreichbar — die Übersicht rendert nur ihre Fehlerzustände. " +
-      "Engine starten (Standard http://localhost:8000, siehe ENGINE_BASE_URL) und erneut laufen lassen.",
+      "Engine starten (Standard http://localhost:8000, siehe ENGINE_BASE_URL) und erneut laufen lassen."
   ).toBe(false)
 }

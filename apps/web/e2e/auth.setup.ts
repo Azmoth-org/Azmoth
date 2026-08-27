@@ -45,7 +45,9 @@ setup("angemeldet", async ({ page, request }) => {
 
   // The dashboard, not merely "not the login page": the redirect after sign-in is what makes the
   // session usable, and landing back on `/login` is exactly the failure this must not pass through.
-  await expect(page.getByRole("heading", { name: "Übersicht", level: 1 })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Übersicht", level: 1 })
+  ).toBeVisible()
 
   await page.context().storageState({ path: STORAGE_STATE })
 })
@@ -60,6 +62,6 @@ async function signUpIfNeeded(request: APIRequestContext): Promise<void> {
   const body = await response.text()
   expect(
     body.includes("USER_ALREADY_EXISTS"),
-    `Das E2E-Konto konnte weder angelegt noch wiederverwendet werden (HTTP ${response.status()}): ${body}`,
+    `Das E2E-Konto konnte weder angelegt noch wiederverwendet werden (HTTP ${response.status()}): ${body}`
   ).toBe(true)
 }

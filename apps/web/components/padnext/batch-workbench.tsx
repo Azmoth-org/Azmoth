@@ -4,7 +4,11 @@ import { DownloadIcon, LayersIcon, Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
 import { Skeleton } from "@workspace/ui/components/skeleton"
@@ -12,10 +16,21 @@ import { Skeleton } from "@workspace/ui/components/skeleton"
 import { CopyableHash } from "@/components/common/copyable-hash"
 import { BatchDropzone } from "@/components/padnext/batch-dropzone"
 import { BatchFilesTable } from "@/components/padnext/batch-files-table"
-import { BatchProgress, FailedFilesNotice } from "@/components/padnext/batch-progress"
-import { BucketBoard, type BucketCounts } from "@/components/padnext/bucket-summary"
+import {
+  BatchProgress,
+  FailedFilesNotice,
+} from "@/components/padnext/batch-progress"
+import {
+  BucketBoard,
+  type BucketCounts,
+} from "@/components/padnext/bucket-summary"
 import { ErrorPanel } from "@/components/review/error-panel"
-import { isRetryable, isWellFormedId, malformedIdError, toDeepLinkError } from "@/lib/deep-link"
+import {
+  isRetryable,
+  isWellFormedId,
+  malformedIdError,
+  toDeepLinkError,
+} from "@/lib/deep-link"
 import { downloadBatchExport } from "@/lib/download"
 import {
   POLL_INTERVAL_MS,
@@ -81,7 +96,11 @@ function BatchExport({ job }: { job: BatchAuditJob }) {
     <div className="space-y-4">
       <Card>
         <CardContent className="flex flex-wrap items-center gap-4 pt-6">
-          <Button variant="outline" onClick={() => void download()} disabled={pending}>
+          <Button
+            variant="outline"
+            onClick={() => void download()}
+            disabled={pending}
+          >
             {pending ? (
               <>
                 <Loader2Icon className="animate-spin" aria-hidden />
@@ -94,18 +113,19 @@ function BatchExport({ job }: { job: BatchAuditJob }) {
               </>
             )}
           </Button>
-          <div className="text-muted-foreground min-w-0 text-xs">
+          <div className="min-w-0 text-xs text-muted-foreground">
             {saved ? (
               <span>
-                Heruntergeladen: <span className="font-mono break-all">{saved}</span>
+                Heruntergeladen:{" "}
+                <span className="font-mono break-all">{saved}</span>
               </span>
             ) : (
               <span>
                 ZIP mit <span className="font-mono">batch_summary.csv</span>,{" "}
                 <span className="font-mono">batch_line_items.csv</span>,{" "}
                 <span className="font-mono">batch_files.csv</span> und einer{" "}
-                <span className="font-mono">README.txt</span>, die die drei Bewertungsgruppen
-                erklärt.
+                <span className="font-mono">README.txt</span>, die die drei
+                Bewertungsgruppen erklärt.
               </span>
             )}
           </div>
@@ -144,7 +164,9 @@ function Provenance({ job }: { job: BatchAuditJob }) {
           <div className="text-muted-foreground">Katalog</div>
           {/* Taken from a report rather than from the job: catalog identity belongs to the audit,
               and every file in a batch is audited by the same process against the same catalog. */}
-          <div className="font-mono break-all">{first?.catalog_version || "—"}</div>
+          <div className="font-mono break-all">
+            {first?.catalog_version || "—"}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -198,7 +220,11 @@ function BatchSkeleton() {
  * and wrong for one it was linked to: a `404` from a mistyped id is a permanent answer, and the old
  * loop would have asked for it every two seconds for fifteen minutes. See the poll effect below.
  */
-export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | null }) {
+export function BatchWorkbench({
+  deepLinkId = null,
+}: {
+  deepLinkId?: string | null
+}) {
   const [job, setJob] = useState<BatchAuditJob | null>(null)
   const [error, setError] = useState<ReviewError | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -218,7 +244,7 @@ export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | nu
       deepLinkId !== null && !isWellFormedId("batch", deepLinkId)
         ? malformedIdError("batch", deepLinkId)
         : null,
-    [deepLinkId],
+    [deepLinkId]
   )
 
   // Held in a ref so the effect that owns the timer is not restarted by every poll's state update.
@@ -227,7 +253,9 @@ export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | nu
   // already what this component holds after an upload, so the existing poll picks it up and a run
   // still in `PROCESSING` keeps ticking exactly as one uploaded in this tab does.
   const [batchId, setBatchId] = useState<string | null>(
-    deepLinkId !== null && isWellFormedId("batch", deepLinkId) ? deepLinkId : null,
+    deepLinkId !== null && isWellFormedId("batch", deepLinkId)
+      ? deepLinkId
+      : null
   )
   // Bumped by "Erneut versuchen"; part of the request key, so a retry restarts the poll.
   const [reloads, setReloads] = useState(0)
@@ -260,12 +288,13 @@ export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | nu
         // The address bar still names the batch this tab was linked to, which is no longer what the
         // screen shows. Dropped for the same reason as on the review screen: a reload would
         // otherwise swap the reader back to the old run.
-        if (deepLinkId !== null) router.replace("/padnext/batch", { scroll: false })
+        if (deepLinkId !== null)
+          router.replace("/padnext/batch", { scroll: false })
       } finally {
         setUploading(false)
       }
     },
-    [deepLinkId, router],
+    [deepLinkId, router]
   )
 
   useEffect(() => {
@@ -289,7 +318,9 @@ export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | nu
       setResolvedRequest(request)
 
       if (result.kind === "error") {
-        const failure = fromDeepLink ? toDeepLinkError("batch", result.error) : result.error
+        const failure = fromDeepLink
+          ? toDeepLinkError("batch", result.error)
+          : result.error
         setError(failure)
         // A single failed poll is not a failed batch — the job is still running on the engine — so
         // a transient error is shown and the loop keeps going rather than abandoning a job the user
@@ -335,7 +366,10 @@ export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | nu
         opened a finished run to read it is one of the people most likely to want to audit the next
         stack, and removing the only way to start one would be a worse trade than a little scrolling.
       */}
-      <BatchDropzone onSubmit={(files) => void onSubmit(files)} pending={uploading} />
+      <BatchDropzone
+        onSubmit={(files) => void onSubmit(files)}
+        pending={uploading}
+      />
 
       {shownError ? (
         <ErrorPanel
@@ -343,7 +377,9 @@ export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | nu
           // Only for a deep link, and only when a second attempt could answer differently. An
           // upload failure is retried by dropping the files again, which the zone above already
           // offers.
-          onRetry={deepLinkId !== null && isRetryable(shownError) ? retry : undefined}
+          onRetry={
+            deepLinkId !== null && isRetryable(shownError) ? retry : undefined
+          }
           pending={loading}
         />
       ) : null}
@@ -356,11 +392,12 @@ export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | nu
         <Alert variant="destructive">
           <AlertTitle>Der Stapel antwortet nicht mehr</AlertTitle>
           <AlertDescription>
-            Seit {POLL_TIMEOUT_MS / 60000} Minuten hat sich der Status nicht auf abgeschlossen
-            geändert. Die Engine verarbeitet Stapel in einem FastAPI-BackgroundTask, der einen
-            Neustart nicht überlebt — ein unterbrochener Lauf bleibt dauerhaft auf{" "}
-            <span className="font-mono">PROCESSING</span> stehen. Die Dateien bitte erneut
-            hochladen.
+            Seit {POLL_TIMEOUT_MS / 60000} Minuten hat sich der Status nicht auf
+            abgeschlossen geändert. Die Engine verarbeitet Stapel in einem
+            FastAPI-BackgroundTask, der einen Neustart nicht überlebt — ein
+            unterbrochener Lauf bleibt dauerhaft auf{" "}
+            <span className="font-mono">PROCESSING</span> stehen. Die Dateien
+            bitte erneut hochladen.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -373,8 +410,9 @@ export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | nu
               {job.error_message ?? "Kein Grund angegeben."}
             </p>
             <p>
-              Es wird bewusst <strong>keine</strong> Auswertung angezeigt: eine Summe über Dateien,
-              die möglicherweise nie geschrieben wurden, wäre schlechter als gar keine.
+              Es wird bewusst <strong>keine</strong> Auswertung angezeigt: eine
+              Summe über Dateien, die möglicherweise nie geschrieben wurden,
+              wäre schlechter als gar keine.
             </p>
           </AlertDescription>
         </Alert>
@@ -394,11 +432,14 @@ export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | nu
             />
           ) : (
             <Alert variant="destructive">
-              <AlertTitle>Die Auswertung enthält nicht die drei Bewertungsgruppen</AlertTitle>
+              <AlertTitle>
+                Die Auswertung enthält nicht die drei Bewertungsgruppen
+              </AlertTitle>
               <AlertDescription>
-                Der Stapel ist abgeschlossen, aber die Zusammenfassung trägt nicht die Felder
-                confirmed_fine / confirmed_wrong / unconfirmed. Vermutlich laufen Engine und UI auf
-                verschiedenen Contract-Versionen — packages/contracts neu generieren.
+                Der Stapel ist abgeschlossen, aber die Zusammenfassung trägt
+                nicht die Felder confirmed_fine / confirmed_wrong / unconfirmed.
+                Vermutlich laufen Engine und UI auf verschiedenen
+                Contract-Versionen — packages/contracts neu generieren.
               </AlertDescription>
             </Alert>
           )}
@@ -419,10 +460,12 @@ export function BatchWorkbench({ deepLinkId = null }: { deepLinkId?: string | nu
           <LayersIcon />
           <AlertTitle>Noch kein Stapel geprüft</AlertTitle>
           <AlertDescription>
-            Eine einzelne Rechnung beantwortet die Frage „ist diese Rechnung haltbar?“. Ein Stapel
-            beantwortet die teurere: „ist unsere Abrechnung systematisch falsch, und wo?“ Die
-            Auswertung trennt dabei dieselben drei Gruppen wie die Einzelprüfung — die mittlere
-            Spalte ist die Grenze unserer Regelabdeckung, nicht ein Vorwurf gegen die Praxis.
+            Eine einzelne Rechnung beantwortet die Frage „ist diese Rechnung
+            haltbar?“. Ein Stapel beantwortet die teurere: „ist unsere
+            Abrechnung systematisch falsch, und wo?“ Die Auswertung trennt dabei
+            dieselben drei Gruppen wie die Einzelprüfung — die mittlere Spalte
+            ist die Grenze unserer Regelabdeckung, nicht ein Vorwurf gegen die
+            Praxis.
           </AlertDescription>
         </Alert>
       ) : null}

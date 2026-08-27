@@ -45,7 +45,10 @@ export function TableSkeleton({
         <div className="space-y-3">
           <div className="flex gap-3 border-b pb-3">
             {columns.map((column) => (
-              <span key={column} className="text-muted-foreground flex-1 text-sm font-medium">
+              <span
+                key={column}
+                className="flex-1 text-sm font-medium text-muted-foreground"
+              >
                 {column}
               </span>
             ))}
@@ -80,10 +83,16 @@ export function NoRecords({
 }) {
   return (
     <div className="flex flex-col items-center gap-3 py-12 text-center">
-      <InboxIcon className="text-muted-foreground size-6 opacity-60" aria-hidden />
+      <InboxIcon
+        className="size-6 text-muted-foreground opacity-60"
+        aria-hidden
+      />
       <p className="text-sm font-medium">{message}</p>
-      <p className="text-muted-foreground max-w-md text-xs">{hint}</p>
-      <Link href={action.href} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+      <p className="max-w-md text-xs text-muted-foreground">{hint}</p>
+      <Link
+        href={action.href}
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+      >
         {action.label}
       </Link>
     </div>
@@ -106,10 +115,18 @@ export function NoMatches({
 }) {
   return (
     <div className="flex flex-col items-center gap-3 py-12 text-center">
-      <SearchXIcon className="text-muted-foreground size-6 opacity-60" aria-hidden />
+      <SearchXIcon
+        className="size-6 text-muted-foreground opacity-60"
+        aria-hidden
+      />
       <p className="text-sm font-medium">{message}</p>
-      {hint ? <p className="text-muted-foreground max-w-md text-xs">{hint}</p> : null}
-      <Link href={reset} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+      {hint ? (
+        <p className="max-w-md text-xs text-muted-foreground">{hint}</p>
+      ) : null}
+      <Link
+        href={reset}
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+      >
         Filter zurücksetzen
       </Link>
     </div>
@@ -124,16 +141,29 @@ export function NoMatches({
  * page they did not ask for makes the URL they followed a lie — and because a URL is a paste as often
  * as it is a click, so "this link is stale" is real information.
  */
-export function PageOutOfRange({ firstPage, pages }: { firstPage: string; pages: number }) {
+export function PageOutOfRange({
+  firstPage,
+  pages,
+}: {
+  firstPage: string
+  pages: number
+}) {
   return (
     <div className="flex flex-col items-center gap-3 py-12 text-center">
-      <SearchXIcon className="text-muted-foreground size-6 opacity-60" aria-hidden />
+      <SearchXIcon
+        className="size-6 text-muted-foreground opacity-60"
+        aria-hidden
+      />
       <p className="text-sm font-medium">Diese Seite ist leer</p>
-      <p className="text-muted-foreground max-w-md text-xs">
-        Es gibt nur {pages} {pages === 1 ? "Seite" : "Seiten"}. Vermutlich stammt der Link aus einer
-        Zeit, in der die Liste länger war, oder ein Filter hat sie verkürzt.
+      <p className="max-w-md text-xs text-muted-foreground">
+        Es gibt nur {pages} {pages === 1 ? "Seite" : "Seiten"}. Vermutlich
+        stammt der Link aus einer Zeit, in der die Liste länger war, oder ein
+        Filter hat sie verkürzt.
       </p>
-      <Link href={firstPage} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+      <Link
+        href={firstPage}
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+      >
         Zur ersten Seite
       </Link>
     </div>
@@ -147,14 +177,22 @@ export function PageOutOfRange({ firstPage, pages }: { firstPage: string; pages:
  * a specific sentence for every failure it has — unreachable, timed out, empty body, unparsable JSON
  * — and replacing that with "Fehler beim Laden" throws away the only thing a reader can act on.
  */
-export function LoadFailed({ headline, message }: { headline: string; message: string }) {
+export function LoadFailed({
+  headline,
+  message,
+}: {
+  headline: string
+  message: string
+}) {
   return (
     <div className="space-y-2 py-10 text-center">
-      <p className="text-destructive flex items-center justify-center gap-2 text-sm font-medium">
+      <p className="flex items-center justify-center gap-2 text-sm font-medium text-destructive">
         <CircleAlertIcon className="size-4 shrink-0" aria-hidden />
         {headline}
       </p>
-      <p className="text-muted-foreground mx-auto max-w-md text-xs">{message}</p>
+      <p className="mx-auto max-w-md text-xs text-muted-foreground">
+        {message}
+      </p>
     </div>
   )
 }

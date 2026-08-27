@@ -41,7 +41,7 @@ export function BatchDropzone({
       // a batch with a file in it twice would double that invoice's weight in the roll-up.
       const seen = new Set(current.map((file) => `${file.name}:${file.size}`))
       const added = Array.from(incoming).filter(
-        (file) => !seen.has(`${file.name}:${file.size}`),
+        (file) => !seen.has(`${file.name}:${file.size}`)
       )
       return [...current, ...added].slice(0, MAX_FILES)
     })
@@ -69,11 +69,16 @@ export function BatchDropzone({
           }}
           className={[
             "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors",
-            dragging ? "border-primary bg-primary/5" : "border-muted-foreground/25",
+            dragging
+              ? "border-primary bg-primary/5"
+              : "border-muted-foreground/25",
           ].join(" ")}
         >
-          <FileUpIcon className="text-muted-foreground size-8" aria-hidden />
-          <label htmlFor={inputId} className="cursor-pointer text-sm font-medium underline">
+          <FileUpIcon className="size-8 text-muted-foreground" aria-hidden />
+          <label
+            htmlFor={inputId}
+            className="cursor-pointer text-sm font-medium underline"
+          >
             Dateien auswählen
           </label>
           <input
@@ -89,10 +94,11 @@ export function BatchDropzone({
               event.target.value = ""
             }}
           />
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             oder mehrere <span className="font-mono">.padx</span>- /{" "}
-            <span className="font-mono">*_padx.xml</span>-Dateien hierher ziehen. Höchstens{" "}
-            {MAX_FILES} Dateien, {MAX_TOTAL_BYTES / 1024 / 1024} MB gesamt. Nur synthetische
+            <span className="font-mono">*_padx.xml</span>-Dateien hierher
+            ziehen. Höchstens {MAX_FILES} Dateien,{" "}
+            {MAX_TOTAL_BYTES / 1024 / 1024} MB gesamt. Nur synthetische
             Testdaten.
           </p>
         </div>
@@ -101,9 +107,10 @@ export function BatchDropzone({
           <div className="space-y-2">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="text-sm font-medium">
-                {files.length} {files.length === 1 ? "Datei" : "Dateien"} ausgewählt
+                {files.length} {files.length === 1 ? "Datei" : "Dateien"}{" "}
+                ausgewählt
               </span>
-              <span className="text-muted-foreground text-xs tabular-nums">
+              <span className="text-xs text-muted-foreground tabular-nums">
                 {(totalBytes / 1024).toFixed(0)} kB
               </span>
             </div>
@@ -118,8 +125,10 @@ export function BatchDropzone({
                   <button
                     type="button"
                     aria-label={`${file.name} entfernen`}
-                    className="text-muted-foreground hover:text-foreground shrink-0"
-                    onClick={() => setFiles((current) => current.filter((f) => f !== file))}
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                    onClick={() =>
+                      setFiles((current) => current.filter((f) => f !== file))
+                    }
                   >
                     <XIcon className="size-3.5" aria-hidden />
                   </button>
@@ -128,13 +137,15 @@ export function BatchDropzone({
             </ul>
 
             {tooLarge ? (
-              <p className="text-destructive text-xs">
-                Der Stapel ist größer als {MAX_TOTAL_BYTES / 1024 / 1024} MB. Bitte aufteilen.
+              <p className="text-xs text-destructive">
+                Der Stapel ist größer als {MAX_TOTAL_BYTES / 1024 / 1024} MB.
+                Bitte aufteilen.
               </p>
             ) : null}
             {atFileLimit ? (
-              <p className="text-muted-foreground text-xs">
-                Das Limit von {MAX_FILES} Dateien ist erreicht; weitere wurden nicht übernommen.
+              <p className="text-xs text-muted-foreground">
+                Das Limit von {MAX_FILES} Dateien ist erreicht; weitere wurden
+                nicht übernommen.
               </p>
             ) : null}
           </div>
@@ -156,7 +167,9 @@ export function BatchDropzone({
             ) : (
               <>
                 <FileUpIcon aria-hidden />
-                {files.length > 0 ? `${files.length} Dateien prüfen` : "Stapel prüfen"}
+                {files.length > 0
+                  ? `${files.length} Dateien prüfen`
+                  : "Stapel prüfen"}
               </>
             )}
           </Button>

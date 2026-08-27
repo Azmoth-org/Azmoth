@@ -25,9 +25,11 @@ export type StatusPresentation = {
 }
 
 const GRAY = "bg-muted text-muted-foreground"
-const YELLOW = "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300"
+const YELLOW =
+  "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300"
 const BLUE = "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300"
-const GREEN = "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300"
+const GREEN =
+  "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300"
 
 /**
  * Grey, green, red, blue — and the greys and the reds are the load-bearing ones.
@@ -53,8 +55,15 @@ export const PROPOSAL_STATUS: Record<Proposal["status"], StatusPresentation> = {
  * engine's startup recovery closed after a restart. A reader scanning this column for "did my upload
  * finish" must not be able to mistake it for `COMPLETED`.
  */
-export const BATCH_STATUS: Record<BatchAuditJobSummary["status"], StatusPresentation> = {
-  PENDING: { label: "In Warteschlange", variant: "secondary", className: YELLOW },
+export const BATCH_STATUS: Record<
+  BatchAuditJobSummary["status"],
+  StatusPresentation
+> = {
+  PENDING: {
+    label: "In Warteschlange",
+    variant: "secondary",
+    className: YELLOW,
+  },
   PROCESSING: { label: "Wird geprüft", variant: "secondary", className: BLUE },
   COMPLETED: { label: "Abgeschlossen", variant: "secondary", className: GREEN },
   FAILED: { label: "Fehlgeschlagen", variant: "destructive" },
@@ -70,7 +79,7 @@ export const BATCH_STATUS: Record<BatchAuditJobSummary["status"], StatusPresenta
  */
 export function statusPresentation<T extends string>(
   map: Record<T, StatusPresentation>,
-  status: string,
+  status: string
 ): StatusPresentation {
   return map[status as T] ?? { label: status, variant: "outline" }
 }

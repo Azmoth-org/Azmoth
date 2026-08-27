@@ -17,7 +17,9 @@ import type {
 
 /** `"130.39"` → `"130.39 €"`. The digits are untouched. */
 export function eur(amount: string | null | undefined): string {
-  return amount === null || amount === undefined || amount === "" ? "—" : `${amount} €`
+  return amount === null || amount === undefined || amount === ""
+    ? "—"
+    : `${amount} €`
 }
 
 /**
@@ -38,7 +40,10 @@ export function rate(value: string | null | undefined): string {
   return value === null || value === undefined || value === "" ? "—" : value
 }
 
-export function shortHash(hash: string | null | undefined, length = 16): string {
+export function shortHash(
+  hash: string | null | undefined,
+  length = 16
+): string {
   if (!hash) return "—"
   return hash.length <= length ? hash : `${hash.slice(0, length)}…`
 }
@@ -47,7 +52,10 @@ export function timestamp(value: string | null | undefined): string {
   if (!value) return "—"
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return value
-  return parsed.toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "medium" })
+  return parsed.toLocaleString("de-DE", {
+    dateStyle: "medium",
+    timeStyle: "medium",
+  })
 }
 
 // ------------------------------------------------------------------------------------------
@@ -125,18 +133,25 @@ export const PROMINENT_WARNING_TYPES = new Set<string>([
   "mapping_references_unknown_ziffer",
 ])
 
-export function isProminentWarning(type: string, severity: WarningSeverity): boolean {
+export function isProminentWarning(
+  type: string,
+  severity: WarningSeverity
+): boolean {
   return severity === "error" || PROMINENT_WARNING_TYPES.has(type)
 }
 
-const SEVERITY_ORDER: Record<WarningSeverity, number> = { error: 0, warning: 1, info: 2 }
+const SEVERITY_ORDER: Record<WarningSeverity, number> = {
+  error: 0,
+  warning: 1,
+  info: 2,
+}
 
-export function bySeverity<T extends { severity: WarningSeverity; type: string }>(
-  a: T,
-  b: T,
-): number {
+export function bySeverity<
+  T extends { severity: WarningSeverity; type: string },
+>(a: T, b: T): number {
   const prominence =
-    Number(isProminentWarning(b.type, b.severity)) - Number(isProminentWarning(a.type, a.severity))
+    Number(isProminentWarning(b.type, b.severity)) -
+    Number(isProminentWarning(a.type, a.severity))
   if (prominence !== 0) return prominence
   return SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
 }

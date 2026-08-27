@@ -24,26 +24,31 @@ export default function RulesPage() {
   return (
     <>
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">GOÄ-Regeln prüfen</h1>
-        <p className="text-muted-foreground text-sm">
-          859 der 894 Regeln dieser Engine wurden automatisch aus dem Verordnungstext der GOÄ
-          extrahiert. Sie setzen nichts durch: eine maschinell gelesene Regel darf keine
-          berechnungsfähige Leistung unterdrücken, bevor ein Mensch sie geprüft hat.
+        <h1 className="text-2xl font-semibold tracking-tight">
+          GOÄ-Regeln prüfen
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          859 der 894 Regeln dieser Engine wurden automatisch aus dem
+          Verordnungstext der GOÄ extrahiert. Sie setzen nichts durch: eine
+          maschinell gelesene Regel darf keine berechnungsfähige Leistung
+          unterdrücken, bevor ein Mensch sie geprüft hat.
         </p>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           Genau das ist der Grund, warum eine{" "}
           <Link href="/padnext" className="underline">
             PADnext-Prüfung
           </Link>{" "}
-          so viel in die Gruppe <strong>unbestätigt</strong> einordnet — das ist kein Vorwurf gegen
-          eine Praxis, sondern die Grenze dessen, was die Engine belegen darf. Jede hier
-          verifizierte Regel verschiebt diese Grenze und wirkt ab sofort auf alle folgenden
-          Prüfungen.
+          so viel in die Gruppe <strong>unbestätigt</strong> einordnet — das ist
+          kein Vorwurf gegen eine Praxis, sondern die Grenze dessen, was die
+          Engine belegen darf. Jede hier verifizierte Regel verschiebt diese
+          Grenze und wirkt ab sofort auf alle folgenden Prüfungen.
         </p>
-        <p className="text-muted-foreground text-sm">
-          Die CSV-Dateien unter <span className="font-mono text-xs">data/rules/</span> werden dabei
-          nicht verändert. Sie sind versionierte Quelldaten; Entscheidungen aus dieser Liste werden
-          in der Datenbank gespeichert und beim Laden über die CSVs gelegt.
+        <p className="text-sm text-muted-foreground">
+          Die CSV-Dateien unter{" "}
+          <span className="font-mono text-xs">data/rules/</span> werden dabei
+          nicht verändert. Sie sind versionierte Quelldaten; Entscheidungen aus
+          dieser Liste werden in der Datenbank gespeichert und beim Laden über
+          die CSVs gelegt.
         </p>
       </header>
 

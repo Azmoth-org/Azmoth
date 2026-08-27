@@ -1,7 +1,21 @@
-import { CircleAlertIcon, CircleCheckIcon, CircleHelpIcon, InfoIcon } from "lucide-react"
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  CircleHelpIcon,
+  InfoIcon,
+} from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card"
 
 import {
   BUCKET,
@@ -13,7 +27,10 @@ import {
   segmentWidths,
   type BucketFigures,
 } from "@/lib/padnext/format"
-import type { PadnextAuditReport, PadnextPositionBucket } from "@/lib/padnext/types"
+import type {
+  PadnextAuditReport,
+  PadnextPositionBucket,
+} from "@/lib/padnext/types"
 
 const BUCKET_ICON = {
   confirmed_wrong: CircleAlertIcon,
@@ -24,7 +41,11 @@ const BUCKET_ICON = {
 export type BucketCounts = Record<PadnextPositionBucket, number>
 
 export function countBuckets(report: PadnextAuditReport): BucketCounts {
-  const counts: BucketCounts = { confirmed_wrong: 0, confirmed_fine: 0, unconfirmed: 0 }
+  const counts: BucketCounts = {
+    confirmed_wrong: 0,
+    confirmed_fine: 0,
+    unconfirmed: 0,
+  }
   for (const position of report.positions ?? []) {
     counts[position.bucket] += 1
   }
@@ -42,7 +63,10 @@ export function countBuckets(report: PadnextAuditReport): BucketCounts {
  * to state a single invoice's position and a whole practice's without a second implementation that
  * could word the amber bucket differently.
  */
-function amountFor(figures: BucketFigures, bucket: PadnextPositionBucket): string {
+function amountFor(
+  figures: BucketFigures,
+  bucket: PadnextPositionBucket
+): string {
   if (bucket === "confirmed_wrong") return figures.confirmed_wrong_eur
   if (bucket === "confirmed_fine") return figures.confirmed_fine_eur
   return figures.unconfirmed_eur
@@ -75,10 +99,10 @@ function BucketCard({
         <div className={`text-3xl font-semibold tabular-nums ${tone.text}`}>
           {eur(amountFor(figures, bucket))}
         </div>
-        <div className="text-muted-foreground text-xs">
+        <div className="text-xs text-muted-foreground">
           {count} {count === 1 ? unit[0] : unit[1]} · {presentation.headline}
         </div>
-        <p className="text-foreground/80 text-xs">{presentation.action}</p>
+        <p className="text-xs text-foreground/80">{presentation.action}</p>
       </CardContent>
     </Card>
   )
@@ -105,19 +129,22 @@ export function CoverageBar({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm font-medium">Prüfabdeckung {percent(figures.coverage_ratio)}</span>
-        <span className="text-muted-foreground text-xs tabular-nums">
+        <span className="text-sm font-medium">
+          Prüfabdeckung {percent(figures.coverage_ratio)}
+        </span>
+        <span className="text-xs text-muted-foreground tabular-nums">
           {totalLabel} {eur(figures.claimed_total_eur)}
         </span>
       </div>
 
       <div
-        className="bg-muted flex h-2.5 w-full overflow-hidden rounded-full"
+        className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
         role="img"
         aria-label={
           `Prüfabdeckung ${percent(figures.coverage_ratio)} der berechneten Summe. ` +
           BUCKET_ORDER.map(
-            (bucket) => `${BUCKET[bucket].label}: ${eur(amountFor(figures, bucket))}`,
+            (bucket) =>
+              `${BUCKET[bucket].label}: ${eur(amountFor(figures, bucket))}`
           ).join(". ")
         }
       >
@@ -128,13 +155,14 @@ export function CoverageBar({
               className={BUCKET_TONE_CLASS[BUCKET[bucket].tone].bar}
               style={{ width: `${widths[index]}%` }}
             />
-          ),
+          )
         )}
       </div>
 
-      <p className="text-muted-foreground text-xs">
-        Der Anteil der berechneten Summe, zu dem diese Prüfung überhaupt eine Aussage treffen konnte.
-        Er sagt <strong>nicht</strong>, wie viel davon falsch ist.
+      <p className="text-xs text-muted-foreground">
+        Der Anteil der berechneten Summe, zu dem diese Prüfung überhaupt eine
+        Aussage treffen konnte. Er sagt <strong>nicht</strong>, wie viel davon
+        falsch ist.
       </p>
     </div>
   )
@@ -149,11 +177,12 @@ export function UnconfirmedNotice() {
       <AlertDescription className="space-y-2">
         <p>{UNCONFIRMED_DISCLAIMER}</p>
         <p className="text-foreground/80">
-          Nur <strong>nachweislich falsch</strong> beruht auf verifizierten Regeln, dem versionierten
-          Katalog oder der Nachrechnung nach § 5 Abs. 1 GOÄ und ist damit gegenüber einem
-          Kostenträger belastbar. <strong>Unbestätigt</strong> bedeutet, dass für diese Ziffer keine
-          von einem Menschen geprüfte Regel vorliegt — die Position ist damit weder bestätigt noch
-          beanstandet.
+          Nur <strong>nachweislich falsch</strong> beruht auf verifizierten
+          Regeln, dem versionierten Katalog oder der Nachrechnung nach § 5 Abs.
+          1 GOÄ und ist damit gegenüber einem Kostenträger belastbar.{" "}
+          <strong>Unbestätigt</strong> bedeutet, dass für diese Ziffer keine von
+          einem Menschen geprüfte Regel vorliegt — die Position ist damit weder
+          bestätigt noch beanstandet.
         </p>
       </AlertDescription>
     </Alert>

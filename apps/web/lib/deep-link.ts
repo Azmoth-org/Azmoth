@@ -71,7 +71,10 @@ export function readDeepLinkId(raw: RawSearchParams): string | null {
 }
 
 /** A link whose id cannot be one this engine issued. Refused without a request. */
-export function malformedIdError(kind: DeepLinkKind, value: string): ReviewError {
+export function malformedIdError(
+  kind: DeepLinkKind,
+  value: string
+): ReviewError {
   return {
     error: kind === "proposal" ? "malformed_proposal_id" : "malformed_batch_id",
     message: `${NOUN[kind]} nicht gefunden`,
@@ -95,8 +98,12 @@ export function malformedIdError(kind: DeepLinkKind, value: string): ReviewError
  * already says something specific, and overwriting it with "nicht gefunden" would report a broken
  * engine as a broken link — which sends the reader to look for the wrong problem.
  */
-export function toDeepLinkError(kind: DeepLinkKind, error: ReviewError): ReviewError {
-  const notFound = kind === "proposal" ? "proposal_not_found" : "batch_not_found"
+export function toDeepLinkError(
+  kind: DeepLinkKind,
+  error: ReviewError
+): ReviewError {
+  const notFound =
+    kind === "proposal" ? "proposal_not_found" : "batch_not_found"
   if (error.error !== notFound && error.status !== 404) return error
   return {
     ...error,

@@ -26,14 +26,17 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(
       {
         error: "unreadable_upload",
-        message: "Der Upload konnte nicht als multipart/form-data gelesen werden.",
+        message:
+          "Der Upload konnte nicht als multipart/form-data gelesen werden.",
         details: cause instanceof Error ? cause.message : String(cause),
       },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
-  const files = form.getAll("files").filter((part): part is File => part instanceof File)
+  const files = form
+    .getAll("files")
+    .filter((part): part is File => part instanceof File)
 
   if (files.length === 0) {
     return Response.json(
@@ -43,7 +46,7 @@ export async function POST(request: Request): Promise<Response> {
           "Keine Dateien empfangen. Bitte mindestens eine PADnext-Datei auswählen — " +
           ".padx-Container oder *_padx.xml-Nutzdaten.",
       },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
@@ -53,7 +56,7 @@ export async function POST(request: Request): Promise<Response> {
         error: "too_many_files",
         message: `${files.length} Dateien; höchstens ${MAX_FILES} pro Stapel. Bitte aufteilen.`,
       },
-      { status: 413 },
+      { status: 413 }
     )
   }
 
@@ -65,7 +68,7 @@ export async function POST(request: Request): Promise<Response> {
           error: "file_too_large",
           message: `${file.name} ist größer als ${MAX_FILE_BYTES / 1024 / 1024} MB.`,
         },
-        { status: 413 },
+        { status: 413 }
       )
     }
     total += file.size
@@ -77,7 +80,7 @@ export async function POST(request: Request): Promise<Response> {
         error: "batch_too_large",
         message: `Der Stapel ist größer als ${MAX_TOTAL_BYTES / 1024 / 1024} MB. Bitte aufteilen.`,
       },
-      { status: 413 },
+      { status: 413 }
     )
   }
 

@@ -12,21 +12,35 @@ type Tone = "ok" | "neutral" | "warn"
 
 function ToneIcon({ tone }: { tone: Tone }) {
   if (tone === "ok") {
-    return <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
+    return (
+      <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
+    )
   }
   if (tone === "warn") {
-    return <TriangleAlertIcon className="text-destructive mt-0.5 size-4 shrink-0" />
+    return (
+      <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
+    )
   }
-  return <CircleIcon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+  return <CircleIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
 }
 
-function Check({ tone, claim, evidence }: { tone: Tone; claim: string; evidence: string }) {
+function Check({
+  tone,
+  claim,
+  evidence,
+}: {
+  tone: Tone
+  claim: string
+  evidence: string
+}) {
   return (
     <li className="flex gap-2.5">
       <ToneIcon tone={tone} />
       <div className="min-w-0">
         <p className="text-sm">{claim}</p>
-        <p className="text-muted-foreground font-mono text-xs break-all">{evidence}</p>
+        <p className="font-mono text-xs break-all text-muted-foreground">
+          {evidence}
+        </p>
       </div>
     </li>
   )
@@ -35,8 +49,10 @@ function Check({ tone, claim, evidence }: { tone: Tone; claim: string; evidence:
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-wrap items-baseline gap-2 border-b py-1.5 last:border-b-0">
-      <dt className="text-muted-foreground w-56 shrink-0 text-xs">{label}</dt>
-      <dd className="min-w-0 flex-1 font-mono text-xs break-all">{value || "—"}</dd>
+      <dt className="w-56 shrink-0 text-xs text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 flex-1 font-mono text-xs break-all">
+        {value || "—"}
+      </dd>
     </div>
   )
 }
@@ -52,7 +68,9 @@ function scalarEntries(summary: Record<string, unknown>): [string, string][] {
   return Object.entries(summary)
     .filter(
       ([, value]) =>
-        typeof value === "string" || typeof value === "number" || typeof value === "boolean",
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean"
     )
     .map(([key, value]) => [key, String(value)] as [string, string])
 }
@@ -88,7 +106,8 @@ export function AuditTrailPanel({ auditTrail }: { auditTrail: AuditTrail }) {
   // In manual mode the engine reports the mode as the model, and "manual · manual" reads as two
   // facts that happen to agree rather than as one fact printed twice.
   const model =
-    auditTrail.extraction_model && auditTrail.extraction_model !== auditTrail.extraction_mode
+    auditTrail.extraction_model &&
+    auditTrail.extraction_model !== auditTrail.extraction_mode
       ? auditTrail.extraction_model
       : null
   const summary = scalarEntries(auditTrail.rule_summary ?? {})
@@ -139,7 +158,9 @@ export function AuditTrailPanel({ auditTrail }: { auditTrail: AuditTrail }) {
       </section>
 
       <section>
-        <h3 className="mb-3 text-sm font-medium">Angewandte Regeln und Politik</h3>
+        <h3 className="mb-3 text-sm font-medium">
+          Angewandte Regeln und Politik
+        </h3>
         {summary.length > 0 ? (
           <dl className="mb-4">
             {summary.map(([key, value]) => (
@@ -147,30 +168,41 @@ export function AuditTrailPanel({ auditTrail }: { auditTrail: AuditTrail }) {
             ))}
           </dl>
         ) : (
-          <p className="text-muted-foreground mb-4 text-sm">
+          <p className="mb-4 text-sm text-muted-foreground">
             Die Engine hat keine Regelzusammenfassung mitgeliefert.
           </p>
         )}
         <dl>
-          <Row label="Policy (unverifizierte Regeln)" value={auditTrail.unverified_rule_policy ?? ""} />
-          <Row label="Policy (Basisfaktor)" value={auditTrail.base_factor_policy ?? ""} />
-          <Row label="Ø Extraktionskonfidenz" value={auditTrail.extraction_confidence_avg ?? ""} />
+          <Row
+            label="Policy (unverifizierte Regeln)"
+            value={auditTrail.unverified_rule_policy ?? ""}
+          />
+          <Row
+            label="Policy (Basisfaktor)"
+            value={auditTrail.base_factor_policy ?? ""}
+          />
+          <Row
+            label="Ø Extraktionskonfidenz"
+            value={auditTrail.extraction_confidence_avg ?? ""}
+          />
         </dl>
       </section>
 
       <section>
         <h3 className="mb-3 text-sm font-medium">
           Beweisbaum pro Position{" "}
-          <span className="text-muted-foreground font-normal">
-            ({perCode.length} {perCode.length === 1 ? "Position" : "Positionen"}, berechnet und
-            gesperrt)
+          <span className="font-normal text-muted-foreground">
+            ({perCode.length} {perCode.length === 1 ? "Position" : "Positionen"}
+            , berechnet und gesperrt)
           </span>
         </h3>
         <div className="space-y-3">
           {perCode.map((entry) => (
             <div key={entry.ziffer} className="rounded-xl border p-3">
               <div className="mb-2 flex items-center gap-2">
-                <span className="font-mono text-sm font-medium">GOÄ {entry.ziffer}</span>
+                <span className="font-mono text-sm font-medium">
+                  GOÄ {entry.ziffer}
+                </span>
                 <Badge variant="outline">
                   {(entry.steps ?? []).length}{" "}
                   {(entry.steps ?? []).length === 1 ? "Schritt" : "Schritte"}
@@ -180,22 +212,34 @@ export function AuditTrailPanel({ auditTrail }: { auditTrail: AuditTrail }) {
                 A timeline rather than a bullet list: the steps are ordered — each one holds because
                 the one above it did — and a rail is what says so without a sentence claiming it.
               */}
-              <ol className="border-border ml-1.5 space-y-2 border-l pl-4">
+              <ol className="ml-1.5 space-y-2 border-l border-border pl-4">
                 {(entry.steps ?? []).map((step, index) => (
-                  <li key={`${step.rule}-${index}`} className="relative text-xs">
+                  <li
+                    key={`${step.rule}-${index}`}
+                    className="relative text-xs"
+                  >
                     <span
                       aria-hidden
-                      className="bg-border absolute top-1.5 -left-[1.3125rem] size-1.5 rounded-full"
+                      className="absolute top-1.5 -left-[1.3125rem] size-1.5 rounded-full bg-border"
                     />
                     <span className="font-mono font-medium">{step.rule}</span>
                     {step.detail ? (
-                      <span className="text-muted-foreground font-mono"> · {step.detail}</span>
+                      <span className="font-mono text-muted-foreground">
+                        {" "}
+                        · {step.detail}
+                      </span>
                     ) : null}
                     {step.rule_id ? (
-                      <span className="text-muted-foreground font-mono"> · {step.rule_id}</span>
+                      <span className="font-mono text-muted-foreground">
+                        {" "}
+                        · {step.rule_id}
+                      </span>
                     ) : null}
                     {step.legal_basis ? (
-                      <span className="text-muted-foreground"> · {step.legal_basis}</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {step.legal_basis}
+                      </span>
                     ) : null}
                   </li>
                 ))}
@@ -212,12 +256,19 @@ export function AuditTrailPanel({ auditTrail }: { auditTrail: AuditTrail }) {
         */}
         <Disclosure label="Diagnostik und Rohdaten" printOpen={false}>
           <div className="space-y-3">
-            <p className="text-muted-foreground text-xs">
-              Gemessene Laufzeiten. Sie gehen <strong>nicht</strong> in den Receipt-Hash ein und
-              werden bei jedem Determinismus-Vergleich ausgeschlossen.
+            <p className="text-xs text-muted-foreground">
+              Gemessene Laufzeiten. Sie gehen <strong>nicht</strong> in den
+              Receipt-Hash ein und werden bei jedem Determinismus-Vergleich
+              ausgeschlossen.
             </p>
-            <RawJson value={auditTrail.stage_timings_ms ?? {}} label="stage_timings_ms (gemessen)" />
-            <RawJson value={auditTrail.rule_summary ?? {}} label="rule_summary" />
+            <RawJson
+              value={auditTrail.stage_timings_ms ?? {}}
+              label="stage_timings_ms (gemessen)"
+            />
+            <RawJson
+              value={auditTrail.rule_summary ?? {}}
+              label="rule_summary"
+            />
           </div>
         </Disclosure>
       </section>

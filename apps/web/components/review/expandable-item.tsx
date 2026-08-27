@@ -46,7 +46,7 @@ export function ExpandableItem({
   children: React.ReactNode
 }) {
   return (
-    <li className={cn("bg-card overflow-hidden rounded-2xl border", className)}>
+    <li className={cn("overflow-hidden rounded-2xl border bg-card", className)}>
       <Collapsible>
         {/*
           `group` so the chevron can read the trigger's own state: Base UI puts `data-panel-open` on
@@ -54,8 +54,8 @@ export function ExpandableItem({
         */}
         <CollapsibleTrigger
           className={cn(
-            "group hover:bg-muted/50 focus-visible:ring-ring flex w-full cursor-pointer",
-            "items-start gap-3 p-3 text-left focus-visible:ring-2 focus-visible:outline-none",
+            "group flex w-full cursor-pointer hover:bg-muted/50 focus-visible:ring-ring",
+            "items-start gap-3 p-3 text-left focus-visible:ring-2 focus-visible:outline-none"
           )}
         >
           <span className="mt-0.5 shrink-0 [&_svg]:size-4">{icon}</span>
@@ -65,12 +65,12 @@ export function ExpandableItem({
           </span>
           <ChevronDownIcon
             aria-hidden
-            className="text-muted-foreground mt-0.5 size-4 shrink-0 transition-transform group-data-[panel-open]:rotate-180 print:hidden"
+            className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180 print:hidden"
           />
         </CollapsibleTrigger>
 
         <CollapsibleContent keepMounted data-print="expand">
-          <div className="text-muted-foreground space-y-2 px-3 pt-1 pb-3 pl-10 text-sm">
+          <div className="space-y-2 px-3 pt-1 pb-3 pl-10 text-sm text-muted-foreground">
             {children}
           </div>
         </CollapsibleContent>

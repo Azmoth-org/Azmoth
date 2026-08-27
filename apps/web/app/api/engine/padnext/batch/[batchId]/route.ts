@@ -11,10 +11,10 @@ import { callEngine, proxyResponse } from "@/lib/engine"
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ batchId: string }> },
+  { params }: { params: Promise<{ batchId: string }> }
 ): Promise<Response> {
   const { batchId } = await params
   return proxyResponse(
-    await callEngine(`/api/v1/padnext/batch/${encodeURIComponent(batchId)}`),
+    await callEngine(`/api/v1/padnext/batch/${encodeURIComponent(batchId)}`)
   )
 }

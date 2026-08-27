@@ -26,7 +26,9 @@ export async function SystemHealthCard() {
     callEngine("/api/v1/health"),
   ])
 
-  const coverage = coverageResult.ok ? (coverageResult.body as RuleCoverage) : null
+  const coverage = coverageResult.ok
+    ? (coverageResult.body as RuleCoverage)
+    : null
   const health = healthResult.ok ? (healthResult.body as HealthResponse) : null
 
   return <SystemStatus coverage={coverage} health={health} />

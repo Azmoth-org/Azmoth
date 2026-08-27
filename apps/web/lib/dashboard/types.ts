@@ -66,14 +66,21 @@ export function isProposalList(value: unknown): value is ProposalList {
   if (!isRecord(value) || !Array.isArray(value.items)) return false
   return value.items.every(
     (item) =>
-      isRecord(item) && isNonEmptyString(item.proposal_id) && isNonEmptyString(item.status),
+      isRecord(item) &&
+      isNonEmptyString(item.proposal_id) &&
+      isNonEmptyString(item.status)
   )
 }
 
-export function isBatchAuditJobList(value: unknown): value is BatchAuditJobList {
+export function isBatchAuditJobList(
+  value: unknown
+): value is BatchAuditJobList {
   if (!isRecord(value) || !Array.isArray(value.jobs)) return false
   return value.jobs.every(
-    (job) => isRecord(job) && isNonEmptyString(job.batch_id) && isNonEmptyString(job.status),
+    (job) =>
+      isRecord(job) &&
+      isNonEmptyString(job.batch_id) &&
+      isNonEmptyString(job.status)
   )
 }
 
@@ -85,7 +92,9 @@ export function isBatchAuditJobList(value: unknown): value is BatchAuditJobList 
  * direction — it can only make the card claim *less* than there is.
  */
 export function totalOrPageLength(total: unknown, pageLength: number): number {
-  return typeof total === "number" && Number.isFinite(total) && total >= pageLength
+  return typeof total === "number" &&
+    Number.isFinite(total) &&
+    total >= pageLength
     ? total
     : pageLength
 }

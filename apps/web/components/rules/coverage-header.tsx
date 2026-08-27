@@ -40,16 +40,22 @@ export function CoverageHeader({
       <CardContent className="space-y-4 pt-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <span className="text-sm font-medium">
-            <span className="text-lg font-semibold tabular-nums">{verified}</span>
-            <span className="text-muted-foreground"> / {total} Regeln verifiziert</span>
+            <span className="text-lg font-semibold tabular-nums">
+              {verified}
+            </span>
+            <span className="text-muted-foreground">
+              {" "}
+              / {total} Regeln verifiziert
+            </span>
           </span>
-          <span className="text-muted-foreground text-xs tabular-nums">
-            davon {coverage.review_verified_rule_count ?? 0} über diese Prüfliste
+          <span className="text-xs text-muted-foreground tabular-nums">
+            davon {coverage.review_verified_rule_count ?? 0} über diese
+            Prüfliste
           </span>
         </div>
 
         <div
-          className="bg-muted flex h-2.5 w-full overflow-hidden rounded-full"
+          className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
           role="img"
           aria-label={
             `${verified} von ${total} Regeln verifiziert, ${rejected} abgelehnt, ` +
@@ -63,7 +69,10 @@ export function CoverageHeader({
             />
           ) : null}
           {rejectedWidth > 0 ? (
-            <div className="bg-muted-foreground/50" style={{ width: `${rejectedWidth}%` }} />
+            <div
+              className="bg-muted-foreground/50"
+              style={{ width: `${rejectedWidth}%` }}
+            />
           ) : null}
         </div>
 
@@ -91,11 +100,12 @@ export function CoverageHeader({
           />
         </div>
 
-        <p className="text-muted-foreground text-xs">
-          Jede hier verifizierte Regel verschiebt in künftigen Prüfungen Beträge aus{" "}
-          <strong>unbestätigt</strong> in eine Gruppe, zu der die Engine eine Aussage treffen kann.
-          Genau dafür ist diese Liste da. Analogkandidaten (§ 6 Abs. 2 GOÄ) sind nicht enthalten:
-          sie sind ein Angebot und können nie eine Position entfernen.
+        <p className="text-xs text-muted-foreground">
+          Jede hier verifizierte Regel verschiebt in künftigen Prüfungen Beträge
+          aus <strong>unbestätigt</strong> in eine Gruppe, zu der die Engine
+          eine Aussage treffen kann. Genau dafür ist diese Liste da.
+          Analogkandidaten (§ 6 Abs. 2 GOÄ) sind nicht enthalten: sie sind ein
+          Angebot und können nie eine Position entfernen.
         </p>
       </CardContent>
     </Card>

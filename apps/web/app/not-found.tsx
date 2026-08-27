@@ -1,7 +1,11 @@
 import { FileQuestionIcon } from "lucide-react"
 import Link from "next/link"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 
 import { NAV_ITEMS } from "@/components/layout/nav"
 
@@ -24,7 +28,10 @@ export default function NotFound() {
         <FileQuestionIcon />
         <AlertTitle>Diese Seite gibt es nicht</AlertTitle>
         <AlertDescription className="space-y-3">
-          <p>Die aufgerufene Adresse gehört zu keinem Arbeitsbereich dieser Anwendung.</p>
+          <p>
+            Die aufgerufene Adresse gehört zu keinem Arbeitsbereich dieser
+            Anwendung.
+          </p>
           <ul className="list-disc space-y-1 pl-4">
             {NAV_ITEMS.map((item) => (
               <li key={item.href}>

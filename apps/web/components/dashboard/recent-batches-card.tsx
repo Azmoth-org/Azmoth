@@ -13,7 +13,11 @@ import {
 import { ActivityRow } from "@/components/dashboard/activity-row"
 import { EmptyState, ErrorState } from "@/components/dashboard/card-states"
 import { callEngine } from "@/lib/engine"
-import { BATCH_STATUS, fileCount, statusPresentation } from "@/lib/dashboard/format"
+import {
+  BATCH_STATUS,
+  fileCount,
+  statusPresentation,
+} from "@/lib/dashboard/format"
 import { isBatchAuditJobList, totalOrPageLength } from "@/lib/dashboard/types"
 
 export const RECENT_BATCHES_TITLE = "Letzte Stapelprüfungen"
@@ -53,7 +57,7 @@ export async function RecentBatchesCard() {
         <CardAction>
           <Link
             href="/padnext/batch/history"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Stapel-Historie
             <ArrowRightIcon className="size-3" aria-hidden />
@@ -112,7 +116,7 @@ function Rows({ result }: { result: Awaited<ReturnType<typeof callEngine>> }) {
   }
 
   return (
-    <ul className="divide-border divide-y">
+    <ul className="divide-y divide-border">
       {jobs.map((job) => (
         <ActivityRow
           key={job.batch_id}
@@ -132,7 +136,10 @@ function Rows({ result }: { result: Awaited<ReturnType<typeof callEngine>> }) {
   )
 }
 
-function batchDetail(job: { file_count?: number; processed_file_count?: number }): string {
+function batchDetail(job: {
+  file_count?: number
+  processed_file_count?: number
+}): string {
   const total = job.file_count ?? 0
   const processed = job.processed_file_count ?? 0
   if (total > 0 && processed < total) {

@@ -82,7 +82,10 @@ function parsePage(raw: RawSearchParams): number {
  * otherwise reach the engine and come back as a `422` — a filter typo rendering as "Prüfungen konnten
  * nicht geladen werden" is a bad trade for a query string somebody hand-edited.
  */
-function parseStatus(raw: RawSearchParams, allowed: readonly string[]): string | null {
+function parseStatus(
+  raw: RawSearchParams,
+  allowed: readonly string[]
+): string | null {
   const value = first(raw, "status")
   if (value === null) return null
   const upper = value.toUpperCase()
@@ -91,7 +94,7 @@ function parseStatus(raw: RawSearchParams, allowed: readonly string[]): string |
 
 export function readListParams(
   raw: RawSearchParams,
-  { statuses }: { statuses: readonly string[] },
+  { statuses }: { statuses: readonly string[] }
 ): ListParams {
   return {
     page: parsePage(raw),
@@ -155,13 +158,14 @@ export function engineQuery({
 export function nextHref(
   pathname: string,
   current: ListParams,
-  patch: Partial<ListParams>,
+  patch: Partial<ListParams>
 ): string {
   const merged: ListParams = { ...current, ...patch }
   const filterChanged =
     (patch.status !== undefined && patch.status !== current.status) ||
     (patch.query !== undefined && patch.query !== current.query)
-  const page = patch.page !== undefined ? patch.page : filterChanged ? 1 : merged.page
+  const page =
+    patch.page !== undefined ? patch.page : filterChanged ? 1 : merged.page
 
   const search = new URLSearchParams()
   if (merged.status) search.set("status", merged.status)

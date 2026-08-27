@@ -1,6 +1,10 @@
 import { FileTextIcon, ShieldCheckIcon, TriangleAlertIcon } from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 import {
   Empty,
   EmptyDescription,
@@ -42,7 +46,11 @@ import type { MissingDocumentation } from "@/lib/review/types"
  * a normal state of a draft, and the § 12 Abs. 3 badge in the positions table is where an actually
  * missing justification is called out in red.
  */
-export function MissingDocumentationPanel({ entries }: { entries: readonly MissingDocumentation[] }) {
+export function MissingDocumentationPanel({
+  entries,
+}: {
+  entries: readonly MissingDocumentation[]
+}) {
   if (entries.length === 0) {
     return (
       <Empty className="border">
@@ -51,8 +59,8 @@ export function MissingDocumentationPanel({ entries }: { entries: readonly Missi
         </EmptyMedia>
         <EmptyTitle>Keine Dokumentationslücke</EmptyTitle>
         <EmptyDescription>
-          Für jede berechnete Position ist der angesetzte Faktor entweder durch die Dokumentation
-          gedeckt oder es besteht kein Spielraum nach oben.
+          Für jede berechnete Position ist der angesetzte Faktor entweder durch
+          die Dokumentation gedeckt oder es besteht kein Spielraum nach oben.
         </EmptyDescription>
       </Empty>
     )
@@ -62,15 +70,20 @@ export function MissingDocumentationPanel({ entries }: { entries: readonly Missi
     <div className="space-y-6">
       <Alert>
         <FileTextIcon />
-        <AlertTitle>Dokumentationslücken — keine Abrechnungsempfehlung</AlertTitle>
+        <AlertTitle>
+          Dokumentationslücken — keine Abrechnungsempfehlung
+        </AlertTitle>
         <AlertDescription>
           <p>
-            Abgerechnet wird <strong>immer der angesetzte Faktor</strong>. Der Wert hinter dem Pfeil
-            zeigt lediglich die gesetzliche Obergrenze, die eine{" "}
-            <strong>schriftliche Begründung nach § 12 Abs. 3 GOÄ</strong> eröffnen würde. Sie ist{" "}
-            <strong>kein Vorschlag, den Faktor zu erhöhen</strong>. Ob eine besondere Schwierigkeit,
-            ein erhöhter Zeitaufwand oder erschwerende Umstände vorlagen, kann ausschließlich die
-            behandelnde Ärztin oder der behandelnde Arzt beurteilen und dokumentieren.
+            Abgerechnet wird <strong>immer der angesetzte Faktor</strong>. Der
+            Wert hinter dem Pfeil zeigt lediglich die gesetzliche Obergrenze,
+            die eine{" "}
+            <strong>schriftliche Begründung nach § 12 Abs. 3 GOÄ</strong>{" "}
+            eröffnen würde. Sie ist{" "}
+            <strong>kein Vorschlag, den Faktor zu erhöhen</strong>. Ob eine
+            besondere Schwierigkeit, ein erhöhter Zeitaufwand oder erschwerende
+            Umstände vorlagen, kann ausschließlich die behandelnde Ärztin oder
+            der behandelnde Arzt beurteilen und dokumentieren.
           </p>
         </AlertDescription>
       </Alert>
@@ -82,7 +95,9 @@ export function MissingDocumentationPanel({ entries }: { entries: readonly Missi
             // Amber on the border as well as on the icon. An icon alone is 16px of colour in a list
             // of six identical rows; the edge is what makes the row itself read as unresolved.
             className="border-amber-300 dark:border-amber-500/30"
-            icon={<TriangleAlertIcon className="text-amber-600 dark:text-amber-400" />}
+            icon={
+              <TriangleAlertIcon className="text-amber-600 dark:text-amber-400" />
+            }
             title={
               <span className="tabular-nums">
                 <span className="font-mono">GOÄ {entry.ziffer}</span>
@@ -94,14 +109,18 @@ export function MissingDocumentationPanel({ entries }: { entries: readonly Missi
             }
             meta={
               entry.legal_basis ? (
-                <span className="text-muted-foreground text-xs">{entry.legal_basis}</span>
+                <span className="text-xs text-muted-foreground">
+                  {entry.legal_basis}
+                </span>
               ) : null
             }
           >
             <p>
-              <span className="text-foreground font-medium">Angesetzt</span>{" "}
+              <span className="font-medium text-foreground">Angesetzt</span>{" "}
               {factor(entry.current_factor)} ·{" "}
-              <span className="text-foreground font-medium">nach § 5 Abs. 2 GOÄ möglich</span>{" "}
+              <span className="font-medium text-foreground">
+                nach § 5 Abs. 2 GOÄ möglich
+              </span>{" "}
               {factor(entry.possible_factor)}
             </p>
             <p>{entry.missing}</p>

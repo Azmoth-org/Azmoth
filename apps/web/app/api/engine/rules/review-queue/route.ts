@@ -17,6 +17,6 @@ export async function GET(request: Request): Promise<Response> {
   }
   const query = forwarded.toString()
   return proxyResponse(
-    await callEngine(`/api/v1/rules/review-queue${query ? `?${query}` : ""}`),
+    await callEngine(`/api/v1/rules/review-queue${query ? `?${query}` : ""}`)
   )
 }

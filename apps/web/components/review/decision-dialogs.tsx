@@ -3,7 +3,11 @@
 import * as React from "react"
 import { CheckCircle2Icon, DownloadIcon, XCircleIcon } from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import {
   Dialog,
@@ -18,7 +22,12 @@ import {
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
 import { Textarea } from "@workspace/ui/components/textarea"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@workspace/ui/components/tooltip"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@workspace/ui/components/tooltip"
 
 import type { Proposal } from "@/lib/review/types"
 
@@ -87,8 +96,8 @@ export function ApproveDialog({
           <DialogHeader>
             <DialogTitle>Vorschlag freigeben</DialogTitle>
             <DialogDescription>
-              Mit der Freigabe übernehmen Sie die ärztliche Verantwortung für diesen
-              Abrechnungsvorschlag.
+              Mit der Freigabe übernehmen Sie die ärztliche Verantwortung für
+              diesen Abrechnungsvorschlag.
             </DialogDescription>
           </DialogHeader>
 
@@ -105,7 +114,7 @@ export function ApproveDialog({
                 autoComplete="off"
                 required
               />
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 Pflichtfeld. Die Engine lehnt eine Freigabe ohne Namen ab.
               </p>
             </div>
@@ -123,16 +132,23 @@ export function ApproveDialog({
             <Alert>
               <AlertTitle>Die Freigabe wird dauerhaft protokolliert</AlertTitle>
               <AlertDescription>
-                Vorschlag und Freigabe werden dauerhaft gespeichert und im Protokoll festgehalten —
-                mit Name, Zeitpunkt und Receipt-Hash. Die Freigabe ist endgültig: sie kann nicht
-                zurückgenommen werden. Der Name wird protokolliert, aber technisch nicht überprüft;
-                eine Authentifizierung ist noch nicht eingerichtet.
+                Vorschlag und Freigabe werden dauerhaft gespeichert und im
+                Protokoll festgehalten — mit Name, Zeitpunkt und Receipt-Hash.
+                Die Freigabe ist endgültig: sie kann nicht zurückgenommen
+                werden. Der Name wird protokolliert, aber technisch nicht
+                überprüft; eine Authentifizierung ist noch nicht eingerichtet.
               </AlertDescription>
             </Alert>
           </div>
 
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="ghost">Abbrechen</Button>} />
+            <DialogClose
+              render={
+                <Button type="button" variant="ghost">
+                  Abbrechen
+                </Button>
+              }
+            />
             <Button type="submit" disabled={!canSubmit}>
               {pending ? "Wird freigegeben…" : "Freigabe bestätigen"}
             </Button>
@@ -160,7 +176,8 @@ export function RejectDialog({
   const [rejectedBy, setRejectedBy] = React.useState("")
   const [reason, setReason] = React.useState("")
 
-  const canSubmit = rejectedBy.trim().length > 0 && reason.trim().length > 0 && !pending
+  const canSubmit =
+    rejectedBy.trim().length > 0 && reason.trim().length > 0 && !pending
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -177,7 +194,7 @@ export function RejectDialog({
             variant="outline"
             size="lg"
             disabled={disabled}
-            className="text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
             <XCircleIcon />
             Ablehnen
@@ -189,8 +206,8 @@ export function RejectDialog({
           <DialogHeader>
             <DialogTitle>Vorschlag ablehnen</DialogTitle>
             <DialogDescription>
-              Eine Ablehnung ist endgültig. Der Vorschlag wird nicht erneut entschieden — führen Sie
-              den Fall nach einer Korrektur neu aus.
+              Eine Ablehnung ist endgültig. Der Vorschlag wird nicht erneut
+              entschieden — führen Sie den Fall nach einer Korrektur neu aus.
             </DialogDescription>
           </DialogHeader>
 
@@ -221,14 +238,20 @@ export function RejectDialog({
                 placeholder="z. B. Sonographie nicht dokumentiert"
                 required
               />
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 Pflichtfeld. Die Engine verlangt Name und Grund.
               </p>
             </div>
           </div>
 
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="ghost">Abbrechen</Button>} />
+            <DialogClose
+              render={
+                <Button type="button" variant="ghost">
+                  Abbrechen
+                </Button>
+              }
+            />
             <Button type="submit" variant="destructive" disabled={!canSubmit}>
               {pending ? "Wird abgelehnt…" : "Ablehnung bestätigen"}
             </Button>
@@ -320,8 +343,9 @@ export function ExportDialog({
           <DialogHeader>
             <DialogTitle>Vorschlag exportieren</DialogTitle>
             <DialogDescription>
-              Der Export enthält den vollständigen Abrechnungsvorschlag mit Receipt-Hash,
-              Katalog- und Regelversionen, allen Beweisketten und dem Freigabeprotokoll.
+              Der Export enthält den vollständigen Abrechnungsvorschlag mit
+              Receipt-Hash, Katalog- und Regelversionen, allen Beweisketten und
+              dem Freigabeprotokoll.
             </DialogDescription>
           </DialogHeader>
 
@@ -338,7 +362,7 @@ export function ExportDialog({
                 autoComplete="off"
                 required
               />
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 Pflichtfeld. Die Engine lehnt einen Export ohne Namen ab.
               </p>
             </div>
@@ -355,18 +379,27 @@ export function ExportDialog({
             </div>
 
             <Alert>
-              <AlertTitle>Der Export ist endgültig und wird protokolliert</AlertTitle>
+              <AlertTitle>
+                Der Export ist endgültig und wird protokolliert
+              </AlertTitle>
               <AlertDescription>
-                Der Vorschlag wechselt dauerhaft in den Status <strong>Exportiert</strong> und kann
-                danach nicht erneut exportiert werden. Name, Zeitpunkt und Notiz werden im
-                Protokoll festgehalten — der Name wird protokolliert, aber technisch nicht
+                Der Vorschlag wechselt dauerhaft in den Status{" "}
+                <strong>Exportiert</strong> und kann danach nicht erneut
+                exportiert werden. Name, Zeitpunkt und Notiz werden im Protokoll
+                festgehalten — der Name wird protokolliert, aber technisch nicht
                 überprüft.
               </AlertDescription>
             </Alert>
           </div>
 
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="ghost">Abbrechen</Button>} />
+            <DialogClose
+              render={
+                <Button type="button" variant="ghost">
+                  Abbrechen
+                </Button>
+              }
+            />
             <Button type="submit" disabled={!canSubmit}>
               {pending ? "Wird exportiert…" : "Export herunterladen"}
             </Button>

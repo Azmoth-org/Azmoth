@@ -43,7 +43,7 @@ function unreachable(cause: unknown): { kind: "error"; error: ReviewError } {
 }
 
 async function readJson(
-  response: Response,
+  response: Response
 ): Promise<{ ok: true; body: unknown } | { ok: false; error: ReviewError }> {
   const raw = await response.text()
 
@@ -87,7 +87,9 @@ async function readJson(
  * no copy of a billing document beyond the request. The engine answers `202` before auditing
  * anything, so a fast response here says the batch was *accepted*, not that it is done.
  */
-export async function uploadBatch(files: readonly File[]): Promise<BatchUploadResult> {
+export async function uploadBatch(
+  files: readonly File[]
+): Promise<BatchUploadResult> {
   const form = new FormData()
   for (const file of files) {
     // The part name the engine's `list[UploadFile]` parameter is called. Repeated once per file.
@@ -96,7 +98,10 @@ export async function uploadBatch(files: readonly File[]): Promise<BatchUploadRe
 
   let response: Response
   try {
-    response = await fetch("/api/engine/padnext/batch", { method: "POST", body: form })
+    response = await fetch("/api/engine/padnext/batch", {
+      method: "POST",
+      body: form,
+    })
   } catch (cause) {
     return unreachable(cause)
   }
@@ -126,9 +131,12 @@ export async function uploadBatch(files: readonly File[]): Promise<BatchUploadRe
 export async function fetchBatch(batchId: string): Promise<BatchJobResult> {
   let response: Response
   try {
-    response = await fetch(`/api/engine/padnext/batch/${encodeURIComponent(batchId)}`, {
-      cache: "no-store",
-    })
+    response = await fetch(
+      `/api/engine/padnext/batch/${encodeURIComponent(batchId)}`,
+      {
+        cache: "no-store",
+      }
+    )
   } catch (cause) {
     return unreachable(cause)
   }

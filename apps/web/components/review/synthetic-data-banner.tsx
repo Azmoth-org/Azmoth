@@ -38,13 +38,18 @@ export function SyntheticDataBanner() {
         className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
       />
       <p className="min-w-0 text-xs leading-relaxed">
-        <strong className="font-semibold">Nur synthetische Demodaten — kein Echtbetrieb.</strong> Es
-        dürfen <strong>ausschließlich synthetische Testdaten</strong> verarbeitet werden: keine
-        Patientendaten, keine echten Rechnungen. Das System implementiert keine Zugriffskontrolle,
-        keine Protokollierung und keinen § 203 StGB-Workflow. Das Ergebnis ist ein{" "}
-        <strong>Abrechnungsvorschlag (Entwurf)</strong> und <strong>keine Rechnung</strong>. Die{" "}
-        <strong>ärztliche Prüfung ist zwingend erforderlich</strong> — die Regelabdeckung ist
-        unvollständig, die Engine ersetzt keine fachliche Entscheidung.
+        <strong className="font-semibold">
+          Nur synthetische Demodaten — kein Echtbetrieb.
+        </strong>{" "}
+        Es dürfen <strong>ausschließlich synthetische Testdaten</strong>{" "}
+        verarbeitet werden: keine Patientendaten, keine echten Rechnungen. Das
+        System implementiert keine Zugriffskontrolle, keine Protokollierung und
+        keinen § 203 StGB-Workflow. Das Ergebnis ist ein{" "}
+        <strong>Abrechnungsvorschlag (Entwurf)</strong> und{" "}
+        <strong>keine Rechnung</strong>. Die{" "}
+        <strong>ärztliche Prüfung ist zwingend erforderlich</strong> — die
+        Regelabdeckung ist unvollständig, die Engine ersetzt keine fachliche
+        Entscheidung.
       </p>
     </div>
   )

@@ -1,6 +1,10 @@
 import { AlertTriangleIcon, RotateCwIcon } from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 
@@ -13,7 +17,8 @@ const HINTS: Record<string, string> = {
     "Engine starten: cd apps/engine && .venv/bin/uvicorn app.main:app --port 8000 — oder ENGINE_BASE_URL prüfen.",
   engine_unreachable_timeout:
     "Die Engine läuft, antwortet aber nicht. Prüfen, ob der Soufflé-Prozess hängt (GET /api/v1/health).",
-  proxy_unreachable: "Der Next.js-Server ist nicht erreichbar. pnpm dev neu starten.",
+  proxy_unreachable:
+    "Der Next.js-Server ist nicht erreichbar. pnpm dev neu starten.",
   solver_timeout:
     "Der Optimierer hat innerhalb von SOLVER_TIMEOUT_SECONDS kein Modell gefunden. Es wird bewusst KEIN Entwurf ausgegeben: ein leeres Ergebnis wäre nicht von „nichts ist berechnungsfähig“ zu unterscheiden.",
   rules_engine_failed:
@@ -42,9 +47,12 @@ const HINTS: Record<string, string> = {
     "Nur ein abgeschlossener Stapel kann exportiert werden. Eine Zwischensumme wäre ein Stand, den später niemand mehr identifizieren kann.",
   batch_not_found:
     "Unter dieser ID ist kein Stapel gespeichert. ID prüfen, oder die Dateien neu hochladen.",
-  unreadable_request_body: "Der Export benötigt einen Namen im Feld exported_by.",
-  empty_response: "Die Engine hat einen leeren Body geliefert. Engine-Logs prüfen.",
-  unparsable_response: "Die Antwort war kein JSON. Steht ein Proxy zwischen UI und Engine?",
+  unreadable_request_body:
+    "Der Export benötigt einen Namen im Feld exported_by.",
+  empty_response:
+    "Die Engine hat einen leeren Body geliefert. Engine-Logs prüfen.",
+  unparsable_response:
+    "Die Antwort war kein JSON. Steht ein Proxy zwischen UI und Engine?",
 }
 
 /**
@@ -75,13 +83,23 @@ export function ErrorPanel({
         <Badge variant="destructive" className="font-mono">
           {error.error}
         </Badge>
-        {error.status ? <Badge variant="outline">HTTP {error.status}</Badge> : null}
+        {error.status ? (
+          <Badge variant="outline">HTTP {error.status}</Badge>
+        ) : null}
       </AlertTitle>
       <AlertDescription className="space-y-3">
         {hint ? <p className="text-foreground/80">{hint}</p> : null}
         {onRetry ? (
-          <Button variant="outline" size="sm" onClick={onRetry} disabled={pending}>
-            <RotateCwIcon className={pending ? "animate-spin" : undefined} aria-hidden />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            disabled={pending}
+          >
+            <RotateCwIcon
+              className={pending ? "animate-spin" : undefined}
+              aria-hidden
+            />
             {pending ? "Wird erneut geladen…" : "Erneut versuchen"}
           </Button>
         ) : null}

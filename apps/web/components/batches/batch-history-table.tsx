@@ -23,14 +23,25 @@ import {
   PageOutOfRange,
 } from "@/components/lists/table-states"
 import { callEngine } from "@/lib/engine"
-import { engineQuery, nextHref, pageCount, type ListParams } from "@/lib/lists/params"
+import {
+  engineQuery,
+  nextHref,
+  pageCount,
+  type ListParams,
+} from "@/lib/lists/params"
 import { isBatchAuditJobList, totalOrPageLength } from "@/lib/dashboard/types"
 import { BATCH_STATUS, statusPresentation } from "@/lib/status"
 import { timestamp } from "@/lib/review/format"
 
 export const BATCH_HISTORY_PATH = "/padnext/batch/history"
 
-export const BATCH_COLUMNS = ["Stapel", "Status", "Dateien", "Erstellt", ""] as const
+export const BATCH_COLUMNS = [
+  "Stapel",
+  "Status",
+  "Dateien",
+  "Erstellt",
+  "",
+] as const
 
 const STATUS_OPTIONS: readonly StatusOption[] = [
   { value: null, label: "Alle Status" },
@@ -40,7 +51,12 @@ const STATUS_OPTIONS: readonly StatusOption[] = [
   { value: "FAILED", label: "Fehlgeschlagen" },
 ]
 
-export const BATCH_STATUS_VALUES = ["PENDING", "PROCESSING", "COMPLETED", "FAILED"] as const
+export const BATCH_STATUS_VALUES = [
+  "PENDING",
+  "PROCESSING",
+  "COMPLETED",
+  "FAILED",
+] as const
 
 /**
  * Every batch run this database holds, filtered by status and paged.
@@ -67,7 +83,7 @@ export const BATCH_STATUS_VALUES = ["PENDING", "PROCESSING", "COMPLETED", "FAILE
  */
 export async function BatchHistoryTable({ params }: { params: ListParams }) {
   const result = await callEngine(
-    `/api/v1/padnext/batch?${engineQuery({ page: params.page, status: params.status })}`,
+    `/api/v1/padnext/batch?${engineQuery({ page: params.page, status: params.status })}`
   )
 
   const toolbar = <ListToolbar params={params} statuses={STATUS_OPTIONS} />
@@ -96,7 +112,11 @@ export async function BatchHistoryTable({ params }: { params: ListParams }) {
 
   const jobs = result.body.jobs ?? []
   const total = totalOrPageLength(result.body.total, jobs.length)
-  const reset = nextHref(BATCH_HISTORY_PATH, params, { status: null, query: null, page: 1 })
+  const reset = nextHref(BATCH_HISTORY_PATH, params, {
+    status: null,
+    query: null,
+    page: 1,
+  })
 
   if (jobs.length === 0) {
     return (
@@ -155,18 +175,25 @@ export async function BatchHistoryTable({ params }: { params: ListParams }) {
             return (
               <TableRow key={job.batch_id}>
                 <TableCell>
-                  <CopyableHash value={job.batch_id} length={14} label="Stapel-ID" />
+                  <CopyableHash
+                    value={job.batch_id}
+                    length={14}
+                    label="Stapel-ID"
+                  />
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
-                    <Badge variant={status.variant} className={cn(status.className)}>
+                    <Badge
+                      variant={status.variant}
+                      className={cn(status.className)}
+                    >
                       {status.label}
                     </Badge>
                     {/* The reason a batch failed, where an operator is already looking. On a run
                         the startup recovery closed this is the only place it is stated. */}
                     {job.error_message ? (
                       <span
-                        className="text-muted-foreground max-w-56 truncate text-xs"
+                        className="max-w-56 truncate text-xs text-muted-foreground"
                         title={job.error_message}
                       >
                         {job.error_message}
@@ -183,13 +210,15 @@ export async function BatchHistoryTable({ params }: { params: ListParams }) {
                     <span>{files}</span>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground text-xs tabular-nums">
+                <TableCell className="text-xs text-muted-foreground tabular-nums">
                   {timestamp(job.created_at)}
                 </TableCell>
                 <TableCell className="text-right">
                   <Link
                     href={`/padnext/batch?id=${encodeURIComponent(job.batch_id)}`}
-                    className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "sm" })
+                    )}
                   >
                     Ansehen
                   </Link>
@@ -221,7 +250,7 @@ function Shell({
     <Card>
       <CardContent className="space-y-4 pt-6">
         {toolbar}
-        <div className="border-border border-t pt-2">{children}</div>
+        <div className="border-t border-border pt-2">{children}</div>
       </CardContent>
     </Card>
   )
