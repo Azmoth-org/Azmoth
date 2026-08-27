@@ -188,7 +188,7 @@ def build_era(era: Era, real: dict) -> dict:
         "synthetic": True,
         "source": {
             "name": f"Synthetischer Fixture-Katalog ({era.directory})",
-            "publisher": "Govatax engine test fixtures — kein amtliches Werk",
+            "publisher": "Azmoth engine test fixtures — kein amtliches Werk",
             "url": "",
             "retrieved_at": "",
             "sha256_raw": "",

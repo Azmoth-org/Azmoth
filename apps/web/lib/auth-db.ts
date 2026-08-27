@@ -19,7 +19,7 @@
  *
  * The engine's `DATABASE_URL` is a *SQLAlchemy* URL — the Python driver is part of the value:
  *
- *     postgresql+asyncpg://user:pw@host:5432/govatax
+ *     postgresql+asyncpg://user:pw@host:5432/azmoth
  *     sqlite+aiosqlite:///./test.db
  *
  * Neither form means anything to `pg` or to `better-sqlite3`. Accepting them anyway is deliberate:

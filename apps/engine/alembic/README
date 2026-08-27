@@ -10,7 +10,7 @@ Run them from `apps/engine`, which is where `alembic.ini` lives:
 The database URL is NOT in `alembic.ini`. It comes from `DATABASE_URL` via `app.config.Settings`, so
 these commands act on exactly the database the service would use:
 
-    DATABASE_URL=postgresql+asyncpg://govatax:govatax@localhost:5432/govatax alembic upgrade head
+    DATABASE_URL=postgresql+asyncpg://azmoth:azmoth@localhost:5432/azmoth alembic upgrade head
 
 The container runs `alembic upgrade head` before uvicorn (see the Dockerfile's entrypoint), so a
 deploy migrates itself. Local development does not need any of this: `DATABASE_AUTO_CREATE=true` is

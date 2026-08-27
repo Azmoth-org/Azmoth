@@ -22,8 +22,8 @@ const fontMono = Geist_Mono({
  */
 export const metadata: Metadata = {
   title: {
-    default: "Govatax — GOÄ-Prüfung",
-    template: "%s · Govatax",
+    default: "Azmoth — GOÄ-Prüfung",
+    template: "%s · Azmoth",
   },
   description:
     "Deterministische GOÄ-Kodierung und Rechnungsprüfung mit nachvollziehbarer Begründung. " +

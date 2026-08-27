@@ -26,9 +26,9 @@ services:
     # No `container_name`, for the same reason the engine has none: a fixed name collides with
     # `docker compose run`.
     environment:
-      POSTGRES_USER: "${POSTGRES_USER:-govatax}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-govatax}"
-      POSTGRES_DB: "${POSTGRES_DB:-govatax}"
+      POSTGRES_USER: "${POSTGRES_USER:-azmoth}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-azmoth}"
+      POSTGRES_DB: "${POSTGRES_DB:-azmoth}"
       # Deterministic collation and encoding for a fresh cluster. Not cosmetic: `ORDER BY` on a
       # Ziffer or a name is locale-dependent, and a database initialised under a different locale
       # sorts differently — which would make a listing's order depend on the machine it was created
@@ -49,7 +49,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-govatax} -d ${POSTGRES_DB:-govatax}",
+          "pg_isready -U ${POSTGRES_USER:-azmoth} -d ${POSTGRES_DB:-azmoth}",
         ]
       interval: 5s
       timeout: 5s
@@ -61,7 +61,7 @@ services:
     build:
       context: ../..
       dockerfile: apps/engine/Dockerfile
-    image: govatax-engine:0.3.0
+    image: azmoth-engine:0.3.0
     # Deliberately no `container_name`: a fixed name makes `docker compose run` collide with the
     # already-running service and shut it down, which breaks running the tests in a second shell
     # while the API is up.
@@ -93,7 +93,7 @@ services:
       # The credentials here are the compose defaults and are development credentials. A real
       # deployment supplies DATABASE_URL from its secret store; nothing in this repository should
       # ever hold a production one, and CI fails the build if a credential-shaped string appears.
-      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-govatax}:${POSTGRES_PASSWORD:-govatax}@postgres:5432/${POSTGRES_DB:-govatax}}"
+      DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-azmoth}:${POSTGRES_PASSWORD:-azmoth}@postgres:5432/${POSTGRES_DB:-azmoth}}"
       # The schema comes from `alembic upgrade head`, run by the entrypoint. Never create_all.
       DATABASE_AUTO_CREATE: "false"
       DATABASE_ECHO: "${DATABASE_ECHO:-false}"
@@ -122,14 +122,15 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # A one-shot: create Better Auth's `user`, `session`, `account` and `verification` tables,
-  # then exit. `web` waits for it to succeed.
+  # A one-shot: create Better Auth's tables — `user`, `session`, `account`, `verification`, and
+  # `organization`, `member`, `invitation` from the organization plugin — then exit. `web` waits for
+  # it to succeed.
   #
   # It exists because this database has two migrators with disjoint table sets. The engine's
   # entrypoint runs `alembic upgrade head` for the proposals and the audit log; Better Auth's
   # schema is the library's own to define, so it is created by `apps/web/scripts/auth-migrate.ts`
   # from the very instance `apps/web/lib/auth.ts` configures. `apps/engine/alembic/env.py`
-  # excludes those four tables from autogenerate, so the two migrators can never fight over them.
+  # excludes all of them from autogenerate, so the two migrators can never fight over them.
   #
   # `target: builder` because the shipped `web` image carries only the traced server bundle:
   # no pnpm, no scripts, no TypeScript. The builder stage has all three and is already built
@@ -152,7 +153,7 @@ services:
       # point is that `audit_events.actor` and `proposals.created_by` hold a `user.id` a join can
       # resolve. The `+asyncpg` suffix is SQLAlchemy's and means nothing to `pg`;
       # `apps/web/lib/auth-db.ts` strips it, so one value is shared verbatim between the tiers.
-      AUTH_DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-govatax}:${POSTGRES_PASSWORD:-govatax}@postgres:5432/${POSTGRES_DB:-govatax}}"
+      AUTH_DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-azmoth}:${POSTGRES_PASSWORD:-azmoth}@postgres:5432/${POSTGRES_DB:-azmoth}}"
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-}"
     # A migration that fails must fail the stack, not be retried forever by a restart policy.
     restart: "no"
@@ -161,7 +162,7 @@ services:
     build:
       context: ../..
       dockerfile: apps/web/Dockerfile
-    image: govatax-web:0.3.0
+    image: azmoth-web:0.3.0
     # No `container_name`, for the same reason the other two have none.
     depends_on:
       engine:
@@ -190,7 +191,7 @@ services:
       # Better Auth runs inside this Next.js app, at /api/auth/*. Its tables live in the same
       # Postgres as the proposals, so an audit row's actor resolves to a person by a join rather
       # than by correlating two systems — see apps/web/lib/auth-db.ts.
-      AUTH_DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-govatax}:${POSTGRES_PASSWORD:-govatax}@postgres:5432/${POSTGRES_DB:-govatax}}"
+      AUTH_DATABASE_URL: "${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-azmoth}:${POSTGRES_PASSWORD:-azmoth}@postgres:5432/${POSTGRES_DB:-azmoth}}"
       #
       # REQUIRED, and deliberately without a default. It signs every session cookie, so a value that
       # changes between boots signs sessions the next container cannot verify — which presents as
@@ -241,4 +242,4 @@ volumes:
   postgres-data:
     # Named so it survives `docker compose down` and is removed only by `down -v`. It holds
     # approvals; deleting it is a decision, not a side effect of stopping the stack.
-    name: govatax-postgres-data
+    name: azmoth-postgres-data

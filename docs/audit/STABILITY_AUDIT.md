@@ -34,7 +34,7 @@ Also present in the working tree: an untracked `apps/engine/test.db` (SQLite, 0 
 | Workspace lint | `pnpm lint` | **0 errors, 3 warnings** |
 | Web build | `pnpm build` | **pass** — 12 routes, Next.js 16.2.6 |
 | Compose validity | `docker compose config -q` | **valid**, services: `postgres`, `engine` |
-| Image build | `docker compose build` | **pass** — `govatax-engine:0.3.0`, 264 MB |
+| Image build | `docker compose build` | **pass** — `azmoth-engine:0.3.0`, 264 MB |
 | Stack boot | `docker compose up -d` | **pass** — Postgres healthy → engine migrated `<none> → 0003_rule_reviews` → `/health` 200 |
 | Lifecycle | live HTTP | solve→`DRAFT`, approve→`APPROVED`, re-approve→**409**, export→200 + attachment, re-export→**409** |
 | Audit log | export document | `["CREATED","APPROVED","EXPORTED"]` |
@@ -139,7 +139,7 @@ pnpm dev                                       # → localhost:3000, talks to EN
 | Exact command for the full app | **Does not exist.** Two commands, one of which is not containerised. |
 | Engine migrations run automatically | **Yes** — `ENTRYPOINT ["/srv/scripts/docker-entrypoint.sh"]`, so they run whatever `command:` compose supplies. Verified in the boot log. |
 | Web has env vars for the engine URL | **Yes, but only for host dev.** `apps/web/.env.example` documents `ENGINE_BASE_URL`; it is correctly server-only (not `NEXT_PUBLIC_`), and `turbo.json` passes it through. Nothing sets it for a container, because there is no container. |
-| Postgres data persists | **Yes** — named volume `govatax-postgres-data`, deliberately not a bind mount. Verified: survived a full `down`/`up`; `down -v` is the only way to remove it. |
+| Postgres data persists | **Yes** — named volume `azmoth-postgres-data`, deliberately not a bind mount. Verified: survived a full `down`/`up`; `down -v` is the only way to remove it. |
 | Development only, or production-like | **Development only.** Compose forces `--reload`, bind-mounts `app/`, `logic/`, `data/`, `alembic/` read-only, and defaults `APP_ENV=development`. The *image* is production-capable (`APP_ENV=production`, `DATABASE_AUTO_CREATE=false`, non-root uid 10001, no `DATABASE_URL` default so it fails loudly). There is no production compose file or override. |
 | Healthcheck endpoints | **Yes, and a good one** — the healthcheck asserts `souffle_available && status=="ok"`, not merely that the port is open. Postgres has `pg_isready`; `engine` waits on `service_healthy`. |
 | Web proxy to engine | **Yes, and well designed** — 11 route handlers under `/api/engine/*`. The browser never learns the engine's address; every failure mode (timeout, empty body, unparsable JSON) is normalised into a renderable German error. This is the seam authentication will eventually sit in. |
@@ -381,7 +381,7 @@ locale-pinned initdb, read-only source mounts, per-setting comments explaining t
     build:
       context: ../..
       dockerfile: apps/web/Dockerfile
-    image: govatax-web:0.3.0
+    image: azmoth-web:0.3.0
     depends_on:
       engine:
         condition: service_healthy
@@ -448,7 +448,7 @@ correct and worth preserving.
 - [ ] **batch jobs survive or fail clearly** — they **fail clearly to the browser** (poll timeout + an explicit German explanation) but a stranded row stays `PROCESSING` forever with no reaper and no list endpoint
 - [ ] **UI has no broken states** — no scaffold-free home page, no navigation, no `error.tsx`/`not-found.tsx`, no route back to a stored record
 - [x] **export works** — proposal export verified (attachment + correct filename + 409 on re-export); batch CSV/ZIP export path present and idempotent by design
-- [x] **no secrets committed** — no tracked `.env`; only compose-default dev credentials (`govatax`/`govatax`); a test fails if a settings field named `*key*`/`*secret*`/`*token*`/`*password*`/`*credential*` appears
+- [x] **no secrets committed** — no tracked `.env`; only compose-default dev credentials (`azmoth`/`azmoth`); a test fails if a settings field named `*key*`/`*secret*`/`*token*`/`*password*`/`*credential*` appears
 - [x] **no PHI committed** — synthetic fixtures only, each self-declaring; `data/licensed/` gitignored except its README with a test asserting it; PADnext models parse no identity field; `echtdaten="1"` refused with 422
 - [x] **CI protects logic/data changes** — the logic guard does gate `logic/asp`, `logic/datalog`, `data/catalogs`, `data/rules` on golden-snapshot evidence, **with two caveats**: PR-only (a direct push to `main` bypasses it) and satisfied by touching any file under `logic/tests/`
 

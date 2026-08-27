@@ -7,14 +7,14 @@
 # never used to build that.
 #
 # The image still COPYs real source (not just manifests), so it is a working container on its own —
-# `docker build -f apps/web/Dockerfile.dev -t govatax-web:dev . && docker run -p 3000:3000
-# govatax-web:dev` boots without compose. The bind mounts are a convenience layered on top by compose,
+# `docker build -f apps/web/Dockerfile.dev -t azmoth-web:dev . && docker run -p 3000:3000
+# azmoth-web:dev` boots without compose. The bind mounts are a convenience layered on top by compose,
 # not a requirement for the image to run.
 #
 # Build context is the MONOREPO ROOT, the same rule as apps/web/Dockerfile and for the same reason:
 # `@workspace/ui` and `@workspace/contracts` live outside apps/web and are consumed as source.
 #
-#     docker build -f apps/web/Dockerfile.dev -t govatax-web:dev .
+#     docker build -f apps/web/Dockerfile.dev -t azmoth-web:dev .
 #
 # or use infra/docker/docker-compose.dev.yml, which sets the context correctly.
 

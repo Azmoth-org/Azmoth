@@ -24,7 +24,7 @@ import { STORAGE_STATE } from "./storage-state"
  * whatever database the app under test is pointed at. That is already true of the proposals the
  * smoke test reads; it is now true of a user row as well.
  */
-const EMAIL = "e2e@govatax.invalid"
+const EMAIL = "e2e@azmoth.invalid"
 const PASSWORD = "e2e-durchlauf-passwort-2026"
 const NAME = "E2E Durchlauf"
 
