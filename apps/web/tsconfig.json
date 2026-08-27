@@ -1,6 +1,16 @@
 {
   "extends": "@workspace/typescript-config/nextjs.json",
   "compilerOptions": {
+    // The shared base turns `declaration` on, which is right for the packages — they are consumed
+    // through their types. This is an application: it emits nothing (`noEmit`), publishes nothing,
+    // and no `.d.ts` is ever written for it. Leaving the check on costs a real diagnostic and buys
+    // nothing: `createAuthClient({ plugins: [organizationClient()] })` infers a type that reaches
+    // into `better-auth/dist/client/query.mjs`, which the package's `exports` map does not expose,
+    // so TypeScript reports TS2742 "cannot be named without a reference to…" for a declaration file
+    // that will never exist. The alternative is hand-writing the plugin-augmented client type and
+    // keeping it in step with the library by hand.
+    "declaration": false,
+    "declarationMap": false,
     "paths": {
       "@/*": ["./*"],
       "@workspace/ui/*": ["../../packages/ui/src/*"]

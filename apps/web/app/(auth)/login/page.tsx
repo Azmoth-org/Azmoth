@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
@@ -12,7 +11,8 @@ import { googleSignInEnabled } from "@/lib/auth-google"
 
 export const metadata: Metadata = {
   title: "Anmelden",
-  description: "Anmeldung zur GOÄ-Prüfung. Interne Anwendung, nur synthetische Daten.",
+  description:
+    "Anmeldung zur GOÄ-Prüfung. Interne Anwendung, nur synthetische Daten.",
 }
 
 /**
@@ -45,40 +45,29 @@ export default async function LoginPage({
   const back = `/login${next ? `?next=${encodeURIComponent(destination)}` : ""}`
 
   return (
-    <AuthCard
-      title="Anmelden"
-      description="Melden Sie sich mit Ihrer dienstlichen E-Mail-Adresse an."
-      alert={
-        failure ? (
-          <Alert variant="destructive" role="alert">
-            <AlertDescription>{failure}</AlertDescription>
-          </Alert>
-        ) : null
-      }
-      social={
-        googleSignInEnabled() ? (
-          <GoogleButton
-            label="Mit Google anmelden"
-            callbackURL={destination}
-            errorCallbackURL={back}
-          />
-        ) : null
-      }
-      footer={
-        <>
-          Noch kein Konto?{" "}
-          <Link
-            // The destination travels with the reader across the two screens, so a visitor who was
-            // sent here from /review and turns out to need an account still lands on /review.
-            href={`/signup${next ? `?next=${encodeURIComponent(destination)}` : ""}`}
-            className="text-foreground font-medium underline underline-offset-4"
-          >
-            Registrieren
-          </Link>
-        </>
-      }
-    >
-      <LoginForm next={destination} />
+    <AuthCard>
+      <LoginForm
+        next={destination}
+        // The destination travels with the reader across the two screens, so a visitor who was sent
+        // here from /review and turns out to need an account still lands on /review.
+        signupHref={`/signup${next ? `?next=${encodeURIComponent(destination)}` : ""}`}
+        alert={
+          failure ? (
+            <Alert variant="destructive" role="alert">
+              <AlertDescription>{failure}</AlertDescription>
+            </Alert>
+          ) : null
+        }
+        social={
+          googleSignInEnabled() ? (
+            <GoogleButton
+              label="Mit Google anmelden"
+              callbackURL={destination}
+              errorCallbackURL={back}
+            />
+          ) : null
+        }
+      />
     </AuthCard>
   )
 }

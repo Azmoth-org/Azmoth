@@ -28,6 +28,10 @@
  * acceptable for one that holds real records; an invite-only flow (or an SSO integration) is what
  * `docs/compliance/PRIVATE_DATA_WARNING.md` now tracks alongside the retention policy.
  *
+ * **Organisations are on, and they identify rather than authorise.** The `organization()` plugin
+ * below gives a session an active practice, and the sidebar shows and switches it. Nothing is scoped
+ * by it yet — see the note on the plugin itself, which says exactly what that does and does not buy.
+ *
  * ## Session length
  *
  * Seven days, refreshed a day at a time. A reviewer works in this application daily, so a short
@@ -50,6 +54,7 @@
 
 import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
+import { organization } from "better-auth/plugins"
 
 import { authDatabase, optionalEnv } from "@/lib/auth-db"
 import { googleCredentials } from "@/lib/auth-google"
@@ -71,7 +76,7 @@ function authSecret(): string {
     throw new Error(
       "BETTER_AUTH_SECRET is not set. It signs the session cookies, so a missing value means " +
         "every deploy invalidates every session. Generate one with `openssl rand -base64 32` and " +
-        "put it in the deployment's secret store — never in a committed file.",
+        "put it in the deployment's secret store — never in a committed file."
     )
   }
   return "development-only-secret-not-for-any-deployment"
@@ -139,7 +144,9 @@ function buildAuth() {
       if (!host) return []
 
       const proto = headers.get("x-forwarded-proto")
-      return proto ? [`${proto}://${host}`] : [`https://${host}`, `http://${host}`]
+      return proto
+        ? [`${proto}://${host}`]
+        : [`https://${host}`, `http://${host}`]
     },
 
     secret: authSecret(),
@@ -205,6 +212,57 @@ function buildAuth() {
       updateAge: 60 * 60 * 24,
     },
 
+    /**
+     * Which organisation a new session starts in.
+     *
+     * The organization plugin does not choose one. It stores `activeOrganizationId` on the session
+     * and leaves it `null` until something calls `/organization/set-active`, which means a reviewer
+     * who belongs to exactly one practice would sign in to a rail reading "Keine Organisation" and
+     * have to pick the only option there is. This picks it for them, at the one moment where it can
+     * be done without a client round-trip and a visible correction.
+     *
+     * The earliest membership, not an arbitrary one. `findMany` with no `sortBy` returns whatever
+     * order the database felt like, so on an account in two organisations the rail would open on a
+     * different one depending on the query plan. Ordering by `createdAt` makes it the first
+     * organisation the account joined, every time.
+     *
+     * A failure here must not cost anybody a sign-in — the active organisation is a piece of UI
+     * state, and this database has none of these tables until `auth:migrate` has run. So the query
+     * is wrapped: on any error the session is created exactly as it would have been without this
+     * hook, and the reader picks an organisation from the menu instead.
+     */
+    databaseHooks: {
+      session: {
+        create: {
+          before: async (session, context) => {
+            const adapter = context?.context.adapter
+            if (!adapter) return
+
+            try {
+              const memberships = await adapter.findMany<{
+                organizationId: string
+              }>({
+                model: "member",
+                where: [{ field: "userId", value: session.userId }],
+                sortBy: { field: "createdAt", direction: "asc" },
+                limit: 1,
+              })
+
+              const organizationId = memberships[0]?.organizationId
+              if (!organizationId) return
+
+              return {
+                data: { ...session, activeOrganizationId: organizationId },
+              }
+            } catch {
+              // Most likely the organisation tables do not exist yet. Signing in still has to work.
+              return
+            }
+          },
+        },
+      },
+    },
+
     advanced: {
       /**
        * `Secure` on the session cookie whenever this is a real deployment.
@@ -216,13 +274,41 @@ function buildAuth() {
       useSecureCookies: process.env.NODE_ENV === "production",
     },
 
-    /**
-     * Lets a server action or a route handler set the session cookie on its own response.
-     *
-     * Without this the sign-in call succeeds, returns a session, and sets no cookie — the classic
-     * "login worked but I am still logged out" failure in the App Router.
-     */
-    plugins: [nextCookies()],
+    plugins: [
+      /**
+       * Organisations — the practice a reviewer is working on behalf of.
+       *
+       * Better Auth's own plugin rather than anything hand-rolled, which matters more here than it
+       * usually would: an organisation is the boundary a future "whose invoices may I see" check
+       * will be drawn on, and the tables that boundary lives in should be the ones the library
+       * maintains and migrates. It brings `organization`, `member` and `invitation`, and adds
+       * `activeOrganizationId` to `session` — run `pnpm --filter web auth:migrate` after pulling
+       * this, or the first sign-in reports a missing table.
+       *
+       * Defaults are kept deliberately. Any signed-in user may create an organisation and becomes
+       * its `owner`; there is no limit and no invitation mail, because there is no SMTP relay to
+       * send one with. Membership is therefore established by the creator today, and an invite flow
+       * is the follow-on — see `docs/compliance/PRIVATE_DATA_WARNING.md`, which already tracks
+       * closing the open sign-up this sits next to.
+       *
+       * **Nothing enforces the organisation yet, and that is worth being plain about.** The rail
+       * shows which one is active and can switch it; the engine is not told, `proposals` carry no
+       * organisation column, and no query is filtered by one. This is the identity half of
+       * multi-tenancy landing before the authorisation half, not multi-tenancy.
+       */
+      organization(),
+
+      /**
+       * Lets a server action or a route handler set the session cookie on its own response.
+       *
+       * Without this the sign-in call succeeds, returns a session, and sets no cookie — the classic
+       * "login worked but I am still logged out" failure in the App Router.
+       *
+       * Last in the list on purpose: `nextCookies` works by hooking every response on its way out,
+       * so any plugin that sets a cookie of its own has to be registered before it.
+       */
+      nextCookies(),
+    ],
   })
 }
 
