@@ -23,5 +23,10 @@ export function safeNext(next: string | undefined | null): string {
   if (next.includes("\\")) return DEFAULT_REDIRECT
   // The auth screens themselves, which would bounce straight back here and look like a loop.
   if (next === "/login" || next === "/signup") return DEFAULT_REDIRECT
+  // And onboarding, for the same reason once removed: it is where the middleware sends a session
+  // that has not completed it, so finishing the form and being sent back to it is the loop this
+  // whole parameter exists to avoid. `/api/onboarding/resume` reads `next` through here too.
+  if (next === "/onboarding" || next.startsWith("/onboarding?"))
+    return DEFAULT_REDIRECT
   return next
 }
