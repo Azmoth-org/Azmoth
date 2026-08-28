@@ -240,8 +240,13 @@ services:
       # URIs" — for this stack that is http://localhost:${WEB_PORT:-3000}/api/auth/callback/google.
       # Change WEB_PORT and the registered URI has to change with it. The secret belongs in the
       # deployment's secret store, never in a committed file; see apps/web/.env.example.
-      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
-      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      # Passed through bare, NOT as "${GOOGLE_CLIENT_ID:-}". The `:-` form sets the variable to an
+      # empty string when the host has none, and a variable that is *defined* — even as "" — is one
+      # Next.js will not overwrite from `apps/web/.env`. That is how a correctly configured .env
+      # produced a login screen with no Google button: the file was mounted and read, and this line
+      # had already shadowed it. Bare means "pass it on if the host has one", and nothing otherwise.
+      GOOGLE_CLIENT_ID:
+      GOOGLE_CLIENT_SECRET:
     volumes:
       # Live-edit the app while developing, same idea as the engine's mounts above: change a file
       # under any of these and Next's dev server picks it up, no rebuild. `@workspace/ui` and

@@ -216,8 +216,13 @@ services:
       # URIs" — for this stack that is http://localhost:${WEB_PORT:-3000}/api/auth/callback/google.
       # Change WEB_PORT and the registered URI has to change with it. The secret belongs in the
       # deployment's secret store, never in a committed file; see apps/web/.env.example.
-      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
-      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      # Passed through bare, NOT as "${GOOGLE_CLIENT_ID:-}". The `:-` form sets the variable to an
+      # empty string when the host has none, and a variable that is *defined* — even as "" — is one
+      # Next.js will not overwrite from `apps/web/.env`. That is how a correctly configured .env
+      # produced a login screen with no Google button: the file was mounted and read, and this line
+      # had already shadowed it. Bare means "pass it on if the host has one", and nothing otherwise.
+      GOOGLE_CLIENT_ID:
+      GOOGLE_CLIENT_SECRET:
     # No `volumes:` here — this service runs the standalone bundle apps/web/Dockerfile traces at
     # build time, nothing else. The dev overlay swaps the Dockerfile and adds the bind mounts; see
     # infra/docker/docker-compose.dev.yml.
