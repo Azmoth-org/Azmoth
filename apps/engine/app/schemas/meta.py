@@ -9,7 +9,44 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.common import RuleCoverage
 
 
+class SolverHealth(BaseModel):
+    """One solver's answer to "can you actually solve", and how long it took to say so.
+
+    `status` is three-valued rather than a boolean because the three cases call for different
+    actions: `ok` solved the probe program, `unavailable` is not installed on this host, and
+    `failed` is installed and did **not** produce the right answer — the case a version string
+    cannot see, and the one most worth alerting on. See `app.services.solver_probe`.
+
+    `probe_time_ms` is the probe's own wall time, measured with `perf_counter`. It is a
+    *diagnostic*, not a benchmark: for Soufflé it is dominated by process creation, so a jump in it
+    usually means the host is under pressure rather than that the solver got slower. Present because
+    "Soufflé answers in 400 ms today and answered in 40 ms last week" is a question an operator can
+    only ask if somebody recorded the number.
+
+    `detail` is empty when `status` is `ok` and carries one line of reason otherwise.
+    """
+
+    status: Literal["ok", "failed", "unavailable"]
+    probe_time_ms: float = 0.0
+    version: str = ""
+    detail: str = ""
+
+
 class HealthResponse(BaseModel):
+    """Liveness, versions, and whether the two solvers actually work.
+
+    **`status` stays `ok` / `degraded`** rather than becoming `healthy`. The Docker healthcheck in
+    `infra/docker/docker-compose.yml` tests `status == "ok"` and the dashboard's System Health card
+    branches on the same two values, so widening the literal would be a breaking change to two
+    committed readers for a synonym. `solvers` is where the new detail lives.
+
+    `souffle_available` and the two version strings are kept beside `solvers` deliberately, and they
+    are not the same claim: `souffle_available` says the binary resolves on `PATH`, and
+    `solvers.souffle.status` says it ran a program and got the right answer. A container where those
+    two disagree is exactly the failure this endpoint was extended to name, so collapsing them into
+    one field would remove the diagnosis.
+    """
+
     status: Literal["ok", "degraded"]
     app_env: str
     extraction_mode: str
@@ -25,6 +62,10 @@ class HealthResponse(BaseModel):
     solver_timeout_seconds: float = 0.0
     cache_enabled: bool = True
     cache_entries: int = 0
+
+    #: Keyed by solver name — `clingo` and `souffle`. A mapping rather than two named fields so a
+    #: third solver does not change the shape of the response for every existing client.
+    solvers: dict[str, SolverHealth] = Field(default_factory=dict)
 
 
 class CatalogSource(BaseModel):

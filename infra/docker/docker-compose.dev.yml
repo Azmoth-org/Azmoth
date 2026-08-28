@@ -286,6 +286,33 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # A web UI for the database on http://localhost:${ADMINER_PORT:-8080} — log in with the
+  # POSTGRES_USER / POSTGRES_PASSWORD above, server `postgres`, database `azmoth`.
+  #
+  # It is here to answer the questions this stack makes people ask: which rows does
+  # `proposals.organization_id` actually carry, did `alembic upgrade head` land, does the Better Auth
+  # `organization` table hold the id the rail is showing. Doing that with `docker compose exec
+  # postgres psql` works and is a worse loop when the answer is a wide row you want to read as a
+  # table.
+  #
+  # `ADMINER_DEFAULT_SERVER` pre-fills the server field with the compose service name, which is the
+  # one thing about this login form that is not guessable from inside the container network.
+  #
+  # **Development only, and it is in the dev file for that reason.** This is an unauthenticated
+  # front door to a database holding approvals and an append-only audit log: anything that can reach
+  # port 8080 can read and write every table, migrations included. `docker-compose.yml` — the
+  # production stack — carries it behind a `debug` profile so it does not start unless asked.
+  adminer:
+    image: adminer:latest
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres-data:
     # Named so it survives `docker compose down` and is removed only by `down -v`. It holds

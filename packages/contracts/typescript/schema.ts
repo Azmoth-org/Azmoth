@@ -52,7 +52,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Health */
+        /**
+         * Health
+         * @description Versions, coverage, and whether both solvers just solved something.
+         *
+         *     A plain `def`, so FastAPI dispatches it to the threadpool. That is load-bearing rather than
+         *     incidental: the Soufflé probe spawns a subprocess and blocks on it, and running that on the
+         *     event loop would stall every other request for the length of an interpreter start. It is also
+         *     why the probes are cached — see `app.services.solver_probe`.
+         */
         get: operations["health_api_v1_health_get"];
         put?: never;
         post?: never;
@@ -115,8 +123,9 @@ export interface paths {
          *     delivery's full audit report would be megabytes to render a table. Open one with
          *     `GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.
          *
-         *     `total` is recounted under `status` and `created_after`, so it says how many batches match and
-         *     never how many rows the table happens to hold. The rows themselves stay in `jobs` — not `items`,
+         *     Scoped to the calling organisation, and `total` is recounted under that filter as well, so a
+         *     practice sees its own batches and its own count. `total` is recounted under `status` and
+         *     `created_after` too, so it says how many batches match and never how many rows the table holds. The rows themselves stay in `jobs` — not `items`,
          *     which is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one
          *     shipped first and renaming a field in a contract already committed to `packages/contracts/`
          *     would break a client to buy symmetry.
@@ -226,6 +235,9 @@ export interface paths {
          * List Proposals
          * @description One page of proposals, newest first, with the count of every match beside it.
          *
+         *     Scoped to the calling organisation. `total` is recounted under that filter too, so a practice's
+         *     review queue reports its own backlog and never the size of the table.
+         *
          *     **This returns an envelope, where it previously returned a bare JSON array.** A client reading
          *     the old shape sees `items`. The change is not cosmetic: without `total` a caller cannot tell
          *     fifty proposals from the first fifty of nine hundred, and a review queue whose size it cannot
@@ -280,6 +292,10 @@ export interface paths {
         /**
          * Approve
          * @description Accept a draft. `approved_by` is required — an unattributed approval is not one.
+         *
+         *     Scoped: another practice's draft is a `404`, so an approval cannot be taken on a record the
+         *     caller may not see. This is the write the boundary exists for — a reader that could approve by
+         *     id would make the read scoping decorative.
          */
         post: operations["approve_api_v1_proposals__proposal_id__approve_post"];
         delete?: never;
@@ -332,6 +348,8 @@ export interface paths {
         /**
          * Reject
          * @description Refuse a draft, with a reason. Terminal: a rejected draft is not re-decided, it is re-run.
+         *
+         *     Scoped like the approval.
          */
         post: operations["reject_api_v1_proposals__proposal_id__reject_post"];
         delete?: never;
@@ -439,11 +457,17 @@ export interface paths {
          *     named person approves it via `POST /api/v1/proposals/{id}/approve`. `receipt_hash` identifies
          *     the catalog, rule tables, logic programs, solver versions, policy and input that produced it.
          *
-         *     Failures carry `error_code`: `VALIDATION_ERROR` (422) if the extraction does not match the
-         *     schema, `SOLVER_TIMEOUT` (504) if the optimiser found no answer set inside
-         *     `SOLVER_TIMEOUT_SECONDS`, `RULES_ENGINE_UNAVAILABLE` (503, retryable) if Soufflé could not be
-         *     run, and `TRANSIENT_DB_FAILURE` (503, retryable) if the draft could not be stored. See
-         *     `docs/errors.md`.
+         *     The draft is stamped with the calling organisation, which is what makes it visible to that
+         *     practice and to no other. A request that does not name one is refused with `403` before the
+         *     solve runs — there is no default tenant to file a billing draft under, and inventing one would
+         *     put a real encounter in a bucket nobody owns. See `docs/errors.md` under
+         *     `ORGANIZATION_REQUIRED` for what to send.
+         *
+         *     Failures carry `error_code`: `ORGANIZATION_REQUIRED` (403) if the request does not say which
+         *     practice it is for, `VALIDATION_ERROR` (422) if the extraction does not match the schema,
+         *     `SOLVER_TIMEOUT` (504) if the optimiser found no answer set inside `SOLVER_TIMEOUT_SECONDS`,
+         *     `RULES_ENGINE_UNAVAILABLE` (503, retryable) if Soufflé could not be run, and
+         *     `TRANSIENT_DB_FAILURE` (503, retryable) if the draft could not be stored. See `docs/errors.md`.
          */
         post: operations["solve_api_v1_solve_post"];
         delete?: never;
@@ -1477,7 +1501,21 @@ export interface components {
              */
             note: string;
         };
-        /** HealthResponse */
+        /**
+         * HealthResponse
+         * @description Liveness, versions, and whether the two solvers actually work.
+         *
+         *     **`status` stays `ok` / `degraded`** rather than becoming `healthy`. The Docker healthcheck in
+         *     `infra/docker/docker-compose.yml` tests `status == "ok"` and the dashboard's System Health card
+         *     branches on the same two values, so widening the literal would be a breaking change to two
+         *     committed readers for a synonym. `solvers` is where the new detail lives.
+         *
+         *     `souffle_available` and the two version strings are kept beside `solvers` deliberately, and they
+         *     are not the same claim: `souffle_available` says the binary resolves on `PATH`, and
+         *     `solvers.souffle.status` says it ran a program and got the right answer. A container where those
+         *     two disagree is exactly the failure this endpoint was extended to name, so collapsing them into
+         *     one field would remove the diagnosis.
+         */
         HealthResponse: {
             /** App Env */
             app_env: string;
@@ -1522,6 +1560,10 @@ export interface components {
              * @default 0
              */
             solver_timeout_seconds: number;
+            /** Solvers */
+            solvers?: {
+                [key: string]: components["schemas"]["SolverHealth"];
+            };
             /** Souffle Available */
             souffle_available: boolean;
             /**
@@ -2502,6 +2544,45 @@ export interface components {
              * @description Overrides patient.setting; drives § 6a Minderung.
              */
             setting?: ("ambulant" | "stationaer" | "belegarzt") | null;
+        };
+        /**
+         * SolverHealth
+         * @description One solver's answer to "can you actually solve", and how long it took to say so.
+         *
+         *     `status` is three-valued rather than a boolean because the three cases call for different
+         *     actions: `ok` solved the probe program, `unavailable` is not installed on this host, and
+         *     `failed` is installed and did **not** produce the right answer — the case a version string
+         *     cannot see, and the one most worth alerting on. See `app.services.solver_probe`.
+         *
+         *     `probe_time_ms` is the probe's own wall time, measured with `perf_counter`. It is a
+         *     *diagnostic*, not a benchmark: for Soufflé it is dominated by process creation, so a jump in it
+         *     usually means the host is under pressure rather than that the solver got slower. Present because
+         *     "Soufflé answers in 400 ms today and answered in 40 ms last week" is a question an operator can
+         *     only ask if somebody recorded the number.
+         *
+         *     `detail` is empty when `status` is `ok` and carries one line of reason otherwise.
+         */
+        SolverHealth: {
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /**
+             * Probe Time Ms
+             * @default 0
+             */
+            probe_time_ms: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "failed" | "unavailable";
+            /**
+             * Version
+             * @default
+             */
+            version: string;
         };
         /** Totals */
         Totals: {

@@ -14,7 +14,11 @@ import {
 } from "@workspace/ui/components/card"
 
 import { CopyableHash } from "@/components/common/copyable-hash"
-import type { HealthResponse, RuleCoverage } from "@workspace/contracts"
+import type {
+  HealthResponse,
+  RuleCoverage,
+  SolverHealth,
+} from "@workspace/contracts"
 
 /**
  * What the engine currently is, on the screen a reader lands on first.
@@ -32,6 +36,20 @@ import type { HealthResponse, RuleCoverage } from "@workspace/contracts"
  *
  * Both are read live rather than baked in — a verified rule takes effect immediately, and a
  * hardcoded "859" would start lying the first time somebody used the rule queue.
+ *
+ * ## The two solver figures report a probe, not an inventory
+ *
+ * `health.solvers` carries what each engine answered when the endpoint handed it a one-line program
+ * to solve, and the version beside it is what solved it. That distinction is the reason this card
+ * can now explain itself: before, a Soufflé that was installed and broken rendered as a version
+ * string next to "Engine bereit", and the first sign of trouble was a coding request failing. Now a
+ * solver that did not solve says so on this card, with the engine's own one-line reason — which is
+ * the difference between "something is wrong" and "the binary exits 127, its shared library is
+ * missing".
+ *
+ * `solvers` is optional in the rendering rather than required, because this screen can be pointed
+ * at an engine older than the field. An engine that does not send it falls back to exactly what
+ * this card showed before, which is a version and no probe.
  */
 export function SystemStatus({
   coverage,
@@ -74,6 +92,14 @@ export function SystemStatus({
   const engineReady =
     health.status === "ok" && health.souffle_available === true
 
+  const solvers: Record<string, SolverHealth> = health.solvers ?? {}
+  // Only the ones that actually failed, so the alert below is absent on a healthy engine rather
+  // than an empty box. `unavailable` is included: a solver that is not installed is as fatal to a
+  // coding request as one that is installed and broken, and the two need different fixes.
+  const brokenSolvers = Object.entries(solvers).filter(
+    ([, solver]) => solver.status !== "ok"
+  )
+
   return (
     <Card>
       <CardHeader>
@@ -94,6 +120,36 @@ export function SystemStatus({
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {brokenSolvers.length > 0 && (
+          <Alert variant="destructive">
+            <AlertTriangleIcon />
+            <AlertTitle>
+              {brokenSolvers.length === 1
+                ? "Ein Solver antwortet nicht"
+                : "Solver antworten nicht"}
+            </AlertTitle>
+            <AlertDescription className="space-y-1">
+              {brokenSolvers.map(([name, solver]) => (
+                <p key={name}>
+                  <span className="font-mono">{name}</span>:{" "}
+                  {solver.status === "unavailable"
+                    ? "nicht installiert"
+                    : "installiert, liefert aber kein Ergebnis"}
+                  {/* The engine's own reason, verbatim. It names the exit code or the missing
+                      binary, which is the whole difference between a ticket somebody can act on
+                      and one that says the system is degraded. */}
+                  {solver.detail ? ` — ${solver.detail}` : ""}
+                </p>
+              ))}
+              <p>
+                Kodierungsanfragen schlagen fehl, solange das so ist. Details
+                unter{" "}
+                <span className="font-mono text-xs">/api/v1/health</span>.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-sm font-medium">
@@ -149,12 +205,16 @@ export function SystemStatus({
             value={String(coverage.advisory_rule_count ?? 0)}
             mono
           />
-          <Figure
+          <SolverFigure
             label="Soufflé"
-            value={health.souffle_version || "fehlt"}
-            mono
+            version={health.souffle_version}
+            probe={solvers.souffle}
           />
-          <Figure label="Clingo" value={health.clingo_version || "—"} mono />
+          <SolverFigure
+            label="Clingo"
+            version={health.clingo_version}
+            probe={solvers.clingo}
+          />
           <Figure
             label="Regel-Policy"
             value={coverage.policy_for_unverified_rules || "—"}
@@ -173,6 +233,51 @@ export function SystemStatus({
         </dl>
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * One solver: which version answered, and how long it took to answer.
+ *
+ * The probe time is shown because it is the number an operator can only ask about if somebody
+ * recorded it — "Soufflé takes 400 ms today and took 40 ms last week" is a real signal about the
+ * host, and it is invisible without this. It is a diagnostic rather than a benchmark: for Soufflé
+ * it is dominated by process creation.
+ *
+ * `probe` is optional so this renders against an engine that predates the field, in which case it
+ * degrades to exactly the version string this card showed before.
+ */
+function SolverFigure({
+  label,
+  version,
+  probe,
+}: {
+  label: string
+  version: string | undefined
+  probe: SolverHealth | undefined
+}) {
+  const failed = probe !== undefined && probe.status !== "ok"
+  const value = failed ? "fehlerhaft" : version || "fehlt"
+
+  return (
+    <div className="min-w-0">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd
+        className={
+          failed
+            ? "mt-0.5 truncate font-mono text-destructive"
+            : "mt-0.5 truncate font-mono"
+        }
+        title={probe?.detail || value}
+      >
+        {value}
+        {probe && !failed ? (
+          <span className="ml-1.5 text-muted-foreground tabular-nums">
+            {Math.round(probe.probe_time_ms)} ms
+          </span>
+        ) : null}
+      </dd>
+    </div>
   )
 }
 

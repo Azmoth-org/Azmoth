@@ -310,7 +310,11 @@ class BatchAuditService:
     # -- create ----------------------------------------------------------------------------
 
     async def create_batch(
-        self, uploads: Sequence[Upload], *, actor: str = SYSTEM_ACTOR
+        self,
+        uploads: Sequence[Upload],
+        *,
+        actor: str = SYSTEM_ACTOR,
+        organization_id: str | None = None,
     ) -> tuple[BatchAuditAccepted, list[Upload]]:
         """Write the job and one row per file, all `PENDING`, in one transaction.
 
@@ -323,6 +327,12 @@ class BatchAuditService:
         because `batch_jobs` has no audit log and should not grow one: a batch is a computation the
         engine ran, not a decision somebody took, and the only attribution question it raises is
         "whose queue is this".
+
+        `organization_id` is the tenancy boundary and is written once, here. It is not on
+        `BatchFileRecord`: a file is reachable only through its batch, so scoping the parent scopes
+        the child, and a second copy of the tenant per file would be a fact with two places to
+        disagree with itself. `None` writes a row no tenant's filter matches — see the note on the
+        same default in `app.services.proposal_store.ProposalStore`.
         """
         if not uploads:
             raise EmptyBatch("A batch needs at least one file.")
@@ -334,6 +344,7 @@ class BatchAuditService:
             status=str(BatchJobStatus.PENDING),
             created_at=created_at,
             created_by=actor or SYSTEM_ACTOR,
+            organization_id=organization_id,
         )
         records = [
             BatchFileRecord(job=job, filename=filename, status=str(BatchFileStatus.PENDING))
@@ -360,18 +371,27 @@ class BatchAuditService:
 
     # -- read ------------------------------------------------------------------------------
 
-    async def load_batch(self, batch_id: str) -> BatchAuditJob:
+    async def load_batch(
+        self, batch_id: str, *, organization_id: str | None = None
+    ) -> BatchAuditJob:
         """The job, its progress, and — once it is terminal — every file's report.
 
         Reports are withheld while the job is still running. A two-second poll over a hundred
         files would otherwise ship a hundred full audit reports on every tick, for a screen that
         is showing a progress bar and nothing else.
+
+        A batch belonging to another organisation raises `BatchNotFound`, so the endpoint answers
+        `404` rather than a permission error — the same reasoning as `ProposalStore.get_proposal`:
+        `403` would confirm that a given `batch_…` id exists, and the screen that polls this one
+        every two seconds must not be able to enumerate another practice's uploads.
         """
         statement = (
             select(BatchJobRecord)
             .where(BatchJobRecord.batch_id == batch_id)
             .options(selectinload(BatchJobRecord.files))
         )
+        if organization_id is not None:
+            statement = statement.where(BatchJobRecord.organization_id == organization_id)
         async with self.database.session() as session:
             job = (await session.execute(statement)).scalar_one_or_none()
             if job is None:
@@ -410,6 +430,7 @@ class BatchAuditService:
         created_after: datetime | None = None,
         limit: int = DEFAULT_BATCH_LIST_LIMIT,
         offset: int = 0,
+        organization_id: str | None = None,
     ) -> BatchAuditJobList:
         """Batches newest first, as headers without their files, filtered and paged.
 
@@ -446,6 +467,11 @@ class BatchAuditService:
         offset = max(0, offset)
 
         filters = []
+        # The tenant filter first, and counted into `total` with everything else, so a practice's
+        # batch count is its own. An equality rather than anything that also admits `NULL`: a row
+        # written before `0006` belongs to no organisation and must not surface in every one.
+        if organization_id is not None:
+            filters.append(BatchJobRecord.organization_id == organization_id)
         if status is not None:
             filters.append(BatchJobRecord.status == str(status))
         if created_after is not None:
@@ -717,7 +743,7 @@ class BatchAuditService:
 
     # -- export ----------------------------------------------------------------------------
 
-    async def export_batch(self, batch_id: str) -> bytes:
+    async def export_batch(self, batch_id: str, *, organization_id: str | None = None) -> bytes:
         """The finished batch as a ZIP of CSVs, built from the rows.
 
         Read-only and idempotent: it changes no status and writes no row, so a billing centre can
@@ -736,6 +762,8 @@ class BatchAuditService:
             .where(BatchJobRecord.batch_id == batch_id)
             .options(selectinload(BatchJobRecord.files))
         )
+        if organization_id is not None:
+            statement = statement.where(BatchJobRecord.organization_id == organization_id)
         async with self.database.session() as session:
             job = (await session.execute(statement)).scalar_one_or_none()
             if job is None:

@@ -68,9 +68,25 @@ Interactive docs at <http://localhost:8000/docs>.
 
 ### Endpoints
 
+**Every proposal and batch endpoint below is organisation-scoped.** They require an
+`X-Organization-ID` header naming the Better Auth organisation the caller acts for, and answer
+`403 ORGANIZATION_REQUIRED` without one — there is no default tenant. Rows are stamped with it on
+write and filtered by it on read, so one practice cannot see or decide another's records. The web
+tier sets it from the session's active practice on every call it proxies
+(`apps/web/lib/engine.ts`); a direct caller sets it itself:
+
+```bash
+curl -s localhost:8000/api/v1/proposals -H 'X-Organization-ID: <organization.id>'
+```
+
+`/health`, `/catalog`, `/vocabulary`, the rules endpoints and `POST /padnext/audit` do **not**
+require it — the first four are not tenant data, and the last stores nothing. See
+`apps/engine/app/api/tenancy.py` for why the header is enforced but not verified.
+
+
 | Method | Path | What it does |
 | --- | --- | --- |
-| `GET` | `/api/v1/health` | engine availability, versions, cache state, solver timeout |
+| `GET` | `/api/v1/health` | versions, cache state, solver timeout — and a live **probe** of each solver (`solvers.clingo` / `solvers.souffle`: `ok` \| `failed` \| `unavailable`, with `probe_time_ms`) |
 | `POST` | `/api/v1/solve` | clinical entities → a **DRAFT** proposal with a receipt hash |
 | `GET` | `/api/v1/proposals` | a page of proposals: `?status=&case_id=&limit=&offset=` → `{items, total, limit, offset}` |
 | `GET` | `/api/v1/proposals/{id}` | one proposal |

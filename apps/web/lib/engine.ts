@@ -17,6 +17,28 @@
  * `requireIdentity()` is called by all four, and both properties belong to *talking to the engine*
  * rather than to remembering to.
  *
+ * ## Two headers, and only one of them is optional
+ *
+ * `X-User-ID` says **who** — the engine records it in its audit log and accepts a call without it,
+ * attributing the row to `anonymous`. `X-Organization-ID` says **whose data**, and the engine
+ * refuses a proposal or batch call that does not carry it with a `403`. Every proposal and batch row
+ * is stamped with it on write and filtered by it on read, so one practice cannot list, open, approve
+ * or export another's records — see `apps/engine/app/api/tenancy.py`.
+ *
+ * The value is the session's `activeOrganizationId`: the Better Auth `organization()` plugin's own
+ * field on the session row, which is what the rail's switcher writes when a reader changes practice.
+ * Taking it from the session rather than from a parameter is the whole security property. A tenant
+ * a caller could *pass* is a tenant a caller could *choose*, and this module is reached from route
+ * handlers whose input is a URL the browser controls — so an organisation id in a query string
+ * would be an endpoint for reading any practice's drafts by guessing its id. The session is the one
+ * place the value can come from that the browser cannot set.
+ *
+ * A session with no active organisation is refused **here**, with a sentence that says what to do,
+ * rather than by sending no header and letting the engine answer `403` with a message about a
+ * header the reader has never heard of. It should not happen — onboarding creates the practice and
+ * makes it active, and `middleware.ts` sends a session that has not onboarded there first — but "it
+ * should not happen" is not a reason to render an incomprehensible error when it does.
+ *
  * This is the authoritative check. `middleware.ts` refuses `/api/engine/*` without a session cookie
  * and cannot do better — it has no database and cannot verify one — so a cookie that is present but
  * forged, expired or **revoked by a sign-out** gets past it. It does not get past here: this
@@ -45,6 +67,17 @@ const DEFAULT_ENGINE_BASE_URL = "http://localhost:8000"
 /** The header name the engine reads. Must match `USER_ID_HEADER` in `app/api/identity.py`. */
 const USER_ID_HEADER = "X-User-ID"
 
+/**
+ * The tenant header. Must match `ORGANIZATION_ID_HEADER` in `app/api/tenancy.py`.
+ *
+ * Sent on every call this module makes, including the ones the engine does not scope
+ * (`POST /padnext/audit` stores nothing, and `GET /health` describes the process). Attaching it
+ * centrally rather than per endpoint is the point: a list of "which calls need the tenant" is a list
+ * that goes stale the first time an endpoint starts storing something, and the failure mode is a
+ * `403` in production rather than a compile error.
+ */
+const ORGANIZATION_ID_HEADER = "X-Organization-ID"
+
 /** What the caller must have before anything is proxied: a session the database recognises. */
 type Identity =
   | { ok: true; headers: Record<string, string> }
@@ -68,7 +101,31 @@ async function requireIdentity(): Promise<Identity> {
       },
     }
   }
-  return { ok: true, headers: { [USER_ID_HEADER]: session.user.id } }
+
+  const organizationId = session.session.activeOrganizationId
+  if (!organizationId) {
+    // A `403`, matching what the engine would answer, so a caller switching on the status sees one
+    // meaning for one condition. The message is German and actionable because it is rendered: this
+    // is reachable by a reader whose only organisation was deleted while they were signed in.
+    return {
+      ok: false,
+      failure: {
+        error: "no_active_organization",
+        message:
+          "Diese Sitzung ist keiner Praxis zugeordnet. Wählen Sie oben links eine Organisation " +
+          "aus oder legen Sie eine an — Vorschläge und Stapel gehören immer zu genau einer Praxis.",
+        status: 403,
+      },
+    }
+  }
+
+  return {
+    ok: true,
+    headers: {
+      [USER_ID_HEADER]: session.user.id,
+      [ORGANIZATION_ID_HEADER]: organizationId,
+    },
+  }
 }
 
 /** How long to wait on the engine. Above its own 5 s solver timeout, so a 504 comes from the engine. */

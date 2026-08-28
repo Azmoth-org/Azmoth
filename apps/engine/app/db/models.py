@@ -183,6 +183,23 @@ class ProposalRecord(Base):
     #: forwarded by the web tier in `X-User-ID` (see `app.api.identity`), or `system` when the call
     #: carried no session.
     #:
+    #: The Better Auth `organization.id` this proposal belongs to — the tenancy boundary.
+    #:
+    #: Every read is filtered on it and every write sets it from the `X-Organization-ID` header the
+    #: web tier forwards (`app.api.tenancy`), so one practice cannot see or decide another's drafts.
+    #: Like `created_by` it is deliberately **not** a foreign key: `organization` is Better Auth's
+    #: table, created by its own migrator, and a constraint here would make this schema depend on a
+    #: table `alembic upgrade head` does not create.
+    #:
+    #: **Nullable, and that is about history rather than about policy.** Rows written before this
+    #: column existed have no organisation and none can be invented for them — a backfill would have
+    #: to guess which practice a draft belonged to, and guessing wrong assigns somebody's billing
+    #: record to a stranger. So legacy rows keep `NULL` and are matched by no tenant's filter: they
+    #: are unreachable through the API rather than visible to everyone, which is the safe direction
+    #: for the ambiguity to fail in. Every row this code writes carries a value, because the header
+    #: is required before a write is accepted at all.
+    organization_id: Mapped[str | None] = mapped_column(String(256), default=None)
+
     #: Write-once, like everything above it: who produced a draft is part of what the draft *is*,
     #: not part of what was later decided about it. Deliberately **not** a foreign key — the `user`
     #: table is Better Auth's and is created by its own migrations, so a constraint here would make
@@ -216,6 +233,11 @@ class ProposalRecord(Base):
         # The list endpoint is "the most recent proposals, optionally in this status". Both halves
         # of that in one index, so the common query does not sort a table scan.
         Index("ix_proposals_status_created_at", "status", "created_at"),
+        # Every listing is now organisation-scoped first and ordered by `created_at` second, so the
+        # tenant is the leading column. A plain index on `organization_id` alone would be redundant
+        # with this one — a composite's leading column serves the equality lookup on its own — and a
+        # second index on the same column is write cost for no read.
+        Index("ix_proposals_organization_id_created_at", "organization_id", "created_at"),
     )
 
     def __repr__(self) -> str:  # pragma: no cover - diagnostics only
@@ -282,6 +304,10 @@ class BatchJobRecord(Base):
     created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(TimestampVariant, default=None)
 
+    #: The Better Auth `organization.id` this batch belongs to. Same boundary, same reasoning and
+    #: the same nullability as `ProposalRecord.organization_id` — see the note there.
+    organization_id: Mapped[str | None] = mapped_column(String(256), default=None)
+
     #: Who uploaded the batch — the same forwarded Better Auth `user.id` as
     #: `ProposalRecord.created_by`, and nullable for the same reason. A batch is the one action here
     #: that costs real compute on somebody's behalf, so "who asked for this" is the question an
@@ -310,6 +336,8 @@ class BatchJobRecord(Base):
         # "The most recent batches, optionally in this status" — the same list query shape as
         # `proposals`, and the same reason for the composite index.
         Index("ix_batch_jobs_status_created_at", "status", "created_at"),
+        # And the same tenant-leading composite, for the same reason as on `proposals`.
+        Index("ix_batch_jobs_organization_id_created_at", "organization_id", "created_at"),
     )
 
     def __repr__(self) -> str:  # pragma: no cover - diagnostics only
