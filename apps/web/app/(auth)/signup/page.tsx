@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
-import { AuthCard } from "@/components/auth/auth-card"
+import { AuthShell } from "@/components/auth/auth-shell"
 import { oauthErrorMessage } from "@/components/auth/auth-messages"
 import { GoogleButton } from "@/components/auth/google-button"
 import { SignupForm } from "@/components/auth/signup-form"
@@ -44,7 +44,7 @@ export default async function SignupPage({
   const back = `/signup${next ? `?next=${encodeURIComponent(destination)}` : ""}`
 
   return (
-    <AuthCard>
+    <AuthShell>
       <SignupForm
         next={destination}
         loginHref={`/login${next ? `?next=${encodeURIComponent(destination)}` : ""}`}
@@ -65,6 +65,6 @@ export default async function SignupPage({
           ) : null
         }
       />
-    </AuthCard>
+    </AuthShell>
   )
 }
