@@ -38,6 +38,22 @@ in `data/rules/*.csv`, which is versioned source data the API must never write. 
 *overlay* merged onto the CSVs at load time (`RuleStore.with_reviews`), which is what lets a
 reviewer promote a machine-extracted rule to verified without anyone editing a file that git tracks
 and a second approver has to sign off.
+
+And two that describe *who is billing*, written by the web tier's onboarding endpoint:
+
+    doctor_profiles     one row per Better Auth user     — name, title, LANR, Facharzt
+    practices           one row per Better Auth organisation — name, BSNR, city, PLZ
+
+They are here, and not as extra columns on Better Auth's `user` and `organization`, because those
+two tables belong to a migrator this one does not control: Better Auth computes its schema from the
+library's own field definitions and `alembic/env.py` excludes its tables from autogenerate, so a
+business column added to either would be owned by nobody and dropped by the next upgrade. Keeping
+the identity tier pure is what lets two migrators share one database safely — `apps/web/lib/db.ts`
+is the seam the web tier reaches these two through, and it says the same thing from the other side.
+
+Neither has a foreign key into Better Auth's tables, for the same reason `proposals.created_by` has
+none: `alembic upgrade head` does not create `user` or `organization`, and a constraint on a table
+this migration cannot create would make the schema unappliable wherever the engine runs alone.
 """
 
 from __future__ import annotations
@@ -439,3 +455,122 @@ __all__ = [
     "as_utc",
     "utcnow",
 ]
+
+
+class DoctorProfileRecord(Base):
+    """The person behind a Better Auth account: who they are on an invoice.
+
+    Better Auth's `user` table holds an email, a display name and a password hash — everything
+    needed to *sign somebody in* and nothing needed to *bill in their name*. This table holds the
+    second half, and it is a separate table rather than four more columns on `user` for one blunt
+    reason: that table is Better Auth's, created and altered by its own migrator from the Next.js
+    app (`pnpm --filter web auth:migrate`). Business columns added to it would be columns neither
+    migrator owns — Alembic is told to keep its hands off `user` (`alembic/env.py`), and Better Auth
+    computes its schema from the library's own field definitions, so it would drop them on the next
+    upgrade. Keeping the identity tier pure is what makes both migrators safe to run.
+
+    **`user_id` is a Better Auth `user.id` and deliberately not a foreign key**, for exactly the
+    reason `ProposalRecord.created_by` is not one: `alembic upgrade head` does not create `user`, so
+    a constraint here would make this schema unappliable against any database the engine runs in
+    without the web tier — the test suite included. It is unique instead, which is the constraint
+    that actually matters: a doctor has one professional identity, and two rows answering to one
+    account would make "who is billing this" depend on which row was read first.
+
+    Nothing in the engine reads this table yet. It is written by `POST /api/onboarding` in the web
+    tier and lives here because it is business data, and because the LANR is what a PADnext export
+    will have to carry when invoice generation lands — at which point the alternative (a second
+    database, or a round-trip to the web tier) would be a join this service cannot make.
+    """
+
+    __tablename__ = "doctor_profiles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The Better Auth `user.id` this profile belongs to. Unique — see the class docstring.
+    user_id: Mapped[str] = mapped_column(String(256), unique=True, index=True, nullable=False)
+
+    #: `Dr.`, `Prof. Dr.`, `Dr. med. dent.` — or nothing at all.
+    #:
+    #: The only nullable column of the five, because a physician without an academic title is not an
+    #: incomplete record and a required field would make them type a placeholder. Everything else
+    #: here is something every practising doctor has.
+    title: Mapped[str | None] = mapped_column(String(64), default=None)
+
+    first_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    #: Lebenslange Arztnummer — nine digits, issued once and kept for a career.
+    #:
+    #: Unique, and this is the one uniqueness constraint here with teeth: the LANR identifies the
+    #: physician on a claim, so two accounts carrying one LANR is either a duplicate registration or
+    #: somebody typing a colleague's number. Both are things a billing system should refuse at the
+    #: point of entry rather than discover in a rejected invoice. `String(16)` rather than
+    #: `String(9)`: the format is fixed today and a column width is a poor place to enforce it — the
+    #: check that a caller sees a message about lives in `apps/web/lib/onboarding/validate.ts`.
+    lanr: Mapped[str] = mapped_column(String(16), unique=True, index=True, nullable=False)
+
+    #: The Facharzt designation as free text — "Allgemeinmedizin", "Innere Medizin", "Chirurgie".
+    #:
+    #: Not an enum and not a foreign key into a catalog. The Weiterbildungsordnung is per-Kammer and
+    #: revised, so a closed set maintained here would be wrong for somebody on the day it shipped;
+    #: nothing branches on this value, and when something does it will need a mapped code rather
+    #: than a tightened string.
+    specialty: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        TimestampVariant, nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return f"<DoctorProfileRecord {self.user_id} lanr={self.lanr}>"
+
+
+class PracticeRecord(Base):
+    """The Betriebsstätte a Better Auth organisation stands for.
+
+    Same split as `DoctorProfileRecord`, one tier up: Better Auth's `organization` table holds a
+    name, a slug and a logo, and this holds what a practice *is* for billing purposes. The
+    organisation is the tenant boundary; the practice is the business behind it.
+
+    `organization_id` is unique and, again, not a foreign key — `organization` is created by Better
+    Auth's migrator, not by `alembic upgrade head`. One organisation is one Betriebsstätte.
+
+    **`bsnr` is indexed and NOT unique, which is the opposite of `lanr` and deliberate.** A BSNR
+    names a place, and several organisations legitimately answer to one: a Berufsausübungs-
+    gemeinschaft where each physician has their own tenant, a practice that re-registers after a
+    handover. A LANR names a person and there is only ever one of those. Making the place unique
+    would refuse the first shared-premises sign-up with an error nobody could act on, so the index
+    is there for the lookup and the constraint is not.
+    """
+
+    __tablename__ = "practices"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The Better Auth `organization.id` this practice belongs to. Unique — see above.
+    organization_id: Mapped[str] = mapped_column(
+        String(256), unique=True, index=True, nullable=False
+    )
+
+    #: The name on the Praxisschild. Also mirrored onto `organization.name` by the onboarding
+    #: endpoint, so the organisation switcher shows a practice rather than an empty label — the
+    #: mirror is one-way and this column is the source of truth.
+    practice_name: Mapped[str] = mapped_column(String(256), nullable=False)
+
+    #: Betriebsstättennummer — nine digits identifying the premises. Indexed, not unique.
+    bsnr: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+
+    city: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    #: Postleitzahl. `String`, never an integer: German PLZ are five characters and a third of them
+    #: begin with a zero, which is exactly the leading digit an integer column eats.
+    plz: Mapped[str] = mapped_column(String(16), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        TimestampVariant, nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return f"<PracticeRecord {self.organization_id} bsnr={self.bsnr}>"

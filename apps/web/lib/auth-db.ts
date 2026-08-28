@@ -10,10 +10,16 @@
  * would make every attribution question a distributed one.
  *
  * The two tiers reach it with different drivers, and neither manages the other's tables: Alembic
- * owns `proposals`, `audit_events`, `batch_jobs`, `batch_files` and `rule_reviews`
- * (`apps/engine/alembic/`), Better Auth owns `user`, `session`, `account` and `verification`.
- * `apps/engine/alembic/env.py` names the second set explicitly so that an `--autogenerate` run can
- * never propose dropping them.
+ * owns `proposals`, `audit_events`, `batch_jobs`, `batch_files`, `rule_reviews`, `doctor_profiles`
+ * and `practices` (`apps/engine/alembic/`), Better Auth owns `user`, `session`, `account`,
+ * `verification` and the three the organization plugin brings. `apps/engine/alembic/env.py` names
+ * the second set explicitly so that an `--autogenerate` run can never propose dropping them.
+ *
+ * The last two of Alembic's are the odd ones out, because the web tier *writes* them: they hold the
+ * doctor and practice details `POST /api/onboarding` collects, and they are Alembic's because they
+ * are business data and because a LANR is what a PADnext export will eventually have to carry. That
+ * is why `databaseDriver` below is exported — `lib/db.ts` reaches those two tables through the very
+ * handle Better Auth is holding, rather than opening a second one.
  *
  * ## Why the URL is parsed rather than passed through
  *
@@ -126,14 +132,37 @@ export function parseDatabaseUrl(raw: string): Resolved {
 }
 
 /**
- * The database Better Auth is configured with, built once per process.
+ * The open handle, with its dialect still attached.
+ *
+ * Better Auth only needs the handle — it discovers the dialect itself. `lib/db.ts` needs both,
+ * because the two business tables it reads are reached with SQL, and the placeholder syntax, the
+ * UUID representation and the timestamp literal all differ between the two backends. Erasing the
+ * distinction at this boundary would only mean re-deriving it there from the connection string.
+ */
+export type DatabaseDriver =
+  | { kind: "postgres"; pool: Pool }
+  | { kind: "sqlite"; db: BetterSqlite3.Database }
+
+/** Opened on first use, then reused. See `databaseDriver`. */
+let driver: DatabaseDriver | null = null
+
+/**
+ * The one connection this process holds to the accounts-and-business database.
+ *
+ * **Memoised, and shared with `lib/db.ts` rather than opened twice.** Better Auth resolves a
+ * session on essentially every request, and the onboarding endpoint writes two rows in the same
+ * database; two pools would double the connection count for no benefit and — worse on the SQLite
+ * development path — mean two `better-sqlite3` handles on one file, which is how a write gets
+ * `SQLITE_BUSY` from a process competing with itself.
  *
  * A `Pool`, not a connection: Next runs many requests concurrently in one process, and a single
  * connection would serialise every session lookup behind whichever request holds it. `better-sqlite3`
  * is synchronous by design and has no pool to size — which is one more reason it is a development
  * default rather than a deployment target.
  */
-export function authDatabase(): AuthDatabase {
+export function databaseDriver(): DatabaseDriver {
+  if (driver) return driver
+
   const configured =
     optionalEnv("AUTH_DATABASE_URL") ?? optionalEnv("DATABASE_URL")
 
@@ -145,7 +174,8 @@ export function authDatabase(): AuthDatabase {
           "(the +asyncpg suffix is stripped for you). There is deliberately no SQLite fallback here."
       )
     }
-    return new BetterSqlite3(DEVELOPMENT_SQLITE_FILE)
+    driver = { kind: "sqlite", db: new BetterSqlite3(DEVELOPMENT_SQLITE_FILE) }
+    return driver
   }
 
   const resolved = parseDatabaseUrl(configured)
@@ -157,8 +187,23 @@ export function authDatabase(): AuthDatabase {
           "engine refuses the same configuration for proposals. Point both at Postgres."
       )
     }
-    return new BetterSqlite3(resolved.file)
+    driver = { kind: "sqlite", db: new BetterSqlite3(resolved.file) }
+    return driver
   }
 
-  return new Pool({ connectionString: resolved.url })
+  driver = {
+    kind: "postgres",
+    pool: new Pool({ connectionString: resolved.url }),
+  }
+  return driver
+}
+
+/**
+ * The database Better Auth is configured with — the handle from `databaseDriver`, dialect dropped.
+ *
+ * Called once, by `buildAuth()`, which `getAuth()` memoises.
+ */
+export function authDatabase(): AuthDatabase {
+  const resolved = databaseDriver()
+  return resolved.kind === "postgres" ? resolved.pool : resolved.db
 }
