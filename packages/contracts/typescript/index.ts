@@ -204,6 +204,17 @@ export type RuleReviewResult = Schemas["RuleReviewResult"];
 /* -- catalog and vocabulary ---------------------------------------------------------------- */
 
 export type HealthResponse = Schemas["HealthResponse"];
+
+/**
+ * One solver's probe result, off `HealthResponse["solvers"]`.
+ *
+ * `status` is three-valued and the middle value is the useful one: `unavailable` means the solver is
+ * not installed on that host, `failed` means it *is* installed and did not produce the right answer.
+ * The old health endpoint could not tell those apart — it reported presence — and a container whose
+ * Soufflé is present and broken is the failure this type exists to make renderable.
+ */
+export type SolverHealth = Schemas["SolverHealth"];
+
 export type CatalogResponse = Schemas["CatalogResponse"];
 export type ZifferResponse = Schemas["ZifferResponse"];
 export type VocabularyResponse = Schemas["VocabularyResponse"];

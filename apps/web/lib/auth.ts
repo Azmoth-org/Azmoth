@@ -28,9 +28,10 @@
  * acceptable for one that holds real records; an invite-only flow (or an SSO integration) is what
  * `docs/compliance/PRIVATE_DATA_WARNING.md` now tracks alongside the retention policy.
  *
- * **Organisations are on, and they identify rather than authorise.** The `organization()` plugin
- * below gives a session an active practice, and the sidebar shows and switches it. Nothing is scoped
- * by it yet — see the note on the plugin itself, which says exactly what that does and does not buy.
+ * **Organisations are on, and they now authorise as well as identify.** The `organization()` plugin
+ * below gives a session an active practice, the sidebar shows and switches it, and `lib/engine.ts`
+ * forwards it to the engine on every call — which filters every proposal and every batch by it. See
+ * the note on the plugin itself for what that boundary does and does not cover.
  *
  * ## Session length
  *
@@ -291,10 +292,19 @@ function buildAuth() {
        * is the follow-on — see `docs/compliance/PRIVATE_DATA_WARNING.md`, which already tracks
        * closing the open sign-up this sits next to.
        *
-       * **Nothing enforces the organisation yet, and that is worth being plain about.** The rail
-       * shows which one is active and can switch it; the engine is not told, `proposals` carry no
-       * organisation column, and no query is filtered by one. This is the identity half of
-       * multi-tenancy landing before the authorisation half, not multi-tenancy.
+       * **The organisation is now enforced, and it is worth being precise about where.** The
+       * session's `activeOrganizationId` travels to the engine in `X-Organization-ID` on every call
+       * `lib/engine.ts` proxies; `proposals.organization_id` and `batch_jobs.organization_id` exist
+       * (Alembic `0006`), every read filters on the header and every write stamps it, and a request
+       * that carries no organisation is refused with a `403`. One practice cannot list, open,
+       * approve, reject or export another's records.
+       *
+       * What that does **not** cover, and should not be mistaken for: the engine does not verify the
+       * header, so the boundary holds because this proxy is the engine's only caller and the engine
+       * is not published to the browser — `apps/engine/app/api/tenancy.py` says so at length and is
+       * the seam a verified Better Auth JWT goes into. Nor is there any *role* inside an
+       * organisation: every member of a practice sees and decides everything that practice owns.
+       * The boundary is between tenants, not within one.
        */
       organization(),
 

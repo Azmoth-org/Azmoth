@@ -57,6 +57,9 @@ class ErrorCode(StrEnum):
     UNKNOWN_ZIFFER = "UNKNOWN_ZIFFER"
     REAL_DATA_REFUSED = "REAL_DATA_REFUSED"
 
+    # -- the client may not do this ------------------------------------------------------------
+    ORGANIZATION_REQUIRED = "ORGANIZATION_REQUIRED"
+
     # -- the client asked for something that is not there --------------------------------------
     CATALOG_NOT_FOUND = "CATALOG_NOT_FOUND"
 
@@ -209,6 +212,22 @@ class EmptyRequestBody(EngineError):
 
     error_code = ErrorCode.EMPTY_REQUEST_BODY
     http_status = 400
+
+
+class OrganizationRequired(EngineError):
+    """The request did not say which organisation it acts for. `403`, and there is no default.
+
+    Raised by `app.api.tenancy.require_organization` for every endpoint that reads or writes a
+    proposal or a batch. `403` rather than `401` because the engine authenticates nobody and is not
+    claiming the caller failed to: the request is well-formed and simply does not state a tenant,
+    which is not something a credential would fix.
+
+    Not retryable in the `Retry-After` sense — the identical request fails identically — so no
+    `retry_after` is set. What fixes it is the header.
+    """
+
+    error_code = ErrorCode.ORGANIZATION_REQUIRED
+    http_status = 403
 
 
 class UnknownZifferError(EngineError):

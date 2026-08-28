@@ -60,6 +60,7 @@ from app.schemas.meta import (
     EntityTypeOption,
     HealthResponse,
     LabelledOption,
+    SolverHealth,
     VocabularyResponse,
     ZifferResponse,
 )
@@ -180,6 +181,7 @@ __all__ = [
     "Severity",
     "Sex",
     "SolveRequest",
+    "SolverHealth",
     "Totals",
     "ValidationViolation",
     "VocabularyResponse",

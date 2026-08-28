@@ -16,6 +16,14 @@ from the `202` lives in the caller's memory, so without a listing a finished bat
 unreachable the moment a browser reloaded — its roll-up still in Postgres with nothing able to ask
 for it. It is also where a batch closed by the startup recovery becomes visible.
 
+**The batch path is organisation-scoped; `POST /padnext/audit` deliberately is not.** A batch is a
+stored record — it has rows, a listing, a roll-up and an export — so it has an owner, and every one
+of the four batch endpoints requires `X-Organization-ID` and filters on it (`app.api.tenancy`). The
+single-file audit stores nothing: bytes in, a report out, no row written and nothing to read back.
+There is no record for a tenant to own, so requiring a tenant would be a gate in front of an empty
+room. A batch belonging to another practice answers `404` rather than `403`, for the same reason
+`/proposals/{id}` does — see that module.
+
 The two paths share `read_delivery` and `audit_delivery` and nothing else. That is deliberate: the
 single-file endpoint is a shipped contract, so the batch path was built alongside it rather than by
 reshaping it around a second caller. What must not diverge is the verdict on a given file, and that
@@ -42,6 +50,7 @@ from fastapi import (
 
 from app.api.deps import batches, pipeline
 from app.api.identity import RequestActor
+from app.api.tenancy import RequestOrganization
 from app.errors import EmptyRequestBody, UnknownZifferError
 from app.padnext import audit_delivery, read_delivery
 from app.schemas import (
@@ -191,6 +200,7 @@ def _batch_not_found(batch_id: str) -> HTTPException:
 async def padnext_batch(
     background_tasks: BackgroundTasks,
     actor: RequestActor,
+    organization: RequestOrganization,
     files: list[UploadFile] = File(
         ...,
         description=(
@@ -286,7 +296,9 @@ async def padnext_batch(
 
     service = batches()
     try:
-        accepted, payloads = await service.create_batch(uploads, actor=actor)
+        accepted, payloads = await service.create_batch(
+            uploads, actor=actor, organization_id=organization
+        )
     except EmptyBatch as exc:  # pragma: no cover - guarded above; belt and braces
         raise HTTPException(status_code=400, detail={"error": "empty_batch", "message": str(exc)}) from exc
 
@@ -296,6 +308,7 @@ async def padnext_batch(
 
 @router.get("/batch", response_model=BatchAuditJobList)
 async def padnext_batch_list(
+    organization: RequestOrganization,
     status: BatchJobStatus | None = Query(
         default=None,
         description=(
@@ -329,8 +342,9 @@ async def padnext_batch_list(
     delivery's full audit report would be megabytes to render a table. Open one with
     `GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.
 
-    `total` is recounted under `status` and `created_after`, so it says how many batches match and
-    never how many rows the table happens to hold. The rows themselves stay in `jobs` — not `items`,
+    Scoped to the calling organisation, and `total` is recounted under that filter as well, so a
+    practice sees its own batches and its own count. `total` is recounted under `status` and
+    `created_after` too, so it says how many batches match and never how many rows the table holds. The rows themselves stay in `jobs` — not `items`,
     which is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one
     shipped first and renaming a field in a contract already committed to `packages/contracts/`
     would break a client to buy symmetry.
@@ -342,12 +356,18 @@ async def padnext_batch_list(
     and neither shadows the other.
     """
     return await batches().list_batches(
-        status=status, created_after=created_after, limit=limit, offset=offset
+        status=status,
+        created_after=created_after,
+        limit=limit,
+        offset=offset,
+        organization_id=organization,
     )
 
 
 @router.get("/batch/{batch_id}", response_model=BatchAuditJob)
-async def padnext_batch_status(batch_id: str) -> BatchAuditJob:
+async def padnext_batch_status(
+    batch_id: str, organization: RequestOrganization
+) -> BatchAuditJob:
     """The batch's progress, and its result once it is done.
 
     While the job runs, `files` carries each delivery's status and no report — a two-second poll
@@ -360,7 +380,7 @@ async def padnext_batch_status(batch_id: str) -> BatchAuditJob:
     not parse back into numbers.
     """
     try:
-        return await batches().load_batch(batch_id)
+        return await batches().load_batch(batch_id, organization_id=organization)
     except BatchNotFound as exc:
         raise _batch_not_found(batch_id) from exc
 
@@ -380,7 +400,9 @@ async def padnext_batch_status(batch_id: str) -> BatchAuditJob:
         409: {"description": "The batch has not completed, so there is no roll-up to export."},
     },
 )
-async def padnext_batch_export(batch_id: str) -> Response:
+async def padnext_batch_export(
+    batch_id: str, organization: RequestOrganization
+) -> Response:
     """Download a completed batch as CSVs, for a billing centre.
 
     Only a `COMPLETED` batch can be exported. A running one would produce totals that are a
@@ -398,7 +420,7 @@ async def padnext_batch_export(batch_id: str) -> Response:
     that sentence has to travel with the numbers.
     """
     try:
-        archive = await batches().export_batch(batch_id)
+        archive = await batches().export_batch(batch_id, organization_id=organization)
     except BatchNotFound as exc:
         raise _batch_not_found(batch_id) from exc
     except BatchNotExportable as exc:

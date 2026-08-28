@@ -139,9 +139,17 @@ def input_hash_of(proposal: Proposal) -> str:
     return sha256_of(proposal.solver_result.extraction)
 
 
-def _to_record(proposal: Proposal) -> ProposalRecord:
-    """Pydantic → row. Called once, by `create_proposal`; everything after that is an UPDATE."""
+def _to_record(proposal: Proposal, *, organization_id: str | None = None) -> ProposalRecord:
+    """Pydantic → row. Called once, by `create_proposal`; everything after that is an UPDATE.
+
+    `organization_id` is a parameter rather than a field on `Proposal` on purpose. The tenant is a
+    property of the *request* — it comes from a header the web tier sets — not of the coding result,
+    and putting it on the response model would publish it in the OpenAPI document and hand a client
+    a field it could send. There is exactly one way a proposal acquires an organisation, and it is
+    the header.
+    """
     return ProposalRecord(
+        organization_id=organization_id,
         proposal_id=proposal.proposal_id,
         case_id=proposal.case_id,
         status=str(proposal.status),
@@ -230,6 +238,27 @@ class ProposalStore:
 
     Constructed with a `Database` or with none, in which case the process-wide one is used. Passing
     one explicitly is how a test points the store at its own schema without touching global state.
+
+    ## `organization_id`, and why it defaults to `None` rather than being required
+
+    Every read and every write takes an `organization_id`, and `None` means *unscoped* — no tenant
+    filter on a read, no tenant written on an insert. That default is a deliberate trade and it has
+    a guard rail, because on its own it would be the wrong shape: a read method that quietly returns
+    every practice's rows when a caller forgets an argument fails open, which is the direction a
+    tenancy bug must never fail in.
+
+    The guard rail is that no HTTP path reaches these methods without a tenant. `app.api.tenancy`
+    refuses a request with no `X-Organization-ID` header with a `403` before any path function runs,
+    and `tests/test_tenancy.py` walks the application's route table asserting that every proposal
+    and batch endpoint declares that dependency — so an endpoint added tomorrow without scoping fails
+    the suite rather than shipping. What the default buys is the direct-construction case: the
+    hundred-odd tests that drive this store against their own isolated in-memory database are about
+    the audit log, the lifecycle and paging, and threading a tenant through all of them would say
+    nothing about tenancy while making every one of them noisier.
+
+    A write with `organization_id=None` produces exactly what a pre-`0006` row is: a record no
+    tenant's filter matches, and therefore one that is unreachable over HTTP. That is the safe
+    failure for a write, which is why the same default is acceptable on both sides.
     """
 
     def __init__(self, database: Database | None = None) -> None:
@@ -248,6 +277,7 @@ class ProposalStore:
         *,
         record_view: bool = False,
         actor: str = ANONYMOUS_ACTOR,
+        organization_id: str | None = None,
     ) -> Proposal:
         """One proposal, or `ProposalNotFound`.
 
@@ -255,9 +285,16 @@ class ProposalStore:
         approval and rejection also has to read the row first, and a `VIEWED` row in front of every
         `APPROVED` row would be noise in the log a reviewer actually reads — the approval already
         records that somebody looked.
+
+        **A proposal belonging to another organisation raises `ProposalNotFound`, not a permission
+        error, and the choice is deliberate.** `403 this exists but is not yours` tells the caller
+        that a given `prop_…` id is real and which practice does not own it, which is an oracle over
+        every id anyone cares to try. A `404` says only that this tenant has no such proposal, which
+        is both true and all they are entitled to know. It also means no `VIEWED` event is written:
+        a read that was refused is not a read of the record.
         """
         async with self.database.session() as session:
-            record = await self._require(session, proposal_id)
+            record = await self._require(session, proposal_id, organization_id=organization_id)
             if record_view:
                 self._add_event(
                     session,
@@ -275,6 +312,7 @@ class ProposalStore:
         case_id: str | None = None,
         limit: int = DEFAULT_PROPOSAL_LIST_LIMIT,
         offset: int = 0,
+        organization_id: str | None = None,
     ) -> ProposalList:
         """One page of proposals, newest first, with the filtered total beside it.
 
@@ -309,6 +347,12 @@ class ProposalStore:
         offset = max(0, offset)
 
         filters = []
+        # The tenant filter goes on first, and it is an equality rather than an `IN` or an `OR
+        # organization_id IS NULL`: a legacy row carries no organisation, and including it here
+        # would show every practice the drafts written before the column existed. `total` is counted
+        # under the same filter, so a practice's queue length is its own and never the table's.
+        if organization_id is not None:
+            filters.append(ProposalRecord.organization_id == organization_id)
         if status is not None:
             filters.append(ProposalRecord.status == str(status))
         if case_id is not None and case_id.strip():
@@ -386,7 +430,11 @@ class ProposalStore:
         ]
 
     async def count(
-        self, *, status: ProposalStatus | None = None, case_id: str | None = None
+        self,
+        *,
+        status: ProposalStatus | None = None,
+        case_id: str | None = None,
+        organization_id: str | None = None,
     ) -> int:
         """How many proposals match, ignoring any page. The same filters `list_proposals` applies.
 
@@ -395,6 +443,8 @@ class ProposalStore:
         solver results.
         """
         statement = select(func.count()).select_from(ProposalRecord)
+        if organization_id is not None:
+            statement = statement.where(ProposalRecord.organization_id == organization_id)
         if status is not None:
             statement = statement.where(ProposalRecord.status == str(status))
         if case_id is not None and case_id.strip():
@@ -405,7 +455,13 @@ class ProposalStore:
     # -- writes ----------------------------------------------------------------------------
 
     @retry_database("ProposalStore.create_proposal")
-    async def create_proposal(self, proposal: Proposal, *, actor: str = SYSTEM_ACTOR) -> Proposal:
+    async def create_proposal(
+        self,
+        proposal: Proposal,
+        *,
+        actor: str = SYSTEM_ACTOR,
+        organization_id: str | None = None,
+    ) -> Proposal:
         """Persist a fresh DRAFT and its `CREATED` event, in one transaction.
 
         The returned value is read back off the row rather than echoed from the argument, so the
@@ -418,7 +474,7 @@ class ProposalStore:
         append-only log for `CREATED` rows would be the wrong shape for the one query a data-subject
         request actually asks.
         """
-        record = _to_record(proposal)
+        record = _to_record(proposal, organization_id=organization_id)
         record.created_by = actor or SYSTEM_ACTOR
         async with self.database.session() as session:
             session.add(record)
@@ -431,6 +487,11 @@ class ProposalStore:
                     "receipt_hash": proposal.receipt_hash,
                     "case_id": proposal.case_id,
                     "cached": proposal.cached,
+                    # In the log as well as in the column, and for the same reason `actor` is in
+                    # both: the column is what a query filters on, the event is what an export
+                    # carries. A `CREATED` row that did not say which practice a draft was written
+                    # for could not answer that question after the fact.
+                    "organization_id": organization_id,
                 },
             )
             await session.flush()
@@ -438,9 +499,19 @@ class ProposalStore:
             return _to_proposal(record)
 
     async def approve_proposal(
-        self, proposal_id: str, *, approved_by: str, note: str = ""
+        self,
+        proposal_id: str,
+        *,
+        approved_by: str,
+        note: str = "",
+        organization_id: str | None = None,
     ) -> Proposal:
-        """Accept a DRAFT. `approved_by` is required — an unattributed approval is not one."""
+        """Accept a DRAFT. `approved_by` is required — an unattributed approval is not one.
+
+        Scoped like the reads: a proposal belonging to another organisation is `ProposalNotFound`,
+        so the endpoint answers `404`. Approving somebody else's draft is the write this boundary
+        exists to prevent, and it must not be reachable by knowing an id.
+        """
         if not approved_by or not approved_by.strip():
             raise ValueError("approved_by is required: an approval nobody signed is not an approval")
         return await self._transition(
@@ -448,12 +519,18 @@ class ProposalStore:
             ProposalStatus.APPROVED,
             actor=approved_by.strip(),
             metadata={"note": note} if note else None,
+            organization_id=organization_id,
         )
 
     async def reject_proposal(
-        self, proposal_id: str, *, rejected_by: str, reason: str
+        self,
+        proposal_id: str,
+        *,
+        rejected_by: str,
+        reason: str,
+        organization_id: str | None = None,
     ) -> Proposal:
-        """Refuse a DRAFT, attributed and with a reason. Terminal."""
+        """Refuse a DRAFT, attributed and with a reason. Terminal. Scoped like `approve_proposal`."""
         if not rejected_by or not rejected_by.strip():
             raise ValueError("rejected_by is required")
         if not reason or not reason.strip():
@@ -463,10 +540,15 @@ class ProposalStore:
             ProposalStatus.REJECTED,
             actor=rejected_by.strip(),
             reason=reason.strip(),
+            organization_id=organization_id,
         )
 
     async def export_proposal(
-        self, proposal_id: str, *, actor: str = SYSTEM_ACTOR
+        self,
+        proposal_id: str,
+        *,
+        actor: str = SYSTEM_ACTOR,
+        organization_id: str | None = None,
     ) -> Proposal:
         """Record that an APPROVED proposal left the system. Only reachable from APPROVED.
 
@@ -475,12 +557,20 @@ class ProposalStore:
         additionally builds the file.
         """
         return await self._transition(
-            proposal_id, ProposalStatus.EXPORTED, actor=actor or SYSTEM_ACTOR
+            proposal_id,
+            ProposalStatus.EXPORTED,
+            actor=actor or SYSTEM_ACTOR,
+            organization_id=organization_id,
         )
 
     @retry_database("ProposalStore.export_proposal_document")
     async def export_proposal_document(
-        self, proposal_id: str, *, exported_by: str, note: str = ""
+        self,
+        proposal_id: str,
+        *,
+        exported_by: str,
+        note: str = "",
+        organization_id: str | None = None,
     ) -> ProposalExport:
         """Mark an APPROVED proposal `EXPORTED` and return the file, from one transaction.
 
@@ -517,6 +607,7 @@ class ProposalStore:
             actor=actor,
             metadata={"note": note.strip()} if note and note.strip() else None,
             project=project,
+            organization_id=organization_id,
         )
 
     # -- internals -------------------------------------------------------------------------
@@ -531,6 +622,7 @@ class ProposalStore:
         reason: str | None = None,
         metadata: dict[str, Any] | None = None,
         project: Callable[[AsyncSession, ProposalRecord], Awaitable[T]] | None = None,
+        organization_id: str | None = None,
     ) -> T | Proposal:
         """Read-check-write plus the audit row, in one transaction, under a row lock.
 
@@ -546,7 +638,9 @@ class ProposalStore:
         a bug nobody notices until two people export the same proposal.
         """
         async with self.database.session() as session:
-            record = await self._require(session, proposal_id, for_update=True)
+            record = await self._require(
+                session, proposal_id, for_update=True, organization_id=organization_id
+            )
             current = ProposalStatus(record.status)
             if to not in ALLOWED[current]:
                 raise IllegalTransitionError(current, to)
@@ -586,9 +680,22 @@ class ProposalStore:
             return _to_proposal(record)
 
     async def _require(
-        self, session: AsyncSession, proposal_id: str, *, for_update: bool = False
+        self,
+        session: AsyncSession,
+        proposal_id: str,
+        *,
+        for_update: bool = False,
+        organization_id: str | None = None,
     ) -> ProposalRecord:
+        """The row, or `ProposalNotFound` — including when it exists and belongs elsewhere.
+
+        The tenant is part of the `WHERE`, not a check on the row after it was fetched. Same result,
+        but this way there is no branch that could be written to load the record first and forget to
+        compare, and on Postgres the `FOR UPDATE` never locks a row this caller may not have.
+        """
         statement = select(ProposalRecord).where(ProposalRecord.proposal_id == proposal_id)
+        if organization_id is not None:
+            statement = statement.where(ProposalRecord.organization_id == organization_id)
         if for_update:
             # Emitted as `FOR UPDATE` on Postgres and omitted by the SQLite dialect, which has no
             # row locks and does not need them: one writer at a time is a property of the file.

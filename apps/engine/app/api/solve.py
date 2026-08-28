@@ -20,6 +20,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import pipeline, proposals
 from app.api.identity import RequestActor
+from app.api.tenancy import RequestOrganization
 from app.schemas import Proposal, SolveRequest
 
 log = logging.getLogger(__name__)
@@ -28,18 +29,26 @@ router = APIRouter(tags=["solve"])
 
 
 @router.post("/solve", response_model=Proposal)
-async def solve(request: SolveRequest, actor: RequestActor) -> Proposal:
+async def solve(
+    request: SolveRequest, actor: RequestActor, organization: RequestOrganization
+) -> Proposal:
     """Run the deterministic pipeline and store the result as a DRAFT proposal.
 
     The response is a proposal, never an invoice: `status` is `DRAFT` and stays there until a
     named person approves it via `POST /api/v1/proposals/{id}/approve`. `receipt_hash` identifies
     the catalog, rule tables, logic programs, solver versions, policy and input that produced it.
 
-    Failures carry `error_code`: `VALIDATION_ERROR` (422) if the extraction does not match the
-    schema, `SOLVER_TIMEOUT` (504) if the optimiser found no answer set inside
-    `SOLVER_TIMEOUT_SECONDS`, `RULES_ENGINE_UNAVAILABLE` (503, retryable) if Soufflé could not be
-    run, and `TRANSIENT_DB_FAILURE` (503, retryable) if the draft could not be stored. See
-    `docs/errors.md`.
+    The draft is stamped with the calling organisation, which is what makes it visible to that
+    practice and to no other. A request that does not name one is refused with `403` before the
+    solve runs — there is no default tenant to file a billing draft under, and inventing one would
+    put a real encounter in a bucket nobody owns. See `docs/errors.md` under
+    `ORGANIZATION_REQUIRED` for what to send.
+
+    Failures carry `error_code`: `ORGANIZATION_REQUIRED` (403) if the request does not say which
+    practice it is for, `VALIDATION_ERROR` (422) if the extraction does not match the schema,
+    `SOLVER_TIMEOUT` (504) if the optimiser found no answer set inside `SOLVER_TIMEOUT_SECONDS`,
+    `RULES_ENGINE_UNAVAILABLE` (503, retryable) if Soufflé could not be run, and
+    `TRANSIENT_DB_FAILURE` (503, retryable) if the draft could not be stored. See `docs/errors.md`.
     """
     # No `try/except` for the four solver failures any more. `ValidationFailed`, `ClingoTimeout`,
     # `SouffleError` and `ClingoError` all carry their own status, code and details now, and
@@ -64,4 +73,6 @@ async def solve(request: SolveRequest, actor: RequestActor) -> Proposal:
     # `actor` is the Better Auth user id the web tier forwarded, or `anonymous` for a call with no
     # session — a direct `curl`, `/docs`, the test suite. It lands on `proposals.created_by` and on
     # the `CREATED` event; see `app.api.identity` for why the header is recorded but not trusted.
-    return await proposals().create_proposal(proposal, actor=actor)
+    return await proposals().create_proposal(
+        proposal, actor=actor, organization_id=organization
+    )

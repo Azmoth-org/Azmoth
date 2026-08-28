@@ -1693,6 +1693,7 @@
         "type": "object"
       },
       "HealthResponse": {
+        "description": "Liveness, versions, and whether the two solvers actually work.\n\n**`status` stays `ok` / `degraded`** rather than becoming `healthy`. The Docker healthcheck in\n`infra/docker/docker-compose.yml` tests `status == \"ok\"` and the dashboard's System Health card\nbranches on the same two values, so widening the literal would be a breaking change to two\ncommitted readers for a synonym. `solvers` is where the new detail lives.\n\n`souffle_available` and the two version strings are kept beside `solvers` deliberately, and they\nare not the same claim: `souffle_available` says the binary resolves on `PATH`, and\n`solvers.souffle.status` says it ran a program and got the right answer. A container where those\ntwo disagree is exactly the failure this endpoint was extended to name, so collapsing them into\none field would remove the diagnosis.",
         "properties": {
           "app_env": {
             "title": "App Env",
@@ -1744,6 +1745,13 @@
             "default": 0.0,
             "title": "Solver Timeout Seconds",
             "type": "number"
+          },
+          "solvers": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SolverHealth"
+            },
+            "title": "Solvers",
+            "type": "object"
           },
           "souffle_available": {
             "title": "Souffle Available",
@@ -3474,6 +3482,40 @@
         "title": "SolveRequest",
         "type": "object"
       },
+      "SolverHealth": {
+        "description": "One solver's answer to \"can you actually solve\", and how long it took to say so.\n\n`status` is three-valued rather than a boolean because the three cases call for different\nactions: `ok` solved the probe program, `unavailable` is not installed on this host, and\n`failed` is installed and did **not** produce the right answer — the case a version string\ncannot see, and the one most worth alerting on. See `app.services.solver_probe`.\n\n`probe_time_ms` is the probe's own wall time, measured with `perf_counter`. It is a\n*diagnostic*, not a benchmark: for Soufflé it is dominated by process creation, so a jump in it\nusually means the host is under pressure rather than that the solver got slower. Present because\n\"Soufflé answers in 400 ms today and answered in 40 ms last week\" is a question an operator can\nonly ask if somebody recorded the number.\n\n`detail` is empty when `status` is `ok` and carries one line of reason otherwise.",
+        "properties": {
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "probe_time_ms": {
+            "default": 0.0,
+            "title": "Probe Time Ms",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "failed",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "default": "",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "SolverHealth",
+        "type": "object"
+      },
       "Totals": {
         "properties": {
           "amount_cent_unrounded": {
@@ -3852,6 +3894,7 @@
     },
     "/api/v1/health": {
       "get": {
+        "description": "Versions, coverage, and whether both solvers just solved something.\n\nA plain `def`, so FastAPI dispatches it to the threadpool. That is load-bearing rather than\nincidental: the Soufflé probe spawns a subprocess and blocks on it, and running that on the\nevent loop would stall every other request for the length of an interpreter start. It is also\nwhy the probes are cached — see `app.services.solver_probe`.",
         "operationId": "health_api_v1_health_get",
         "responses": {
           "200": {
@@ -3947,7 +3990,7 @@
     },
     "/api/v1/padnext/batch": {
       "get": {
-        "description": "A page of the batches this database holds, newest first, as headers without their files.\n\nThis is what makes a durable batch reachable again. A `batch_id` is issued once and the browser\nholds it in memory, so before this endpoint existed a page reload orphaned a finished batch —\nthe roll-up was still in Postgres and nothing could ask for it. It is also where an operator\nsees a batch that was `FAILED` by the startup recovery, and reads why in `error_message`.\n\nRows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every\ndelivery's full audit report would be megabytes to render a table. Open one with\n`GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.\n\n`total` is recounted under `status` and `created_after`, so it says how many batches match and\nnever how many rows the table happens to hold. The rows themselves stay in `jobs` — not `items`,\nwhich is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one\nshipped first and renaming a field in a contract already committed to `packages/contracts/`\nwould break a client to buy symmetry.\n\nThe page size ceiling is now 100, down from 500; `limit=200` is a `422` where it used to be\nserved. See `MAX_BATCH_LIST_LIMIT` for why.\n\nDeclared before `/batch/{batch_id}` for readability only — the two paths are distinct templates\nand neither shadows the other.",
+        "description": "A page of the batches this database holds, newest first, as headers without their files.\n\nThis is what makes a durable batch reachable again. A `batch_id` is issued once and the browser\nholds it in memory, so before this endpoint existed a page reload orphaned a finished batch —\nthe roll-up was still in Postgres and nothing could ask for it. It is also where an operator\nsees a batch that was `FAILED` by the startup recovery, and reads why in `error_message`.\n\nRows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every\ndelivery's full audit report would be megabytes to render a table. Open one with\n`GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.\n\nScoped to the calling organisation, and `total` is recounted under that filter as well, so a\npractice sees its own batches and its own count. `total` is recounted under `status` and\n`created_after` too, so it says how many batches match and never how many rows the table holds. The rows themselves stay in `jobs` — not `items`,\nwhich is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one\nshipped first and renaming a field in a contract already committed to `packages/contracts/`\nwould break a client to buy symmetry.\n\nThe page size ceiling is now 100, down from 500; `limit=200` is a `422` where it used to be\nserved. See `MAX_BATCH_LIST_LIMIT` for why.\n\nDeclared before `/batch/{batch_id}` for readability only — the two paths are distinct templates\nand neither shadows the other.",
         "operationId": "padnext_batch_list_api_v1_padnext_batch_get",
         "parameters": [
           {
@@ -4215,7 +4258,7 @@
     },
     "/api/v1/proposals": {
       "get": {
-        "description": "One page of proposals, newest first, with the count of every match beside it.\n\n**This returns an envelope, where it previously returned a bare JSON array.** A client reading\nthe old shape sees `items`. The change is not cosmetic: without `total` a caller cannot tell\nfifty proposals from the first fifty of nine hundred, and a review queue whose size it cannot\nstate is not a queue. `total` counts everything matching `status` and `case_id`, not the page.\n\nUnpaginated is no longer an option, and that is deliberate rather than an oversight. The old\ncall took the newest 500 rows unconditionally and each of those carries a whole `solver_result`;\non a table that only grows, \"all records\" is a response size that depends on how long the\nservice has been running. Omitting `limit` gets the newest 50 — a default, not a cap on what is\nreachable, since `offset` walks the rest.\n\nOrdered `created_at DESC`, tie-broken on the surrogate key so two proposals stamped in the same\nmicrosecond cannot swap places between two reads and make paging skip or repeat one. Note that\nthis reverses what the endpoint used to return: it served the newest page *ascending*, which\ncannot be paged coherently. See `app.services.proposal_store.list_proposals`.",
+        "description": "One page of proposals, newest first, with the count of every match beside it.\n\nScoped to the calling organisation. `total` is recounted under that filter too, so a practice's\nreview queue reports its own backlog and never the size of the table.\n\n**This returns an envelope, where it previously returned a bare JSON array.** A client reading\nthe old shape sees `items`. The change is not cosmetic: without `total` a caller cannot tell\nfifty proposals from the first fifty of nine hundred, and a review queue whose size it cannot\nstate is not a queue. `total` counts everything matching `status` and `case_id`, not the page.\n\nUnpaginated is no longer an option, and that is deliberate rather than an oversight. The old\ncall took the newest 500 rows unconditionally and each of those carries a whole `solver_result`;\non a table that only grows, \"all records\" is a response size that depends on how long the\nservice has been running. Omitting `limit` gets the newest 50 — a default, not a cap on what is\nreachable, since `offset` walks the rest.\n\nOrdered `created_at DESC`, tie-broken on the surrogate key so two proposals stamped in the same\nmicrosecond cannot swap places between two reads and make paging skip or repeat one. Note that\nthis reverses what the endpoint used to return: it served the newest page *ascending*, which\ncannot be paged coherently. See `app.services.proposal_store.list_proposals`.",
         "operationId": "list_proposals_api_v1_proposals_get",
         "parameters": [
           {
@@ -4374,7 +4417,7 @@
     },
     "/api/v1/proposals/{proposal_id}/approve": {
       "post": {
-        "description": "Accept a draft. `approved_by` is required — an unattributed approval is not one.",
+        "description": "Accept a draft. `approved_by` is required — an unattributed approval is not one.\n\nScoped: another practice's draft is a `404`, so an approval cannot be taken on a record the\ncaller may not see. This is the write the boundary exists for — a reader that could approve by\nid would make the read scoping decorative.",
         "operationId": "approve_api_v1_proposals__proposal_id__approve_post",
         "parameters": [
           {
@@ -4503,7 +4546,7 @@
     },
     "/api/v1/proposals/{proposal_id}/reject": {
       "post": {
-        "description": "Refuse a draft, with a reason. Terminal: a rejected draft is not re-decided, it is re-run.",
+        "description": "Refuse a draft, with a reason. Terminal: a rejected draft is not re-decided, it is re-run.\n\nScoped like the approval.",
         "operationId": "reject_api_v1_proposals__proposal_id__reject_post",
         "parameters": [
           {
@@ -4751,7 +4794,7 @@
     },
     "/api/v1/solve": {
       "post": {
-        "description": "Run the deterministic pipeline and store the result as a DRAFT proposal.\n\nThe response is a proposal, never an invoice: `status` is `DRAFT` and stays there until a\nnamed person approves it via `POST /api/v1/proposals/{id}/approve`. `receipt_hash` identifies\nthe catalog, rule tables, logic programs, solver versions, policy and input that produced it.\n\nFailures carry `error_code`: `VALIDATION_ERROR` (422) if the extraction does not match the\nschema, `SOLVER_TIMEOUT` (504) if the optimiser found no answer set inside\n`SOLVER_TIMEOUT_SECONDS`, `RULES_ENGINE_UNAVAILABLE` (503, retryable) if Soufflé could not be\nrun, and `TRANSIENT_DB_FAILURE` (503, retryable) if the draft could not be stored. See\n`docs/errors.md`.",
+        "description": "Run the deterministic pipeline and store the result as a DRAFT proposal.\n\nThe response is a proposal, never an invoice: `status` is `DRAFT` and stays there until a\nnamed person approves it via `POST /api/v1/proposals/{id}/approve`. `receipt_hash` identifies\nthe catalog, rule tables, logic programs, solver versions, policy and input that produced it.\n\nThe draft is stamped with the calling organisation, which is what makes it visible to that\npractice and to no other. A request that does not name one is refused with `403` before the\nsolve runs — there is no default tenant to file a billing draft under, and inventing one would\nput a real encounter in a bucket nobody owns. See `docs/errors.md` under\n`ORGANIZATION_REQUIRED` for what to send.\n\nFailures carry `error_code`: `ORGANIZATION_REQUIRED` (403) if the request does not say which\npractice it is for, `VALIDATION_ERROR` (422) if the extraction does not match the schema,\n`SOLVER_TIMEOUT` (504) if the optimiser found no answer set inside `SOLVER_TIMEOUT_SECONDS`,\n`RULES_ENGINE_UNAVAILABLE` (503, retryable) if Soufflé could not be run, and\n`TRANSIENT_DB_FAILURE` (503, retryable) if the draft could not be stored. See `docs/errors.md`.",
         "operationId": "solve_api_v1_solve_post",
         "requestBody": {
           "content": {

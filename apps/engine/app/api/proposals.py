@@ -15,6 +15,14 @@ verifying — so the log holds both "who signed" and "which account was signed i
 requires them to agree. A Better Auth JWT the engine verifies itself is what closes that. And there
 is still no **retention policy**. Both are tracked in `docs/compliance/PRIVATE_DATA_WARNING.md`.
 
+**Every endpoint here is organisation-scoped.** `RequestOrganization` reads the `X-Organization-ID`
+header the web tier sets from the session's active practice and refuses a request without one with a
+`403` (`app.api.tenancy`). The tenant is then part of the `WHERE` on every read and every write, so
+a proposal belonging to another practice is a `404` here — not a `403`, which would confirm that a
+guessed `prop_…` id exists and merely belongs to somebody else. That distinction is the whole point:
+the id is the only thing an attacker has, and the answer must not tell them whether it was a good
+guess.
+
 These path functions are `async def`, unlike `/solve`. They do database I/O and nothing else, so
 awaiting is exactly right; dispatching them to the threadpool would only add a hop.
 
@@ -32,6 +40,7 @@ from fastapi import APIRouter, HTTPException, Query, Response
 
 from app.api.deps import proposals
 from app.api.identity import RequestActor
+from app.api.tenancy import RequestOrganization
 from app.schemas import (
     ApprovalRequest,
     ExportRequest,
@@ -79,6 +88,7 @@ def _conflict(exc: IllegalTransitionError) -> HTTPException:
 
 @router.get("", response_model=ProposalList)
 async def list_proposals(
+    organization: RequestOrganization,
     status: ProposalStatus | None = Query(
         default=None,
         description=(
@@ -104,6 +114,9 @@ async def list_proposals(
 ) -> ProposalList:
     """One page of proposals, newest first, with the count of every match beside it.
 
+    Scoped to the calling organisation. `total` is recounted under that filter too, so a practice's
+    review queue reports its own backlog and never the size of the table.
+
     **This returns an envelope, where it previously returned a bare JSON array.** A client reading
     the old shape sees `items`. The change is not cosmetic: without `total` a caller cannot tell
     fifty proposals from the first fifty of nine hundred, and a review queue whose size it cannot
@@ -121,12 +134,18 @@ async def list_proposals(
     cannot be paged coherently. See `app.services.proposal_store.list_proposals`.
     """
     return await proposals().list_proposals(
-        status=status, case_id=case_id, limit=limit, offset=offset
+        status=status,
+        case_id=case_id,
+        limit=limit,
+        offset=offset,
+        organization_id=organization,
     )
 
 
 @router.get("/{proposal_id}", response_model=Proposal)
-async def get_proposal(proposal_id: str, actor: RequestActor) -> Proposal:
+async def get_proposal(
+    proposal_id: str, actor: RequestActor, organization: RequestOrganization
+) -> Proposal:
     # Reads one proposal and records a VIEWED event: who looked is part of the audit question.
     #
     # A comment rather than a docstring, deliberately. FastAPI publishes a path function's docstring
@@ -141,17 +160,29 @@ async def get_proposal(proposal_id: str, actor: RequestActor) -> Proposal:
     # read that came through the UI, which is the half of "who looked at this record" that a
     # clinical audit log has to be able to answer.
     try:
-        return await proposals().get_proposal(proposal_id, record_view=True, actor=actor)
+        return await proposals().get_proposal(
+            proposal_id, record_view=True, actor=actor, organization_id=organization
+        )
     except ProposalNotFound as exc:
         raise _not_found(proposal_id) from exc
 
 
 @router.post("/{proposal_id}/approve", response_model=Proposal)
-async def approve(proposal_id: str, request: ApprovalRequest) -> Proposal:
-    """Accept a draft. `approved_by` is required — an unattributed approval is not one."""
+async def approve(
+    proposal_id: str, request: ApprovalRequest, organization: RequestOrganization
+) -> Proposal:
+    """Accept a draft. `approved_by` is required — an unattributed approval is not one.
+
+    Scoped: another practice's draft is a `404`, so an approval cannot be taken on a record the
+    caller may not see. This is the write the boundary exists for — a reader that could approve by
+    id would make the read scoping decorative.
+    """
     try:
         return await proposals().approve_proposal(
-            proposal_id, approved_by=request.approved_by, note=request.note
+            proposal_id,
+            approved_by=request.approved_by,
+            note=request.note,
+            organization_id=organization,
         )
     except ProposalNotFound as exc:
         raise _not_found(proposal_id) from exc
@@ -160,11 +191,19 @@ async def approve(proposal_id: str, request: ApprovalRequest) -> Proposal:
 
 
 @router.post("/{proposal_id}/reject", response_model=Proposal)
-async def reject(proposal_id: str, request: RejectionRequest) -> Proposal:
-    """Refuse a draft, with a reason. Terminal: a rejected draft is not re-decided, it is re-run."""
+async def reject(
+    proposal_id: str, request: RejectionRequest, organization: RequestOrganization
+) -> Proposal:
+    """Refuse a draft, with a reason. Terminal: a rejected draft is not re-decided, it is re-run.
+
+    Scoped like the approval.
+    """
     try:
         return await proposals().reject_proposal(
-            proposal_id, rejected_by=request.rejected_by, reason=request.reason
+            proposal_id,
+            rejected_by=request.rejected_by,
+            reason=request.reason,
+            organization_id=organization,
         )
     except ProposalNotFound as exc:
         raise _not_found(proposal_id) from exc
@@ -186,7 +225,9 @@ async def reject(proposal_id: str, request: RejectionRequest) -> Proposal:
         409: {"description": "The proposal is not APPROVED, so there is nothing to export."},
     },
 )
-async def export_proposal(proposal_id: str, request: ExportRequest) -> Response:
+async def export_proposal(
+    proposal_id: str, request: ExportRequest, organization: RequestOrganization
+) -> Response:
     """Export an approved proposal, and record that it left the system.
 
     Only reachable from `APPROVED`; anything else is a `409`. The transition to `EXPORTED` is
@@ -203,7 +244,10 @@ async def export_proposal(proposal_id: str, request: ExportRequest) -> Response:
     """
     try:
         document = await proposals().export_proposal_document(
-            proposal_id, exported_by=request.exported_by, note=request.note
+            proposal_id,
+            exported_by=request.exported_by,
+            note=request.note,
+            organization_id=organization,
         )
     except ProposalNotFound as exc:
         raise _not_found(proposal_id) from exc

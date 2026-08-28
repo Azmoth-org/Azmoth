@@ -17,6 +17,12 @@ a test cannot see the proposals of the test before it. `tests/test_db_persistenc
 exception — it needs a store that outlives its connection, so it builds a file-backed one in
 `tmp_path` and reopens it.
 
+**The organisation header.** Every proposal and batch endpoint requires `X-Organization-ID` and
+answers `403` without it (`app.api.tenancy`), so the `client` fixture sets one on every request:
+`TEST_ORGANIZATION_ID`. That is not a way around the check — it is what a real caller does, and the
+suite is a real caller. The tests that are *about* the boundary build their own clients with
+different ids, or with none, and live in `tests/test_tenancy.py`.
+
 This means the suite does not exercise Postgres. `POSTGRES_TEST_URL` is honoured by
 `tests/test_db_persistence.py`, which runs the same assertions against a real server when one is
 pointed at — see that module for the command. CI runs SQLite; the dialect-specific behaviour
@@ -47,6 +53,7 @@ os.environ["DATABASE_AUTO_CREATE"] = "true"
 os.environ["APP_ENV"] = "development"
 
 from app.api import deps
+from app.api.tenancy import ORGANIZATION_ID_HEADER
 from app.bridge.entity_to_ziffer import BridgeResult
 from app.catalog import load_catalog
 from app.config import (
@@ -68,6 +75,15 @@ from app.solvers.souffle_engine import SouffleEngine
 from app.validation.validator import Validator
 
 PADNEXT_DIR = CASES_DIR / "padnext"
+
+
+#: The organisation every request from the `client` fixture acts for.
+#:
+#: Shaped like a Better Auth id — 32 characters of its alphabet — rather than something like
+#: `test-org`, so nothing in the suite can come to depend on a tenant id being human-readable. One
+#: id for the whole fixture, because a test that wants two practices wants `tests/test_tenancy.py`,
+#: where the second one is the point rather than a detail.
+TEST_ORGANIZATION_ID = "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J"
 
 
 def _engines_required() -> bool:
@@ -180,6 +196,10 @@ async def store(database) -> ProposalStore:
 def client():
     """A TestClient over the real app, with the shared singletons rebuilt for each test.
 
+    Carries `X-Organization-ID` on every request. Without it every proposal and batch call in the
+    suite would be a `403`: the header is required, and this fixture stands in for the web tier,
+    which sets it from the session's active practice. See `TEST_ORGANIZATION_ID`.
+
     Resetting is what keeps the proposal-store tests independent of each other. It used to be about
     a process-wide dictionary; it is now about the connection pool. `TestClient.__enter__` runs the
     lifespan, which builds a `Database` and creates the schema, and `__exit__` disposes it — and
@@ -194,7 +214,7 @@ def client():
     from app.main import app
 
     deps.reset()
-    with TestClient(app) as test_client:
+    with TestClient(app, headers={ORGANIZATION_ID_HEADER: TEST_ORGANIZATION_ID}) as test_client:
         if not deps.pipeline().souffle.available():
             _require_or_skip(deps.pipeline().settings)
         yield test_client

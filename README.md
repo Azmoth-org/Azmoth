@@ -81,6 +81,11 @@ Better Auth's tables in the same database, then the web app, each gated on the p
 | --- | --- |
 | <http://localhost:3000> | the UI — Prüfung, Rechnungsprüfung, Stapelprüfung, Regelprüfung |
 | <http://localhost:8000/api/v1/health> | the engine's API, and `/docs` for the OpenAPI explorer |
+| <http://localhost:8080> | Adminer, a web UI on the database — server `postgres`, user and password `azmoth` |
+
+Adminer starts with the **dev** stack only. The production file carries it behind a `debug` profile
+(`--profile debug up adminer`) and publishes it on `127.0.0.1` when it does, because it is an
+unauthenticated front door to a database holding approvals and an append-only audit log.
 
 Nothing needs configuring first for the dev stack. `ENGINE_BASE_URL` is set to
 `http://engine:8000` inside it, and it is deliberately server-side only — the browser never learns
