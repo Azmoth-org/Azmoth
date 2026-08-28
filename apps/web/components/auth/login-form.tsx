@@ -1,11 +1,19 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import * as React from "react"
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
-import { LoginForm as LoginFormTemplate } from "@workspace/ui/components/login-form"
+import { Button } from "@workspace/ui/components/button"
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldSeparator,
+} from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 
 import {
   NETWORK_ERROR_MESSAGE,
@@ -16,15 +24,21 @@ import { authClient } from "@/lib/auth-client"
 /**
  * Sign in with an email address and a password.
  *
- * The layout is `@workspace/ui`'s `LoginForm` template; everything below is what makes it this
- * application's sign-in — the German copy, the Better Auth call, and the two failures that have to
- * read differently. The template owns no words and no provider, so the Google button arrives here as
- * a slot rather than as the GitHub button the shadcn original shipped with.
+ * The layout is shadcn's `login-02` form, installed into this app rather than into `@workspace/ui`.
+ * It lives here because it is not shared: every string in it is German, the provider is Google, and
+ * the submit calls Better Auth. A copy in the shared package would be a component with one consumer
+ * that no second app could adopt without first removing this app's language from it.
+ *
+ * Three things the block shipped are gone. Its GitHub button became the `social` slot, because
+ * whether this deployment has a provider at all is a server-side question (`googleSignInEnabled()`)
+ * and the page answers it. Its `href="#"` "Forgot your password?" link is not rendered, because
+ * there is no reset flow to point it at and a dead link on a login form reads as a broken product.
+ * Its English copy is replaced outright.
  *
  * ## Uncontrolled fields, read from `FormData`
  *
- * The template's inputs carry `name` and no `value`, so this component holds no per-keystroke state.
- * Two fields do not need a reducer, and the version of this file that had one re-rendered the whole
+ * The inputs carry `name` and no `value`, so this component holds no per-keystroke state. Two
+ * fields do not need a reducer, and the version of this file that had one re-rendered the whole
  * form on every character typed into it.
  *
  * ## `router.refresh()` before the push, every time
@@ -93,32 +107,80 @@ export function LoginForm({
   }
 
   return (
-    <LoginFormTemplate
-      onSubmit={submit}
-      noValidate
-      pending={pending}
-      title="Anmelden"
-      description="Melden Sie sich mit Ihrer dienstlichen E-Mail-Adresse an."
-      emailLabel="E-Mail"
-      emailPlaceholder="name@praxis.de"
-      passwordLabel="Passwort"
-      submitLabel={pending ? "Wird angemeldet…" : "Anmelden"}
-      separatorLabel="Oder fortfahren mit"
-      social={social}
-      alert={
-        // The alert the page passed in (an OAuth round-trip that failed) and the one this form
-        // produced (a wrong password) occupy the same slot, because they are the same thing to the
-        // reader: the reason they are still on this screen.
-        error ? (
+    <form className="flex flex-col gap-6" onSubmit={submit} noValidate>
+      <FieldGroup>
+        <div className="flex flex-col items-center gap-1 text-center">
+          {/*
+            An `<h1>`, not a `<div>`. On a screen whose entire content is one form, the form's name
+            is the page's name, and a page with no level-1 heading gives a screen-reader user
+            nothing to land on.
+          */}
+          <h1 className="text-2xl font-bold">Anmelden</h1>
+          <p className="text-sm text-balance text-muted-foreground">
+            Melden Sie sich mit Ihrer dienstlichen E-Mail-Adresse an.
+          </p>
+        </div>
+
+        {/*
+          The alert the page passed in (an OAuth round-trip that failed) and the one this form
+          produced (a wrong password) occupy the same slot, because they are the same thing to the
+          reader: the reason they are still on this screen.
+
+          It sits above the fields rather than beside the button that caused it, because the failure
+          it usually reports happened on a previous render — by the time it is read the button is no
+          longer what the reader is looking at.
+        */}
+        {error ? (
           <Alert variant="destructive" role="alert">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : (
           alert
-        )
-      }
-      footer={
-        <>
+        )}
+
+        <Field>
+          <FieldLabel htmlFor="email">E-Mail</FieldLabel>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="username"
+            // The cursor starts here. On a form of two fields that is the difference between typing
+            // and reaching for the mouse first.
+            autoFocus
+            required
+            placeholder="name@praxis.de"
+            disabled={pending}
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="password">Passwort</FieldLabel>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            disabled={pending}
+          />
+        </Field>
+
+        <Field>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Wird angemeldet…" : "Anmelden"}
+          </Button>
+        </Field>
+
+        {social ? (
+          <>
+            <FieldSeparator>Oder fortfahren mit</FieldSeparator>
+            <Field>{social}</Field>
+          </>
+        ) : null}
+
+        <FieldDescription className="text-center">
           Noch kein Konto?{" "}
           <Link
             href={signupHref}
@@ -126,8 +188,8 @@ export function LoginForm({
           >
             Registrieren
           </Link>
-        </>
-      }
-    />
+        </FieldDescription>
+      </FieldGroup>
+    </form>
   )
 }

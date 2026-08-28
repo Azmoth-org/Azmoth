@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
-import { AuthCard } from "@/components/auth/auth-card"
+import { AuthShell } from "@/components/auth/auth-shell"
 import { oauthErrorMessage } from "@/components/auth/auth-messages"
 import { GoogleButton } from "@/components/auth/google-button"
 import { LoginForm } from "@/components/auth/login-form"
@@ -45,7 +45,7 @@ export default async function LoginPage({
   const back = `/login${next ? `?next=${encodeURIComponent(destination)}` : ""}`
 
   return (
-    <AuthCard>
+    <AuthShell>
       <LoginForm
         next={destination}
         // The destination travels with the reader across the two screens, so a visitor who was sent
@@ -68,6 +68,6 @@ export default async function LoginPage({
           ) : null
         }
       />
-    </AuthCard>
+    </AuthShell>
   )
 }
