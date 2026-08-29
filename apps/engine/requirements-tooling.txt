@@ -23,3 +23,7 @@
 # rule tables, and a major bump that changed the request surface would make two verification passes
 # incomparable without saying so.
 anthropic==1.2.0
+
+# The same script can call Gemini instead (`--provider gemini`), which is what a key without
+# Anthropic access gets used for. Same contract, same parser, same conservative default.
+google-genai==2.20.0

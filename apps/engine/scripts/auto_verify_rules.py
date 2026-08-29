@@ -59,13 +59,30 @@ AI_COLUMNS = ("ai_verdict", "ai_reasoning", "ai_model", "ai_checked_at")
 VERIFIED = "VERIFIED"
 NEEDS_REVIEW = "NEEDS_HUMAN_REVIEW"
 
-DEFAULT_MODEL = "claude-opus-5"
+#: Per provider: the env vars that count as credentials, and the default model.
+PROVIDERS = {
+    "anthropic": {
+        "keys": ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"),
+        "model": "claude-opus-5",
+    },
+    "gemini": {
+        "keys": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+        # Flash rather than Pro because a free-tier key has no Pro quota (`gemini-3.1-pro-preview`
+        # answers 429 RESOURCE_EXHAUSTED, `gemini-pro-latest` likewise). On a billed key, prefer
+        # `--model gemini-3.1-pro-preview`: the exclusion rules turn on distinctions in German legal
+        # prose — which of two Ziffern a sentence blocks, whether a range really covers a member —
+        # and that is where a Flash-tier model is most likely to be confidently wrong.
+        "model": "gemini-3.6-flash",
+    },
+}
+
 DEFAULT_EFFORT = "high"
 DEFAULT_SLEEP_SECONDS = 2.5
 MAX_ATTEMPTS = 3
 MAX_TOKENS = 4000
 
-# Published rates, $/1M tokens, for the cost estimate only.
+# Published rates, $/1M tokens, for the cost estimate only. A model absent from this table reports
+# no cost rather than a made-up one.
 PRICING = {
     "claude-opus-5": (5.0, 25.0),
     "claude-fable-5": (10.0, 50.0),
@@ -353,31 +370,103 @@ class Usage:
     cache_read_tokens: int = 0
     cache_write_tokens: int = 0
 
-    def add(self, usage) -> None:
+    #: Reasoning tokens, where the provider reports them separately from the answer.
+    thinking_tokens: int = 0
+
+    def add_anthropic(self, usage) -> None:
         self.input_tokens += getattr(usage, "input_tokens", 0) or 0
         self.output_tokens += getattr(usage, "output_tokens", 0) or 0
         self.cache_read_tokens += getattr(usage, "cache_read_input_tokens", 0) or 0
         self.cache_write_tokens += getattr(usage, "cache_creation_input_tokens", 0) or 0
 
-    def cost_usd(self, model: str) -> float:
-        rate_in, rate_out = PRICING.get(model, (0.0, 0.0))
+    def add_gemini(self, usage) -> None:
+        if usage is None:
+            return
+        self.input_tokens += getattr(usage, "prompt_token_count", 0) or 0
+        self.output_tokens += getattr(usage, "candidates_token_count", 0) or 0
+        self.thinking_tokens += getattr(usage, "thoughts_token_count", 0) or 0
+        self.cache_read_tokens += getattr(usage, "cached_content_token_count", 0) or 0
+
+    def cost_usd(self, model: str) -> float | None:
+        """None when the model is not in the rate table — better than a confidently wrong number."""
+        if model not in PRICING:
+            return None
+        rate_in, rate_out = PRICING[model]
         billable_in = self.input_tokens + self.cache_write_tokens * 1.25 + self.cache_read_tokens * 0.1
-        return (billable_in * rate_in + self.output_tokens * rate_out) / 1_000_000
+        billable_out = self.output_tokens + self.thinking_tokens
+        return (billable_in * rate_in + billable_out * rate_out) / 1_000_000
 
 
 class Verifier:
-    """One Messages API call per rule, with bounded retries around the transient failures."""
+    """One API call per rule, with bounded retries around the transient failures.
+
+    Subclasses supply `ask` plus the two exception sets the shared retry loop needs: FATAL failures
+    that three attempts would reproduce identically (a rejected key, an unknown model id), and
+    RETRYABLE ones that are worth another go (rate limits, 5xx, a dropped connection).
+    """
+
+    FATAL: tuple[type[BaseException], ...] = ()
+    RETRYABLE: tuple[type[BaseException], ...] = ()
 
     def __init__(self, model: str, effort: str, *, usage: Usage) -> None:
-        import anthropic  # imported here so --help works without the SDK installed
-
-        self._anthropic = anthropic
-        # `max_retries=0`: the retry policy is ours, so that a skip is logged as a skip rather
-        # than disappearing into the SDK's backoff.
-        self.client = anthropic.Anthropic(max_retries=0, timeout=120.0)
         self.model = model
         self.effort = effort
         self.usage = usage
+
+    def ask(self, user_prompt: str) -> str:
+        raise NotImplementedError
+
+    def is_fatal(self, exc: BaseException) -> bool:
+        """Would three attempts reproduce this identically? Overridden where the class is coarser
+        than the failure — Gemini raises one `ClientError` for both a rejected key and a 429."""
+        return isinstance(exc, self.FATAL)
+
+    def _retry_delay(self, exc: BaseException, attempt: int) -> float:
+        return 2.0 * attempt
+
+    def ask_with_retries(self, user_prompt: str) -> tuple[str, str | None]:
+        """Returns (answer_text, error). On terminal failure the answer is an empty string."""
+        last = ""
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            try:
+                return self.ask(user_prompt), None
+            except (self.FATAL + self.RETRYABLE) as exc:
+                if self.is_fatal(exc):
+                    return "", f"{type(exc).__name__}: {exc}"
+                last = f"{type(exc).__name__}: {exc}"
+                wait = self._retry_delay(exc, attempt)
+            if attempt < MAX_ATTEMPTS:
+                print(f"      ! {last[:160]} — retry {attempt}/{MAX_ATTEMPTS - 1} in {wait:.0f}s", flush=True)
+                time.sleep(wait)
+        return "", last
+
+
+class AnthropicVerifier(Verifier):
+    def __init__(self, model: str, effort: str, *, usage: Usage) -> None:
+        super().__init__(model, effort, usage=usage)
+        import anthropic  # imported here so --help works without the SDK installed
+
+        # `max_retries=0`: the retry policy is ours, so that a skip is logged as a skip rather
+        # than disappearing into the SDK's backoff.
+        self.client = anthropic.Anthropic(max_retries=0, timeout=120.0)
+        self.FATAL = (
+            anthropic.BadRequestError,
+            anthropic.AuthenticationError,
+            anthropic.PermissionDeniedError,
+            anthropic.NotFoundError,
+        )
+        self.RETRYABLE = (
+            anthropic.RateLimitError,
+            anthropic.APIStatusError,
+            anthropic.APIConnectionError,
+            anthropic.APITimeoutError,
+        )
+        self._rate_limit = anthropic.RateLimitError
+
+    def _retry_delay(self, exc: BaseException, attempt: int) -> float:
+        if isinstance(exc, self._rate_limit):
+            return float(exc.response.headers.get("retry-after", "30") or 30)
+        return 2.0 * attempt
 
     def ask(self, user_prompt: str) -> str:
         response = self.client.messages.create(
@@ -387,8 +476,8 @@ class Verifier:
                 {
                     "type": "text",
                     "text": SYSTEM_PROMPT,
-                    # The system prompt is byte-identical on all 859 calls; caching it is free
-                    # money if it clears the model's minimum cacheable prefix.
+                    # The system prompt is byte-identical on every call; caching it is free money
+                    # if it clears the model's minimum cacheable prefix.
                     "cache_control": {"type": "ephemeral"},
                 }
             ],
@@ -397,33 +486,89 @@ class Verifier:
             output_config={"effort": self.effort},
             messages=[{"role": "user", "content": user_prompt}],
         )
-        self.usage.add(response.usage)
+        self.usage.add_anthropic(response.usage)
         if response.stop_reason == "refusal":
             detail = getattr(response, "stop_details", None)
             return f"VERDICT: {NEEDS_REVIEW}\nREASONING: the model declined to answer ({detail})."
         return "".join(b.text for b in response.content if b.type == "text").strip()
 
-    def ask_with_retries(self, user_prompt: str) -> tuple[str, str | None]:
-        """Returns (answer_text, error). On terminal failure the answer is an empty string."""
-        a = self._anthropic
-        last = ""
-        for attempt in range(1, MAX_ATTEMPTS + 1):
-            try:
-                return self.ask(user_prompt), None
-            except (a.BadRequestError, a.AuthenticationError, a.PermissionDeniedError, a.NotFoundError) as exc:
-                # Nothing about a retry would change these — a bad model id or a rejected key
-                # fails identically three times.
-                return "", f"{type(exc).__name__}: {exc}"
-            except a.RateLimitError as exc:
-                wait = float(exc.response.headers.get("retry-after", "30") or 30)
-                last = f"RateLimitError: {exc}"
-            except (a.APIStatusError, a.APIConnectionError, a.APITimeoutError) as exc:
-                wait = 2.0 * attempt
-                last = f"{type(exc).__name__}: {exc}"
-            if attempt < MAX_ATTEMPTS:
-                print(f"      ! {last} — retry {attempt}/{MAX_ATTEMPTS - 1} in {wait:.0f}s", flush=True)
-                time.sleep(wait)
-        return "", last
+
+class GeminiVerifier(Verifier):
+    """The same contract against the Google Gen AI SDK.
+
+    `temperature=0` rather than a thinking budget: the answer is a two-token classification, and
+    what matters for a verification pass is that re-running a rule gives the same verdict.
+    """
+
+    def __init__(self, model: str, effort: str, *, usage: Usage) -> None:
+        super().__init__(model, effort, usage=usage)
+        from google import genai
+        from google.genai import errors, types
+
+        self._types = types
+        self.client = genai.Client()
+        self._config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            temperature=0.0,
+            max_output_tokens=MAX_TOKENS,
+            # Gemini's safety filters have nothing useful to say about fee-schedule prose, and a
+            # blocked candidate would read as a malformed answer. Ask for the least intervention
+            # the API offers on each category; anything still blocked falls through to review.
+            safety_settings=[
+                types.SafetySetting(category=c, threshold="BLOCK_ONLY_HIGH")
+                for c in (
+                    "HARM_CATEGORY_HARASSMENT",
+                    "HARM_CATEGORY_HATE_SPEECH",
+                    "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    "HARM_CATEGORY_DANGEROUS_CONTENT",
+                )
+            ],
+        )
+        self.FATAL = (errors.ClientError,)
+        self.RETRYABLE = (errors.ServerError, errors.APIError, ConnectionError, TimeoutError)
+
+    def is_fatal(self, exc: BaseException) -> bool:
+        """A 429 arrives as `ClientError` alongside the genuinely fatal 400/401/403/404.
+
+        Treating the whole class as fatal would abandon a rule the moment a per-minute quota
+        refilled a second later, so 429 is pulled back out and retried with a long backoff.
+        """
+        code = getattr(exc, "code", None)
+        if code == 429:
+            return False
+        return isinstance(exc, self.FATAL)
+
+    def _retry_delay(self, exc: BaseException, attempt: int) -> float:
+        # Free-tier quotas refill per minute, so a 429 is worth a real wait rather than 2 seconds.
+        if getattr(exc, "code", None) == 429:
+            return 30.0 * attempt
+        return 2.0 * attempt
+
+    def ask(self, user_prompt: str) -> str:
+        response = self.client.models.generate_content(
+            model=self.model, contents=user_prompt, config=self._config
+        )
+        self.usage.add_gemini(getattr(response, "usage_metadata", None))
+        text = (response.text or "").strip()
+        if not text:
+            # A safety block or an empty candidate. Say so rather than returning "", so the row
+            # records why it went to review instead of looking like a parser failure.
+            feedback = getattr(response, "prompt_feedback", None)
+            finish = ""
+            if getattr(response, "candidates", None):
+                finish = str(getattr(response.candidates[0], "finish_reason", ""))
+            return (
+                f"VERDICT: {NEEDS_REVIEW}\n"
+                f"REASONING: the model returned no text (finish_reason={finish or 'unknown'}, "
+                f"prompt_feedback={feedback})."
+            )
+        return text
+
+
+def make_verifier(provider: str, model: str, effort: str, *, usage: Usage) -> Verifier:
+    if provider == "gemini":
+        return GeminiVerifier(model, effort, usage=usage)
+    return AnthropicVerifier(model, effort, usage=usage)
 
 
 # ----------------------------------------------------------------------------------------------
@@ -497,8 +642,16 @@ class Tally:
     errors: list[str] = field(default_factory=list)
 
 
-def _has_credentials() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+def _has_credentials(provider: str) -> bool:
+    return any(os.environ.get(k) for k in PROVIDERS[provider]["keys"])
+
+
+def _detect_provider() -> str:
+    """Whichever provider has a key in the environment; Anthropic wins a tie."""
+    for name in PROVIDERS:
+        if _has_credentials(name):
+            return name
+    return "anthropic"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -517,7 +670,14 @@ def main(argv: list[str] | None = None) -> int:
         choices=("exclusions", "factor_caps"),
         help="restrict to one table (default: both)",
     )
-    parser.add_argument("--model", default=DEFAULT_MODEL, help=f"default {DEFAULT_MODEL}")
+    parser.add_argument(
+        "--provider",
+        choices=tuple(PROVIDERS),
+        help="which API to call (default: whichever has a key in the environment)",
+    )
+    parser.add_argument(
+        "--model", help="default: the provider's default (see PROVIDERS at the top of this file)"
+    )
     parser.add_argument(
         "--effort",
         default=DEFAULT_EFFORT,
@@ -541,6 +701,8 @@ def main(argv: list[str] | None = None) -> int:
         help="comma-separated rule ids to un-verify, then exit (for a rule a golden case caught)",
     )
     args = parser.parse_args(argv)
+    args.provider = args.provider or _detect_provider()
+    args.model = args.model or PROVIDERS[args.provider]["model"]
 
     tables: list[RuleTable] = []
     if args.only != "factor_caps":
@@ -572,6 +734,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  tables         : {', '.join(t.path.name for t in tables)}")
     print(f"  unverified     : {total_unverified}")
     print(f"  to process now : {len(candidates)}")
+    print(f"  provider       : {args.provider}")
     print(f"  model / effort : {args.model} / {args.effort}")
     print(f"  mode           : {'DRY RUN — nothing will be written' if args.dry_run else 'LIVE — CSV saved after every rule'}")
     print("=" * 96)
@@ -581,8 +744,9 @@ def main(argv: list[str] | None = None) -> int:
         print("Nothing to do: every rule already carries a verdict or is verified.")
         return 0
 
-    if not _has_credentials():
-        print("!! No ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN in the environment.")
+    if not _has_credentials(args.provider):
+        expected = " / ".join(PROVIDERS[args.provider]["keys"])
+        print(f"!! No {expected} in the environment.")
         print("!! Printing the rendered prompts so they can be reviewed, then stopping without")
         print("!! calling the API. Export a key and re-run to get verdicts.")
         print()
@@ -600,7 +764,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     usage = Usage()
-    verifier = Verifier(args.model, args.effort, usage=usage)
+    verifier = make_verifier(args.provider, args.model, args.effort, usage=usage)
     tally = Tally()
 
     for i, candidate in enumerate(candidates, 1):
@@ -694,8 +858,10 @@ def main(argv: list[str] | None = None) -> int:
         f"  tokens                : in {usage.input_tokens:,} "
         f"(cache read {usage.cache_read_tokens:,}, write {usage.cache_write_tokens:,}), "
         f"out {usage.output_tokens:,}"
+        + (f" (+{usage.thinking_tokens:,} thinking)" if usage.thinking_tokens else "")
     )
-    print(f"  approx. cost          : ${usage.cost_usd(args.model):.2f}")
+    cost = usage.cost_usd(args.model)
+    print(f"  approx. cost          : {f'${cost:.2f}' if cost is not None else 'n/a (no rate on file for this model)'}")
     if tally.errors:
         print()
         print("  errors:")
