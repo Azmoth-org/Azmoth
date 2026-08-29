@@ -262,24 +262,24 @@
     ],
     "rule_coverage": "partial",
     "rule_coverage_detail": {
-      "advisory_rule_count": 862,
+      "advisory_rule_count": 840,
       "analog_candidate_count": 3,
-      "enforced_rule_count": 35,
+      "enforced_rule_count": 57,
       "policy_for_unverified_rules": "warn",
       "rejected_rule_count": 0,
       "review_verified_rule_count": 0,
       "rule_coverage": "partial",
       "rules_version": "auto_extracted_2026-07-25",
-      "suppressed_unverified_rule_count": 859,
+      "suppressed_unverified_rule_count": 837,
       "total_constraint_rule_count": 894,
-      "unverified_rule_count": 859,
-      "verified_share": "35/894"
+      "unverified_rule_count": 837,
+      "verified_share": "57/894"
     },
     "rule_summary": {
       "analog_candidates": 3,
       "exclusions_enforced": 30,
       "exclusions_mutual": 15,
-      "factor_caps_enforced": 0,
+      "factor_caps_enforced": 22,
       "files_loaded": [
         "analog_candidates.csv",
         "exclusions.csv",
@@ -294,9 +294,9 @@
       "review_verified_rules": 0,
       "specificity_enforced": 2,
       "total_constraint_rules": 894,
-      "unverified_constraint_rules": 859,
-      "unverified_rules_not_enforced": 859,
-      "verified_share": "35/894",
+      "unverified_constraint_rules": 837,
+      "unverified_rules_not_enforced": 837,
+      "verified_share": "57/894",
       "zielleistung_enforced": 3
     },
     "rules_engine": "souffle",
@@ -753,7 +753,7 @@
       },
       {
         "legal_basis": "",
-        "message": "Regelabdeckung ist unvollständig: 35 verifizierte Regeln von 894 werden durchgesetzt, 859 automatisch extrahierte Regeln sind NICHT verifiziert und wirken bei Policy 'warn' nicht blockierend. Die Rechnung ist ein Vorschlag und ersetzt keine ärztliche Prüfung.",
+        "message": "Regelabdeckung ist unvollständig: 57 verifizierte Regeln von 894 werden durchgesetzt, 837 automatisch extrahierte Regeln sind NICHT verifiziert und wirken bei Policy 'warn' nicht blockierend. Die Rechnung ist ein Vorschlag und ersetzt keine ärztliche Prüfung.",
         "rule_id": "",
         "severity": "warning",
         "type": "rule_coverage_incomplete",

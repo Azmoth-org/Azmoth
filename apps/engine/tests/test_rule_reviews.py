@@ -156,7 +156,13 @@ def test_the_denominator_is_the_number_the_dashboard_counts_towards(csv_rules):
 
     assert coverage.total_constraint_rule_count == enforced_plus_suppressed
     assert coverage.total_constraint_rule_count == 894
-    assert coverage.unverified_rule_count == 859
+    # Derived, not pinned. The *denominator* is a property of the CSVs and is asserted literally
+    # above; the number still outstanding is supposed to fall as rules get verified, so a literal
+    # here would have to be edited after every verification pass — which is exactly the kind of
+    # edit that stops anyone reading what the test is for.
+    assert coverage.unverified_rule_count == (
+        coverage.total_constraint_rule_count - coverage.enforced_rule_count
+    )
     # The analog candidates are outside the denominator entirely.
     assert csv_rules.analog_candidates
     assert coverage.analog_candidate_count == len(csv_rules.analog_candidates)
@@ -224,7 +230,11 @@ def test_the_review_queue_lists_the_undecided_rules_with_their_evidence(client):
     body = queue(client, limit=5)
 
     assert body["total_constraint_rules"] == 894
-    assert body["pending_rule_count"] == 859
+    # Everything in the denominator that nobody has enforced yet is what a reviewer is offered.
+    assert body["pending_rule_count"] == (
+        body["total_constraint_rules"] - body["verified_rule_count"]
+    )
+    assert body["pending_rule_count"] > 0, "an empty queue would make the rest of this vacuous"
     assert body["review_verified_rule_count"] == 0
     assert body["rejected_rule_count"] == 0
     assert body["truncated"] is True
@@ -242,12 +252,15 @@ def test_the_review_queue_lists_the_undecided_rules_with_their_evidence(client):
 
 
 def test_the_queue_can_be_filtered_by_kind_without_hiding_the_backlog(client):
-    caps = queue(client, kind="factor_cap", limit=1000)
+    """Filtered on exclusions rather than factor caps: every factor cap is verified now, so a
+    `factor_cap` filter returns an empty page and the assertion below would hold vacuously."""
+    everything = queue(client, limit=1000)
+    exclusions = queue(client, kind="exclusion", limit=1000)
 
-    assert {r["kind"] for r in caps["rules"]} == {"factor_cap"}
-    assert len(caps["rules"]) == 22
+    assert exclusions["rules"], "no pending exclusions left — pick a kind that still has a backlog"
+    assert {r["kind"] for r in exclusions["rules"]} == {"exclusion"}
     # The filter narrows the page, not the number the dashboard reports as outstanding.
-    assert caps["pending_rule_count"] == 859
+    assert exclusions["pending_rule_count"] == everything["pending_rule_count"]
 
 
 def test_the_queue_never_offers_a_rule_the_csv_already_verified(client):
@@ -274,7 +287,11 @@ def test_verifying_a_rule_removes_it_from_the_queue_and_moves_the_coverage(clien
     assert body["rule"]["review_notes"].startswith("Anmerkung")
 
     assert body["coverage"]["review_verified_rule_count"] == 1
-    assert body["coverage"]["unverified_rule_count"] == before["total_constraint_rules"] - 36
+    # One more rule is enforced than before, so one fewer is outstanding. Written as the identity
+    # rather than a literal, because the CSV's own verified count moves as rules get curated.
+    assert body["coverage"]["unverified_rule_count"] == (
+        before["total_constraint_rules"] - before["verified_rule_count"] - 1
+    )
 
     after = queue(client, limit=1000)
     assert target not in {r["rule_id"] for r in after["rules"]}
@@ -283,7 +300,8 @@ def test_verifying_a_rule_removes_it_from_the_queue_and_moves_the_coverage(clien
 
 
 def test_rejecting_a_rule_removes_it_from_the_queue_without_enforcing_it(client):
-    target = queue(client, limit=5)["rules"][0]["rule_id"]
+    before = queue(client, limit=5)
+    target = before["rules"][0]["rule_id"]
 
     body = review(client, target, status="REJECTED", review_notes="Extraktion falsch.").json()
 
@@ -294,11 +312,12 @@ def test_rejecting_a_rule_removes_it_from_the_queue_without_enforcing_it(client)
 
     after = queue(client, limit=1000)
     assert target not in {r["rule_id"] for r in after["rules"]}
-    assert after["pending_rule_count"] == 858
+    assert after["pending_rule_count"] == before["pending_rule_count"] - 1
 
 
 def test_a_pending_review_leaves_the_rule_in_the_queue(client):
-    target = queue(client, limit=5)["rules"][0]["rule_id"]
+    before = queue(client, limit=5)
+    target = before["rules"][0]["rule_id"]
 
     body = review(client, target, status="PENDING", reviewed_by="").json()
     assert body["rule"]["review_status"] == "PENDING"
@@ -306,7 +325,9 @@ def test_a_pending_review_leaves_the_rule_in_the_queue(client):
     after = queue(client, limit=1000)
     parked = next(r for r in after["rules"] if r["rule_id"] == target)
     assert parked["review_status"] == "PENDING"
-    assert after["pending_rule_count"] == 859, "parking a rule has not made it any safer"
+    assert after["pending_rule_count"] == before["pending_rule_count"], (
+        "parking a rule has not made it any safer"
+    )
 
 
 def test_a_decision_without_a_name_is_refused(client):

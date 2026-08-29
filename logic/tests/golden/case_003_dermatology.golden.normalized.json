@@ -299,7 +299,7 @@
       "analog_candidates": 3,
       "exclusions_enforced": 30,
       "exclusions_mutual": 15,
-      "factor_caps_enforced": 0,
+      "factor_caps_enforced": 22,
       "files_loaded": [
         "analog_candidates.csv",
         "exclusions.csv",
@@ -311,8 +311,8 @@
       ],
       "policy_for_unverified_rules": "warn",
       "specificity_enforced": 2,
-      "unverified_rules_not_enforced": 859,
-      "verified_share": "35/894",
+      "unverified_rules_not_enforced": 837,
+      "verified_share": "57/894",
       "zielleistung_enforced": 3
     },
     "rules_engine": "souffle",
@@ -802,7 +802,7 @@
       },
       {
         "legal_basis": "",
-        "message": "Regelabdeckung ist unvollständig: 35 verifizierte Regeln von 894 werden durchgesetzt, 859 automatisch extrahierte Regeln sind NICHT verifiziert und wirken bei Policy 'warn' nicht blockierend. Die Rechnung ist ein Vorschlag und ersetzt keine ärztliche Prüfung.",
+        "message": "Regelabdeckung ist unvollständig: 57 verifizierte Regeln von 894 werden durchgesetzt, 837 automatisch extrahierte Regeln sind NICHT verifiziert und wirken bei Policy 'warn' nicht blockierend. Die Rechnung ist ein Vorschlag und ersetzt keine ärztliche Prüfung.",
         "rule_id": "",
         "severity": "warning",
         "type": "rule_coverage_incomplete",
