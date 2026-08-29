@@ -1,0 +1,27 @@
+# Azmoth
+
+> Azmoth kodiert und prüft ärztliche Privatliquidationen nach der Gebührenordnung
+> für Ärzte (GOÄ). Aus der Behandlungsdokumentation werden GOÄ-Ziffern
+> vorgeschlagen; zu jeder Position wird offengelegt, aus welcher Regel sie folgt.
+
+Der Kern ist ein deterministisches Regelwerk, kein Sprachmodell: dieselbe Eingabe
+ergibt dasselbe Ergebnis, und jede Position ist gegenüber einer Erstattungsstelle
+begründbar. Azmoth trifft keine Abrechnungsentscheidung — jede Position wird
+vorgeschlagen und von einem Menschen freigegeben.
+
+## Wichtige Adressen
+
+- Startseite: /
+- Funktionen: /funktionen
+- Häufige Fragen: /faq
+- Über uns: /ueber-uns
+- Kontakt: /kontakt
+
+Die Anwendung selbst liegt auf einer eigenen Domain; Anmeldung und Registrierung
+sind von jeder Seite aus verlinkt.
+
+## Was Azmoth nicht ist
+
+- keine Praxisverwaltung (keine Terminplanung, Kartei oder Buchhaltung)
+- kein Ersatz für rechtliche oder steuerliche Beratung
+- keine automatische Abrechnung ohne ärztliche Freigabe

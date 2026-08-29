@@ -3,6 +3,7 @@
 #     docker compose -f infra/docker/docker-compose.yml up --build
 #
 #     http://localhost:3000   the review and audit UI
+#     http://localhost:3001   the public marketing site
 #     http://localhost:8000   the engine's API (and /docs)
 #
 # Builds and runs the images that actually ship: the standalone Next.js bundle, no bind mounts, no
@@ -14,11 +15,14 @@
 # app directory: the engine needs `logic/` and `data/`, the web app needs the pnpm lockfile and the
 # `packages/*` it consumes as source.
 #
-# Three services, started in that order by their healthchecks. `postgres` holds the proposals and
+# Four services. Three of them start in order by their healthchecks: `postgres` holds the proposals and
 # the immutable audit log; `engine` migrates it on start (`alembic upgrade head`, in the image's
 # entrypoint) and then serves the API; `web` serves the UI and is the only tier a browser talks to.
 # There is no in-memory fallback: the engine refuses to start under APP_ENV=production without a
 # Postgres DATABASE_URL, which is the point of this stack existing rather than a bare `uvicorn`.
+#
+# The fourth, `marketing`, is in no order at all — it holds no data and talks to nothing, so it
+# comes up on its own and stays up whatever the rest of the stack is doing.
 
 services:
   postgres:
@@ -236,6 +240,61 @@ services:
           "node",
           "-e",
           "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  # The public marketing site — http://localhost:${MARKETING_PORT:-3001}
+  #
+  # It shares this stack's network and nothing else. No database, no session, no engine: the whole
+  # point of separating it from `web` was that it holds no data, so it has no `depends_on` and does
+  # not wait on a healthy Postgres to serve a static page. Behind a reverse proxy it is the only
+  # service that should be reachable from the public internet alongside `web`.
+  #
+  # 3001 on the host, 3000 in the container, matching docker-compose.dev.yml — `web` already owns
+  # 3000 on the host, and inside its own network namespace this container has the port to itself.
+  #
+  # ── APP_URL is a BUILD argument, not an environment variable ────────────────────────────────
+  # Every page of this site is statically prerendered, so the address of `web` is baked into the
+  # HTML when the image is built. Setting it under `environment:` would do nothing — the page has
+  # already been rendered. Changing where "Anmelden" points means rebuilding:
+  #
+  #     APP_URL=https://app.azmoth.de docker compose -f infra/docker/docker-compose.yml build marketing
+  #
+  # And the value is the address a VISITOR'S BROWSER can reach, so it is a public URL — never
+  # http://web:3000, which resolves only inside this network. That is the opposite of
+  # ENGINE_BASE_URL above, which is fetched by the `web` container itself.
+  # ───────────────────────────────────────────────────────────────────────────────────────────
+  marketing:
+    build:
+      context: ../..
+      dockerfile: apps/marketing/Dockerfile
+      args:
+        # NEXT_PUBLIC_APP_URL is honoured as an alias, so either name in .env works.
+        APP_URL: "${APP_URL:-${NEXT_PUBLIC_APP_URL:-https://app.azmoth.de}}"
+        NEXT_PUBLIC_SITE_URL: "${MARKETING_SITE_URL:-https://www.azmoth.de}"
+    image: azmoth-marketing:0.3.0
+    # No `container_name`, for the same reason nothing else here has one.
+    ports:
+      - "${MARKETING_PORT:-3001}:3000"
+    environment:
+      # The image already sets NODE_ENV=production; stated here too so that reading this file
+      # answers "what does this run as" without opening the Dockerfile.
+      NODE_ENV: production
+    # No `volumes:` — this service runs the standalone bundle apps/marketing/Dockerfile traces at
+    # build time, nothing else. The dev file swaps the Dockerfile and adds bind mounts.
+    healthcheck:
+      # The homepage. This app has no /api/health and needs none: it renders no live data and
+      # depends on no other service, so a 200 here genuinely means the site is up.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 10s

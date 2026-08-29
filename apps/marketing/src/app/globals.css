@@ -1,0 +1,31 @@
+/*
+ * Azmoth marketing — the styling entry point, and deliberately almost empty.
+ *
+ * Every colour, radius and font token lives in `@workspace/ui`, the same sheet the
+ * product app loads. That is the point of importing it rather than restating it: a
+ * brand colour changed once in `packages/ui` moves the marketing site and the
+ * application together, instead of leaving two palettes that drift apart over a
+ * few months until the "Anmelden" button is a different blue on either side of the
+ * click.
+ *
+ * What belongs here is only what a long scrolling public page needs and an
+ * application screen does not.
+ */
+@import "@workspace/ui/globals.css";
+
+/* Tailwind scans from this file's project root, but naming the tree is explicit. */
+@source "../**/*.{ts,tsx}";
+
+@layer base {
+  html {
+    /* In-page anchors (#funktionen, #preise) must clear the fixed header. */
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}

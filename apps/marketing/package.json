@@ -1,0 +1,35 @@
+{
+  "name": "marketing",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Azmoth \u2014 public marketing site. Links into the product app; holds no data of its own.",
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "eslint",
+    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vercel/speed-insights": "^2.0.0",
+    "@workspace/ui": "workspace:*",
+    "lucide-react": "^1.33.0",
+    "next": "16.2.6",
+    "next-intl": "^4.13.5",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "eslint": "^9",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

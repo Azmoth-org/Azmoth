@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+
+# build
+dist/
+
+# env — never commit real secrets (.env.vercel* holds deploy tokens)
+.env*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+.vercel
+
+# agent scratch
+.reasonix/
+
+# ai harness tooling (impeccable etc. — global installs, not project assets)
+.claude/
+.codex/
+.agents/
+.gemini/
+.kiro/
+.opencode/
+
+# build
+*.tsbuildinfo
+
+# not template code — kept on disk, out of git history
+# (SILKDEV internal business doc, and a personal photo of the original author)
+E-commerce-Checklist-silkdev.xlsx
+public/images/jesser-against-dark-background.png

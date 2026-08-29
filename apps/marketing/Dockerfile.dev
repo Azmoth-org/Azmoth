@@ -1,0 +1,51 @@
+# syntax=docker/dockerfile:1
+#
+# DEVELOPMENT image for the marketing site: `next dev` (Turbopack), meant to be run through
+# infra/docker/docker-compose.dev.yml, which bind-mounts the working tree over the source copied in
+# below so an edit on the host is a save, not a rebuild.
+#
+# Build context is the MONOREPO ROOT, the same rule as apps/web/Dockerfile.dev and for the same
+# reason: this app consumes `@workspace/ui` as source, and the pnpm lockfile that pins the whole
+# graph lives at the root.
+#
+#     docker build -f apps/marketing/Dockerfile.dev -t azmoth-marketing:dev .
+#
+# or use infra/docker/docker-compose.dev.yml, which sets the context correctly.
+#
+# There is deliberately no entrypoint script here, unlike apps/web/Dockerfile.dev. That one runs a
+# staleness check before the server because the web app has a database schema to be out of step
+# with. This app has no database, no migrations and no session — there is nothing for it to be
+# stale against.
+
+# Pinned to the same Node as apps/web and CI. "Works in dev" stops meaning anything otherwise.
+FROM node:22.14-alpine AS base
+RUN corepack enable
+WORKDIR /repo
+
+# Manifests and the lockfile first, so this layer is rebuilt when a dependency changes and reused
+# when application code changes.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY apps/marketing/package.json apps/marketing/
+COPY packages/eslint-config/package.json packages/eslint-config/
+COPY packages/typescript-config/package.json packages/typescript-config/
+COPY packages/ui/package.json packages/ui/
+RUN pnpm install --frozen-lockfile --filter marketing...
+
+# Real source, so the image runs standalone as well as under compose's bind mounts.
+COPY apps/marketing apps/marketing
+COPY packages/typescript-config packages/typescript-config
+COPY packages/ui packages/ui
+
+ENV NEXT_TELEMETRY_DISABLED=1
+EXPOSE 3000
+
+# `--hostname 0.0.0.0`, not the dev server's localhost default: inside a container that default
+# means nothing outside the container can connect.
+#
+# Port 3000 *inside* the container. The host-side 3001 is compose's business — see the port mapping
+# in docker-compose.dev.yml. The package.json `dev` script uses 3001 instead, because there it is
+# sharing a machine with apps/web; in here it has the network namespace to itself.
+#
+# `pnpm --filter marketing exec` rather than `pnpm --filter marketing dev`, so a caller can override
+# the command without fighting the `dev` script's own argv.
+CMD ["pnpm", "--filter", "marketing", "exec", "next", "dev", "--hostname", "0.0.0.0", "--port", "3000"]

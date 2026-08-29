@@ -1,0 +1,17 @@
+{
+  "name": "Azmoth — GOÄ-Kodierung und Rechnungsprüfung",
+  "short_name": "Azmoth",
+  "description": "Deterministische GOÄ-Kodierung und Rechnungsprüfung mit nachvollziehbarer Begründung.",
+  "start_url": "/",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "theme_color": "#101828",
+  "background_color": "#101828",
+  "display": "standalone"
+}
