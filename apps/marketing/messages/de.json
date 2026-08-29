@@ -7,24 +7,19 @@
     "faq": "Häufige Fragen",
     "ueberUns": "Über uns",
     "kontakt": "Kontakt",
-    "datenschutz": "Datenschutz",
-    "agb": "AGB",
     "anmelden": "Anmelden",
-    "testen": "Kostenlos testen",
-    "impressum": "Impressum"
+    "testen": "Kostenlos testen"
   },
   "footer": {
     "claim": "Deterministische GOÄ-Kodierung und Rechnungsprüfung — mit einer Begründung, die einer Rückfrage standhält.",
     "produkt": "Produkt",
     "unternehmen": "Unternehmen",
-    "rechtliches": "Rechtliches",
     "rechte": "Alle Rechte vorbehalten.",
     "hinweis": "Azmoth ersetzt keine ärztliche oder rechtliche Beratung."
   },
   "cookies": {
     "titel": "Cookie-Hinweis",
     "text": "Wir verwenden Analyse-Cookies nur mit Ihrer Einwilligung. Ohne Zustimmung wird nichts geladen und nichts gemessen.",
-    "mehr": "Mehr erfahren",
     "akzeptieren": "Akzeptieren",
     "ablehnen": "Ablehnen"
   },
@@ -199,10 +194,6 @@
     "hinweisText": "Support-Anfragen gehen am schnellsten direkt aus der Anwendung heraus.",
     "hinweisCta": "Zur Anmeldung"
   },
-  "recht": {
-    "platzhalterTitel": "Rechtlich zu prüfender Entwurf — noch nicht veröffentlichungsreif",
-    "platzhalterText": "Dieser Text ist ein Strukturentwurf und ersetzt keine anwaltlich geprüfte Fassung. Jede gelb hervorgehobene Stelle muss vor Veröffentlichung durch die tatsächliche Angabe ersetzt werden; anschließend ist der gesamte Text rechtlich zu prüfen."
-  },
   "nichtGefunden": {
     "titel": "Seite nicht gefunden",
     "text": "Diese Adresse gibt es nicht — oder nicht mehr.",
@@ -217,12 +208,6 @@
     "faqTitel": "Häufige Fragen",
     "faqBeschreibung": "Antworten zu Regelwerk, Freigabe, Datenhaltung und Einrichtung von Azmoth.",
     "kontaktTitel": "Kontakt",
-    "kontaktBeschreibung": "Fragen zur Einführung von Azmoth in Ihrer Praxis? Schreiben Sie uns.",
-    "datenschutzTitel": "Datenschutz",
-    "datenschutzBeschreibung": "Wie Azmoth personenbezogene Daten verarbeitet.",
-    "agbTitel": "AGB",
-    "agbBeschreibung": "Allgemeine Geschäftsbedingungen für die Nutzung von Azmoth.",
-    "impressumTitel": "Impressum",
-    "impressumBeschreibung": "Anbieterkennzeichnung nach § 5 DDG und § 18 Abs. 2 MStV."
+    "kontaktBeschreibung": "Fragen zur Einführung von Azmoth in Ihrer Praxis? Schreiben Sie uns."
   }
 }

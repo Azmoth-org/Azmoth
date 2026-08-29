@@ -5,9 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@workspace/ui/components/button";
 
-import { Link } from "@/i18n/navigation";
 import { enableAnalytics, hasAnalytics } from "@/lib/analytics";
-import { routes } from "@/lib/site";
 
 const STORAGE_KEY = "azmoth-cookie-consent";
 
@@ -72,12 +70,7 @@ export function CookieBanner() {
       className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-2xl rounded-2xl border border-border bg-card p-4 shadow-lg sm:p-5"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <p className="flex-1 text-sm text-muted-foreground">
-          {t("text")}{" "}
-          <Link href={routes.datenschutz} className="underline underline-offset-3">
-            {t("mehr")}
-          </Link>
-        </p>
+        <p className="flex-1 text-sm text-muted-foreground">{t("text")}</p>
         <div className="flex shrink-0 gap-2">
           <Button variant="outline" size="sm" onClick={() => decide("declined")}>
             {t("ablehnen")}

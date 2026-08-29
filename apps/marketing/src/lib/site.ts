@@ -48,7 +48,7 @@ export const siteConfig = {
     "keine KI-Halluzinationen. 100% nachvollziehbare GOÄ-Compliance.",
   /** Short form, for the footer and the web app manifest. */
   tagline: "Deterministische GOÄ-Prüfengine",
-  email: "kontakt@azmoth.de",
+  email: "oussama0khadraoui@gmail.com",
 } as const;
 
 /** Marketing routes, so a rename is one edit rather than a grep. */
@@ -58,7 +58,4 @@ export const routes = {
   ueberUns: "/ueber-uns",
   faq: "/faq",
   kontakt: "/kontakt",
-  impressum: "/impressum",
-  datenschutz: "/datenschutz",
-  agb: "/agb",
 } as const;

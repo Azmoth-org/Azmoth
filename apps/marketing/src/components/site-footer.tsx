@@ -21,14 +21,6 @@ const COLUMNS = [
       { href: routes.kontakt, key: "kontakt" },
     ],
   },
-  {
-    key: "rechtliches",
-    links: [
-      { href: routes.impressum, key: "impressum" },
-      { href: routes.datenschutz, key: "datenschutz" },
-      { href: routes.agb, key: "agb" },
-    ],
-  },
 ] as const;
 
 export function SiteFooter() {
@@ -38,7 +30,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border/60">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="grid gap-10 md:grid-cols-[2fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 md:grid-cols-[2fr_1fr_1fr]">
           <div className="max-w-xs">
             <Logo />
             <p className="mt-3 text-sm text-muted-foreground">{t("claim")}</p>
