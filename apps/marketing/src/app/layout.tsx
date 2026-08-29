@@ -23,8 +23,20 @@ const structuredData = JSON.stringify([getOrganizationSchema(), getWebsiteSchema
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={cn(inter.variable, "dark")} suppressHydrationWarning>
-      <body className="bg-background text-foreground antialiased">
+    /*
+     * Light, with no toggle and no `system` check — the same decision apps/web
+     * makes, for the same reason. This product carries invoice amounts and a
+     * physician's signature, and a public page that arrives dark because a laptop
+     * switched at sunset reads as the developer-tool version of the product. The
+     * palette is defined on bare `:root` in @workspace/ui, so simply not setting
+     * the class is the light theme.
+     */
+    <html
+      lang="de"
+      className={cn("antialiased font-sans", inter.variable)}
+      suppressHydrationWarning
+    >
+      <body className="bg-background text-foreground">
         {/*
          * A plain <script>, not next/script: this has to be in the static HTML a
          * crawler receives, and next/script would defer it into the RSC payload.

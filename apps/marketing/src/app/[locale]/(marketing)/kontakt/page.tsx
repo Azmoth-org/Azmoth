@@ -3,12 +3,12 @@ import { useTranslations } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { MailIcon } from "lucide-react";
 
-import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 
+import { ButtonLink } from "@/components/button-link";
 import { Section, SectionHeading } from "@/components/section";
 import { buildPageMetadata } from "@/lib/seo";
-import { siteConfig } from "@/lib/site";
+import { getProductLinks } from "@/lib/site";
 
 /**
  * Contact is a mail link, not a form.
@@ -79,9 +79,9 @@ function KontaktContent() {
           </CardHeader>
           <CardContent className="flex flex-col items-start gap-4">
             <p className="text-muted-foreground">{t("hinweisText")}</p>
-            <Button variant="outline" size="sm" render={<a href={siteConfig.login} />}>
+            <ButtonLink external href={getProductLinks().login} variant="outline" size="sm">
               {t("hinweisCta")}
-            </Button>
+            </ButtonLink>
           </CardContent>
         </Card>
       </div>

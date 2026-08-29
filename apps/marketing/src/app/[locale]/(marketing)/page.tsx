@@ -12,13 +12,12 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@workspace/ui/components/badge";
-import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 
+import { ButtonLink } from "@/components/button-link";
 import { Section, SectionHeading } from "@/components/section";
-import { Link } from "@/i18n/navigation";
 import { buildPageMetadata } from "@/lib/seo";
-import { routes, siteConfig } from "@/lib/site";
+import { getProductLinks, routes, siteConfig } from "@/lib/site";
 
 /** Same order as `startseite.funktionen.punkte` — the copy lives in the catalogue. */
 const FEATURE_ICONS = [
@@ -43,7 +42,9 @@ export async function generateMetadata({
 
   return buildPageMetadata({
     path: "/",
-    title: t("startseiteTitel"),
+    // `absolute`, so the root template does not turn this into
+    // "Azmoth – Deterministische GOÄ-Prüfengine · Azmoth".
+    title: { absolute: siteConfig.title },
     description: t("startseiteBeschreibung"),
     keywords: ["GOÄ", "Privatliquidation", "Rechnungsprüfung", "PADnext", "Abrechnung"],
   });
@@ -82,17 +83,13 @@ function Hero() {
           {t("untertitel")}
         </p>
         <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-          <Button size="lg" render={<a href={siteConfig.signup} />}>
+          <ButtonLink external href={getProductLinks().signup} size="lg">
             {t("ctaPrimaer")}
             <ArrowRightIcon data-icon="inline-end" />
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            render={<Link href={routes.funktionen} />}
-          >
+          </ButtonLink>
+          <ButtonLink href={routes.funktionen} size="lg" variant="outline">
             {t("ctaSekundaer")}
-          </Button>
+          </ButtonLink>
         </div>
         <p className="text-xs text-muted-foreground">{t("hinweis")}</p>
       </div>
@@ -187,13 +184,13 @@ function ClosingCta() {
       <div className="rounded-4xl bg-card px-6 py-14 text-center ring-1 ring-foreground/5 sm:px-12">
         <SectionHeading title={t("titel")} subtitle={t("text")} />
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button size="lg" render={<a href={siteConfig.signup} />}>
+          <ButtonLink external href={getProductLinks().signup} size="lg">
             {t("primaer")}
             <ArrowRightIcon data-icon="inline-end" />
-          </Button>
-          <Button size="lg" variant="outline" render={<Link href={routes.kontakt} />}>
+          </ButtonLink>
+          <ButtonLink href={routes.kontakt} size="lg" variant="outline">
             {t("sekundaer")}
-          </Button>
+          </ButtonLink>
         </div>
       </div>
     </Section>

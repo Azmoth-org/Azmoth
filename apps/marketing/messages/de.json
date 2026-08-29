@@ -10,7 +10,8 @@
     "datenschutz": "Datenschutz",
     "agb": "AGB",
     "anmelden": "Anmelden",
-    "testen": "Kostenlos testen"
+    "testen": "Kostenlos testen",
+    "impressum": "Impressum"
   },
   "footer": {
     "claim": "Deterministische GOÄ-Kodierung und Rechnungsprüfung — mit einer Begründung, die einer Rückfrage standhält.",
@@ -199,8 +200,8 @@
     "hinweisCta": "Zur Anmeldung"
   },
   "recht": {
-    "platzhalterTitel": "Rechtlich zu prüfender Entwurf",
-    "platzhalterText": "Dieser Text ist ein Strukturentwurf und ersetzt keine anwaltlich geprüfte Fassung. Vor Veröffentlichung müssen die mit [...] markierten Angaben ergänzt und der gesamte Text rechtlich geprüft werden."
+    "platzhalterTitel": "Rechtlich zu prüfender Entwurf — noch nicht veröffentlichungsreif",
+    "platzhalterText": "Dieser Text ist ein Strukturentwurf und ersetzt keine anwaltlich geprüfte Fassung. Jede gelb hervorgehobene Stelle muss vor Veröffentlichung durch die tatsächliche Angabe ersetzt werden; anschließend ist der gesamte Text rechtlich zu prüfen."
   },
   "nichtGefunden": {
     "titel": "Seite nicht gefunden",
@@ -208,8 +209,7 @@
     "cta": "Zur Startseite"
   },
   "metadaten": {
-    "startseiteTitel": "GOÄ-Kodierung und Rechnungsprüfung",
-    "startseiteBeschreibung": "Azmoth schlägt GOÄ-Ziffern aus Ihrer Behandlungsdokumentation vor und begründet jede einzelne. Deterministisch, nachvollziehbar, prüffest.",
+    "startseiteBeschreibung": "Mathematische Gewissheit für die medizinische Abrechnung. Keine Blackbox, keine KI-Halluzinationen. 100% nachvollziehbare GOÄ-Compliance.",
     "funktionenTitel": "Funktionen",
     "funktionenBeschreibung": "Kodierung, Prüfung und Nachvollziehbarkeit — von der Dokumentation bis zur freigegebenen Rechnung.",
     "ueberUnsTitel": "Über uns",
@@ -221,6 +221,8 @@
     "datenschutzTitel": "Datenschutz",
     "datenschutzBeschreibung": "Wie Azmoth personenbezogene Daten verarbeitet.",
     "agbTitel": "AGB",
-    "agbBeschreibung": "Allgemeine Geschäftsbedingungen für die Nutzung von Azmoth."
+    "agbBeschreibung": "Allgemeine Geschäftsbedingungen für die Nutzung von Azmoth.",
+    "impressumTitel": "Impressum",
+    "impressumBeschreibung": "Anbieterkennzeichnung nach § 5 DDG und § 18 Abs. 2 MStV."
   }
 }

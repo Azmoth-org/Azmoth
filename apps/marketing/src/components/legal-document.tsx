@@ -6,13 +6,19 @@ import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/al
 import { Section } from "@/components/section";
 import type { LegalDocument } from "@/data/legal";
 
+/** `{{Firmenname}}` → a chip; everything else → text. Captures keep the split parts. */
+const PLACEHOLDER = /\{\{([^}]+)\}\}/g;
+
 /**
- * Renders one legal document, with the draft warning it currently has to carry.
+ * Renders one legal document, with the draft warnings it currently has to carry.
  *
- * The banner is not decoration: these texts still contain `[...]` placeholders where
- * company facts belong, and shipping them silently would put an unreviewed privacy
- * notice in front of real visitors. Delete the `<Alert>` when a lawyer has signed
- * the text off — not before.
+ * Two of them, deliberately. The banner at the top says the whole text is
+ * unreviewed; the chips below say exactly which words are missing. A `[...]` buried
+ * mid-paragraph is the kind of thing that survives to production because nobody
+ * scrolled — an amber chip reading "BITTE EINTRAGEN: USt-IdNr." does not.
+ *
+ * Delete both when a lawyer has signed the text off, not before. `data/legal.ts`
+ * carries the full list of what has to be filled in first.
  */
 export function LegalDocumentView({ document }: { document: LegalDocument }) {
   const t = useTranslations("recht");
@@ -45,7 +51,7 @@ export function LegalDocumentView({ document }: { document: LegalDocument }) {
                     key={paragraph}
                     className="whitespace-pre-line text-pretty text-sm text-muted-foreground"
                   >
-                    {paragraph}
+                    <ParagraphWithPlaceholders text={paragraph} />
                   </p>
                 ))}
               </div>
@@ -54,5 +60,29 @@ export function LegalDocumentView({ document }: { document: LegalDocument }) {
         </div>
       </div>
     </Section>
+  );
+}
+
+function ParagraphWithPlaceholders({ text }: { text: string }) {
+  // `split` with a capturing group interleaves the literal text and the captures,
+  // so odd indices are the placeholder names and even indices the prose between.
+  const parts = text.split(PLACEHOLDER);
+
+  return (
+    <>
+      {parts.map((part, index) =>
+        index % 2 === 1 ? (
+          <strong
+            key={`${part}-${index}`}
+            data-placeholder
+            className="mx-0.5 inline-block rounded-md bg-amber-100 px-1.5 py-0.5 align-baseline text-[0.8125rem] font-semibold text-amber-900 ring-1 ring-amber-300 dark:bg-amber-950 dark:text-amber-100 dark:ring-amber-800"
+          >
+            BITTE EINTRAGEN: {part}
+          </strong>
+        ) : (
+          part
+        )
+      )}
+    </>
   );
 }

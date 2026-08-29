@@ -3,7 +3,9 @@
 #     docker compose -f infra/docker/docker-compose.dev.yml up --build
 #
 #     http://localhost:3000   the review and audit UI (Turbopack dev server, hot-reloading)
+#     http://localhost:3001   the public marketing site (Turbopack dev server, hot-reloading)
 #     http://localhost:8000   the engine's API (and /docs), uvicorn --reload
+#     http://localhost:8080   Adminer, a web UI for the database
 #
 # This is a full copy of the stack in docker-compose.yml, not an override layered on top of it —
 # deliberately, after an IDE "compose up" task pointed at this file alone failed with "service ...
@@ -283,6 +285,74 @@ services:
       interval: 30s
       timeout: 10s
       start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  # The public marketing site — http://localhost:${MARKETING_PORT:-3001}
+  #
+  # It is in this stack for one reason: the "Anmelden" and "Kostenlos testen" buttons point at
+  # `web`, and the only way to check that they land somewhere real is to have both running. It
+  # shares nothing else. No database, no session, no engine — the whole point of the marketing app
+  # is that it holds no data, so it has no `depends_on: postgres` and it does not care whether the
+  # rest of the stack is healthy.
+  #
+  # 3001 on the host, 3000 in the container. `web` already owns 3000 on the host; inside its own
+  # network namespace this container has the port to itself, so the two images stay symmetrical and
+  # only the published side differs.
+  #
+  # APP_URL is the address of `web` **as a browser on the host sees it** — http://localhost:3000,
+  # not http://web:3000. These links are followed by the visitor's browser, which is outside this
+  # network and cannot resolve a compose service name. That is the opposite of ENGINE_BASE_URL
+  # above, which is fetched by the `web` container itself and therefore does use the service name.
+  #
+  # Under `next dev` this is read on every compile, so changing it here and restarting is enough.
+  # A production image bakes it at build time instead — every page is statically prerendered — so
+  # there it is a build argument. See apps/marketing/src/lib/site.ts.
+  marketing:
+    build:
+      context: ../..
+      dockerfile: apps/marketing/Dockerfile.dev
+    image: azmoth-marketing:dev
+    # No `container_name`, for the same reason nothing else here has one.
+    ports:
+      - "${MARKETING_PORT:-3001}:3000"
+    environment:
+      APP_URL: "${APP_URL:-http://localhost:${WEB_PORT:-3000}}"
+      # The same value under the name the app also accepts, so either spelling works for anyone
+      # who reaches for the one they have seen in a Next.js project before.
+      NEXT_PUBLIC_APP_URL: "${APP_URL:-http://localhost:${WEB_PORT:-3000}}"
+      # Canonical URLs, the sitemap and og:url are built from this. Without it they would point at
+      # the localhost default baked into lib/seo.ts.
+      NEXT_PUBLIC_SITE_URL: "${MARKETING_SITE_URL:-http://localhost:${MARKETING_PORT:-3001}}"
+      # Unset means the cookie banner never appears and no analytics script is ever loaded, which
+      # is the right default for a development stack.
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: "${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}"
+    volumes:
+      # Live-edit, same idea as `web` above. `@workspace/ui` is consumed as source, so editing a
+      # shared component has to reload here too — and `@workspace/typescript-config` is mounted for
+      # the same reason it is there: apps/marketing/tsconfig.json `extends` its nextjs.json.
+      - ../../apps/marketing:/repo/apps/marketing
+      - ../../packages/ui:/repo/packages/ui
+      - ../../packages/typescript-config:/repo/packages/typescript-config
+      # Anonymous volumes masking the bind mounts for these subdirectories only, so the host's
+      # (missing, or host-arch) node_modules and .next do not shadow what the image installed.
+      - /repo/node_modules
+      - /repo/apps/marketing/node_modules
+      - /repo/apps/marketing/.next
+      - /repo/packages/ui/node_modules
+    healthcheck:
+      # The homepage itself. Unlike `web`, this app has no /api/health to ask and needs none: it
+      # renders no live data, so a page that returns 200 genuinely means the site is up.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
       retries: 3
     restart: unless-stopped
 

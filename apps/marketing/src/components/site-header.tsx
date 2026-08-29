@@ -13,6 +13,7 @@ import {
   SheetTrigger,
 } from "@workspace/ui/components/sheet";
 
+import { ButtonLink } from "@/components/button-link";
 import { Logo } from "@/components/logo";
 import { Link } from "@/i18n/navigation";
 import { routes, siteConfig } from "@/lib/site";
@@ -24,7 +25,7 @@ const NAV_ITEMS = [
   { href: routes.kontakt, key: "kontakt" },
 ] as const;
 
-export function SiteHeader() {
+export function SiteHeader({ login, signup }: { login: string; signup: string }) {
   const t = useTranslations("navigation");
   const [open, setOpen] = useState(false);
 
@@ -56,12 +57,12 @@ export function SiteHeader() {
            * Plain <a>, not the i18n <Link>: the product is a separate Next application
            * on another origin, so a client-side transition would 404 inside this one.
            */}
-          <Button variant="ghost" size="sm" render={<a href={siteConfig.login} />}>
+          <ButtonLink external href={login} variant="ghost" size="sm">
             {t("anmelden")}
-          </Button>
-          <Button size="sm" render={<a href={siteConfig.signup} />}>
+          </ButtonLink>
+          <ButtonLink external href={signup} size="sm">
             {t("testen")}
-          </Button>
+          </ButtonLink>
         </div>
 
         <Sheet open={open} onOpenChange={setOpen}>
@@ -94,10 +95,10 @@ export function SiteHeader() {
               ))}
             </div>
             <div className="mt-4 flex flex-col gap-2 px-4">
-              <Button variant="outline" render={<a href={siteConfig.login} />}>
+              <ButtonLink external href={login} variant="outline">
                 {t("anmelden")}
-              </Button>
-              <Button render={<a href={siteConfig.signup} />}>{t("testen")}</Button>
+              </ButtonLink>
+              <ButtonLink external href={signup}>{t("testen")}</ButtonLink>
             </div>
           </SheetContent>
         </Sheet>

@@ -1,9 +1,7 @@
 import { useTranslations } from "next-intl";
 
-import { Button } from "@workspace/ui/components/button";
-
+import { ButtonLink } from "@/components/button-link";
 import { Section } from "@/components/section";
-import { Link } from "@/i18n/navigation";
 import { routes } from "@/lib/site";
 
 export default function NotFound() {
@@ -17,9 +15,9 @@ export default function NotFound() {
           {t("titel")}
         </h1>
         <p className="text-muted-foreground">{t("text")}</p>
-        <Button className="mt-2" render={<Link href={routes.home} />}>
+        <ButtonLink href={routes.home} className="mt-2">
           {t("cta")}
-        </Button>
+        </ButtonLink>
       </div>
     </Section>
   );

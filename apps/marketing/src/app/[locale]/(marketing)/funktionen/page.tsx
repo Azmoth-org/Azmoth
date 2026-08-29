@@ -3,12 +3,12 @@ import { useTranslations } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowRightIcon, CheckIcon } from "lucide-react";
 
-import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 
+import { ButtonLink } from "@/components/button-link";
 import { Section, SectionHeading } from "@/components/section";
 import { buildPageMetadata } from "@/lib/seo";
-import { siteConfig } from "@/lib/site";
+import { getProductLinks } from "@/lib/site";
 
 type Group = { titel: string; punkte: string[] };
 
@@ -83,10 +83,10 @@ function FeatureCta() {
     <Section className="border-t border-border/60">
       <div className="flex flex-col items-center gap-6 text-center">
         <SectionHeading title={t("titel")} subtitle={t("text")} />
-        <Button size="lg" render={<a href={siteConfig.signup} />}>
+        <ButtonLink external href={getProductLinks().signup} size="lg">
           {t("primaer")}
           <ArrowRightIcon data-icon="inline-end" />
-        </Button>
+        </ButtonLink>
       </div>
     </Section>
   );

@@ -24,6 +24,7 @@ const COLUMNS = [
   {
     key: "rechtliches",
     links: [
+      { href: routes.impressum, key: "impressum" },
       { href: routes.datenschutz, key: "datenschutz" },
       { href: routes.agb, key: "agb" },
     ],

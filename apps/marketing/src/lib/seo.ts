@@ -27,10 +27,27 @@ export function absoluteUrl(path = "/"): string {
   return new URL(path, getSiteUrl()).toString();
 }
 
+/*
+ * The card is served by src/app/opengraph-image.tsx (and twitter-image.tsx), which
+ * render it with `next/og` at request time.
+ *
+ * It has to be named explicitly here rather than left to Next's file convention.
+ * The convention attaches the image to the segment the file sits in — the root —
+ * and `openGraph` is *replaced* by a child's metadata rather than deep-merged, so
+ * every page that returns its own `openGraph` block dropped the inherited image and
+ * emitted no og:image at all. `metadataBase` makes this relative path absolute.
+ */
+const OG_IMAGE = {
+  url: "/opengraph-image",
+  width: 1200,
+  height: 630,
+} as const;
+
 type PageMetadataInput = {
   /** Path of the page, e.g. "/funktionen" or "/". */
   path: string;
-  title: string;
+  /** A plain string joins the root's "%s · Azmoth" template; `{ absolute }` replaces it. */
+  title: string | { absolute: string };
   description: string;
   type?: "website" | "article";
   keywords?: string[];
@@ -44,6 +61,9 @@ export function buildPageMetadata({
   type = "website",
   keywords,
 }: PageMetadataInput): Metadata {
+  // og:title takes no template, so it needs the plain string either way.
+  const ogTitle = typeof title === "string" ? title : title.absolute;
+
   return {
     title,
     description,
@@ -52,20 +72,22 @@ export function buildPageMetadata({
     openGraph: {
       type,
       url: absoluteUrl(path),
-      title,
+      title: ogTitle,
       description,
       siteName: siteConfig.name,
       locale: "de_DE",
+      images: [{ ...OG_IMAGE, alt: ogTitle }],
     },
     twitter: {
-      card: "summary",
-      title,
+      card: "summary_large_image",
+      title: ogTitle,
       description,
+      images: [OG_IMAGE.url],
     },
   };
 }
 
-const defaultTitle = `${siteConfig.name} — ${siteConfig.tagline}`;
+const defaultTitle = siteConfig.title;
 
 export const defaultMetadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
@@ -91,10 +113,12 @@ export const defaultMetadata: Metadata = {
     description: siteConfig.description,
     siteName: siteConfig.name,
     locale: "de_DE",
+    images: [{ ...OG_IMAGE, alt: siteConfig.name }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: defaultTitle,
     description: siteConfig.description,
+    images: [OG_IMAGE.url],
   },
 };
