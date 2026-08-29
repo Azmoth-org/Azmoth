@@ -67,7 +67,7 @@ REPORT_JSON = RULES_DATA_DIR / "deterministic_parse_report.json"
 PROVENANCE = "deterministic_parser"
 
 #: Columns this script maintains, alongside the ones `auto_verify_rules.py` adds.
-PARSER_COLUMNS = ("parser_verdict", "parser_reason", "parser_provision")
+PARSER_COLUMNS = ("parser_verdict", "parser_reason", "parser_provision", "review_note")
 
 # ----------------------------------------------------------------------------------------------
 # vocabulary
@@ -309,7 +309,9 @@ def conditional_marker(text: str) -> str:
 # ----------------------------------------------------------------------------------------------
 
 CONFIRMED = "CONFIRMED"
-QUARANTINE = "QUARANTINE"
+#: Deliberately the same token `auto_verify_rules.py` writes, so one vocabulary covers both passes
+#: and a reviewer filtering the CSVs for work to do does not need to know which script parked it.
+QUARANTINE = "NEEDS_HUMAN_REVIEW"
 
 
 @dataclass
@@ -444,6 +446,11 @@ def main(argv: list[str] | None = None) -> int:
         help="also replace a concatenated quote with the single provision that decided the rule",
     )
     parser.add_argument("--residue", type=Path, default=DEFAULT_RESIDUE)
+    parser.add_argument(
+        "--review-note",
+        metavar="TEXT",
+        help="stamp this note on every rule the parser parks, for the human who picks them up",
+    )
     parser.add_argument("--explain", metavar="RULE_ID", help="show the full parse for one rule")
     args = parser.parse_args(argv)
 
@@ -482,6 +489,11 @@ def main(argv: list[str] | None = None) -> int:
         row["parser_verdict"] = verdict.status
         row["parser_reason"] = verdict.reason
         row["parser_provision"] = " ".join(verdict.provision.split())
+        # Never cleared by a re-run: `parser_reason` is the machine's re-derivable finding, while
+        # the note is what a person wrote about why this rule needs a person. Losing that on the
+        # next pass would quietly re-open work somebody had already thought about.
+        if args.review_note and verdict.status == QUARANTINE:
+            row["review_note"] = args.review_note
 
         if verdict.status == CONFIRMED:
             tally.confirmed += 1
@@ -538,7 +550,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"  report written      : {REPORT_JSON}")
 
-    if args.write or args.write_quotes:
+    if args.write or args.write_quotes or args.review_note:
         save(EXCLUSIONS_CSV, fields, rows)
         print(f"  exclusions.csv      : updated"
               f"{' (verdicts + verified)' if args.write else ' (quotes only)'}")
