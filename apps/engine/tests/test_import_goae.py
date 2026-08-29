@@ -306,3 +306,42 @@ def test_no_licensed_data_is_committed():
     contents = [p.name for p in licensed.iterdir()] if licensed.exists() else []
 
     assert [c for c in contents if c not in {".gitkeep", "README.md"}] == []
+
+
+def test_run_on_provisions_are_split_into_separate_sentences():
+    """The source runs provisions together with no space, and numbers them: `...begründen.4.Die`.
+
+    `split_sentences` required whitespace after the full stop, so a paragraph like this became ONE
+    sentence and every rule extracted from it stored all three provisions as its `quote`. That quote
+    is the evidence a reviewer decides from: two of these three are frequency restrictions the
+    engine cannot evaluate, so a sound exclusion arrived looking like a temporal rule, and 116
+    exclusion rules carried a quote like it.
+    """
+    from scripts.import_goae import split_sentences
+
+    paragraph = (
+        "Bei den Leistungen nach den Nummern 1, 5, 6, 7 und/oder 8 ist eine mehrmalige "
+        "Berechnung an demselben Tag auf Verlangen zu begründen."
+        "4.Die Leistungen nach den Nummern 1, 3, 22, 30 und/oder 34 sind neben den Leistungen "
+        "nach den Nummern 804 bis 812 nicht berechnungsfähig."
+        "5.Mehr als zwei Visiten an demselben Tag können nur berechnet werden."
+    )
+
+    sentences = split_sentences(paragraph)
+
+    assert len(sentences) == 3, sentences
+    assert sentences[0].startswith("Bei den Leistungen")
+    assert sentences[1].startswith("Die Leistungen nach den Nummern 1, 3, 22")
+    assert sentences[1].endswith("nicht berechnungsfähig.")
+    assert sentences[2].startswith("Mehr als zwei Visiten")
+    # The exclusion must come out on its own, carrying none of the frequency language beside it.
+    assert "mehrmalige" not in sentences[1] and "Mehr als zwei" not in sentences[1]
+
+
+def test_an_abbreviation_is_not_a_sentence_end():
+    """The other half: `\\s*` instead of `\\s+` must not start splitting on `Nr. 5`."""
+    from scripts.import_goae import split_sentences
+
+    assert split_sentences("Die Leistung nach Nr. 5 ist neben Nr. 7 nicht berechnungsfähig.") == [
+        "Die Leistung nach Nr. 5 ist neben Nr. 7 nicht berechnungsfähig."
+    ]

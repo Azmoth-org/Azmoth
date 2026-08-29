@@ -169,22 +169,39 @@ def test_component_is_chargeable_when_the_parent_is_absent(souffle):
 def test_unverified_rules_do_not_block_under_the_default_policy(settings, catalog):
     """The safety posture: a machine-read rule must not suppress a chargeable service.
 
-    Nr. 21 excludes Nr. 1 in the auto-extracted set, and that rule is unverified. Under
-    UNVERIFIED_RULE_POLICY=warn it must not block.
+    The rule under test is chosen from whatever the store is actually holding back, rather than
+    named. It used to name the auto-extracted Nr. 21 -> Nr. 1 edge, which was fine until a
+    verification pass verified it — at which point the test failed for the one reason that is not a
+    regression. What is being asserted is a property of the policy, not of any particular rule, so
+    the test now reads the property off the store and skips honestly if the backlog is ever empty.
     """
     warn_rules = RuleStore.load(policy=UnverifiedRulePolicy.WARN)
     engine = SouffleEngine(settings, catalog, warn_rules)
     if not engine.available():
         pytest.skip("souffle not available")
 
-    assert any(
-        r.from_ziffer == "21" and r.to_ziffer == "1" and not r.verified
-        for r in warn_rules.suppressed
-    ), "expected the auto-extracted Nr. 21 -> Nr. 1 rule to be held back"
+    held_back = next(
+        (
+            r
+            for r in warn_rules.suppressed
+            if not r.verified
+            and getattr(r, "from_ziffer", "")
+            and catalog.has(r.from_ziffer)
+            and catalog.has(r.to_ziffer)
+            and r.from_ziffer != r.to_ziffer
+        ),
+        None,
+    )
+    if held_back is None:
+        pytest.skip("no unverified exclusion left in the shipped data to exercise the policy with")
 
-    result = engine.run(make_extraction(), one_act_per_ziffer("21", "1"))
+    result = engine.run(
+        make_extraction(), one_act_per_ziffer(held_back.from_ziffer, held_back.to_ziffer)
+    )
 
-    assert set(result.billable) == {"1", "21"}
+    assert set(result.billable) == {held_back.from_ziffer, held_back.to_ziffer}, (
+        f"{held_back.rule_id} is unverified and must not block under policy=warn"
+    )
 
 
 def test_block_policy_enforces_unverified_rules(catalog):

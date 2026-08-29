@@ -146,22 +146,28 @@ def test_the_denominator_is_the_number_the_dashboard_counts_towards(csv_rules):
     the queue would pad a reviewer's backlog with work that changes no outcome.
     """
     coverage = coverage_service.build(csv_rules)
-    enforced_plus_suppressed = (
+    every_loaded_rule = (
         len(csv_rules.exclusions)
         + len(csv_rules.zielleistung)
         + len(csv_rules.specificity)
         + len(csv_rules.factor_caps)
         + len(csv_rules.suppressed)
+        # Verified, but asserting an edge a hand-curated rule already covers, so held out of the
+        # enforcement list. Still a rule the engine loaded, so still in the denominator: dropping it
+        # would make the total shrink every time a machine pass rediscovers a manual rule.
+        + len(csv_rules.redundant)
     )
 
-    assert coverage.total_constraint_rule_count == enforced_plus_suppressed
+    assert coverage.total_constraint_rule_count == every_loaded_rule
     assert coverage.total_constraint_rule_count == 894
     # Derived, not pinned. The *denominator* is a property of the CSVs and is asserted literally
     # above; the number still outstanding is supposed to fall as rules get verified, so a literal
     # here would have to be edited after every verification pass — which is exactly the kind of
     # edit that stops anyone reading what the test is for.
     assert coverage.unverified_rule_count == (
-        coverage.total_constraint_rule_count - coverage.enforced_rule_count
+        coverage.total_constraint_rule_count
+        - coverage.enforced_rule_count
+        - len(csv_rules.redundant)
     )
     # The analog candidates are outside the denominator entirely.
     assert csv_rules.analog_candidates
@@ -231,8 +237,13 @@ def test_the_review_queue_lists_the_undecided_rules_with_their_evidence(client):
 
     assert body["total_constraint_rules"] == 894
     # Everything in the denominator that nobody has enforced yet is what a reviewer is offered.
+    # Redundant rules are verified and enforced by their twin, so they are neither in the queue
+    # nor a coverage gap — see `RuleStore._dedupe_exclusions`.
+    from app.api import deps
+
+    redundant = len(deps.pipeline().rules.redundant)
     assert body["pending_rule_count"] == (
-        body["total_constraint_rules"] - body["verified_rule_count"]
+        body["total_constraint_rules"] - body["verified_rule_count"] - redundant
     )
     assert body["pending_rule_count"] > 0, "an empty queue would make the rest of this vacuous"
     assert body["review_verified_rule_count"] == 0
@@ -289,8 +300,13 @@ def test_verifying_a_rule_removes_it_from_the_queue_and_moves_the_coverage(clien
     assert body["coverage"]["review_verified_rule_count"] == 1
     # One more rule is enforced than before, so one fewer is outstanding. Written as the identity
     # rather than a literal, because the CSV's own verified count moves as rules get curated.
+    from app.api import deps
+
     assert body["coverage"]["unverified_rule_count"] == (
-        before["total_constraint_rules"] - before["verified_rule_count"] - 1
+        before["total_constraint_rules"]
+        - before["verified_rule_count"]
+        - len(deps.pipeline().rules.redundant)
+        - 1
     )
 
     after = queue(client, limit=1000)
@@ -432,17 +448,30 @@ def synthetic_invoice(client, *ziffern: str) -> bytes:
 def test_verifying_a_rule_moves_euros_out_of_unconfirmed_in_a_real_audit(client):
     """End to end, and the reason any of this is worth building.
 
-    `excl_auto_30_4` is one of the 837 machine-extracted exclusions: GOÄ 4 is not chargeable beside
-    GOÄ 30. Unverified, it enforces nothing, so an invoice charging both sits entirely in
-    `unconfirmed` — the engine has no verified rule that bears on either line and refuses to say
-    anything about the money. Verifying it has to change that in one step.
+    An invoice charging the two Ziffern of a still-unverified exclusion sits entirely in
+    `unconfirmed`: the engine has no verified rule bearing on either line and refuses to say
+    anything about the money. Verifying that one rule has to change it in one step.
 
-    The bundled nine-position example is deliberately *not* used here: no unverified rule in the
-    shipped data bears on it (the only two that do, `excl_auto_5_7` and `excl_auto_7_5`, duplicate
-    manual rules that are already verified), so the assertion would be vacuous. Checked rather than
-    assumed — the assertion below on the "before" state is what makes this test meaningful.
+    The rule is taken from the review queue rather than named. It used to name `excl_auto_30_4`,
+    which stopped working the day a verification pass verified that rule — a failure that says
+    nothing about the behaviour under test. The bundled nine-position example is deliberately not
+    used either: the assertion on the "before" state below is what keeps this test meaningful, and
+    it only holds for an invoice no verified rule reaches.
     """
-    payload = synthetic_invoice(client, "30", "4")
+    from app.api import deps
+
+    pending = deps.pipeline().rules.suppressed
+    target = next(
+        (
+            r
+            for r in pending
+            if not r.verified and getattr(r, "from_ziffer", "") and r.from_ziffer != r.to_ziffer
+        ),
+        None,
+    )
+    if target is None:
+        pytest.skip("every machine-extracted rule is verified; nothing left to promote")
+    payload = synthetic_invoice(client, target.from_ziffer, target.to_ziffer)
 
     def audit() -> dict:
         response = client.post(
@@ -459,7 +488,7 @@ def test_verifying_a_rule_moves_euros_out_of_unconfirmed_in_a_real_audit(client)
     )
     assert before["coverage_ratio"] == 0.0
 
-    assert review(client, "excl_auto_30_4").status_code == 200
+    assert review(client, target.rule_id).status_code == 200
 
     after = audit()
 
@@ -478,7 +507,7 @@ def test_verifying_a_rule_moves_euros_out_of_unconfirmed_in_a_real_audit(client)
     assert Decimal(after["claimed_total_eur"]) == Decimal(before["claimed_total_eur"])
 
     # Both positions now name the rule that decided them, so the verdict is traceable to the review.
-    assert all("excl_auto_30_4" in p["verified_rule_ids"] for p in after["positions"])
+    assert all(target.rule_id in p["verified_rule_ids"] for p in after["positions"])
 
     # And the receipt moved with the rules: two audits of one invoice under different rule sets
     # must not be confusable for each other.

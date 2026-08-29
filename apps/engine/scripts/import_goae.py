@@ -375,9 +375,26 @@ def parse_nummern(blob: str, known: set[str]) -> tuple[list[str], list[str], lis
     return deduped, expanded, unresolved
 
 
+#: A numbered list item the source runs into the previous sentence: `...zu begründen.4.Die`.
+_LIST_ITEM_RE = re.compile(r"(?<=[a-zäöüß)][.;])\s*\d{1,2}\.\s*(?=[A-ZÄÖÜ])")
+#: An ordinary sentence end. `\s*`, not `\s+`: the source frequently runs two provisions together
+#: with no space at all (`begründen.Anstelle`), and requiring whitespace here is what let three
+#: separate provisions be stored as one `quote` on 116 exclusion rules. A rule's quote is the
+#: evidence a reviewer decides from, so a quote carrying two unrelated provisions — a frequency
+#: restriction next to an exclusion — makes a sound rule look unsound and an unsound one look
+#: justified. The lookbehind spans the full stop rather than consuming it, so each sentence keeps
+#: its own punctuation; the lower-case/closing-paren requirement is what keeps `Nr.` intact.
+_SENTENCE_END_RE = re.compile(r"(?<=[a-zäöüß)][.;])\s*(?=[A-ZÄÖÜ][a-zäöüß])")
+#: `exclusions.manual.csv` joins one Anmerkung's provisions with a slash.
+_SLASH_RE = re.compile(r"\s+/\s+")
+
+
 def split_sentences(text: str) -> list[str]:
     """Split on sentence ends, but not on the '.' inside 'Nummer 5.' style references."""
-    parts = re.split(r"(?<=[.;])\s+(?=[A-ZÄÖÜ])", text)
+    parts: list[str] = []
+    for chunk in _LIST_ITEM_RE.split(text):
+        for piece in _SLASH_RE.split(chunk):
+            parts.extend(_SENTENCE_END_RE.split(piece))
     return [p.strip() for p in parts if p.strip()]
 
 

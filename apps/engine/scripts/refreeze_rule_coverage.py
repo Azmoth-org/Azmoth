@@ -57,6 +57,8 @@ ALLOWED = (
     "/audit_trail/rules_hash",
     "/audit_trail/rule_summary/factor_caps_enforced",
     "/audit_trail/rule_summary/exclusions_enforced",
+    "/audit_trail/rule_summary/exclusions_mutual",
+    "/audit_trail/rule_summary/redundant_rules",
     "/audit_trail/rule_summary/unverified_constraint_rules",
     "/audit_trail/rule_summary/unverified_rules_not_enforced",
     "/audit_trail/rule_summary/verified_share",

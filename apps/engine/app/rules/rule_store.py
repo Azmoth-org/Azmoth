@@ -99,6 +99,19 @@ class Rule:
         return self.review_status == str(RuleReviewStatus.REJECTED)
 
     @property
+    def hand_verified(self) -> bool:
+        """A person read this rule against the law, rather than a script or a model deriving it.
+
+        Read off `source` because that is where the distinction is recorded and versioned:
+        `manual_verification` is written only by a human editing a `.manual.` file, while a machine
+        pass stamps its own provenance (`deterministic_parser:…`, `ai_verified:<model>:…`). Used to
+        break ties when two rules assert the same thing — a curated legal citation beats a derived
+        one — and deliberately not used to decide whether a rule is enforced at all, which stays
+        `verified`'s job.
+        """
+        return self.source.startswith("manual") or self.verified_at == "by_review"
+
+    @property
     def provenance(self) -> dict:
         return {
             "rule_id": self.rule_id,
@@ -217,6 +230,13 @@ class RuleStore:
     factor_caps: list[FactorCapRule] = field(default_factory=list)
     #: Rules loaded but not enforced — unverified under the policy, or rejected by a reviewer.
     suppressed: list[Rule] = field(default_factory=list)
+
+    #: Rules that ARE verified but assert an edge another enforced rule already covers — see
+    #: `_dedupe_exclusions`. Kept out of the enforcement lists so the solver sees one rule per edge,
+    #: and kept here rather than dropped so the denominator still counts every rule the engine
+    #: loaded. A redundant rule is neither suppressed (that means policy refused it) nor a coverage
+    #: gap: the edge it asserts *is* enforced, by its twin.
+    redundant: list[Rule] = field(default_factory=list)
     files_loaded: list[str] = field(default_factory=list)
     #: What the CSVs said, so `with_reviews` can decide admission again from scratch.
     source: SourceRules = field(default_factory=SourceRules)
@@ -266,11 +286,44 @@ class RuleStore:
         )
         return RuleStore._from_source(merged, self.policy)
 
+    @staticmethod
+    def _dedupe_exclusions(
+        rules: list[ExclusionRule],
+    ) -> tuple[list[ExclusionRule], list[ExclusionRule]]:
+        """One enforced rule per directed edge, preferring the hand-verified one.
+
+        Two rules can assert the same edge once a machine-extracted rule is verified: every one of
+        the 30 rules in `exclusions.manual.csv` is also derivable from the Anmerkungen prose, so the
+        auto table carries the same 30 edges. Both being enforced is not merely redundant, it is
+        visibly wrong in two places — `conflicts_arbitrated` lists the pair once per rule, so a
+        reviewer sees "GOÄ 5 ↔ GOÄ 7" twice; and whichever rule the solver happens to cite supplies
+        the `legal_basis`, so the curated "GOÄ Anmerkungen zu den Nummern 5, 6, 7, 8 (Abschnitt B I)"
+        can be replaced by the narrower "GOÄ Anmerkung zu Nummer 7" that the extractor produced.
+
+        A human wrote the manual rule's citation after reading the whole Abschnitt, so it wins. Order
+        is otherwise preserved, because the solver's output must not depend on dictionary iteration.
+        """
+        best: dict[tuple[str, str], ExclusionRule] = {}
+        order: list[tuple[str, str]] = []
+        for rule in rules:
+            edge = (rule.from_ziffer, rule.to_ziffer)
+            incumbent = best.get(edge)
+            if incumbent is None:
+                best[edge] = rule
+                order.append(edge)
+            elif rule.hand_verified and not incumbent.hand_verified:
+                best[edge] = rule
+        kept = [best[edge] for edge in order]
+        winners = {id(rule) for rule in kept}
+        return kept, [rule for rule in rules if id(rule) not in winners]
+
     @classmethod
     def _from_source(cls, source: SourceRules, policy: UnverifiedRulePolicy) -> RuleStore:
         """Run the admission policy over a parsed rule set. The one place `_admit` is called."""
         store = cls(policy=policy, source=source, files_loaded=list(source.files_loaded))
-        store.exclusions = [r for r in source.exclusions if store._admit(r)]
+        store.exclusions, store.redundant = cls._dedupe_exclusions(
+            [r for r in source.exclusions if store._admit(r)]
+        )
         store.zielleistung = [r for r in source.zielleistung if store._admit(r)]
         store.specificity = [r for r in source.specificity if store._admit(r)]
         store.factor_caps = [r for r in source.factor_caps if store._admit(r)]
@@ -511,6 +564,7 @@ class RuleStore:
             *self.specificity,
             *self.factor_caps,
             *self.suppressed,
+            *self.redundant,
         ]
 
     def rejected_rule_count(self) -> int:
