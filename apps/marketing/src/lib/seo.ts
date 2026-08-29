@@ -1,62 +1,34 @@
 import type { Metadata } from "next";
 
+import { siteConfig } from "@/lib/site";
+
 /**
- * SEO helpers — SILKDEV (mirrors the SILKLEARN marketing-site pattern, but
- * locale-aware: silkdev routes every page under /en /fr /ar).
+ * Canonical URLs and per-page metadata.
+ *
+ * The site is single-locale, so there are no hreflang alternates to emit — a
+ * `languages` map naming only `de` is noise that tells a crawler nothing. When a
+ * second locale arrives, this is where it comes back.
  */
 
-const siteName = "Silkdev";
-const defaultTitle = "Web Design & Development Agency | Silkdev";
-const defaultDescription =
-  "Designing software from Tunisia. An AI development agency in Bizerte.";
+export function getSiteUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured) return configured;
 
-export const LOCALES = ["en", "fr"] as const;
-export type Locale = (typeof LOCALES)[number];
+  const production = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (production) return `https://${production}`;
 
-export function isLocale(value: string): value is Locale {
-  return (LOCALES as readonly string[]).includes(value);
+  const preview = process.env.VERCEL_URL;
+  if (preview) return `https://${preview}`;
+
+  return "http://localhost:3001";
 }
 
-export const ogLocales: Record<Locale, string> = {
-  en: "en_US",
-  fr: "fr_FR",
-};
-
-export function getSiteUrl() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL;
-
-  if (configuredUrl) {
-    return configuredUrl;
-  }
-
-  const productionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-
-  if (productionUrl) {
-    return `https://${productionUrl}`;
-  }
-
-  const previewUrl = process.env.VERCEL_URL;
-
-  if (previewUrl) {
-    return `https://${previewUrl}`;
-  }
-
-  return "https://silkdev.com.tn";
-}
-
-export function absoluteUrl(path = "/") {
+export function absoluteUrl(path = "/"): string {
   return new URL(path, getSiteUrl()).toString();
 }
 
-/** Locale-prefixed path, e.g. localePath("/services", "fr") → "/fr/services". */
-export function localePath(path: string, locale: Locale): string {
-  const normalized = path === "/" ? "" : path;
-  return `/${locale}${normalized}`;
-}
-
-type BuildLocaleMetadataInput = {
-  locale: Locale;
-  /** Locale-less path of the page, e.g. "/services" or "/". */
+type PageMetadataInput = {
+  /** Path of the page, e.g. "/funktionen" or "/". */
   path: string;
   title: string;
   description: string;
@@ -64,102 +36,65 @@ type BuildLocaleMetadataInput = {
   keywords?: string[];
 };
 
-/**
- * Metadata for one locale version of a page: self-referencing canonical,
- * hreflang alternates across en/fr (+ x-default → the English version),
- * and Open Graph/twitter with the absolute URL and the right og:locale.
- */
-export function buildLocaleMetadata({
-  locale,
+/** Metadata for one page: self-referencing canonical, Open Graph, Twitter card. */
+export function buildPageMetadata({
   path,
   title,
   description,
   type = "website",
   keywords,
-}: BuildLocaleMetadataInput): Metadata {
-  const canonicalPath = localePath(path, locale);
-  const url = absoluteUrl(canonicalPath);
-
-  const languages: Record<string, string> = {
-    en: localePath(path, "en"),
-    fr: localePath(path, "fr"),
-    "x-default": localePath(path, "en"),
-  };
-
+}: PageMetadataInput): Metadata {
   return {
     title,
     description,
     keywords,
-    alternates: {
-      canonical: canonicalPath,
-      languages,
-    },
+    alternates: { canonical: path },
     openGraph: {
       type,
-      url,
+      url: absoluteUrl(path),
       title,
       description,
-      siteName,
-      locale: ogLocales[locale],
-      images: [
-        {
-          url: "/og-image.png",
-          width: 500,
-          height: 500,
-          alt: title,
-        },
-      ],
+      siteName: siteConfig.name,
+      locale: "de_DE",
     },
     twitter: {
       card: "summary",
       title,
       description,
-      images: ["/og-image.png"],
     },
   };
 }
 
+const defaultTitle = `${siteConfig.name} — ${siteConfig.tagline}`;
+
 export const defaultMetadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: defaultTitle,
-  description: defaultDescription,
+  title: {
+    default: defaultTitle,
+    template: `%s · ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  /*
+   * SVG only. The .ico / .png / apple-touch set that used to be here was the
+   * original template author's artwork and was removed with the rest of their
+   * branding; pointing at files that no longer exist would serve 404s to every
+   * browser that asks. Phase 2 generates the raster set from the real Azmoth mark.
+   */
   icons: {
-    icon: [
-      { url: "/favicon.ico", type: "image/x-icon" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon-96x96.png", type: "image/png", sizes: "96x96" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-    shortcut: { url: "/favicon.ico" },
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },
   manifest: "/site.webmanifest",
   openGraph: {
     type: "website",
-    url: absoluteUrl("/en"),
+    url: absoluteUrl("/"),
     title: defaultTitle,
-    description: defaultDescription,
-    siteName,
-    locale: "en_US",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 500,
-        height: 500,
-        alt: "Silkdev",
-      },
-    ],
+    description: siteConfig.description,
+    siteName: siteConfig.name,
+    locale: "de_DE",
   },
   twitter: {
     card: "summary",
     title: defaultTitle,
-    description: defaultDescription,
-    images: ["/og-image.png"],
+    description: siteConfig.description,
   },
-};
-
-export const siteMetadata = {
-  siteName,
-  defaultTitle,
-  defaultDescription,
-  LOCALES,
 };

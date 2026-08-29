@@ -1,0 +1,226 @@
+{
+  "navigation": {
+    "ariaLabel": "Hauptnavigation",
+    "menue": "Menü",
+    "menueOeffnen": "Menü öffnen",
+    "funktionen": "Funktionen",
+    "faq": "Häufige Fragen",
+    "ueberUns": "Über uns",
+    "kontakt": "Kontakt",
+    "datenschutz": "Datenschutz",
+    "agb": "AGB",
+    "anmelden": "Anmelden",
+    "testen": "Kostenlos testen"
+  },
+  "footer": {
+    "claim": "Deterministische GOÄ-Kodierung und Rechnungsprüfung — mit einer Begründung, die einer Rückfrage standhält.",
+    "produkt": "Produkt",
+    "unternehmen": "Unternehmen",
+    "rechtliches": "Rechtliches",
+    "rechte": "Alle Rechte vorbehalten.",
+    "hinweis": "Azmoth ersetzt keine ärztliche oder rechtliche Beratung."
+  },
+  "cookies": {
+    "titel": "Cookie-Hinweis",
+    "text": "Wir verwenden Analyse-Cookies nur mit Ihrer Einwilligung. Ohne Zustimmung wird nichts geladen und nichts gemessen.",
+    "mehr": "Mehr erfahren",
+    "akzeptieren": "Akzeptieren",
+    "ablehnen": "Ablehnen"
+  },
+  "startseite": {
+    "hero": {
+      "badge": "Für Privatliquidation nach GOÄ",
+      "titel": "Jede Ziffer begründet. Jede Rechnung belastbar.",
+      "untertitel": "Azmoth liest Ihre Behandlungsdokumentation, schlägt die passenden GOÄ-Ziffern vor und legt für jede einzelne offen, aus welcher Regel sie folgt. Kein Blackbox-Vorschlag, den Sie der Erstattungsstelle nicht erklären können.",
+      "ctaPrimaer": "Kostenlos testen",
+      "ctaSekundaer": "Funktionen ansehen",
+      "hinweis": "Kein Zahlungsmittel erforderlich."
+    },
+    "ablauf": {
+      "titel": "Drei Schritte bis zur geprüften Rechnung",
+      "untertitel": "Vom Dokument zur nachvollziehbaren Position — ohne Zwischenschritt in einer Tabelle.",
+      "schritte": [
+        {
+          "titel": "Dokumentation übergeben",
+          "text": "Behandlungsdokumentation oder eine bestehende Rechnung hochladen. PADnext-Lieferungen werden vor der Verarbeitung gegen das ADL-Schema geprüft — fehlerhafte Datensätze werden mit Zeilenangabe abgewiesen statt still verarbeitet."
+        },
+        {
+          "titel": "Ziffern prüfen lassen",
+          "text": "Der Regelkern schlägt Ziffern vor, erkennt Ausschlüsse und Analogansätze und ordnet jede Position der Gebührenordnung zu, die zum Behandlungsdatum galt."
+        },
+        {
+          "titel": "Freigeben oder korrigieren",
+          "text": "Sie sehen jeden Vorschlag mit seiner Begründung, bevor etwas verbindlich wird. Freigabe, Änderung und Ablehnung werden protokolliert."
+        }
+      ]
+    },
+    "funktionen": {
+      "titel": "Was Azmoth tatsächlich prüft",
+      "untertitel": "Kein Sprachmodell, das plausibel klingt. Ein Regelwerk, das dieselbe Eingabe zweimal gleich beantwortet.",
+      "punkte": [
+        {
+          "titel": "Deterministische Kodierung",
+          "text": "Dieselbe Dokumentation ergibt dieselben Ziffern — heute, morgen und in der Rückfrage in acht Monaten."
+        },
+        {
+          "titel": "Begründung je Position",
+          "text": "Zu jeder Ziffer die Regel, aus der sie folgt. Das ist der Unterschied zwischen einem Vorschlag und einer belastbaren Position."
+        },
+        {
+          "titel": "Ausschlüsse und Analogansatz",
+          "text": "Nebeneinander nicht berechnungsfähige Leistungen werden erkannt. Ein Analogansatz unterliegt denselben Ausschlüssen wie jede andere Position."
+        },
+        {
+          "titel": "Zeitliche Zuordnung",
+          "text": "Eine Rechnung wird gegen die Fassung der Gebührenordnung geprüft, die am Behandlungstag galt — nicht gegen die heutige."
+        },
+        {
+          "titel": "PADnext-Prüfung",
+          "text": "Stapelverarbeitung für PADnext-Lieferungen mit Schema-Validierung und einer nach Ursache getrennten Auswertung."
+        },
+        {
+          "titel": "Prüfpfad",
+          "text": "Vorschlag, Änderung und Freigabe werden mit Zeitpunkt und Person festgehalten. Eine Rückfrage lässt sich beantworten, ohne zu rekonstruieren."
+        }
+      ]
+    },
+    "grenzen": {
+      "titel": "Was Azmoth nicht ist",
+      "untertitel": "Ehrlicher als eine Funktionsliste, und für die Entscheidung nützlicher.",
+      "punkte": [
+        "Azmoth entscheidet nicht. Jede Position wird vorgeschlagen und von einem Menschen freigegeben — die ärztliche Verantwortung bleibt, wo sie hingehört.",
+        "Azmoth ist keine Praxisverwaltung. Es kodiert und prüft; Terminplanung, Karteiführung und Buchhaltung bleiben in Ihren bestehenden Systemen.",
+        "Azmoth ersetzt keine Rechtsberatung. Bei strittigen Erstattungsfragen liefert es die Begründung, nicht das Urteil."
+      ]
+    },
+    "cta": {
+      "titel": "Sehen Sie es an Ihren eigenen Fällen",
+      "text": "Legen Sie einen Zugang an und prüfen Sie eine Rechnung, deren richtige Antwort Sie bereits kennen. Das ist der einzige Test, der etwas aussagt.",
+      "primaer": "Kostenlos testen",
+      "sekundaer": "Fragen? Sprechen Sie uns an"
+    }
+  },
+  "funktionen": {
+    "titel": "Funktionen",
+    "untertitel": "Azmoth deckt den Weg von der Dokumentation bis zur freigegebenen Rechnung ab — und legt an jeder Stelle offen, warum es zu seinem Ergebnis kommt.",
+    "gruppen": [
+      {
+        "titel": "Kodierung",
+        "punkte": [
+          "Ziffernvorschlag aus der Behandlungsdokumentation",
+          "Erkennung nicht nebeneinander berechnungsfähiger Leistungen",
+          "Analogansatz mit denselben Ausschlussregeln wie reguläre Positionen",
+          "Zuordnung zur Fassung der Gebührenordnung, die am Behandlungstag galt"
+        ]
+      },
+      {
+        "titel": "Prüfung",
+        "punkte": [
+          "Prüfung bestehender Rechnungen gegen dieselben Regeln",
+          "PADnext-Stapelverarbeitung mit Schema-Validierung vor der Verarbeitung",
+          "Abweisung fehlerhafter Lieferungen mit Angabe der betroffenen Zeile",
+          "Auswertung getrennt nach Ursache statt einer einzigen Summe"
+        ]
+      },
+      {
+        "titel": "Nachvollziehbarkeit",
+        "punkte": [
+          "Begründung je Position mit Verweis auf die angewandte Regel",
+          "Protokoll über Vorschlag, Änderung und Freigabe",
+          "Reproduzierbares Ergebnis bei gleicher Eingabe",
+          "Druckbare Ansicht für Rückfragen der Erstattungsstelle"
+        ]
+      },
+      {
+        "titel": "Betrieb",
+        "punkte": [
+          "Getrennte Datenhaltung je Praxis",
+          "Rollen für Ärztinnen, Ärzte und Abrechnungskräfte",
+          "Zwei-Schritt-Einrichtung ohne Migrationsprojekt",
+          "Betrieb in Deutschland"
+        ]
+      }
+    ],
+    "cta": {
+      "titel": "Am schnellsten beurteilen Sie es selbst",
+      "text": "Ein Zugang ist in wenigen Minuten eingerichtet.",
+      "primaer": "Kostenlos testen"
+    }
+  },
+  "ueberUns": {
+    "titel": "Über Azmoth",
+    "untertitel": "Warum wir ein Regelwerk gebaut haben und kein Sprachmodell.",
+    "absaetze": [
+      "Die Privatliquidation nach GOÄ scheitert selten am guten Willen. Sie scheitert daran, dass eine korrekte Rechnung Regelwissen voraussetzt, das über Ausschlüsse, Analogansätze und mehrere Fassungen der Gebührenordnung verteilt ist — und dass eine Rückfrage der Erstattungsstelle Monate später kommt, wenn niemand mehr weiß, warum eine Ziffer angesetzt wurde.",
+      "Azmoth beantwortet genau diese Frage. Der Kern ist ein deterministisches Regelwerk: Dieselbe Dokumentation ergibt dieselbe Rechnung, und zu jeder Position steht die Regel dabei, aus der sie folgt. Ein Sprachmodell hätte das nicht leisten können — es hätte plausibel geklungen und wäre bei der zweiten Anfrage anders ausgefallen.",
+      "Die Entscheidung bleibt bei Ihnen. Azmoth schlägt vor, prüft und begründet; freigegeben wird von einem Menschen. Was wir liefern, ist die Vorarbeit — vollständig, überprüfbar und in Sekunden statt in einer Stunde."
+    ]
+  },
+  "faq": {
+    "titel": "Häufige Fragen",
+    "untertitel": "Was Praxen vor der Einführung wissen wollen.",
+    "fragen": [
+      {
+        "q": "Verwendet Azmoth ein Sprachmodell für die Kodierung?",
+        "a": "Nein. Die Ziffernermittlung läuft über ein deterministisches Regelwerk. Das ist die Voraussetzung dafür, dass dieselbe Eingabe zweimal dasselbe Ergebnis liefert und dass zu jeder Position eine nachvollziehbare Begründung gehört."
+      },
+      {
+        "q": "Entscheidet Azmoth eigenständig über die Abrechnung?",
+        "a": "Nein. Jede Position wird vorgeschlagen und muss freigegeben werden. Die Freigabe ist der Punkt, an dem ein Mensch die Verantwortung übernimmt — Azmoth protokolliert sie, trifft sie aber nicht."
+      },
+      {
+        "q": "Was passiert bei einer Rückfrage der Erstattungsstelle?",
+        "a": "Zu jeder abgerechneten Position ist hinterlegt, aus welcher Regel sie folgt und wer sie wann freigegeben hat. Die Rückfrage lässt sich beantworten, ohne den Fall zu rekonstruieren."
+      },
+      {
+        "q": "Wird gegen die aktuelle oder die damals gültige Gebührenordnung geprüft?",
+        "a": "Gegen die Fassung, die am Behandlungstag galt. Eine Rechnung über eine Behandlung aus dem Vorjahr wird nicht an heutigen Regeln gemessen."
+      },
+      {
+        "q": "Können bestehende Rechnungen geprüft werden?",
+        "a": "Ja. Bestehende Rechnungen und PADnext-Lieferungen laufen durch dieselben Regeln wie eine Neukodierung. PADnext-Daten werden vor der Verarbeitung gegen das ADL-Schema validiert; fehlerhafte Lieferungen werden mit Angabe der betroffenen Zeile abgewiesen."
+      },
+      {
+        "q": "Wie sind die Daten mehrerer Praxen getrennt?",
+        "a": "Jede Praxis hat eine eigene Datenhaltung. Ein Zugang sieht ausschließlich die Vorgänge der eigenen Praxis."
+      },
+      {
+        "q": "Wie aufwendig ist die Einrichtung?",
+        "a": "Die Einrichtung erfolgt in zwei Schritten und erfordert kein Migrationsprojekt. Azmoth ersetzt keine Praxisverwaltung, sondern setzt an der Stelle an, an der kodiert und geprüft wird."
+      }
+    ]
+  },
+  "kontakt": {
+    "titel": "Kontakt",
+    "untertitel": "Fragen zur Einführung, zum Regelwerk oder zur Datenhaltung? Schreiben Sie uns — eine Antwort kommt von einem Menschen.",
+    "emailLabel": "E-Mail",
+    "hinweisTitel": "Bereits Kundin oder Kunde?",
+    "hinweisText": "Support-Anfragen gehen am schnellsten direkt aus der Anwendung heraus.",
+    "hinweisCta": "Zur Anmeldung"
+  },
+  "recht": {
+    "platzhalterTitel": "Rechtlich zu prüfender Entwurf",
+    "platzhalterText": "Dieser Text ist ein Strukturentwurf und ersetzt keine anwaltlich geprüfte Fassung. Vor Veröffentlichung müssen die mit [...] markierten Angaben ergänzt und der gesamte Text rechtlich geprüft werden."
+  },
+  "nichtGefunden": {
+    "titel": "Seite nicht gefunden",
+    "text": "Diese Adresse gibt es nicht — oder nicht mehr.",
+    "cta": "Zur Startseite"
+  },
+  "metadaten": {
+    "startseiteTitel": "GOÄ-Kodierung und Rechnungsprüfung",
+    "startseiteBeschreibung": "Azmoth schlägt GOÄ-Ziffern aus Ihrer Behandlungsdokumentation vor und begründet jede einzelne. Deterministisch, nachvollziehbar, prüffest.",
+    "funktionenTitel": "Funktionen",
+    "funktionenBeschreibung": "Kodierung, Prüfung und Nachvollziehbarkeit — von der Dokumentation bis zur freigegebenen Rechnung.",
+    "ueberUnsTitel": "Über uns",
+    "ueberUnsBeschreibung": "Warum Azmoth auf ein deterministisches Regelwerk setzt statt auf ein Sprachmodell.",
+    "faqTitel": "Häufige Fragen",
+    "faqBeschreibung": "Antworten zu Regelwerk, Freigabe, Datenhaltung und Einrichtung von Azmoth.",
+    "kontaktTitel": "Kontakt",
+    "kontaktBeschreibung": "Fragen zur Einführung von Azmoth in Ihrer Praxis? Schreiben Sie uns.",
+    "datenschutzTitel": "Datenschutz",
+    "datenschutzBeschreibung": "Wie Azmoth personenbezogene Daten verarbeitet.",
+    "agbTitel": "AGB",
+    "agbBeschreibung": "Allgemeine Geschäftsbedingungen für die Nutzung von Azmoth."
+  }
+}

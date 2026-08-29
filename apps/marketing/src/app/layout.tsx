@@ -1,62 +1,39 @@
 import type { Metadata } from "next";
-import Script from "next/script";
+import { Inter } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { NextIntlClientProvider } from "next-intl";
+
+import { cn } from "@workspace/ui/lib/utils";
+
 import { defaultMetadata } from "@/lib/seo";
 import { getOrganizationSchema, getWebsiteSchema } from "@/lib/structured-data";
+
 import "./globals.css";
+
+/**
+ * `next/font` rather than an `@import url(fonts.googleapis.com)` in the stylesheet.
+ * The CSS import is render-blocking against a third-party origin on every cold
+ * visit; this self-hosts the file, emits the `@font-face` inline, and sets
+ * `--font-sans`, which is the variable `@workspace/ui` already reads.
+ */
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = defaultMetadata;
 
-// Google Tag Manager — container GTM-MDTCM7XG.
-// Head snippet (as high in <head> as possible) + noscript right after <body>.
-const GTM_HEAD = `<!-- Google Tag Manager -->
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-MDTCM7XG');</script>
-<!-- End Google Tag Manager -->`;
+const structuredData = JSON.stringify([getOrganizationSchema(), getWebsiteSchema()]);
 
-const GTM_NOSCRIPT = `<!-- Google Tag Manager (noscript) -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MDTCM7XG"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-<!-- End Google Tag Manager (noscript) -->`;
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  // lang/dir are set per-locale by a pre-paint script in the [locale]
-  // layout — suppressHydrationWarning stops React from flagging the
-  // post-server mutation (standard next-intl pattern).
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
-      {/* GTM head snippet — beforeInteractive injects it into <head> in the
-          initial HTML, as high as the app router allows. */}
-      <Script
-        id="gtm-container"
-        strategy="beforeInteractive"
-        dangerouslySetInnerHTML={{ __html: GTM_HEAD }}
-      />
-      <body className="antialiased">
-        <noscript dangerouslySetInnerHTML={{ __html: GTM_NOSCRIPT }} />
-        {/* Organization + WebSite structured data (JSON-LD) — plain script tag
-            so it lands in the static HTML for crawlers (next/script would
-            defer it into the RSC payload instead). */}
+    <html lang="de" className={cn(inter.variable, "dark")} suppressHydrationWarning>
+      <body className="bg-background text-foreground antialiased">
+        {/*
+         * A plain <script>, not next/script: this has to be in the static HTML a
+         * crawler receives, and next/script would defer it into the RSC payload.
+         */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify([
-              getOrganizationSchema(),
-              getWebsiteSchema(),
-            ]),
-          }}
+          dangerouslySetInnerHTML={{ __html: structuredData }}
         />
         {children}
-        {/* Vercel Speed Insights — real-user Core Web Vitals (auto project-id
-            on Vercel deployments; no-op off Vercel). */}
         <SpeedInsights />
       </body>
     </html>

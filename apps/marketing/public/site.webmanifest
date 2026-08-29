@@ -1,23 +1,17 @@
 {
-  "name": "SILKDEV — AI Development Agency",
-  "short_name": "SILKDEV",
-  "description": "Designing software from Tunisia. Building products for the AI era.",
-  "start_url": "/en",
+  "name": "Azmoth — GOÄ-Kodierung und Rechnungsprüfung",
+  "short_name": "Azmoth",
+  "description": "Deterministische GOÄ-Kodierung und Rechnungsprüfung mit nachvollziehbarer Begründung.",
+  "start_url": "/",
+  "lang": "de",
   "icons": [
     {
-      "src": "/web-app-manifest-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/web-app-manifest-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ],
-  "theme_color": "#0a0a14",
-  "background_color": "#0a0a14",
+  "theme_color": "#101828",
+  "background_color": "#101828",
   "display": "standalone"
 }

@@ -1,20 +1,26 @@
 import Link from "next/link";
 
+/**
+ * Root 404 — reached only for paths the locale middleware never matched (a request
+ * for a file-like URL, say). It renders outside `[locale]`, so there is no
+ * translation context here and the two strings are inline by necessity.
+ */
 export default function RootNotFound() {
   return (
-    <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
-      <div className="text-center max-w-md mx-auto px-8">
-        <h1 className="text-[64px] font-bold text-white mb-4 font-['Manrope',system-ui,sans-serif]">
-          404
+    <div className="flex min-h-screen items-center justify-center px-4">
+      <div className="flex max-w-md flex-col items-center gap-4 text-center">
+        <p className="font-heading text-sm font-medium text-muted-foreground">404</p>
+        <h1 className="font-heading text-3xl font-semibold tracking-tight">
+          Seite nicht gefunden
         </h1>
-        <p className="text-[var(--muted)] mb-8 text-[17px] tracking-[-0.01em]">
-          Page not found
+        <p className="text-muted-foreground">
+          Diese Adresse gibt es nicht — oder nicht mehr.
         </p>
         <Link
           href="/"
-          className="inline-flex items-center px-6 py-3 bg-[var(--accent)] text-white rounded-[10px] font-medium text-[15px] hover:bg-[var(--accent-hover)] transition-colors duration-150 btn-press"
+          className="mt-2 inline-flex h-10 items-center rounded-4xl bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
         >
-          Go Home
+          Zur Startseite
         </Link>
       </div>
     </div>
