@@ -1,0 +1,51 @@
+# SILKDEV
+
+> SILKDEV (Silkdev-SUARL, matricule fiscal 1782006M) is an AI development agency based in Bizerte, Tunisia. We design, engineer, and ship software end to end — web apps, AI agents, knowledge systems, and platforms — for clients in Tunisia and worldwide. "If it can be done, it will be done."
+
+Every project starts with an AI intake chat on the website; active clients get a portal with a project planner, notifications, and an AI project representative that remembers their preferences. Services are scoped individually and quoted at a fixed price — no public price list.
+
+The site is available in English and French (Arabic was removed — existing /ar URLs redirect to French).
+
+## Important URLs
+
+- Homepage: https://silkdev.com.tn/
+- Services: https://silkdev.com.tn/en/services
+- Products ("What we're building"): https://silkdev.com.tn/en/products
+- Blog: https://silkdev.com.tn/en/blog
+- FAQ: https://silkdev.com.tn/en/faq
+- About: https://silkdev.com.tn/en/about
+- Contact: https://silkdev.com.tn/en/contact
+- Client portal login: https://silkdev.com.tn/en/login
+- Terms of Service: https://silkdev.com.tn/en/terms
+- Privacy Policy: https://silkdev.com.tn/en/privacy
+- AI intake assistant: available via the chat widget on every page
+
+## Services
+
+1. Web Development & Design — sites that convert, platforms that scale. React/Next.js, e-commerce, SaaS, SEO, internationalization.
+2. AI Support Agents — customer support on WhatsApp, web chat, and email in Arabic, French, and English, 24/7, with human handoff.
+3. Custom AI Features — semantic search, auto-tagging, summarization, and recommendations built inside existing products.
+4. Knowledge & Document AI — PDFs, Notion, Drive, and wikis become a searchable, citation-grounded knowledge base (powered by SILKLEARN).
+5. Workflow Automation — invoicing, lead routing, reporting, and CRM automation for the back office.
+6. AI Strategy & Fractional CTO — technical leadership and AI adoption planning without a full-time hire.
+
+## Products
+
+- SILKLEARN — knowledge infrastructure that keeps compounding: https://silklearn.io (live)
+- SILKLABS — experimental tools for the post-LLM era: https://labs.silkdev.com.tn
+- SILKGUILD — RPG-based distributed learning guilds (coming soon)
+- SILKLOOM — AI workflow agents that weave themselves (coming soon)
+- LucaP — AI-native accounting for modern businesses: https://nexus.silkdev.io
+- Meridian — client portal & agency ops (coming soon)
+
+## Key facts
+
+- Location: Bureau 5, Centre Aziza, 1er étage, Av. de l'Indépendance, Menzel Bourguiba 7050, Tunisia
+- Contact: contact@silkdev.com.tn
+- Rating: 5.0 on Google (Menzel Bourguiba, Tunisia)
+- Clients include: IPS, Luca Pacioli, Wolves Gym, Podomus, Trueveda, Creacom
+- 4+ years in business · 4 products launched · 2 locales supported
+- Payments: Konnect (Global Net International) for online payments in Tunisia
+- Legal entity: Silkdev-SUARL (matricule fiscal 1782006M)
+- Email: transactional email via ZeptoMail (brief confirmations, project updates, password resets)
+- Languages: English, French

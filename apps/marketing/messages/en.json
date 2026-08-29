@@ -1,0 +1,915 @@
+{
+ "$schema": "https://unpkg.com/next-intl@4/schema.json",
+ "metadata": {
+  "title": "Web Design & Development Agency | Silkdev",
+  "description": "Designing software from Tunisia. An AI development agency in Bizerte."
+ },
+ "navigation": {
+  "home": "Home",
+  "products": "Products",
+  "services": "Services",
+  "blog": "Blog",
+  "about": "About",
+  "faq": "FAQ",
+  "contact": "Contact",
+  "intake": "Start a project",
+  "portal": "Portal",
+  "privacy": "Privacy",
+  "terms": "Terms",
+  "langEn": "EN",
+  "langFr": "FR",
+  "logo": "SILKDEV",
+  "language": "Language"
+ },
+ "footer": {
+  "description": "SILKDEV is an AI development agency based in Bizerte, Tunisia — designing and shipping software for the AI era.",
+  "products": "Products",
+  "getInTouch": "Get in Touch",
+  "socialMedia": "Social Media",
+  "hours": "8AM–5PM (UTC) Monday–Friday",
+  "ourLinks": "Our Links",
+  "home": "Home",
+  "copyright": "© {year} SILKDEV. All rights reserved.",
+  "services": "Services",
+  "startProject": "Start a project",
+  "blog": "Blog",
+  "about": "About",
+  "faq": "FAQ",
+  "contact": "Contact",
+  "terms": "Terms",
+  "privacy": "Privacy",
+  "address1": "Bureau 5, Centre Aziza, 1er étage,",
+  "address2": "Av. de l'Indépendance, Menzel Bourguiba 7050, Tunisia",
+  "fb": "Fb.",
+  "in": "In.",
+  "ig": "Ig.",
+  "legal": "Legal",
+  "backToTop": "Back to top",
+  "duskTitle": "Common questions, straight answers.",
+  "contactEmail": "contact@silkdev.com.tn"
+ },
+ "common": {
+  "badgeServices": "Services",
+  "badgeFaq": "FAQ",
+  "badgeAbout": "Studio / About",
+  "badgeBlog": "Insights / Blog",
+  "badgeProducts": "Products",
+  "badgeContact": "Contact",
+  "backToBlog": "← Back to blog",
+  "backToArticles": "← Back to all articles",
+  "noArticles": "No articles yet.",
+  "comingSoon": "Coming Soon",
+  "learnMore": "Learn more →",
+  "readMore": "Read more",
+  "allArticles": "All articles",
+  "latestInsight": "Latest insight",
+  "haveProject": "Have a project? →",
+  "contactUs": "Contact us →",
+  "freeQuote": "Contact us for a free quote →",
+  "home": "Home"
+ },
+ "home": {
+  "founderNote": "A note from the founder",
+  "storyTitle": "It started with a dream.",
+  "storyPara1": "When I started SILKDEV, I was learning business in real time — writing my first professional emails, learning how to price a project, and figuring out how to sell without feeling like I was pretending. Every lesson came the hard way.",
+  "storyPara2": "Four years later, we had a team: people from different countries and backgrounds, each carrying a vision of their own, choosing to build something alongside me. I felt nothing but pride working with them. I'm still indebted to every single one of them. That part doesn't go away.",
+  "storyPara3": "Then AI arrived — and the market didn't just shift. It collapsed overnight. The craft we had spent years sharpening became something a prompt could imitate. Clients who once needed a team now needed a subscription. Developers who had spent a decade building expertise began seeing their roles disappear from the very job posts they used to fill. We watched it happen in real time. And we had a choice: roll over and let it consume us, or place a real bet on a pivot.",
+  "pivotBody1": "So we stopped digging and started building the tools everyone rushing in would need. In a commoditized market, that is the position with leverage.",
+  "pivotBody2": "We stopped taking clients. And we started building.",
+  "introducingSilklearn": "Introducing SILKLEARN.io",
+  "silklearnHeadline": "SILKLEARN is knowledge infrastructure that keeps compounding.",
+  "imagineThis": "Imagine this for a second",
+  "collideQuestion": "What if knowledge could collide?",
+  "jobsStory": "Steve Jobs spent a semester studying calligraphy at Reed College, dropped out, and had no obvious use for it. Ten years later, that stray semester helped shape why every Mac shipped with proportional spacing and multiple typefaces — and why every personal computer that followed eventually copied it. He didn't apply calligraphy to typography. The two ideas collided inside him and produced something neither contained alone.",
+  "galileoStory": "Galileo watched a chandelier swing in a cathedral in 1583 and saw the laws of pendulum motion. He was there for a church service; the pendulum wasn't the point. But the way he had already structured everything he knew made the collision inevitable.",
+  "bridgeQuestion": "What would a person become if they carried both of those structures? Not Jobs's opinions or Galileo's conclusions, but the shape of how they connected things: the way Jobs moved between aesthetics, function, and urgency; the way Galileo could hold a wrong theory about tides for thirty years while still being right about what mattered.",
+  "structureInsight": "We are not only what we know. We are the order our knowledge arrived in — the contradictions we had to hold, the gaps that forced us to build bridges nobody else needed. That structure is rarely written down. It lives between the lines of every document, inside the assumptions the author knew so well they forgot to explain them.",
+  "silklearnBuilt": "SILKLEARN is built to map that structure.",
+  "buildingFullTime": "We're an AI development agency in Bizerte, Tunisia.",
+  "learnMoreAtSilklearn": "Learn more at SILKLEARN.io",
+  "ctaTitle": "Let's get building",
+  "ctaBody": "Tell us what you're building — we'll scope it and get back to you within 24 hours.",
+  "visitSilklearn": "Visit SILKLEARN.io",
+  "birdQuote": "Birds didn't know they inspired planes. But someone still had to build the plane.",
+  "heroBadge": "AI Development Agency · Bizerte",
+  "heroTag1": "Designing software from",
+  "heroTag2": "Tunisia.",
+  "heroTag3": "Building products for the",
+  "heroTag4": "AI era.",
+  "ctaServices": "See our services",
+  "ctaContact": "Get in touch",
+  "prod1": "SILKLEARN",
+  "prod2": "SILKLABS",
+  "prod3": "SILKGUILD",
+  "prod4": "LucaP",
+  "ratedLabel": "Rated",
+  "ratedGoogle": "on Google · Menzel Bourguiba, Tunisia",
+  "servicesTitle": "Full-service digital agency",
+  "servicesSub": "From web applications to AI agent pipelines — we ship everything your business needs to compete.",
+  "servicesCta": "Start your project",
+  "servicesViewAll": "View all services",
+  "productsTitle": "What we're building",
+  "productsSub": "Products that reimagine how knowledge, finance, and collaboration work in the post-LLM era.",
+  "visitSite": "Visit site",
+  "philoQuote1": "When there's a gold rush,",
+  "philoQuote2": "sell the shovels.",
+  "philoText": "We stopped taking client work and started building the tools everyone rushing in would need. In a commoditized market, that is the position with leverage.",
+  "philoCta": "Learn about SILKLEARN",
+  "ctaAction": "Start a conversation",
+  "hero10Title": "Software you can rely on, from Bizerte to the world",
+  "hero10Sub": "An AI development agency — web apps, agent pipelines, and platforms, designed and shipped end to end.",
+  "metric1": "Years in business",
+  "metric2": "Projects shipped",
+  "metric3": "Products launched",
+  "statsSub": "Every project designed, engineered, and shipped from Bizerte — web apps to AI agent pipelines.",
+  "statsHead1": "4+ years in business.",
+  "statsHead2": "Built from Bizerte, Tunisia.",
+  "prod5": "Meridian",
+  "prod6": "Podomus",
+  "clientIps": "IPS",
+  "clientLuca": "Luca Pacioli",
+  "clientWolves": "Wolves Gym",
+  "clientPodomus": "Podomus",
+  "clientCreacom": "Creacom",
+  "clientTrueveda": "Trueveda"
+ },
+ "services": {
+  "pageTitle": "Services",
+  "heroTitle": "AI Services for Modern Businesses",
+  "heroSubtitle": "Support agents, custom AI features, knowledge engines, and automation — every service ships with a demo you can feel, not a deck.",
+  "learnMore": "Learn more",
+  "whatsIncluded": "What's included",
+  "whatsIncludedSub": "Everything you need to ship a production-ready solution — no hidden costs, no surprises.",
+  "processSub": "A proven 4-step process that de-risks delivery and keeps you in control.",
+  "faqTitle": "Frequently asked questions",
+  "faqSub": "Honest answers to the questions we hear most often — no sales fluff.",
+  "reviewsTitle": "What our clients say",
+  "reviewsSub": "Real feedback from real projects. No fake testimonials, no stock photos.",
+  "caseStudiesTitle": "Impact in action",
+  "caseStudiesSub": "Real before-and-after metrics from projects we've shipped. Names changed for confidentiality.",
+  "beforeLabel": "Before",
+  "afterLabel": "After",
+  "comparisonTitle": "Why choose us?",
+  "comparisonSub": "We don't compete on price alone. Here's how we stack up against the alternatives.",
+  "comparisonFeature": "Feature",
+  "comparisonUs": "SILKDEV",
+  "comparisonThem": "Freelancer / Generic Agency",
+  "getQuote": "Get a custom quote",
+  "offerings": {
+   "web-development": {
+    "title": "Web Development & Design",
+    "tagline": "Sites that convert. Platforms that scale.",
+    "outcome": "Your business gets a high-performance web presence — custom-built with React, Next.js, and Framer, that loads fast, ranks well, and converts visitors into customers. From brochure sites to full SaaS platforms, you own every line of code.",
+    "items": [
+     "Custom React / Next.js / Framer development",
+     "E-commerce, SaaS platforms, landing pages",
+     "Responsive design with mobile-first approach",
+     "Built-in SEO, semantic HTML, Core Web Vitals",
+     "CMS integration (Sanity, Strapi, or custom)",
+     "Performance optimization, Lighthouse 90+ targets",
+     "Ongoing maintenance & hosting support",
+     "Internationalization (multi-language ready)"
+    ],
+    "processTitle": "How we bring your site to life",
+    "processSteps": [
+     {
+      "title": "Discovery & scoping",
+      "description": "We learn about your business, audience, and goals. You get a clear roadmap with timeline and budget before any code is written."
+     },
+     {
+      "title": "Design & prototyping",
+      "description": "We design every screen in high fidelity — you review and give feedback in real time. No surprises, no back-and-forth loops."
+     },
+     {
+      "title": "Development & integration",
+      "description": "We build your site with modern stack, integrate your CMS, set up analytics, and optimize for performance and SEO."
+     },
+     {
+      "title": "Launch & beyond",
+      "description": "We deploy to production, configure your domain, and hand over documentation. You get ongoing support for peace of mind."
+     }
+    ],
+    "trustMetrics": [
+     {
+      "value": "50+",
+      "label": "Sites shipped"
+     },
+     {
+      "value": "92",
+      "label": "Avg Lighthouse score"
+     },
+     {
+      "value": "35%",
+      "label": "Avg conversion lift"
+     },
+     {
+      "value": "4.9/5",
+      "label": "Client satisfaction"
+     }
+    ],
+    "caseStudies": [
+     {
+      "company": "E-commerce platform (Tunisia)",
+      "before": "5-second loads, 2% mobile conversion, WordPress maintenance nightmares",
+      "after": "0.8s loads, 4.7% mobile conversion, zero-maintenance Next.js stack",
+      "metric": "2.3x revenue increase in 3 months"
+     },
+     {
+      "company": "SaaS dashboard (EU)",
+      "before": "Monolith React app, 45s initial bundle, no SSR",
+      "after": "Next.js with streaming SSR, 1.2s LCP, 96 Lighthouse score",
+      "metric": "40% user retention improvement"
+     }
+    ],
+    "comparison": [
+     {
+      "feature": "Tech stack",
+      "us": "Modern stack (Next.js, Tailwind, Framer)",
+      "them": "WordPress templates or outdated stacks"
+     },
+     {
+      "feature": "Performance SLA",
+      "us": "Guaranteed Lighthouse 90+",
+      "them": "No performance guarantee"
+     },
+     {
+      "feature": "Design fidelity",
+      "us": "Pixel-perfect, micro-animations, custom illustrations",
+      "them": "Template-based, limited animations"
+     },
+     {
+      "feature": "Post-launch support",
+      "us": "Ongoing maintenance & monitoring",
+      "them": "Hand-off with minimal support"
+     },
+     {
+      "feature": "Internationalization",
+      "us": "Multi-language built in",
+      "them": "Single-language or extra cost"
+     }
+    ],
+    "faq": [
+     {
+      "q": "How much does a project cost?",
+      "a": "<p>Every project is scoped individually. Tell us what you're building and we'll come back with a fixed-price quote — no public price list, no surprises.</p>"
+     },
+     {
+      "q": "How long does it take?",
+      "a": "<p>Typical timelines: showcase sites 2–3 weeks, pro sites with blog 3–5 weeks, complex platforms 6–12 weeks. We give you a precise timeline during scoping.</p>"
+     },
+     {
+      "q": "Do you redesign existing sites?",
+      "a": "<p>Yes. We can rebuild your current site with modern tech while preserving your SEO rankings and content. We start with an SEO audit to make sure nothing is lost.</p>"
+     },
+     {
+      "q": "What if I already have a design?",
+      "a": "<p>We can work from your Figma files or design system. We'll audit the design for feasibility and performance before starting development.</p>"
+     },
+     {
+      "q": "Do you provide hosting and domains?",
+      "a": "<p>We set up hosting on Vercel, AWS, or your preferred provider. We can also manage domains, SSL certificates, and email configurations as part of our maintenance package.</p>"
+     },
+     {
+      "q": "How do revisions work?",
+      "a": "<p>Our process includes structured feedback rounds at each milestone — design, development, pre-launch. Minor revisions are included; major scope changes are quoted separately.</p>"
+     },
+     {
+      "q": "What happens after launch?",
+      "a": "<p>We offer a 30-day post-launch warranty covering any bugs or issues. After that, you can opt into our monthly maintenance plan or self-manage with our documentation.</p>"
+     },
+     {
+      "q": "Do you build mobile apps too?",
+      "a": "<p>We focus on web applications. For iOS/Android native apps, we partner with trusted mobile developers and can manage the project end to end.</p>"
+     }
+    ],
+    "quote": {
+     "note": "Every project is scoped individually. Tell us what you're building and we'll come back with a fixed-price quote — no public price list, no surprises."
+    }
+   },
+   "fractional-cto": {
+    "title": "Fractional CTO",
+    "tagline": "Technical leadership without the full-time hire.",
+    "outcome": "You get an experienced technical director who aligns your engineering decisions with business goals — without paying a full-time salary. We define your tech strategy, vet your stack, lead your dev team, and make sure every build decision moves your company forward.",
+    "items": [
+     "Tech stack audit & recommendation",
+     "Architecture planning & code review",
+     "Engineering team leadership & hiring",
+     "Product roadmap & sprint planning",
+     "Security & compliance oversight",
+     "Budget forecasting & vendor evaluation",
+     "Documentation & knowledge transfer",
+     "On-demand advisory (Slack / weekly calls)"
+    ],
+    "processTitle": "How fractional CTO works",
+    "processSteps": [
+     {
+      "title": "Audit & alignment",
+      "description": "We review your current tech, team, and roadmap. You get a candid assessment of what's working and what needs to change."
+     },
+     {
+      "title": "Strategy & roadmap",
+      "description": "We define a 6–12 month technical roadmap with clear milestones — prioritized by business impact, not engineering preference."
+     },
+     {
+      "title": "Execution & mentorship",
+      "description": "We join your team's rhythm — sprint planning, stand-ups, code reviews — while mentoring your engineers to level up."
+     },
+     {
+      "title": "Ongoing partnership",
+      "description": "You get continuous access to technical guidance. Scale hours up or down as your needs change."
+     }
+    ],
+    "trustMetrics": [
+     {
+      "value": "12+",
+      "label": "Companies advised"
+     },
+     {
+      "value": "4",
+      "label": "Avg engagement (months)"
+     },
+     {
+      "value": "70%",
+      "label": "Cost vs full-time CTO"
+     },
+     {
+      "value": "100%",
+      "label": "Retention rate"
+     }
+    ],
+    "caseStudies": [
+     {
+      "company": "Tunisian fintech startup",
+      "before": "No technical roadmap, three failed dev hires, AWS bill growing 20%/mo",
+      "after": "Clear 12-month roadmap, strong engineering team, 40% cloud cost reduction",
+      "metric": "2x dev velocity in 6 months"
+     },
+     {
+      "company": "EU marketplace scale-up",
+      "before": "Monolith blocking growth, no testing culture, frequent outages",
+      "after": "Microservices migration plan, CI/CD pipeline, 99.9% uptime",
+      "metric": "Zero critical outages in 8 months"
+     }
+    ],
+    "comparison": [
+     {
+      "feature": "Cost",
+      "us": "Fraction of full-time CTO (70% less)",
+      "them": "Full-time CTO hire + equity"
+     },
+     {
+      "feature": "Commitment",
+      "us": "Flexible: 8–40 hrs/week, no long-term contract",
+      "them": "Full-time or nothing"
+     },
+     {
+      "feature": "Depth",
+      "us": "Full-stack technical leadership + mentoring",
+      "them": "Often purely strategic, hands-off"
+     },
+     {
+      "feature": "Network",
+      "us": "Direct access to our full team's expertise",
+      "them": "Single perspective"
+     },
+     {
+      "feature": "Onboarding",
+      "us": "Audit-to-roadmap in 2 weeks",
+      "them": "3–6 months to full impact"
+     }
+    ],
+    "faq": [
+     {
+      "q": "How is this different from hiring a full-time CTO?",
+      "a": "<p>A fractional CTO costs 70% less than a full-time executive hire and gives you the same strategic value. You pay for the hours you need — no equity, no long-term commitment. Most engagements start at 8–12 hours per week.</p>"
+     },
+     {
+      "q": "How many hours per week?",
+      "a": "<p>Most engagements start at 8–12 hours per week, adjusted based on your stage and complexity. We're flexible — scale up during critical phases and down during steady periods.</p>"
+     },
+     {
+      "q": "Do you work with non-technical founders?",
+      "a": "<p>Absolutely. In fact, that's our sweet spot. We translate between business goals and technical decisions so you can make informed choices without a CS degree.</p>"
+     },
+     {
+      "q": "Can you help me hire my own CTO later?",
+      "a": "<p>Yes. Many clients start with us fractionally while searching for a full-time CTO. We can define the role, vet candidates, and ensure a smooth handoff when you're ready.</p>"
+     },
+     {
+      "q": "What if we already have a dev team?",
+      "a": "<p>Even better. We audit your current processes, identify bottlenecks, and mentor your existing team. No turf wars — we augment, not replace.</p>"
+     },
+     {
+      "q": "How do you handle confidential information?",
+      "a": "<p>We sign NDAs and can accommodate your preferred data security practices. Our engagements are built on trust — we treat your roadmap and metrics as your property.</p>"
+     }
+    ],
+    "quote": {
+     "note": "Every project is scoped individually. Tell us what you're building and we'll come back with a fixed-price quote — no public price list, no surprises."
+    }
+   },
+   "ai-support-agents": {
+    "title": "AI Support Agents",
+    "tagline": "Your customers, answered in your tone, 24/7.",
+    "outcome": "Your customer messages stop going unanswered. We deploy AI agents on WhatsApp, web chat, and email that handle routine questions in Arabic, French, and English — trained on your products, policies, and tone, and hand off to a human the moment it matters.",
+    "items": [
+     "WhatsApp, web chat & email support",
+     "Trilingual: Arabic, French, English",
+     "Trained on your docs & brand tone",
+     "Smart human handoff routing",
+     "Escalation dashboards & analytics",
+     "24/7 coverage, no queue",
+     "Works with your existing tools",
+     "Monthly retainer, one-week setup"
+    ],
+    "processTitle": "How we ship your support agent",
+    "processSteps": [
+     {
+      "title": "Audit your inbox",
+      "description": "We study your customer messages, common questions, and tone to map what the agent must handle — and what must reach a human."
+     },
+     {
+      "title": "Train on your knowledge",
+      "description": "Your docs, policies, and past conversations become the agent's source of truth — grounded answers with citations, no hallucinations."
+     },
+     {
+      "title": "Deploy on your channels",
+      "description": "WhatsApp, web chat, or email — the agent goes live on the channels your customers already use."
+     },
+     {
+      "title": "Monitor & improve",
+      "description": "We watch resolution rates and handoff quality, and tune the agent weekly. You see the numbers, not a black box."
+     }
+    ],
+    "quote": {
+     "note": "Most clients see their response time drop from hours to seconds within the first two weeks."
+    },
+    "faq": [
+     {
+      "q": "Will the AI agent sound robotic?",
+      "a": "No. It's trained on your brand tone and real conversations, and it writes naturally in all three languages."
+     },
+     {
+      "q": "What happens when the agent can't answer?",
+      "a": "It escalates to your team with full context — the customer never repeats themselves."
+     },
+     {
+      "q": "Which channels can we start with?",
+      "a": "WhatsApp and web chat are the fastest to launch. Email and Instagram DM follow quickly."
+     }
+    ]
+   },
+   "custom-ai-features": {
+    "title": "Custom AI Features",
+    "tagline": "AI built into your product, not bolted on.",
+    "outcome": "Your existing product learns to search semantically, summarize, tag, and recommend. We design and ship AI features inside your app — search that understands intent, auto-tagging, content summaries, smart recommendations, as real product capabilities your users feel every day.",
+    "items": [
+     "Semantic search that understands intent",
+     "Auto-tagging & content classification",
+     "Summarization & report generation",
+     "Smart recommendations",
+     "In-app assistants & copilots",
+     "Cost-optimized model selection",
+     "Privacy-first pipelines (your data stays yours)",
+     "Feature analytics & iteration"
+    ],
+    "processTitle": "How we build AI into your product",
+    "processSteps": [
+     {
+      "title": "Find the highest-leverage feature",
+      "description": "We audit your product and usage data to pick the AI capability with the clearest payoff — not the trendiest one."
+     },
+     {
+      "title": "Prototype in a week",
+      "description": "A working prototype with your real data, so you feel the feature before we commit to building it."
+     },
+     {
+      "title": "Ship it properly",
+      "description": "Hardened pipelines, latency budgets, fallbacks, and cost controls — production quality, not a demo."
+     },
+     {
+      "title": "Measure & iterate",
+      "description": "We track adoption and quality, and tune the feature with your team until it earns its place."
+     }
+    ],
+    "quote": {
+     "note": "Every custom AI feature ships with a fallback path — your product never depends on a model being perfect."
+    },
+    "faq": [
+     {
+      "q": "Which AI features are worth building?",
+      "a": "Start with search, tagging, or summarization — they touch the most users and the value is measurable."
+     },
+     {
+      "q": "Can you integrate with our existing stack?",
+      "a": "Yes — we work inside your codebase and data layer, whatever the stack."
+     },
+     {
+      "q": "What about AI cost?",
+      "a": "We engineer for cost: the right model for each task, caching, and routing — most features run on pennies per thousand requests."
+     }
+    ]
+   },
+   "knowledge-ai": {
+    "title": "Knowledge & Document AI",
+    "tagline": "Your scattered docs, finally answerable.",
+    "outcome": "Your PDFs, Notion, Drive folders, and internal wikis become one searchable knowledge base that your team and customers can ask questions of. Grounded answers with sources — built on the same deterministic engine that powers SILKLEARN.",
+    "items": [
+     "Ingest PDFs, docs, Notion & Drive",
+     "Grounded Q&A with citations",
+     "Structured knowledge graphs",
+     "Internal wikis & onboarding",
+     "Customer-facing FAQ automation",
+     "Automatic re-indexing on updates",
+     "Permissions-aware access",
+     "Powered by our SILKLEARN engine"
+    ],
+    "processTitle": "How we make your knowledge answerable",
+    "processSteps": [
+     {
+      "title": "Map your knowledge",
+      "description": "We inventory where your knowledge lives — files, wikis, chat history — and what questions people actually ask it."
+     },
+     {
+      "title": "Index with structure",
+      "description": "Documents are decomposed into typed, sourced segments with provenance — not a retrieval blob."
+     },
+     {
+      "title": "Deploy the interface",
+      "description": "A chat interface for your team, an FAQ widget for customers, or both — permissions respected."
+     },
+     {
+      "title": "Keep it fresh",
+      "description": "Updates re-index automatically; new documents are picked up without you touching a config."
+     }
+    ],
+    "quote": {
+     "note": "Grounding with citations means your team can trust every answer — and verify it in one click."
+    },
+    "faq": [
+     {
+      "q": "Which sources can you connect?",
+      "a": "PDFs, Office docs, Notion, Google Drive, websites, and even chat history. If it's accessible, we can index it."
+     },
+     {
+      "q": "How is this different from ChatGPT?",
+      "a": "Answers are grounded in your documents with citations, permissions are respected, and updates reflect automatically."
+     },
+     {
+      "q": "Is our data safe?",
+      "a": "Yes — your content stays in your infrastructure or a private index. We never train on your data."
+     }
+    ]
+   },
+   "automation": {
+    "title": "Workflow Automation",
+    "tagline": "Your back office, on autopilot.",
+    "outcome": "The repetitive operations that eat your week — invoicing, lead routing, reporting, CRM hygiene, get automated end to end. Your team stops copy-pasting and starts working on the things only they can do.",
+    "items": [
+     "Lead capture & smart routing",
+     "Invoice & receipt automation",
+     "Automatic report generation",
+     "CRM & spreadsheet sync",
+     "Approval workflows",
+     "Notification bots (Slack, WhatsApp)",
+     "Stripe, HubSpot, Google integrations",
+     "Monthly maintenance & monitoring"
+    ],
+    "processTitle": "How we automate your operations",
+    "processSteps": [
+     {
+      "title": "Find the time sinks",
+      "description": "We shadow your operations and map every repetitive task with a cost — minutes per week per person."
+     },
+     {
+      "title": "Design the workflows",
+      "description": "Each automation gets a clear trigger, steps, and failure handling. You approve before anything runs."
+     },
+     {
+      "title": "Build & connect",
+      "description": "We wire your tools together — CRMs, payments, sheets — with the integrations you already use."
+     },
+     {
+      "title": "Run & maintain",
+      "description": "Automations are monitored; we fix breaks and add new ones as your operations evolve."
+     }
+    ],
+    "quote": {
+     "note": "Teams typically reclaim 10+ hours per person per week from the automations we ship."
+    },
+    "faq": [
+     {
+      "q": "Which processes are worth automating first?",
+      "a": "Anything done more than once a day that follows a rule — lead routing, invoicing, report prep."
+     },
+     {
+      "q": "Will it work with our current tools?",
+      "a": "Almost always — we integrate with what you already use before introducing anything new."
+     },
+     {
+      "q": "What if a workflow breaks?",
+      "a": "Failures are monitored and alerted; we maintain what we build as part of the monthly plan."
+     }
+    ]
+   }
+  },
+  "ctaTitle": "Ready to start your project?",
+  "ctaBody": "Tell us what you're building and we'll get back to you within 24 hours with a roadmap and estimate.",
+  "ctaButton": "Get a free quote →",
+  "ctaService": {
+   "ctaWeb": {
+    "title": "Ready to launch your website?",
+    "body": "From one-page sites to full platforms — your next project starts with a conversation.",
+    "button": "Start your project"
+   },
+   "ctaCto": {
+    "title": "Need technical leadership?",
+    "body": "Book a free 30-minute strategy call. No commitment, just honest advice.",
+    "button": "Book a call"
+   },
+   "ctaSupport": {
+    "title": "Ready to answer every customer?",
+    "body": "We'll scope your support agent on a free call — no commitment.",
+    "button": "Start your project"
+   },
+   "ctaFeatures": {
+    "title": "Have an AI feature in mind?",
+    "body": "Tell us your idea — we'll prototype it with your data in a week.",
+    "button": "Start your project"
+   },
+   "ctaKnowledge": {
+    "title": "Your knowledge is worth more than a folder.",
+    "body": "Let's turn it into an answerable engine — starting with a free audit.",
+    "button": "Start your project"
+   },
+   "ctaAutomation": {
+    "title": "What's eating your team's week?",
+    "body": "Tell us the repetitive work — we'll show you what automation saves.",
+    "button": "Start your project"
+   }
+  },
+  "reviewsContent": {
+   "reviewWeb1": "Professional team that delivered exactly what we needed. The site loads incredibly fast and our conversion rate has gone up since the launch.",
+   "reviewWeb2": "They redesigned our e-commerce platform and the results were immediate — better mobile experience, faster checkout, and higher sales.",
+   "reviewWeb3": "The attention to detail is what sets them apart. Every animation, every transition — it all feels intentional and polished.",
+   "reviewCto1": "Having them as our fractional CTO transformed how we approach engineering decisions. We're building faster and with more confidence.",
+   "reviewCto2": "The technical strategy they defined for us saved months of wasted development. Worth every minute.",
+   "reviewAgent1": "The agent pipeline they built for our content team saves us about 15 hours per week. The quality is surprisingly good — we only need minor edits.",
+   "reviewAgent2": "We were skeptical about AI automation but they proved it works. Customer triage is now handled in minutes instead of hours.",
+   "reviewApi1": "Solid backend work. The API documentation was so clear we barely needed any hand-holding to start integrating.",
+   "reviewApi2": "They built our entire payment processing API. It's been running for 6 months without a single issue."
+  },
+  "quoteTitle": "Get a custom quote",
+  "quoteBody": "Tell us about your project and we'll come back with a fixed-price quote — no public price list.",
+  "explorerTitle": "Six services. One outcome: your business moving faster.",
+  "explorerSub": "Every service ships with a working demo — pick one to see what it actually does.",
+  "howTitle": "How we work",
+  "howFast": "Fast.",
+  "howFastBody": "A working demo in the first week — you feel the feature before you commit.",
+  "howProven": "Proven.",
+  "howProvenBody": "The same AI that runs our own products (SILKLEARN, LucaP) runs yours.",
+  "clientsTitle": "Shipped for teams like yours",
+  "cta2Title": "Start building from here",
+  "startService": "Start your project"
+ },
+ "faq": {
+  "pageTitle": "FAQ — Frequently Asked Questions",
+  "subtitle": "Everything you need to know before getting started",
+  "items": [
+   {
+    "q": "How much does a project cost?",
+    "a": "<p>Every project is scoped individually. Tell us what you're building and we'll come back with a fixed-price quote — no public price list, no surprises.</p><p>Here's how to think about the price: you don't want the cheapest parachute, and you don't want the cheapest surgeon — you want the one who does the job right the first time. A cheap site that has to be rebuilt always ends up costing more.</p>"
+   },
+   {
+    "q": "How long does it take to build a website?",
+    "a": "<p>Typical timelines depend on the project scope:</p><ul><li><strong>Showcase site (5 pages):</strong> 2–3 weeks</li><li><strong>Pro site (10 pages + blog):</strong> 3–5 weeks</li><li><strong>Complex platform (e-commerce, custom features):</strong> 6–12 weeks</li></ul><p>And a note on expectations: a solid build is like muscle — nobody gets it after a week at the gym. Quality takes the time it takes, which is exactly why we give you a precise timeline at scoping instead of a rushed promise.</p><p>We'll give you a precise timeline during the project scoping phase.</p>"
+   },
+   {
+    "q": "What technologies do you use?",
+    "a": "<p>We specialize in modern web technologies:</p><ul><li><strong>Frontend:</strong> React, Next.js, TypeScript, Tailwind CSS</li><li><strong>Backend:</strong> Node.js, Python, Go</li><li><strong>CMS:</strong> Sanity, custom solutions</li><li><strong>Animation:</strong> Framer Motion, GSAP</li><li><strong>Hosting:</strong> Vercel, AWS, self-managed</li></ul><p>We choose the right stack for each project's needs.</p>"
+   },
+   {
+    "q": "Do you offer maintenance services?",
+    "a": "<p>Yes — we offer ongoing maintenance, monitoring, and updates tailored to your stack. You can opt into a monthly plan or self-manage with our documentation. Every plan is quoted individually.</p>"
+   },
+   {
+    "q": "Is SEO included?",
+    "a": "<p>Every site we build comes with built-in SEO best practices: semantic HTML structure, optimized meta tags, fast loading speeds (Core Web Vitals), and mobile responsiveness. For more comprehensive SEO strategies — including keyword research, content optimization, and link building — we offer dedicated SEO packages.</p><p>Think of it as a three-legged stool: design, development, and SEO. Two legs can look fine for a while, but the stool only stands with all three — which is why we build SEO in from day one.</p>"
+   },
+   {
+    "q": "Do you work with international clients?",
+    "a": "<p>Absolutely! While we're based in Tunisia, we work with clients worldwide. We communicate in English and French, and our development process is fully remote-friendly. Timezone differences are managed with flexible scheduling and asynchronous communication.</p>"
+   }
+  ],
+  "ctaTitle": "Still have questions?",
+  "ctaBody": "We're here to help. Reach out and we'll get back to you within 24 hours.",
+  "ctaButton": "Contact us →",
+  "duskTitle": "Common questions, straight answers."
+ },
+ "about": {
+  "pageTitle": "About SILKDEV",
+  "subtitle": "Web development agency based in Tunisia, reaching the world",
+  "sections": [
+   {
+    "title": "Our Story",
+    "body": "SILKDEV was founded to help Tunisian businesses and international clients build clear, fast, and durable web products. What started as a freelance operation grew into a full-studio approach: strategy, design, development, and SEO under one roof."
+   },
+   {
+    "title": "Our Team",
+    "body": "A compact team blending strategy, design, development, and SEO. We work lean, iterate fast, and ship with confidence."
+   },
+   {
+    "title": "Our Values",
+    "body": "Clarity, performance, transparency, and continuous improvement in every delivery."
+   },
+   {
+    "title": "Why Choose Us",
+    "body": "A local partner with international standards and an obsession with results. We don't just build — we care about what we ship."
+   }
+  ],
+  "ctaButton": "Contact us →"
+ },
+ "contact": {
+  "pageTitle": "Contact Us",
+  "subtitle": "Ask us anything — we'll respond within 24 hours",
+  "emailLabel": "Email",
+  "hours": "Hours",
+  "hoursValue": "8AM–5PM (UTC) Monday–Friday",
+  "socialMedia": "Social Media",
+  "address": "Our Office",
+  "addressValue": "Ariana, Tunisia",
+  "intakeHint": "For a detailed project brief, use our structured intake process.",
+  "intakeCta": "Start a project brief",
+  "chatBadge": "Silkdev AI",
+  "startOver": "Start over",
+  "verifyTitle": "Verify you're human",
+  "verifyBody": "Quick security check to keep our AI chat spam-free.",
+  "protectedBy": "Protected by Cloudflare Turnstile",
+  "summaryTitle": "Message summary",
+  "readyLabel": "Ready to send",
+  "sendMessage": "Send message ✓",
+  "continueChatting": "Continue chatting",
+  "successTitle": "Message sent!",
+  "successBody": "We've got it — someone from Silkdev will get back to you within 24 hours.",
+  "refLabel": "Your reference",
+  "sendAnother": "Send another message",
+  "submitError": "Something went wrong. Please try again.",
+  "welcomeFallback": "Hey! Welcome to Silkdev 👋\n\nAsk us anything — we'll respond within 24 hours. 👇"
+ },
+ "intake": {
+  "pageTitle": "Start a Project",
+  "subtitle": "Tell us what you need — we'll turn it into a proposal within 48 hours",
+  "step1Title": "What do you need?",
+  "step1Sub": "Select the category that best describes your project",
+  "step2Title": "Tell us about your project",
+  "step2Sub": "The more detail you share, the better our proposal will be",
+  "step3Title": "Scope & Commitment",
+  "step3Sub": "Help us understand the scale of your project",
+  "step4Title": "Who are you?",
+  "step4Sub": "So we can get back to you",
+  "step5Title": "Review & Submit",
+  "step5Sub": "Check everything looks right before sending",
+  "next": "Next",
+  "back": "Back",
+  "submit": "Submit brief",
+  "categoryWeb": "Web Application",
+  "categoryMobile": "Mobile App",
+  "categoryAI": "AI / Agent Pipeline",
+  "categoryCTO": "Fractional CTO",
+  "categoryDesign": "Design / UI-UX",
+  "categoryOther": "Something else",
+  "narrativeProblem": "What problem are you solving?",
+  "narrativeProblemPh": "Describe the challenge or opportunity...",
+  "narrativeTried": "What have you tried so far?",
+  "narrativeTriedPh": "Existing solutions, previous attempts...",
+  "narrativeOutcome": "What's the dream outcome?",
+  "narrativeOutcomePh": "What does success look like?",
+  "narrativeAudience": "Who is it for?",
+  "narrativeAudiencePh": "Target users, stakeholders...",
+  "timelineLabel": "Timeline",
+  "timeline1": "Under 1 month",
+  "timeline2": "1 – 3 months",
+  "timeline3": "3 – 6 months",
+  "timeline4": "Flexible",
+  "readinessLabel": "Team readiness",
+  "readiness1": "I have a team",
+  "readiness2": "Need full-service",
+  "readiness3": "Co-build with you",
+  "specLabel": "Technical spec",
+  "spec1": "Have a spec document",
+  "spec2": "Rough idea",
+  "spec3": "Starting from zero",
+  "nameField": "Full Name",
+  "namePh": "Your name",
+  "companyField": "Company",
+  "companyPh": "Company name (optional)",
+  "emailField": "Email",
+  "emailPh": "you@example.com",
+  "phoneField": "Phone",
+  "phonePh": "+216 XX XXX XXX",
+  "hearField": "How did you hear about us?",
+  "hearPh": "Google, referral, social media...",
+  "discoveryLabel": "Schedule a discovery call",
+  "discoveryYes": "Yes, book a 15-min call",
+  "discoveryNo": "Not right now",
+  "reviewCategory": "Category",
+  "reviewNarrative": "Project Description",
+  "reviewScope": "Scope",
+  "reviewContact": "Contact",
+  "reviewDiscovery": "Discovery Call",
+  "confirmTitle": "Brief Submitted!",
+  "confirmBody": "We've received your project brief and will review it within 48 hours.",
+  "confirmRef": "Reference",
+  "confirmProgress": "Progress",
+  "confirmStep1": "Requirements received",
+  "confirmStep2": "Being reviewed",
+  "confirmStep3": "Proposal drafted",
+  "confirmStep4": "Discovery call",
+  "confirmStep5": "Project kickoff",
+  "confirmEmail": "A confirmation has been sent to"
+ },
+ "chat": {
+  "prefilterTitle": "What are you building?",
+  "prefilterSub": "Pick a category to start — our AI intake will shape your idea into a brief.",
+  "optWeb": "Website / Web App",
+  "optMobile": "Mobile App",
+  "optAgent": "AI / Agent Pipeline",
+  "optCto": "Fractional CTO",
+  "optDesign": "Design / UI-UX",
+  "optOther": "Something else",
+  "newProject": "New project",
+  "turnstileNote": "Protected by Cloudflare Turnstile",
+  "verifyTitle": "Verify you're human",
+  "verifySub": "Quick security check to keep our AI intake spam-free.",
+  "placeholder": "Type your message...",
+  "startOver": "Start over",
+  "briefTitle": "Your project brief",
+  "fieldName": "Name",
+  "fieldCompany": "Company",
+  "fieldEmail": "Email",
+  "fieldPhone": "Phone",
+  "fieldCategory": "Category",
+  "fieldBudget": "Budget",
+  "fieldTimeline": "Timeline",
+  "edit": "Edit",
+  "submit": "Submit my request to Silkdev →",
+  "submitting": "Submitting your request…",
+  "doneTitle": "Request received!",
+  "doneBody": "Our team will review your brief and get back to you shortly.",
+  "reference": "Reference:",
+  "trackPortal": "Track in portal →",
+  "startAnother": "Start another",
+  "welcomeFallback": "Hey! Tell me about your project 👇"
+ },
+ "login": {
+  "welcomeBack": "Welcome back",
+  "welcomeSub": "Sign in to your account to continue",
+  "createAccount": "Create your account",
+  "createSub": "Start tracking your projects in one place",
+  "email": "Email",
+  "password": "Password",
+  "name": "Name",
+  "signIn": "Sign In",
+  "signUp": "Sign Up",
+  "create": "Create Account",
+  "forgot": "Forgot password?",
+  "loading": "Loading...",
+  "resetSent": "Reset link sent — check your inbox.",
+  "errLogin": "Invalid email or password",
+  "errSignup": "Couldn't create the account",
+  "errReset": "Couldn't send the reset link",
+  "terms1": "By continuing, you agree to our",
+  "terms": "Terms",
+  "privacy": "Privacy",
+  "and": "and",
+  "magicLink": "Sign in with a magic link",
+  "magicSub": "We'll email you a secure sign-in link — no password needed.",
+  "sendLink": "Send magic link",
+  "magicSent": "Check your inbox — your sign-in link is on the way.",
+  "errMagic": "Couldn't send the magic link",
+  "usePassword": "Use password instead",
+  "continueGoogle": "Continue with Google",
+  "continueLinkedIn": "Continue with LinkedIn",
+  "signupGoogle": "Sign up with Google",
+  "signupLinkedIn": "Sign up with LinkedIn",
+  "or": "or",
+  "magicTitle": "Welcome",
+  "noAccount": "Don't have an account?",
+  "createAccountLink": "Create an account"
+ },
+ "notifications": {
+  "title": "Notifications",
+  "markAll": "Mark all read",
+  "empty": "Nothing yet — updates will land here."
+ },
+ "capture": {
+  "title": "Prefer to skip the chat?",
+  "subtitle": "Leave an email or phone number and we'll get back to you within 24 hours.",
+  "emailPlaceholder": "Your email",
+  "phonePlaceholder": "Your phone number",
+  "submit": "Get in touch",
+  "success": "Got it — we'll reach out within 24 hours.",
+  "error": "Something went wrong. Please try again.",
+  "required": "Add an email or phone number so we can reach you."
+ }
+}

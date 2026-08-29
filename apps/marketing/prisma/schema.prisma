@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String?
+  email        String    @unique
+  emailVerified Boolean  @default(false)
+  image        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  role         String    @default("user")
+  slug         String?   @unique // client-portal URL slug (/client/{slug})
+  isAnonymous  Boolean   @default(false)
+  banned       Boolean   @default(false)
+  banReason    String?
+  banExpires   DateTime?
+
+  customer Customer?
+
+  sessions Session[]
+  accounts Account[]
+  briefs   Brief[]
+  projects Project[]
+  notifications Notification[]
+  memories ClientMemory[]
+
+  @@map("user")
+}
+
+/// A billable client — LucaP-flavored billing profile (company, contacts,
+/// addresses, tax identifier). Links to the portal account via userId.
+model Customer {
+  id              String   @id @default(cuid())
+  userId          String?  @unique // linked portal account (client)
+  displayName     String
+  title           String? // Mr/Mrs/Ms/Dr
+  givenName       String?
+  familyName      String?
+  companyName     String?
+  primaryEmail    String?
+  alternateEmail  String?
+  primaryPhone    String?
+  mobile          String?
+  webAddress      String?
+  taxIdentifier   String? // MF for Tunisian businesses — needed for invoices
+  billingAddress  Json? // { line1, line2, city, state, postalCode, country }
+  shippingAddress Json?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyName])
+  @@map("customer")
+}
+
+/// In-app notification for a portal user (brief/project/stage events)
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  type      String // brief | project | stage | system
+  title     String
+  body      String?
+  href      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notification")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+/// Client project briefs submitted through the intake flow
+model Brief {
+  id          String   @id @default(cuid())
+  userId      String?
+  name        String?
+  email       String?
+  category    String?
+  description String?
+  scope       String?
+  status      String   @default("received")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  projects Project[]
+
+  @@index([userId])
+  @@map("brief")
+}
+
+/// A project promoted from a brief — the delivery pipeline owner
+model Project {
+  id          String   @id @default(cuid())
+  briefId     String?  @unique
+  userId      String?
+  name        String?
+  category    String?
+  status      String   @default("proposed") // proposed | approved | in_progress | launched | completed
+  // Lifecycle phase — the client-facing state machine:
+  // intake → admin_review → quoting → payment → in_progress → iteration ⇄ delivery_review → completed
+  phase        String   @default("intake")
+  quote        Json? // { lineItems: [{label, amount, qty?}], total, currency, depositPercent, depositAmount }
+  paymentStatus String? // unpaid | partial | paid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  brief     Brief?     @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  stages    Stage[]
+  tasks     Task[]
+  messages  Message[]
+  payments  Payment[]
+
+  @@index([userId])
+  @@map("project")
+}
+
+/// A persisted chat message in a project conversation (AI, client, or admin).
+/// Admin messages carry the sender's name/avatar and set the project to
+/// admin_review — while the admin is in the conversation, client chat is off.
+model Message {
+  id           String   @id @default(cuid())
+  projectId    String
+  role         String // user | assistant | admin
+  senderName   String? // admin display name (role = admin)
+  senderAvatar String? // admin avatar url (role = admin)
+  content      String
+  createdAt    DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("message")
+}
+
+/// A payment attempt against a project (Konnect).
+model Payment {
+  id         String   @id @default(cuid())
+  projectId  String
+  kind       String   @default("deposit") // deposit | full | milestone
+  amount     Float
+  currency   String   @default("TND")
+  status     String   @default("pending") // pending | paid | failed
+  paymentRef String? // Konnect payment_ref for verification
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("payment")
+}
+
+/// A client-visible to-do item inside a project's planner
+model Task {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String
+  status    String   @default("pending") // pending | done
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("task")
+}
+
+/// Long-term memory about a client (preferences, context) — written by the
+/// AI rep or manually; injected into project chat context
+model ClientMemory {
+  id        String   @id @default(cuid())
+  userId    String
+  note      String
+  source    String   @default("ai") // ai | manual
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("client_memory")
+}
+
+/// A delivery stage inside a project pipeline
+model Stage {
+  id          String    @id @default(cuid())
+  projectId   String
+  key         String // template key, e.g. "discovery", "design", "development"
+  title       String?
+  order       Int
+  status      String    @default("pending") // pending | in_progress | review | done | blocked
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("stage")
+}

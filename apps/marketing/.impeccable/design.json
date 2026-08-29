@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-05T23:50:00Z",
+  "title": "Design System: SILKDEV",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Signal Violet",
+        "canonical": "#6c63ff",
+        "tonalRamp": ["#17132e", "#2a2160", "#3d2f8f", "#4f3dbb", "#6c63ff", "#8f88ff", "#b3adff", "#dcdaff"]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Cyan Reflex",
+        "canonical": "#00d9ff",
+        "tonalRamp": ["#002b33", "#004d5c", "#006e85", "#0090ab", "#00d9ff", "#4de4ff", "#8cefff", "#d2f9ff"]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Deep Void",
+        "canonical": "#0a0a14",
+        "tonalRamp": ["#050509", "#0a0a14", "#0f0f1a", "#1a1a28", "#23233a", "#2d2d4a", "#3a3a5c", "#48486e"]
+      },
+      "neutral-text": {
+        "role": "neutral",
+        "displayName": "Bone White",
+        "canonical": "#e8e8ed",
+        "tonalRamp": ["#3a3a42", "#5c5c68", "#7d7d8c", "#9f9fb0", "#c0c0cf", "#d4d4de", "#e8e8ed", "#f6f6f9"]
+      },
+      "neutral-muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#8888a0",
+        "tonalRamp": ["#22222b", "#3a3a48", "#525266", "#6a6a7e", "#8888a0", "#a0a0b4", "#b8b8c8", "#d2d2dd"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero wordmarks only. Uppercase, once per page, user-select none." },
+      "headline": { "displayName": "Headline", "purpose": "Section titles. Manrope 700, tight tracking." },
+      "label": { "displayName": "Label", "purpose": "Badges, nav, footer headings, chips. Uppercase with wide tracking." }
+    },
+    "shadows": [
+      { "name": "violet-hover-glow", "value": "0 0 20px rgba(108,99,255,0.15)", "purpose": "The only box shadow in the system; hover feedback on featured elements." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Default easing for all UI transitions and press feedback." },
+      { "name": "ease-in-out", "value": "cubic-bezier(0.77, 0, 0.175, 1)", "purpose": "Strong ease-in-out for on-screen movement." },
+      { "name": "ease-card", "value": "cubic-bezier(0.25, 0.46, 0.45, 0.94)", "purpose": "Gentle card hover easing." },
+      { "name": "press", "value": "scale(0.97) 160ms ease-out", "purpose": "Active state on all interactive elements." },
+      { "name": "typing-dot", "value": "1.2s ease-out infinite", "purpose": "Typing indicator lift; 4px translateY, opacity 0.35 to 1, 150ms stagger." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single action color. Used for 'See our services', 'Start a conversation'.",
+      "html": "<button class=\"ds-btn-primary\">Start a conversation</button>",
+      "css": ".ds-btn-primary { background: #6c63ff; color: #fff; padding: 12px 28px; border: none; border-radius: 10px; font-family: 'Noto Sans', system-ui, sans-serif; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; transition: transform 160ms cubic-bezier(0.23,1,0.32,1), opacity 150ms ease; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid #00d9ff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet alternative — hairline border, no fill.",
+      "html": "<button class=\"ds-btn-secondary\">Get in touch</button>",
+      "css": ".ds-btn-secondary { background: transparent; color: #e8e8ed; padding: 12px 28px; border: 1px solid #1e1e30; border-radius: 10px; font-family: 'Noto Sans', system-ui, sans-serif; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; transition: transform 160ms cubic-bezier(0.23,1,0.32,1), background 150ms ease; } .ds-btn-secondary:hover { background: rgba(255,255,255,0.05); } .ds-btn-secondary:active { transform: scale(0.97); } .ds-btn-secondary:focus-visible { outline: 2px solid #00d9ff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Product/service card. Flat at rest; accent glow blob on hover.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-glow\"></div><h3 class=\"ds-card-title\">SILKLEARN</h3><p class=\"ds-card-sub\">Knowledge infrastructure that keeps compounding</p></div>",
+      "css": ".ds-card { position: relative; overflow: hidden; background: #0f0f1a; border: 1px solid #1e1e30; border-radius: 16px; padding: 24px; transition: transform 160ms cubic-bezier(0.23,1,0.32,1); } .ds-card:hover { transform: translateY(-2px); } .ds-card-glow { position: absolute; top: -64px; right: -64px; width: 128px; height: 128px; border-radius: 50%; background: radial-gradient(circle, rgba(108,99,255,0.35), transparent 70%); opacity: 0; transition: opacity 200ms ease; pointer-events: none; } .ds-card:hover .ds-card-glow { opacity: 1; } .ds-card-title { font-family: 'Manrope', system-ui, sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; color: #e8e8ed; margin: 0 0 6px; } .ds-card-sub { font-family: 'Noto Sans', system-ui, sans-serif; font-size: 14px; line-height: 1.6; color: #8888a0; margin: 0; }"
+    },
+    {
+      "name": "Chip / Status Pill",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Section badges and product status pills (LIVE, BETA, COMING SOON).",
+      "html": "<span class=\"ds-chip\">Live</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; background: rgba(15,15,26,0.5); border: 1px solid #1e1e30; border-radius: 9999px; padding: 6px 12px; font-family: 'Noto Sans', system-ui, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8888a0; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Form fields — glass fill, hairline border, violet focus.",
+      "html": "<input class=\"ds-input\" placeholder=\"Your email\" />",
+      "css": ".ds-input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 16px; color: #e8e8ed; font-family: 'Noto Sans', system-ui, sans-serif; font-size: 14px; transition: border-color 150ms ease; } .ds-input::placeholder { color: rgba(255,255,255,0.3); } .ds-input:focus { outline: none; border-color: #6c63ff; } .ds-input:focus-visible { outline: 2px solid #00d9ff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Nav Link",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Uppercase tracked links; active state gets violet text on a faint violet wash.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-link is-active\" href=\"#\">Home</a><a class=\"ds-nav-link\" href=\"#\">Services</a></nav>",
+      "css": ".ds-nav { display: flex; gap: 4px; } .ds-nav-link { padding: 8px 12px; font-family: 'Noto Sans', system-ui, sans-serif; font-size: 15px; font-weight: 500; letter-spacing: -0.01em; text-transform: uppercase; color: #e8e8ed; text-decoration: none; border-radius: 8px; transition: color 150ms ease, background 150ms ease; } .ds-nav-link:hover { color: #ffffff; } .ds-nav-link.is-active { color: #6c63ff; background: rgba(108,99,255,0.1); } .ds-nav-link:focus-visible { outline: 2px solid #00d9ff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Custom Cursor",
+      "kind": "custom",
+      "refersTo": "cursor",
+      "description": "Signature: 6px violet dot + 36px ring that scales 1.33x over interactives. Transform-only.",
+      "html": "<div class=\"ds-cursor\"><div class=\"ds-cursor-dot\"></div><div class=\"ds-cursor-ring\"></div></div>",
+      "css": ".ds-cursor { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999; } .ds-cursor-dot { position: absolute; width: 6px; height: 6px; background: #6c63ff; border-radius: 50%; transform: translate(-50%,-50%); transition: transform 100ms ease; } .ds-cursor-ring { position: absolute; width: 36px; height: 36px; border: 1.5px solid #6c63ff; border-radius: 50%; transform: translate(-50%,-50%); transition: transform 150ms cubic-bezier(0.23,1,0.32,1), border-color 200ms ease, background 200ms ease; } .ds-cursor-ring.is-hovering { transform: translate(-50%,-50%) scale(1.33); border-color: rgba(108,99,255,0.4); background: rgba(108,99,255,0.05); }"
+    },
+    {
+      "name": "Typing Indicator",
+      "kind": "custom",
+      "refersTo": "typing-dot",
+      "description": "Signature: three dots with a smooth ease-out lift. No bounce.",
+      "html": "<div class=\"ds-typing\"><span class=\"ds-typing-dot\"></span><span class=\"ds-typing-dot\"></span><span class=\"ds-typing-dot\"></span></div>",
+      "css": ".ds-typing { display: flex; gap: 6px; padding: 10px 20px; background: #0f0f1a; border: 1px solid #1e1e30; border-radius: 16px; width: max-content; } .ds-typing-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(136,136,160,0.4); animation: dsTypingDot 1.2s cubic-bezier(0.23,1,0.32,1) infinite; } .ds-typing-dot:nth-child(2) { animation-delay: 150ms; } .ds-typing-dot:nth-child(3) { animation-delay: 300ms; } @keyframes dsTypingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.35; } 30% { transform: translateY(-4px); opacity: 1; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Vantage",
+    "overview": "SILKDEV does not ask for permission. The site speaks from a position of advantage: a studio that watched the market commoditize and repositioned itself above the crowd, selling the shovels. Every surface is dark, deliberate, and sharp — no pastel optimism, no soft apology, no decorative warmth. The void background is the default state; violet signal and cyan reflex appear only where they mean something: an action, a live product, a decision point. Typography carries the confidence — Drystick's blocky uppercase display is the studio's voice, loud and unhurried — while Noto Sans body text stays clinical and readable underneath. Interaction is immediate: things press, glow on hover, and never linger. The system is layered, not shadowed. Depth comes from tonal surfaces and blurred glow blobs, not box shadows.",
+    "keyCharacteristics": [
+      "Void-first: near-black backgrounds everywhere, surfaces slightly lighter, borders barely visible",
+      "Signal rarity: violet/cyan accents are scarce and purposeful, never decorative wallpaper",
+      "Uppercase voice: display type and labels shout in caps; body copy stays quiet and small",
+      "Immediate interaction: press feedback (scale 0.97), ease-out motion, hover glows",
+      "Craft details: custom cursor (dot + ring), grid-pattern overlays, glass surfaces"
+    ],
+    "rules": [
+      { "name": "The Signal Rule", "body": "Accents cover at most ~15% of any screen. Their rarity is the point — when violet appears, it means \"act here.\"", "section": "colors" },
+      { "name": "The Void Rule", "body": "Backgrounds are always darker than surfaces, surfaces darker than borders, borders darker than text. The hierarchy is: void → surface → border → text. Never invert it.", "section": "colors" },
+      { "name": "The Uppercase Voice Rule", "body": "Display and labels are uppercase; body copy is sentence case. The contrast between shout and whisper is the typographic personality.", "section": "typography" },
+      { "name": "The No-Shadow Rule", "body": "Cards and surfaces are flat at rest. Depth comes from tonal contrast and glow, not box shadows. The single violet glow is reserved for hover feedback.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep backgrounds in the void family (#0a0a14–#1a1a28); a page should read as one continuous dark field.",
+      "Do reserve Signal Violet for actionable/decision moments — buttons, active nav, focus.",
+      "Do use uppercase for display and labels, sentence case for body.",
+      "Do use glow blobs (blurred radial gradients) for depth; they're the system's shadow language.",
+      "Do press everything interactive (scale 0.97) — the site reacts immediately or not at all."
+    ],
+    "donts": [
+      "Don't add warm colors, gradients with gold/orange warmth, or pastel tints anywhere in the chrome (product cards keep their own identity accents).",
+      "Don't use box shadows as primary elevation — tonal layering and glow only.",
+      "Don't set body text below 14px or above 65–75ch line length.",
+      "Don't uppercase body copy or long passages — uppercase is a display/label privilege.",
+      "Don't animate width/height/left/top — transform and opacity only."
+    ]
+  }
+}
