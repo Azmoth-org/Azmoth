@@ -747,6 +747,29 @@ def test_no_llm_sdk_is_a_dependency():
         assert package not in requirements, f"{package} must not be a dependency of the engine"
 
 
+def test_the_curation_tooling_stays_out_of_the_image():
+    """`scripts/auto_verify_rules.py` calls a model; the engine must still not be able to.
+
+    The tool reads the machine-extracted rule tables back against the catalog text and writes
+    verdicts into `data/rules/*.csv`. That is a developer's offline curation pass over versioned
+    data, and its SDK lives in `requirements-tooling.txt` for exactly that reason. The test above
+    only checks that no LLM SDK is in `requirements.txt` — which would also pass if the tooling file
+    did not exist at all, or if the Dockerfile quietly installed it. This pins both halves, so the
+    boundary holds because it is built that way rather than because nobody has crossed it yet.
+    """
+    from app.config import ENGINE_DIR
+
+    tooling = ENGINE_DIR / "requirements-tooling.txt"
+    assert tooling.exists(), "the curation tooling's dependencies need a file of their own"
+    assert "anthropic" in tooling.read_text(encoding="utf-8").lower()
+
+    dockerfile = (ENGINE_DIR / "Dockerfile").read_text(encoding="utf-8")
+    assert "requirements.txt" in dockerfile, "the image is expected to install the engine's deps"
+    assert "requirements-tooling" not in dockerfile, (
+        "the image installed the curation tooling — the shipped engine would carry a model client"
+    )
+
+
 def test_the_engine_makes_no_outbound_call_on_the_solve_path():
     """Nothing on the coding path may reach the network: no client, no key, nowhere to send it."""
     import app.services.pipeline as pipeline_module
