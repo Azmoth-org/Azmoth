@@ -1107,3 +1107,155 @@ def test_a_second_case_reusing_position_numbers_does_not_inherit_the_first_case_
     assert report.confirmed_wrong_eur == Decimal("50.00")
     assert report.confirmed_fine_eur == Decimal("100.00")
     assert report.unconfirmed_eur == Decimal("350.00")
+
+
+# ------------------------------------------------------------------------------------------
+# mutual exclusion: the finding lands on both sides, the money lands on the cheaper one
+# ------------------------------------------------------------------------------------------
+#
+# A `Conflict` is the rules engine saying it cannot decide which of two positions the practice
+# meant to keep. Reporting both is right — the practice must drop one. Charging *both* amounts to
+# `confirmed_wrong` is not: GOÄ 5 (10.72 €) beside GOÄ 7 (21.45 €) overcharges by at most 10.72 €,
+# and the engine used to report 32.17 €, treating an ambiguity as if the whole encounter were
+# fictitious. These tests pin the lower bound and the fact that it stays a lower bound.
+
+
+def _mutual_delivery(*positions: tuple[str, str, str]) -> PadnextDelivery:
+    """A one-case delivery of `(positionsnr, ziffer, gesamtbetrag)` at the Schwellenwert."""
+    return PadnextDelivery(
+        nachrichtentyp="ADL",
+        version="02.12",
+        source_name="mutual_padx.xml",
+        invoices=[
+            PadnextInvoice(
+                invoice_id="MUT-1",
+                cases=[
+                    PadnextCase(
+                        behandlungsart="0",
+                        positions=[
+                            PadnextPosition(
+                                positionsnr=nr,
+                                ziffer=ziffer,
+                                go="GOÄ",
+                                anzahl=1,
+                                faktor=Decimal("2.3"),
+                                gesamtbetrag=Decimal(betrag),
+                            )
+                            for nr, ziffer, betrag in positions
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+
+
+@pytest.fixture
+def mutual_report(pipeline):
+    """GOÄ 5 and GOÄ 7, both priced correctly, nothing else wrong with either line."""
+    return audit_delivery(
+        _mutual_delivery(("1", "5", "10.72"), ("2", "7", "21.45")),
+        catalog=pipeline.catalog,
+        rules=pipeline.rules,
+        souffle_run=pipeline.souffle.run,
+    )
+
+
+def test_a_mutual_exclusion_still_reports_both_positions(mutual_report):
+    """The regression guard on the fix: the money moved, the finding did not. A reviewer must
+    still see that both lines are implicated, because only a human can say which one is real."""
+    for nr in ("1", "2"):
+        row = position(mutual_report, nr)
+        assert row.verdict == "blocked"
+        assert "padnext_mutual_exclusion" in finding_types(mutual_report, nr)
+
+
+def test_only_the_cheaper_side_of_a_mutual_exclusion_is_confirmed_wrong(mutual_report):
+    """10.72 €, not 32.17 €. The dearer position survives the cluster and is `unconfirmed` —
+    not `confirmed_fine`, because nothing confirmed it either."""
+    assert mutual_report.confirmed_wrong_eur == Decimal("10.72")
+    assert mutual_report.unconfirmed_eur == Decimal("21.45")
+    assert mutual_report.confirmed_fine_eur == Decimal("0.00")
+    assert position(mutual_report, "1").bucket == "confirmed_wrong"
+    assert position(mutual_report, "2").bucket == "unconfirmed"
+
+
+def test_the_surviving_side_says_why_it_survived(mutual_report):
+    """`unconfirmed` here is a different statement from "no rule covers this Ziffer", and the
+    reason has to distinguish them or a reader will read a rule gap where there is none."""
+    reason = position(mutual_report, "2").bucket_reason
+    assert "Wechselseitiger Ausschluss" in reason
+    assert "GOÄ 5" in reason
+
+
+def test_the_buckets_still_account_for_every_euro_of_a_mutual_exclusion(mutual_report):
+    total = (
+        mutual_report.confirmed_fine_eur
+        + mutual_report.confirmed_wrong_eur
+        + mutual_report.unconfirmed_eur
+    )
+    assert total == mutual_report.claimed_total_eur == Decimal("32.17")
+
+
+def test_a_four_way_exclusion_cluster_keeps_exactly_one_survivor(pipeline):
+    """GOÄ 5/6/7/8 arrive as several overlapping pairs. Choosing a survivor per *pair* would leave
+    every member surviving something and charge nothing to `confirmed_wrong`; the pairs are unioned
+    into one cluster first, so three of the four are the overcharge."""
+    report = audit_delivery(
+        _mutual_delivery(
+            ("1", "5", "10.72"),
+            ("2", "6", "13.41"),
+            ("3", "7", "21.45"),
+            ("4", "8", "34.86"),
+        ),
+        catalog=pipeline.catalog,
+        rules=pipeline.rules,
+        souffle_run=pipeline.souffle.run,
+    )
+    buckets = {p.positionsnr: p.bucket for p in report.positions}
+    assert sum(1 for b in buckets.values() if b == "unconfirmed") == 1
+    assert buckets["4"] == "unconfirmed", "the dearest member is the one kept"
+    assert report.confirmed_wrong_eur == Decimal("45.58")  # 10.72 + 13.41 + 21.45
+    assert (
+        report.confirmed_fine_eur + report.confirmed_wrong_eur + report.unconfirmed_eur
+        == report.claimed_total_eur
+    )
+
+
+def test_surviving_a_cluster_does_not_excuse_a_defect_of_the_lines_own(pipeline):
+    """Position 5 of the bundled example is the dearer half of the 5/7 cluster *and* understates
+    its own total by 1 €. Surviving the cluster must not launder that: an independent verified
+    defect is checked first and still puts the line in `confirmed_wrong`."""
+    report = audit_delivery(
+        _mutual_delivery(("1", "5", "10.72"), ("2", "7", "20.45")),  # 20.45 recomputes to 21.45
+        catalog=pipeline.catalog,
+        rules=pipeline.rules,
+        souffle_run=pipeline.souffle.run,
+    )
+    row = position(report, "2")
+    assert "padnext_amount_mismatch" in finding_types(report, "2")
+    assert row.bucket == "confirmed_wrong"
+    assert report.confirmed_wrong_eur == Decimal("31.17")
+
+
+# ------------------------------------------------------------------------------------------
+# § 12 Abs. 3 attaches above the Schwellenwert, including above the Höchstsatz
+# ------------------------------------------------------------------------------------------
+
+
+def test_a_factor_above_the_hoechstsatz_still_requires_a_justification(report):
+    """Position 9 charges 4.0 against a maximum of 3.5. It used to report
+    `justification_required: false`, because the cap branch short-circuited the § 12 Abs. 3 flag —
+    a factor so high it is illegal was reported as needing no written reason at all."""
+    row = position(report, "9")
+    assert row.factor_within_band is False
+    assert row.justification_required is True
+    assert row.justification_present is True  # the position does carry a begruendung
+    assert "padnext_factor_above_maximum" in finding_types(report, "9")
+
+
+def test_an_illegal_factor_reports_one_error_not_two(report):
+    """The flag moved out of the branch; the *finding* stayed in it. A reviewer sees the error that
+    decides what happens next — the factor is above the legal maximum — not that plus a second
+    error about the paperwork for a factor that may not be charged at all."""
+    assert "padnext_justification_missing" not in finding_types(report, "9")

@@ -535,9 +535,13 @@ class Validator:
             Warning_(
                 type="rule_coverage_incomplete",
                 severity="warning",
+                # Quotes `enforced_rules` over `total_constraint_rules` — the same pair as
+                # `verified_share` and as the `advisory_rules_present` warning. This line used to
+                # say "30 Ausschlussregeln" while the warning beside it said "35 Regeln", which
+                # left a reader to work out that the two were counting different things.
                 message=(
-                    f"Regelabdeckung ist unvollständig: {summary['exclusions_enforced']} "
-                    f"Ausschlussregeln werden durchgesetzt, "
+                    f"Regelabdeckung ist unvollständig: {summary['enforced_rules']} verifizierte "
+                    f"Regeln von {summary['total_constraint_rules']} werden durchgesetzt, "
                     f"{summary['unverified_rules_not_enforced']} automatisch extrahierte Regeln "
                     f"sind NICHT verifiziert und wirken bei Policy "
                     f"'{summary['policy_for_unverified_rules']}' nicht blockierend. Die "

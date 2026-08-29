@@ -166,7 +166,10 @@ def cmd_check(args: argparse.Namespace) -> int:
         report(
             "rules load",
             bool(rules.files_loaded),
-            f"{summary['exclusions_enforced']} enforced, "
+            # `enforced_rules`, not `exclusions_enforced`: this line and the "rule coverage
+            # reported" line below are read together, and quoting the exclusion subset here made
+            # them disagree ("30 enforced" against "35 enforced") about the same rule store.
+            f"{summary['enforced_rules']} of {summary['total_constraint_rules']} enforced, "
             f"{summary['unverified_rules_not_enforced']} unverified/not enforced",
         )
     except Exception as exc:  # noqa: BLE001
@@ -227,7 +230,8 @@ def cmd_check(args: argparse.Namespace) -> int:
             report(
                 "rule coverage reported",
                 proposal.enforced_rule_count > 0 and proposal.advisory_rule_count > 0,
-                f"{proposal.enforced_rule_count} enforced / {proposal.advisory_rule_count} advisory",
+                f"{proposal.enforced_rule_count} enforced / "
+                f"{proposal.advisory_rule_count} advisory",
             )
         except Exception as exc:  # noqa: BLE001
             report("end-to-end coding", False, f"{type(exc).__name__}: {exc}")

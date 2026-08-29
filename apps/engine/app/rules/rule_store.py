@@ -534,10 +534,27 @@ class RuleStore:
         """The denominator the review dashboard counts towards. 894 in the shipped data."""
         return len(self.constraint_rules())
 
+    def enforced_rule_count(self) -> int:
+        """Rules that may actually suppress a position right now. 35 in the shipped data.
+
+        The numerator of `verified_share`, and the single definition of "enforced" in the codebase:
+        `app.services.rule_coverage.build` calls this rather than re-adding the four lists, so the
+        coverage endpoint and the rule store cannot drift into quoting different totals. They did:
+        `engine_cli.py check` printed "30 enforced" from `exclusions_enforced` on one line and
+        "35 enforced" from the coverage object on the next.
+        """
+        return (
+            len(self.exclusions)
+            + len(self.zielleistung)
+            + len(self.specificity)
+            + len(self.factor_caps)
+        )
+
     def summary(self) -> dict:
         return {
             "policy_for_unverified_rules": str(self.policy),
             "files_loaded": sorted(self.files_loaded),
+            "enforced_rules": self.enforced_rule_count(),
             "exclusions_enforced": len(self.exclusions),
             "exclusions_mutual": len(self.mutual_pairs()),
             "zielleistung_enforced": len(self.zielleistung),
@@ -549,9 +566,18 @@ class RuleStore:
             "rejected_rules": self.rejected_rule_count(),
             "review_verified_rules": self.review_verified_rule_count(),
             "total_constraint_rules": self.constraint_rule_count(),
+            #: Enforced rules over every constraint rule loaded — "35/894" in the shipped data.
+            #:
+            #: It used to read `verified exclusions / enforced exclusions`, which was "30/30". That
+            #: is 1/1 by construction: under `warn` only verified rules are ever admitted to
+            #: `self.exclusions`, so the numerator and the denominator were the same set and the
+            #: field could not express a gap no matter how large the gap was. On the review
+            #: dashboard it rendered as a full meter — "100 % verified" — for an engine enforcing
+            #: 3.9 % of its rules. The denominator now includes `suppressed`, so the figure moves
+            #: only when a reviewer actually promotes a rule.
             "verified_share": (
-                f"{sum(1 for r in self.exclusions if r.verified)}/{len(self.exclusions)}"
-                if self.exclusions
+                f"{self.enforced_rule_count()}/{self.constraint_rule_count()}"
+                if self.constraint_rule_count()
                 else "0/0"
             ),
         }

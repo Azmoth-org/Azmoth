@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import os
 import time
+from collections.abc import Sequence
 from decimal import Decimal
 
 from app.bridge.entity_to_ziffer import BridgeResult
@@ -44,6 +45,7 @@ from app.schemas import (
     ClinicalAct,
     ClinicalExtraction,
     CodeCandidate,
+    Conflict,
     JustificationFactor,
     Patient,
     Setting,
@@ -405,11 +407,89 @@ def rules_bearing_on(
     )
 
 
+def mutual_exclusion_survivors(
+    rows: Sequence[PadnextAuditedPosition], conflicts: Sequence[Conflict]
+) -> set[int]:
+    """The one position per mutual-exclusion cluster whose euros are *not* an overcharge.
+
+    Returns the `id()` of each surviving row, matching how `blocking_rule_id` is keyed and for the
+    same reason: `positionsnr` is unique only within an `abrechnungsfall`.
+
+    A `Conflict` is an unordered pair the rules refused to decide between, because the invoice alone
+    cannot say which service the practice actually performed. Both sides are correctly reported
+    `blocked` — neither is confirmed billable, and the practice must drop one. What does not follow
+    is that *both* amounts are wrong. Charging GOÄ 5 (10.72 €) beside GOÄ 7 (21.45 €) overcharges by
+    at most 10.72 €; billing 32.17 € to `confirmed_wrong` claims the whole encounter was fictitious
+    and overstates a provable finding by 3×.
+
+    So each cluster keeps its most valuable member and every other member is the overcharge. Keeping
+    the dearest is the reading most favourable to the practice, which is the only safe direction for
+    a figure we intend to put in front of a payer: whatever the practice meant to keep, it cannot
+    have been worth more than that, so the remainder is chargeable to `confirmed_wrong` no matter
+    which way the ambiguity resolves. It is a lower bound on the overcharge, and it is stated as
+    one.
+
+    Clusters, not pairs. GOÄ 5/6/7/8 and 650–653 arrive as several overlapping pairs, and picking a
+    survivor per pair would leave every member of a four-way cluster surviving something. The pairs
+    are unioned into connected components first, so a cluster of four yields exactly one survivor
+    and three overcharges.
+
+    Ties break on `positionsnr` then `ziffer`, so two positions at the same price cannot make the
+    result depend on dict ordering — the receipt hash covers this figure.
+    """
+    by_ziffer: dict[str, list[PadnextAuditedPosition]] = {}
+    for row in rows:
+        # Only rows the conflict branch actually blocked. A Ziffer that appears in a Conflict but
+        # was suppressed by a *directed* rule as well is already attributed to that rule, and a
+        # chargeable row is not in the cluster at all.
+        if row.verdict == "blocked" and row.blocked_by:
+            by_ziffer.setdefault(row.ziffer, []).append(row)
+
+    # -- union the pairs into clusters --------------------------------------------------------
+    parent: dict[str, str] = {}
+
+    def find(z: str) -> str:
+        parent.setdefault(z, z)
+        while parent[z] != z:
+            parent[z] = parent[parent[z]]
+            z = parent[z]
+        return z
+
+    def union(a: str, b: str) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    for conflict in conflicts:
+        if conflict.ziffer_a in by_ziffer and conflict.ziffer_b in by_ziffer:
+            union(conflict.ziffer_a, conflict.ziffer_b)
+
+    clusters: dict[str, list[PadnextAuditedPosition]] = {}
+    for ziffer in parent:
+        clusters.setdefault(find(ziffer), []).extend(by_ziffer.get(ziffer, []))
+
+    def value(row: PadnextAuditedPosition) -> tuple[Decimal, str, str]:
+        # A position with no `gesamtbetrag` contributes nothing to any bucket, so it must never win
+        # the cluster and take the survivor slot away from a priced position.
+        return (
+            row.claimed_amount_eur if row.claimed_amount_eur is not None else Decimal("-1"),
+            row.positionsnr,
+            row.ziffer,
+        )
+
+    survivors: set[int] = set()
+    for members in clusters.values():
+        if len(members) > 1:
+            survivors.add(id(max(members, key=value)))
+    return survivors
+
+
 def classify_position(
     row: PadnextAuditedPosition,
     *,
     verified_defects: set[str],
     blocking_rule_verified: bool | None,
+    mutual_exclusion_survivor: bool = False,
 ) -> tuple[PositionBucket, str]:
     """Put one audited position into one of the three buckets, and say why.
 
@@ -425,6 +505,18 @@ def classify_position(
     if verified_defects:
         return "confirmed_wrong", (
             "Verifizierte Prüfung fehlgeschlagen: " + ", ".join(sorted(verified_defects)) + "."
+        )
+
+    # Checked after `verified_defects` and before the blocked branch. After, because surviving the
+    # cluster says nothing about the rest of the line: the dearest of two mutually exclusive
+    # positions can still recompute to the wrong amount, and that defect is its own. Before, because
+    # this is precisely the case where a verified rule fired and still cannot say which side loses.
+    if row.verdict == "blocked" and mutual_exclusion_survivor:
+        return "unconfirmed", (
+            f"Wechselseitiger Ausschluss mit GOÄ {row.blocked_by}: eine der beiden Positionen ist "
+            "berechnungsfähig, die Rechnung lässt aber offen welche. Als teurere Position wird "
+            "diese nicht als Überzahlung gewertet — der Ausschluss ist gegen die günstigere "
+            "gebucht. Welche Leistung tatsächlich erbracht wurde, muss ein Mensch entscheiden."
         )
 
     if row.verdict == "blocked" and blocking_rule_verified:
@@ -718,6 +810,18 @@ def audit_delivery(
         if position.faktor is not None:
             row.factor_within_band = position.faktor <= band.max
             row.legal_basis = row.legal_basis or band.legal_basis
+
+            # § 12 Abs. 3 attaches to *every* factor above the Schwellenwert, and it does not stop
+            # attaching when the factor also breaks the § 5 Höchstsatz — a line charged at 4.0 needs
+            # a written reason and is illegal, not one instead of the other. Recorded before the
+            # branch below because these two flags used to live inside the `elif`, where the cap
+            # check short-circuited them and a 4.0 factor reported `justification_required: false`.
+            # The *finding* below stays in the `elif`: a reviewer should see one error per line, and
+            # "the factor is above the legal maximum" is the one that decides what happens next.
+            if position.faktor > band.threshold:
+                row.justification_required = True
+                row.justification_present = bool(position.begruendung)
+
             if position.faktor > band.max or position.ziffer in factor_invalid:
                 findings.append(
                     PadnextFinding(
@@ -735,8 +839,6 @@ def audit_delivery(
                     )
                 )
             elif position.faktor > band.threshold:
-                row.justification_required = True
-                row.justification_present = bool(position.begruendung)
                 if not position.begruendung:
                     findings.append(
                         PadnextFinding(
@@ -899,6 +1001,10 @@ def audit_delivery(
         "confirmed_wrong": Decimal("0.00"),
         "unconfirmed": Decimal("0.00"),
     }
+    #: One survivor per mutual-exclusion cluster, so a cluster costs the invoice its cheaper
+    #: members and not the whole cluster. See `mutual_exclusion_survivors`.
+    survivors = mutual_exclusion_survivors(audited, conflicts)
+
     for row in audited:
         # Out-of-scope positions carry a Ziffer from another fee schedule, whose numbers collide
         # with GOÄ ones — GOZ 2020 is not GOÄ 2020. Looking up rules for them would attribute GOÄ
@@ -918,6 +1024,7 @@ def audit_delivery(
             row,
             verified_defects=verified_defects_per_position.get(row.positionsnr, set()),
             blocking_rule_verified=blocking_rule_verified,
+            mutual_exclusion_survivor=id(row) in survivors,
         )
         bucket_totals[row.bucket] += row.claimed_amount_eur or Decimal("0.00")
 
