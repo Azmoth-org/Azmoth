@@ -18,7 +18,7 @@ import { getProductLinks } from "@/lib/site";
  * A form that silently drops enquiries is worse than an address that works, so
  * until a backend exists this page hands the visitor a real mailbox.
  */
-const CONTACT_EMAIL = "kontakt@azmoth.de";
+const CONTACT_EMAIL = "oussama0khadraoui@gmail.com";
 
 export async function generateMetadata({
   params,
