@@ -158,7 +158,11 @@ export type EngineProxyResult =
  */
 export async function callEngine(
   path: string,
-  init?: { method?: "GET" | "POST"; body?: unknown }
+  // `DELETE` joined the union for revoking an API key. It is the only destructive verb this proxy
+  // speaks, and it is deliberately not a `POST /revoke`: revocation is idempotent and removes a
+  // resource, which is what `DELETE` means, and a client library generated from our OpenAPI
+  // document should not have to learn a house convention to use it.
+  init?: { method?: "GET" | "POST" | "DELETE"; body?: unknown }
 ): Promise<EngineProxyResult> {
   const url = `${engineBaseUrl()}${path}`
   const method = init?.method ?? "GET"

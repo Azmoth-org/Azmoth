@@ -19,6 +19,10 @@ each hold their own lock and could drain the same queue at once.
 
 `ApiKeyStore` is on the hot path rather than outliving anything: it is asked to verify a credential
 on every request to `/api/v1/audit/*`.
+
+`UsageMeter` is the one that genuinely *has* state — a buffer of rows waiting to be written — so two
+instances would not merely be wasteful, they would each hold half the traffic and neither would
+reach the flush threshold. See `app.services.usage`.
 """
 
 from __future__ import annotations
@@ -29,12 +33,15 @@ from app.services.batch_audit import BatchAuditService
 from app.services.pipeline import Pipeline
 from app.services.proposal_store import ProposalStore
 from app.services.rule_reviews import RuleReviewStore
+from app.services.usage import UsageMeter, UsageStore
 
 _pipeline: Pipeline | None = None
 _proposals: ProposalStore | None = None
 _batches: BatchAuditService | None = None
 _rule_reviews: RuleReviewStore | None = None
 _api_keys: ApiKeyStore | None = None
+_usage_meter: UsageMeter | None = None
+_usage_store: UsageStore | None = None
 
 
 def pipeline() -> Pipeline:
@@ -83,6 +90,28 @@ def api_keys() -> ApiKeyStore:
     return _api_keys
 
 
+def usage_meter() -> UsageMeter:
+    """The process-wide usage buffer.
+
+    A singleton for a stronger reason than the others: it holds *state*. Two instances would each
+    buffer half the traffic, neither would reach the flush threshold on its own, and rows would sit
+    in memory far longer than the 15-second staleness bound claims. It is also what the lifespan
+    flushes on shutdown, and it can only flush the one everything wrote into.
+    """
+    global _usage_meter
+    if _usage_meter is None:
+        _usage_meter = UsageMeter()
+    return _usage_meter
+
+
+def usage() -> UsageStore:
+    """The read side. Stateless, and separate from the meter so nothing that reads can write."""
+    global _usage_store
+    if _usage_store is None:
+        _usage_store = UsageStore()
+    return _usage_store
+
+
 def reset() -> None:
     """Drop the in-process singletons. For tests that change settings between cases.
 
@@ -90,11 +119,16 @@ def reset() -> None:
     that quietly left a connection pool open would leak one per test. Use `reset_async`.
     """
     global _pipeline, _proposals, _batches, _rule_reviews, _api_keys
+    global _usage_meter, _usage_store
     _pipeline = None
     _proposals = None
     _batches = None
     _rule_reviews = None
     _api_keys = None
+    # Dropped rather than flushed: a test's buffered rows belong to a database that is about to be
+    # thrown away, and writing them would be writing into the next test's world.
+    _usage_meter = None
+    _usage_store = None
 
     # The rate limiter's counters are process-wide state of exactly the same kind, and a test that
     # exhausted a budget must not hand it to the next one. Cleared here rather than in a fixture of
