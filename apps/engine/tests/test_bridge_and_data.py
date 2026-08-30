@@ -183,14 +183,34 @@ def test_verified_rules_carry_a_verification_date(rules):
 
 def test_auto_extracted_rules_quote_the_law():
     """An automatically extracted rule must carry the sentence it came from, or a reviewer cannot
-    check it without re-reading the whole fee schedule."""
+    check it without re-reading the whole fee schedule.
+
+    The second assertion used to be `verified == "false"` outright. That was the right invariant
+    while nothing but a human could verify anything, but it is not what was actually meant: the
+    danger is a rule claiming verification that nobody and nothing can be held to, not a rule being
+    verified at all. So it is now the stronger, durable form — a rule may claim verification only if
+    it says *who or what* verified it and *when*. `manual_verification` is a person;
+    `deterministic_parser:…` is a re-parse of the same sentence that can be re-run and diffed;
+    `ai_verified:<model>:…` is a model's opinion and reads as one. A bare `auto_extracted:…` with
+    `verified=true` is the thing that must never appear, and this is what would catch it.
+    """
     with open(RULES_DATA_DIR / "exclusions.csv", encoding="utf-8", newline="") as fh:
         rows = list(csv.DictReader(fh))
 
     assert rows, "the importer produced no exclusion rules"
-    for row in rows[:200]:
+    accountable = ("manual_verification", "deterministic_parser", "ai_verified", "by_review")
+    for row in rows:
         assert row["quote"].strip(), f"{row['rule_id']} has no quote"
-        assert row["verified"] == "false", "auto-extracted rules must not claim verification"
+        if row["verified"] != "true":
+            continue
+        source = (row["source"] or "").strip()
+        assert source.startswith(accountable), (
+            f"{row['rule_id']} claims verification but its source ({source!r}) does not record "
+            "who or what verified it"
+        )
+        assert (row["verified_at"] or "").strip(), (
+            f"{row['rule_id']} claims verification with no date"
+        )
 
 
 def test_mutual_direction_is_symmetric_in_the_data(rules):
@@ -415,3 +435,45 @@ def test_unbound_justification_is_encounter_wide(catalog, rules):
     assert per_ziffer == {}
     assert encounter == [("schwer", "Notfall")]
     assert warnings == []
+
+
+def test_one_enforced_rule_per_edge_and_the_curated_citation_wins(rules):
+    """Two rules can assert the same edge once a machine-extracted one is verified.
+
+    Every rule in `exclusions.manual.csv` is also derivable from the Anmerkungen prose, so verifying
+    the auto table gave the store 30 duplicate edges. Both being enforced is wrong twice over:
+    `conflicts_arbitrated` emits one entry per rule, so a reviewer saw "GOÄ 5 ↔ GOÄ 7" listed
+    twice; and whichever rule the solver cited supplied the `legal_basis`, so the hand-written
+    "Anmerkungen zu den Nummern 5, 6, 7, 8 (Abschnitt B I)" could be replaced by the narrower
+    "Anmerkung zu Nummer 7" the extractor produced. A person read the whole Abschnitt to write the
+    first one, so it wins.
+    """
+    edges = [(r.from_ziffer, r.to_ziffer) for r in rules.exclusions]
+
+    assert len(edges) == len(set(edges)), "the solver must not be handed two rules for one edge"
+
+    rule = rules.exclusion_rule("5", "7")
+    assert rule is not None
+    assert rule.hand_verified, f"{rule.rule_id} shadowed the hand-verified rule for this edge"
+    assert "Abschnitt B I" in rule.legal_basis
+
+
+def test_a_redundant_rule_is_still_counted_in_the_denominator(rules):
+    """It is neither enforced nor a coverage gap, and it must not quietly leave the total.
+
+    A redundant rule is verified and the edge it asserts *is* enforced — by its twin. Dropping it
+    from `constraint_rules` would shrink the 894 denominator every time a machine pass rediscovers
+    a rule a human had already written, which would read on the dashboard as the fee schedule
+    getting smaller.
+    """
+    ids = {r.rule_id for r in rules.constraint_rules()}
+
+    for rule in rules.redundant:
+        assert rule.verified, "a redundant rule is verified; it is its twin that is enforced"
+        assert not rule.rejected
+        assert rule.rule_id in ids
+        assert rule.rule_id not in {r.rule_id for r in rules.exclusions}
+
+    assert rules.unverified_constraint_rule_count() == sum(
+        1 for r in rules.constraint_rules() if not r.verified and not r.rejected
+    )

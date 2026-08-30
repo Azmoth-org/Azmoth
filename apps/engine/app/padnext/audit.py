@@ -84,7 +84,15 @@ SETTING_MINDERUNG_PERCENT: dict[Setting, Decimal] = {
 #: Engine warning types this module re-reports itself, with a position number and a recomputation
 #: attached. Keeping both would show a reviewer one defect twice under two different names.
 ENGINE_WARNINGS_REPORTED_PER_POSITION = frozenset(
-    {"unknown_ziffer", "factor_above_hoechstsatz", "inactive_ziffer"}
+    {
+        "unknown_ziffer",
+        "factor_above_hoechstsatz",
+        # The Leistungslegende cap, for the same reason as the Höchstsatz above it: the audit now
+        # re-reports it per position, with the position number and the cap that was broken, so the
+        # engine's Ziffer-keyed copy would only be the same defect under a second name.
+        "factor_above_leistungslegende_cap",
+        "inactive_ziffer",
+    }
 )
 
 #: Finding types that put a position in `confirmed_wrong` — the defects whose basis is something a
@@ -822,20 +830,42 @@ def audit_delivery(
                 row.justification_required = True
                 row.justification_present = bool(position.begruendung)
 
-            if position.faktor > band.max or position.ziffer in factor_invalid:
+            # Two different ceilings end up in `factor_invalid`, and they are not interchangeable:
+            # `invalid_factor` is the § 5 chapter band (3.5 in Abschnitt B), `invalid_factor_cap` is
+            # a Leistungslegende cap from an Anmerkung ("nur mit dem einfachen Gebührensatz" → 1.0).
+            # Reporting `band.max` for both produced a sentence that was simply untrue — GOÄ 52 at
+            # 2.3 breaks its 1.0 cap and was reported as "Faktor 2.3 überschreitet den Höchstsatz
+            # 3.5". That was unreachable while no factor cap was enforced; it stopped being
+            # unreachable the moment the caps in `factor_caps.csv` were verified.
+            cap = rules.factor_cap(position.ziffer)
+            over_band = position.faktor > band.max
+            over_cap = cap is not None and position.faktor > cap.max_factor
+            if over_band or over_cap or position.ziffer in factor_invalid:
+                # The band is the stricter statement about the fee schedule as a whole, so it wins
+                # when both are broken; otherwise report whichever ceiling was actually exceeded.
+                if over_band or not over_cap:
+                    limit, basis, rule_id = band.max, band.legal_basis or "§ 5 Abs. 1 GOÄ", ""
+                    message = (
+                        f"Faktor {position.faktor} überschreitet den Höchstsatz {limit} "
+                        f"für GOÄ {position.ziffer}."
+                    )
+                else:
+                    limit, basis, rule_id = cap.max_factor, cap.legal_basis, cap.rule_id
+                    message = (
+                        f"Faktor {position.faktor} überschreitet den in der Leistungslegende "
+                        f"festgelegten Höchstwert {limit} für GOÄ {position.ziffer}."
+                    )
                 findings.append(
                     PadnextFinding(
                         type="padnext_factor_above_maximum",
                         severity="error",
                         positionsnr=position.positionsnr,
                         ziffer=position.ziffer,
-                        message=(
-                            f"Faktor {position.faktor} überschreitet den Höchstsatz {band.max} "
-                            f"für GOÄ {position.ziffer}."
-                        ),
-                        legal_basis=band.legal_basis or "§ 5 Abs. 1 GOÄ",
+                        message=message,
+                        legal_basis=basis or "§ 5 Abs. 1 GOÄ",
+                        rule_id=rule_id,
                         claimed=str(position.faktor),
-                        recomputed=f"max {band.max}",
+                        recomputed=f"max {limit}",
                     )
                 )
             elif position.faktor > band.threshold:

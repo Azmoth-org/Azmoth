@@ -1,0 +1,29 @@
+# Offline data-curation tooling. NOT a dependency of the engine, and deliberately not in
+# `requirements.txt`.
+#
+# `tests/test_production_fixes.py::test_no_llm_sdk_is_a_dependency` asserts that no LLM SDK appears
+# in `requirements.txt`, and that assertion is load-bearing rather than stylistic: the shipped image
+# is supposed to be a thing that cannot phone home. It has no model client, no API key and no
+# network path off the solve path, so "patient data left the building" is answerable from the
+# dependency list alone. Installing `anthropic` into the image would end that, for a script the
+# image never runs.
+#
+# So the split is the point. The Dockerfile installs `requirements.txt` only (see Dockerfile:43-47).
+# This file is installed by hand, on a developer's machine, when someone is curating the rule
+# tables:
+#
+#     pip install -r requirements-tooling.txt
+#     python scripts/auto_verify_rules.py --dry-run
+#
+# What the tool produces — verdicts written into `data/rules/*.csv` — is versioned data reviewed in
+# a pull request, so the engine still consumes nothing but CSVs it can hash.
+
+# Used by `scripts/auto_verify_rules.py`. Pinned like everything else in this repo, and for a
+# sharper reason than most: the verdicts this SDK's responses become are provenance recorded in the
+# rule tables, and a major bump that changed the request surface would make two verification passes
+# incomparable without saying so.
+anthropic==1.2.0
+
+# The same script can call Gemini instead (`--provider gemini`), which is what a key without
+# Anthropic access gets used for. Same contract, same parser, same conservative default.
+google-genai==2.20.0

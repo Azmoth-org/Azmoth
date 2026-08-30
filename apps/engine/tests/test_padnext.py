@@ -1259,3 +1259,81 @@ def test_an_illegal_factor_reports_one_error_not_two(report):
     decides what happens next — the factor is above the legal maximum — not that plus a second
     error about the paperwork for a factor that may not be charged at all."""
     assert "padnext_justification_missing" not in finding_types(report, "9")
+
+
+# ------------------------------------------------------------------------------------------
+# § 5 Höchstsatz and Leistungslegende cap are two different ceilings
+# ------------------------------------------------------------------------------------------
+
+
+def _one_position_delivery(ziffer: str, faktor: str, punktzahl: str, betrag: str) -> bytes:
+    """A minimal ADL payload with a single position, for probing one rule at a time."""
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">'
+        '<nachrichtentyp version="02.12">ADL</nachrichtentyp>'
+        "<rechnungsersteller><name>Synthetisch</name></rechnungsersteller>"
+        '<leistungserbringer id="01"><name>Dr. Test</name></leistungserbringer>'
+        '<rechnung id="PROBE-1" aisrechnungsnr="RG-1"><abrechnungsfall>'
+        "<behandlungsart>0</behandlungsart><vertragsart>1</vertragsart>"
+        '<positionen posanzahl="1">'
+        f'<goziffer positionsnr="1" go="GOÄ" ziffer="{ziffer}">'
+        "<datum>2026-07-20</datum><anzahl>1</anzahl><text>Probe</text>"
+        f"<faktor>{faktor}</faktor><punktzahl>{punktzahl}</punktzahl>"
+        f"<gesamtbetrag>{betrag}</gesamtbetrag>"
+        "</goziffer></positionen></abrechnungsfall></rechnung></rechnungen>"
+    ).encode("utf-8")
+
+
+def test_a_leistungslegende_cap_is_reported_as_the_cap_not_as_the_chapter_hoechstsatz(pipeline):
+    """GOÄ 52 is capped at 1.0 by its own Anmerkung, well below Abschnitt B's Höchstsatz of 3.5.
+
+    Both ceilings arrive in `factor_invalid` — the § 5 band from Soufflé's `invalid_factor`, the
+    Anmerkung cap from `invalid_factor_cap` — and the audit used to quote `band.max` for either.
+    Charged at 2.3 that produced the literally false sentence *"Faktor 2.3 überschreitet den
+    Höchstsatz 3.5"*: 2.3 does not exceed 3.5, and the reason the position is wrong is the 1.0 cap.
+    The bug was unreachable while no factor cap was enforced and became reachable the moment
+    `factor_caps.csv` was verified, so it is pinned here rather than left to the next pass.
+    """
+    payload = _one_position_delivery("52", "2.3", "100", "13.41")
+    delivery, read_findings = read_delivery(payload, source_name="probe.xml")
+    report = audit_delivery(
+        delivery,
+        catalog=pipeline.catalog,
+        rules=pipeline.rules,
+        souffle_run=pipeline.souffle.run,
+        read_findings=read_findings,
+    )
+
+    cap = pipeline.rules.factor_cap("52")
+    assert cap is not None and cap.verified, "this test needs the GOÄ 52 cap to be enforced"
+
+    over = [f for f in report.findings if f.type == "padnext_factor_above_maximum"]
+    assert len(over) == 1, f"expected exactly one ceiling finding, got {[f.message for f in over]}"
+    assert "1.0" in over[0].message and "Leistungslegende" in over[0].message
+    assert "3.5" not in over[0].message, "the chapter Höchstsatz is not what this position broke"
+    assert over[0].recomputed == "max 1.0"
+    assert over[0].legal_basis == cap.legal_basis
+    assert over[0].rule_id == cap.rule_id
+
+    # And the engine's own Ziffer-keyed copy is not reported a second time alongside it.
+    assert [f.type for f in report.findings].count("factor_above_leistungslegende_cap") == 0
+    assert position(report, "1").bucket == "confirmed_wrong"
+
+
+def test_breaking_both_ceilings_reports_the_chapter_hoechstsatz(pipeline):
+    """When a factor is over the § 5 band *and* over an Anmerkung cap, the band is the stricter
+    statement about the fee schedule, so that is the one a reviewer is shown."""
+    payload = _one_position_delivery("52", "4.0", "100", "23.31")
+    delivery, read_findings = read_delivery(payload, source_name="probe.xml")
+    report = audit_delivery(
+        delivery,
+        catalog=pipeline.catalog,
+        rules=pipeline.rules,
+        souffle_run=pipeline.souffle.run,
+        read_findings=read_findings,
+    )
+
+    over = [f for f in report.findings if f.type == "padnext_factor_above_maximum"]
+    assert len(over) == 1
+    assert "3.5" in over[0].message and "Höchstsatz" in over[0].message

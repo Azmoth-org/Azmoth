@@ -1,0 +1,14 @@
+{
+  "examined": 837,
+  "confirmed": 831,
+  "quarantined": 6,
+  "by_reason": {
+    "conditional": 6,
+    "form_A": 294,
+    "form_B": 482,
+    "form_C": 49,
+    "form_D": 4,
+    "form_E": 2
+  },
+  "generated_at": "2026-08-30"
+}
