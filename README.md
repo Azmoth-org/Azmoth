@@ -154,7 +154,7 @@ pnpm dev
 cd apps/engine
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python scripts/engine_cli.py check     # engines, data, logic, end-to-end probe
-.venv/bin/python -m pytest -q                    # 731 tests, against in-memory SQLite
+.venv/bin/python -m pytest -q                    # 1161 tests, against in-memory SQLite
 .venv/bin/uvicorn app.main:app --reload
 ```
 
