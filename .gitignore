@@ -94,3 +94,10 @@ apps/engine/*.db
 *.db
 *.sqlite
 *.sqlite3
+
+# Uploads the engine writes at runtime: a bulk job's ZIP lives here between the 202 and the report.
+# Under data/ because UPLOAD_DIR defaults beside the catalogs in a source checkout — but unlike
+# everything else in that directory this is neither versioned nor reproducible, it is somebody's
+# billing data. A deployment points UPLOAD_DIR at a mounted volume instead; see
+# apps/engine/.env.example.
+data/uploads/

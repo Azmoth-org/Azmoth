@@ -114,7 +114,22 @@ services:
       # Refusing production data is the default and should stay that way. See
       # docs/compliance/PRIVATE_DATA_WARNING.md before changing it.
       PADNEXT_ALLOW_REAL_DATA: "false"
+
+      # -- the partner API -------------------------------------------------------------------
+      # The one writable path in this service, and the reason it is not under /srv: every mount
+      # below is `:ro` on purpose, and /srv is root-owned while the engine runs as uid 10001.
+      UPLOAD_DIR: /var/lib/azmoth/uploads
+      RATE_LIMIT_SINGLE_PER_MINUTE: "${RATE_LIMIT_SINGLE_PER_MINUTE:-100}"
+      RATE_LIMIT_BULK_PER_HOUR: "${RATE_LIMIT_BULK_PER_HOUR:-10}"
+      # Off by default in development, unlike the production file. A limiter that refuses the
+      # eleventh bulk upload of the hour is correct in front of a customer and is only in the way
+      # while somebody is iterating on an integration against their own machine.
+      RATE_LIMIT_ENABLED: "${RATE_LIMIT_ENABLED:-false}"
     volumes:
+      # The bulk uploads. A named volume rather than a bind mount into the repo, and the same
+      # volume the production file uses, for the same reason `postgres-data` is shared: dev and
+      # prod are one local stack, and a `git clean` must not be able to delete an accepted job.
+      - engine-uploads:/var/lib/azmoth/uploads
       # Live-edit the rules while developing: change goae_rules.dl, goae_optimize.lp or any CSV in
       # data/rules/ and the next request picks it up, no rebuild. Read-only, so a container cannot
       # modify the committed catalog.
@@ -389,3 +404,8 @@ volumes:
     # approvals; deleting it is a decision, not a side effect of stopping the stack. Same explicit
     # name as docker-compose.yml's volume, deliberately: dev and prod share one local database.
     name: azmoth-postgres-data
+  engine-uploads:
+    # And the same for the bulk uploads, for the same reason and with the same name as in
+    # docker-compose.yml: a job accepted with a `202` under one file must still be there under the
+    # other.
+    name: azmoth-engine-uploads
