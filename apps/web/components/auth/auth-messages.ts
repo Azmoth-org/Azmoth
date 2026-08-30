@@ -28,6 +28,20 @@ const MESSAGES: Record<string, string> = {
     "Die Anmeldung mit Google ist auf diesem Server nicht eingerichtet.",
   SOCIAL_ACCOUNT_ALREADY_LINKED:
     "Dieses Google-Konto ist bereits mit einem anderen Konto verknüpft.",
+  /**
+   * Ours, not the library's — `lib/auth-allowlist.ts` raises it when an address is not on
+   * `SIGNUP_ALLOWLIST`. It is here for the same reason every other entry is: without a mapping the
+   * form would render the generic "Die Anmeldung ist fehlgeschlagen" and a legitimate pilot
+   * participant would have no idea that the fix is to ask us to add their address.
+   *
+   * Deliberately identical for "no allowlist configured" and "address not on it". A stranger must
+   * not be able to probe for a misconfigured deployment through a sign-up form; the operator sees
+   * the distinction in the server log.
+   */
+  SIGNUP_NOT_ALLOWED:
+    "Die Registrierung ist derzeit auf freigeschaltete Pilot-Teilnehmer beschränkt. " +
+    "Diese E-Mail-Adresse ist nicht freigegeben. Wenn Sie am Pilotprogramm teilnehmen " +
+    "möchten, fordern Sie bitte einen Zugang an — wir schalten Ihre Adresse dann frei.",
 }
 
 /** The German sentence for a Better Auth failure, or a truthful fallback when the code is new. */

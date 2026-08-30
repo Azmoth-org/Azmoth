@@ -62,6 +62,21 @@ const PUBLIC_PREFIXES = [
   "/signup",
   "/api/auth",
   "/api/health",
+  /**
+   * The public demo, and the proxy routes behind it.
+   *
+   * This is the only *data* path in the application open to an anonymous visitor, so it is worth
+   * saying exactly what it can reach. `/api/demo/*` proxies to two engine endpoints that take no
+   * body, no query and no path parameter and audit one committed synthetic delivery — so no
+   * request a visitor composes causes anything of theirs to be processed. That property, not this
+   * list, is what makes the route publishable; see `apps/engine/app/api/demo.py`.
+   *
+   * The gated track is unaffected: `/padnext`, `/review` and every `/api/engine/*` route stay
+   * behind the session, which is what keeps "look at the product" and "upload a document" two
+   * different acts with two different front doors.
+   */
+  "/demo",
+  "/api/demo",
 ] as const
 
 /**
@@ -98,7 +113,9 @@ export function middleware(request: NextRequest) {
     // Someone who is already signed in has no business on the login form; sending them to the
     // dashboard instead is what makes a bookmarked `/login` behave the way a reader expects.
     // Only the two screens, never `/api/auth/*` — bouncing the sign-out call would make signing
-    // out impossible.
+    // out impossible, and never `/demo`, which a signed-in reader has every reason to open: it is
+    // what they show a colleague, and bouncing them to the dashboard would make it unreachable
+    // from inside the product.
     if (hasSession && (pathname === "/login" || pathname === "/signup")) {
       return NextResponse.redirect(new URL("/", request.url))
     }

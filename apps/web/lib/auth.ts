@@ -23,10 +23,15 @@
  * ever use. What *is* on is the password floor — Better Auth's default minimum is 8, and 12 is the
  * BSI's recommendation for an account that reaches clinical data.
  *
- * **Sign-up is open, and that is a gap rather than a decision.** Anyone who can reach `/signup` can
- * make an account. That is acceptable for a build that holds only synthetic data and is not
- * acceptable for one that holds real records; an invite-only flow (or an SSO integration) is what
- * `docs/compliance/PRIVATE_DATA_WARNING.md` now tracks alongside the retention policy.
+ * **Sign-up is gated by an allowlist, and closed by default.** `SIGNUP_ALLOWLIST` names the
+ * addresses and domains that may register; unset means nobody may, except in development. The
+ * check runs in the `user.create.before` hook below so it applies to *every* way an account can
+ * come into existence — the password form and a Google sign-in alike — rather than to the one
+ * screen somebody remembered to guard. `lib/auth-allowlist.ts` holds the rule and the reasoning.
+ *
+ * What that does not do is create roles. Every account admitted still has every permission inside
+ * its own practice; a reviewer and an administrator are the same thing. That gap is deliberate for
+ * a named pilot and is tracked in `docs/compliance/PRIVATE_DATA_WARNING.md` alongside retention.
  *
  * **Organisations are on, and they now authorise as well as identify.** The `organization()` plugin
  * below gives a session an active practice, the sidebar shows and switches it, and `lib/engine.ts`
@@ -54,9 +59,15 @@
  */
 
 import { betterAuth } from "better-auth"
+import { APIError } from "better-auth/api"
 import { nextCookies } from "better-auth/next-js"
 import { organization } from "better-auth/plugins"
 
+import {
+  SIGNUP_REFUSED_CODE,
+  SIGNUP_REFUSED_MESSAGE,
+  mayRegister,
+} from "@/lib/auth-allowlist"
 import { authDatabase, optionalEnv } from "@/lib/auth-db"
 import { googleCredentials } from "@/lib/auth-google"
 
@@ -233,6 +244,43 @@ function buildAuth() {
      * hook, and the reader picks an organisation from the menu instead.
      */
     databaseHooks: {
+      /**
+       * The sign-up gate. Refuses an account whose address is not on `SIGNUP_ALLOWLIST`.
+       *
+       * **Here rather than on the sign-up route**, and the difference is the whole point: this hook
+       * runs on every path that creates a user row, so a Google sign-in by a stranger is refused by
+       * the same three lines that refuse a password registration. A check written into the form —
+       * or into `/api/auth/sign-up/email` — would guard one of the two doors and leave the other
+       * open the day social sign-in is switched on, which is exactly the shape of bug that gets
+       * found by the person who walks through it.
+       *
+       * `APIError` rather than returning `false`: Better Auth turns it into a 403 whose body the
+       * sign-up form already renders, so the visitor gets a sentence instead of a generic failure.
+       *
+       * The refusal reason is logged and not sent. A stranger must not be able to tell an
+       * unconfigured deployment from an address that is merely not listed — see
+       * `SIGNUP_REFUSED_MESSAGE`.
+       */
+      user: {
+        create: {
+          before: async (user) => {
+            const decision = mayRegister(user.email)
+            if (decision.allowed) return
+
+            console.warn(
+              `[signup] refused ${user.email}: ${decision.reason}` +
+                (decision.reason === "not_configured"
+                  ? " — SIGNUP_ALLOWLIST is unset, so no account can be created in this deployment."
+                  : "")
+            )
+            throw new APIError("FORBIDDEN", {
+              code: SIGNUP_REFUSED_CODE,
+              message: SIGNUP_REFUSED_MESSAGE,
+            })
+          },
+        },
+      },
+
       session: {
         create: {
           before: async (session, context) => {

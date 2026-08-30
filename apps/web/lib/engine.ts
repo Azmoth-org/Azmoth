@@ -51,6 +51,15 @@
  * construction cannot be corrected or deleted is the wrong place to put a person's contact details.
  * The id resolves to them through Better Auth's own `user` table, in the same database.
  *
+ * ## The one seam that carries no identity
+ *
+ * `callPublicEngine` and `proxyPublicEngineDownload` are the exception, and they are constrained so
+ * that reading them is enough to know what they can reach: they accept only a literal from
+ * `PUBLIC_ENGINE_PATHS`, and both of those engine endpoints take no input and audit one committed
+ * synthetic delivery. They exist for `/demo`, which serves a visitor who has not signed in. They
+ * are separate functions rather than a flag on the ones above, because a boolean that disables
+ * authentication is a boolean somebody eventually passes from a variable.
+ *
  * The engine does not verify the header, and `apps/engine/app/api/identity.py` says so at length.
  * What makes it trustworthy is the deployment shape — the engine is not published to the browser,
  * and this proxy is its only caller — together with the fact that nothing reaches the engine from
@@ -499,6 +508,162 @@ export async function proxyEngineDownload(
   }
   // A download must never be served from a cache the UI does not control — and an export is a
   // one-shot record, so a cached copy would be a second file claiming to be the first.
+  headers.set("Cache-Control", "no-store")
+
+  return new Response(body, { status: response.status, headers })
+}
+
+/**
+ * The **public** paths on the engine, and the only ones reachable without a session.
+ *
+ * An allowlist of exact strings rather than a prefix test, and never a value derived from a
+ * request. This is the one seam in this module that skips `requireIdentity`, so what it can address
+ * has to be enumerable by reading it: a prefix like `/api/v1/demo/` would be one refactor away from
+ * matching something that should never have been public, and a caller-supplied path would be a
+ * hole big enough to read every proposal in the database through.
+ *
+ * Both entries take no input and audit one committed synthetic delivery — see
+ * `apps/engine/app/api/demo.py` for why that is what makes them publishable at all.
+ */
+const PUBLIC_ENGINE_PATHS = ["/api/v1/demo/audit", "/api/v1/demo/report.pdf"] as const
+
+type PublicEnginePath = (typeof PUBLIC_ENGINE_PATHS)[number]
+
+/**
+ * Forward one request to a public engine endpoint, with **no identity attached**.
+ *
+ * Used only by `/api/demo/*`, which serves visitors who have not signed in and by design cannot
+ * send us anything. Deliberately a separate function rather than a `{ public: true }` flag on
+ * `callEngine`: a boolean parameter that disables authentication is a boolean somebody eventually
+ * passes from a variable, and the failure is silent. A function whose name says what it does, whose
+ * body cannot reach a non-public path, and which is called from two route handlers, is auditable by
+ * reading its call sites.
+ *
+ * No `X-User-ID` and no `X-Organization-ID`. That is not an omission — it is what keeps a demo
+ * request out of `api_usage_logs` entirely, because the engine meters a request only when the
+ * context carries a tenant. See `apps/engine/tests/test_demo.py`.
+ */
+export async function callPublicEngine(
+  path: PublicEnginePath
+): Promise<EngineProxyResult> {
+  if (!PUBLIC_ENGINE_PATHS.includes(path)) {
+    // Unreachable through the type, and checked anyway: the type is erased at runtime and this
+    // function's whole safety property is that it cannot address anything else.
+    return {
+      ok: false,
+      failure: {
+        error: "not_a_public_path",
+        message: "Dieser Endpunkt ist nicht öffentlich erreichbar.",
+        status: 403,
+      },
+    }
+  }
+
+  const url = `${engineBaseUrl()}${path}`
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      cache: "no-store",
+      signal: AbortSignal.timeout(ENGINE_TIMEOUT_MS),
+    })
+  } catch (cause) {
+    const timedOut = cause instanceof Error && cause.name === "TimeoutError"
+    return {
+      ok: false,
+      failure: {
+        error: timedOut ? "engine_unreachable_timeout" : "engine_unreachable",
+        message:
+          "Die Demo-Prüfung ist derzeit nicht erreichbar. Bitte versuchen Sie es in einem " +
+          "Moment erneut.",
+        status: 503,
+        details: {
+          url,
+          method: "POST",
+          cause: cause instanceof Error ? cause.message : String(cause),
+        },
+      },
+    }
+  }
+
+  const raw = await response.text()
+
+  if (raw.length === 0) {
+    return {
+      ok: false,
+      failure: {
+        error: "empty_response",
+        message: `Die Engine hat mit HTTP ${response.status} und leerem Body geantwortet.`,
+        status: 502,
+        details: { url, method: "POST", status: response.status },
+      },
+    }
+  }
+
+  let body: unknown
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return {
+      ok: false,
+      failure: {
+        error: "unparsable_response",
+        message: "Die Antwort der Engine ist kein gültiges JSON.",
+        status: 502,
+        details: { url, method: "POST", status: response.status, raw: raw.slice(0, 4000) },
+      },
+    }
+  }
+
+  return { ok: true, status: response.status, body }
+}
+
+/**
+ * The demo PDF: bytes straight back, with no identity attached.
+ *
+ * The download twin of `callPublicEngine`, for the same reason `proxyEngineDownload` is separate
+ * from `callEngine` — there is nothing useful to parse on the happy path, and re-encoding the
+ * bytes would corrupt the document.
+ */
+export async function proxyPublicEngineDownload(
+  path: PublicEnginePath
+): Promise<Response> {
+  if (!PUBLIC_ENGINE_PATHS.includes(path)) {
+    return Response.json(
+      {
+        error: "not_a_public_path",
+        message: "Dieser Endpunkt ist nicht öffentlich erreichbar.",
+      },
+      { status: 403 }
+    )
+  }
+
+  let response: Response
+  try {
+    response = await fetch(`${engineBaseUrl()}${path}`, {
+      method: "POST",
+      cache: "no-store",
+      signal: AbortSignal.timeout(ENGINE_TIMEOUT_MS),
+    })
+  } catch {
+    return Response.json(
+      {
+        error: "engine_unreachable",
+        message:
+          "Der Demo-Bericht konnte nicht erzeugt werden. Bitte versuchen Sie es in einem " +
+          "Moment erneut.",
+      },
+      { status: 503 }
+    )
+  }
+
+  const body = await response.arrayBuffer()
+  const headers = new Headers()
+  for (const name of ["content-type", "content-disposition"]) {
+    const value = response.headers.get(name)
+    if (value) headers.set(name, value)
+  }
   headers.set("Cache-Control", "no-store")
 
   return new Response(body, { status: response.status, headers })

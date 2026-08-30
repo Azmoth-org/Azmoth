@@ -82,12 +82,23 @@ function Hero() {
         <p className="max-w-2xl text-pretty text-base text-muted-foreground sm:text-lg">
           {t("untertitel")}
         </p>
+        {/*
+          The two tracks, in the order a stranger can use them. Primary is the demo, which needs no
+          account and takes no upload; secondary is the gated pilot. Before `SIGNUP_ALLOWLIST` the
+          primary button pointed at `signup`, which now refuses anyone not on the list — a button
+          labelled "kostenlos testen" that leads to a refusal is worse than no button.
+        */}
         <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-          <ButtonLink external href={getProductLinks().signup} size="lg">
+          <ButtonLink external href={getProductLinks().demo} size="lg">
             {t("ctaPrimaer")}
             <ArrowRightIcon data-icon="inline-end" />
           </ButtonLink>
-          <ButtonLink href={routes.funktionen} size="lg" variant="outline">
+          <ButtonLink
+            external
+            href={getProductLinks().signup}
+            size="lg"
+            variant="outline"
+          >
             {t("ctaSekundaer")}
           </ButtonLink>
         </div>

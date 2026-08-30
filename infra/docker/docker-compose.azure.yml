@@ -1,0 +1,141 @@
+# The public-deployment layer. **This is an OVERRIDE — it does not run on its own.**
+#
+#     docker compose -f infra/docker/docker-compose.yml \
+#                    -f infra/docker/docker-compose.azure.yml up -d --build
+#
+# `scripts/deploy.sh` and the `azure-*` Makefile targets always pass both flags. Running this file
+# alone fails with "service ... has neither an image nor a build context specified", which is the
+# same error that made docker-compose.dev.yml a full standalone copy rather than an override.
+#
+# It is an override anyway, and the difference from the dev file is the audience. The dev file is
+# opened in an editor and started with a right-click, so it has to be complete on its own. This one
+# is only ever run by a script on a server. Copying the production file's 350 lines to add a proxy
+# would create a second definition of `engine` and `web` that goes stale the first time the real one
+# changes — and the thing that would go stale silently is the deployment.
+#
+# It does exactly two things.
+#
+# ── 1. It puts Caddy in front ─────────────────────────────────────────────────────────────────
+# One process listening publicly, terminating TLS, renewing its own certificates. See
+# infra/docker/Caddyfile — in particular the note explaining why `api.*` is a path allowlist and not
+# a reverse proxy to the whole engine.
+#
+# ── 2. It unpublishes every other port ────────────────────────────────────────────────────────
+# The production file publishes 8000 (engine), 5432 (postgres), 3000 (web) and 3001 (marketing) on
+# the host, which is right for a laptop and wrong for a box with a public IP. `docker publish` also
+# writes its own DOCKER-USER iptables rules — a published port is reachable from the internet even
+# when ufw says it is not, which is the classic way a "firewalled" Docker host turns out not to be.
+#
+# The Network Security Group in infra/azure/provision.sh is the outer wall and denies everything but
+# 22/80/443. This is the inner one, and the reason for both is that they fail differently: an NSG
+# rule is edited in a portal by someone who does not know what 8000 is, and a published port is
+# added by someone editing compose. Neither alone would have caught the other's mistake.
+#
+# Nothing is lost by unpublishing. Caddy reaches every service over the compose network by name, and
+# an operator reaches Postgres with `docker compose exec postgres psql` — which is what
+# infra/scripts/backup-db.sh already does, so backups never needed the published port either.
+#
+# `!override` and `!reset` are Compose merge tags and need **Docker Compose v2.24 or newer**: for
+# `ports`, Compose's default is to CONCATENATE the base list with this one, so without the tag
+# `8000:8000` would survive and this file would publish the engine twice rather than not at all.
+# scripts/deploy.sh asserts the version before it runs anything.
+
+services:
+  # ── The only service with a public port ─────────────────────────────────────────────────────
+  caddy:
+    image: caddy:2.8-alpine
+    # Pinned to a minor like everything else in this repository. Caddy's ACME client and its config
+    # syntax both live in this binary; "latest" would mean a certificate renewal path that changed
+    # under a `docker compose pull` nobody read the changelog for.
+    ports:
+      # The only two ports that may be open on this box, and both are needed:
+      #   80  — Let's Encrypt's HTTP-01 challenge, and the redirect to 443 that Caddy serves itself.
+      #         Closing it does not harden anything; it stops certificates being issued.
+      #   443 — TLS, TCP and UDP. The UDP line is HTTP/3. It is not required, and without it Caddy
+      #         still advertises h3 in Alt-Svc, so browsers try a port nothing is listening on and
+      #         fall back after a timeout — slower than never having offered it.
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      # Substituted into the Caddyfile when Caddy loads it. Unset means an empty site address and a
+      # refusal to start, which is the right failure: a proxy that starts with no hostname would
+      # serve the default site to everyone and get no certificate at all.
+      APP_DOMAIN: "${APP_DOMAIN_HOST:?set APP_DOMAIN_HOST in infra/docker/.env, e.g. app.azmoth.app}"
+      API_DOMAIN: "${API_DOMAIN_HOST:?set API_DOMAIN_HOST in infra/docker/.env, e.g. api.azmoth.app}"
+      MARKETING_DOMAIN: "${MARKETING_DOMAIN_HOST:?set MARKETING_DOMAIN_HOST in infra/docker/.env, e.g. azmoth.app}"
+      ACME_EMAIL: "${ACME_EMAIL:?set ACME_EMAIL in infra/docker/.env — Let's Encrypt sends renewal failures here}"
+    volumes:
+      # Read-only: Caddy never rewrites its own config, and this is the file that decides what is
+      # published. A container that could edit it could publish the rest of the engine.
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # **The certificates and the ACME account key.** Named, and the most important volume on the
+      # box after the database: losing it means re-issuing every certificate on the next start, and
+      # Let's Encrypt's rate limit is 5 duplicate certificates per week. Two or three redeploys
+      # that each wipe this and the pilot has no HTTPS until the window rolls.
+      - caddy-data:/data
+      # Caddy's own autosave of the last loaded config. Separate volume because it is cache, not
+      # state — deleting it costs nothing, deleting the one above costs a week.
+      - caddy-config:/config
+    # Deliberately NO `depends_on`. Caddy must come up whatever the application is doing: if `web`
+    # is crash-looping on a bad build, an ordered start would mean Caddy never runs, never answers
+    # the HTTP-01 challenge, and the certificate expires while somebody debugs Next.js. Its
+    # `health_uri` in the Caddyfile handles a backend that is not ready yet — that is a 502 for a
+    # few seconds, not a deployment with no TLS.
+    healthcheck:
+      # Caddy's own config-validation, run against the file it actually loaded. Proves the process
+      # is alive AND that the Caddyfile parses — a proxy that is running with a config it silently
+      # failed to reload is the failure this catches.
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ── Everything below: unpublished ───────────────────────────────────────────────────────────
+
+  engine:
+    # THE port that must not be open. The user-facing requirement is "8000 stays closed", and this
+    # is the half of it that the NSG cannot enforce, because a published Docker port bypasses the
+    # host firewall. Caddy reaches the engine at `engine:8000` on the compose network.
+    ports: !reset []
+
+  postgres:
+    # Nothing on the host needs 5432. `infra/scripts/backup-db.sh` runs `pg_dump` through
+    # `docker compose exec`, not over TCP, so backups are unaffected. For an interactive session:
+    #   docker compose -f ... exec postgres psql -U azmoth -d azmoth
+    ports: !reset []
+
+  web:
+    # Caddy proxies to `web:3000`. Publishing 3000 as well would make the app reachable over plain
+    # HTTP on the IP — bypassing TLS, and bypassing the `Secure` session cookie with it.
+    ports: !reset []
+    environment:
+      # ── Read this before setting BETTER_AUTH_URL ──────────────────────────────────────────
+      # Leave it EMPTY unless you use Google sign-in.
+      #
+      # Better Auth derives the origin per request, and `trustedOrigins` in apps/web/lib/auth.ts
+      # already compares the browser's `Origin` against `x-forwarded-host` / `x-forwarded-proto` —
+      # both of which Caddy sets. So the proxy is handled without this variable.
+      #
+      # It is needed for exactly one thing: the `redirect_uri` sent to Google. Unset, that is
+      # derived from the request and Google answers `redirect_uri_mismatch`. Set it to
+      # `https://app.azmoth.app` and register that exact callback in the Google console.
+      #
+      # Setting it WRONG is worse than leaving it unset — a value that does not match the browser's
+      # origin makes every sign-in answer `403 INVALID_ORIGIN`. The base file passes it as
+      # "${BETTER_AUTH_URL:-}" and `optionalEnv` treats "" as absent, so an empty line here is safe.
+      BETTER_AUTH_URL: "${BETTER_AUTH_URL:-}"
+
+  marketing:
+    ports: !reset []
+
+volumes:
+  caddy-data:
+    # Named and explicit, like postgres-data, and for a stronger version of the same reason: this
+    # is not merely data that would be inconvenient to lose, it is data Let's Encrypt rate-limits
+    # the replacement of. `docker compose down` keeps it; only `down -v` removes it.
+    name: azmoth-caddy-data
+  caddy-config:
+    name: azmoth-caddy-config
