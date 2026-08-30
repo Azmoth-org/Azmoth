@@ -25,9 +25,10 @@ split into `confirmed_fine` / `confirmed_wrong` / `unconfirmed`, and the split t
 *verified* rule bore on the position — `rules_bearing_on` and `classify_position` below. A position
 the solver did not confirm is `blocked` in the verdict but only `unconfirmed` in the money, because
 "no verified rule kept it" is the absence of evidence. Getting this wrong is not a rounding problem:
-837 of the 869 exclusion rules are machine-extracted and unenforced under the default policy, so a
-single "at risk" figure computed by subtraction reports most of a practice's revenue as disputed
-when almost all of it was simply never checked.
+a position no verified rule reaches is the common case rather than the exception, so a single "at
+risk" figure computed by subtraction reports revenue as disputed when it was simply never checked.
+The share varies with the rule set and the catalog, which is exactly why the report carries the
+counts (`rule_coverage_detail`) instead of anything here quoting one.
 """
 
 from __future__ import annotations

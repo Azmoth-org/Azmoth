@@ -110,14 +110,21 @@ run for pages:
 
   "receipt_hash": "bd8abb06ef7f0a4b…",  // SHA-256 over catalog, rules, logic, solvers, policy, input
   "catalog_version": "goae_official_snapshot_2026-07-25",
-  "enforced_rule_count": 57,
-  "advisory_rule_count": 837
+  "enforced_rule_count": 858,      // live figures — see the note below
+  "advisory_rule_count": 9
 }
 ```
 
 Note what those numbers say about this engine and not about that invoice: **55 % of the money could
-not be judged at all**. That is the honest state of rule coverage today, and it is why the amber
-bucket is reported rather than folded away.
+not be judged at all**. That is the honest state of coverage today, and it is why the amber bucket
+is reported rather than folded away.
+
+> **The two rule counts above move, and they are the only figures in this document that do.** They
+> are reproduced from a real response so the example is checkable, and they are *not* a contract:
+> read them from `rule_coverage_detail` on your own responses, or from `GET /api/v1/rules/coverage`.
+> A regression test in this repository fails the build if the values printed here drift from what
+> the engine computes, so they cannot go quietly stale — but your integration should not depend on
+> them being any particular number.
 
 Every euro amount is a **decimal string**, never a JSON number. Parse it with a decimal type. A
 client that reads these into an IEEE double will lose cents, and cents are what a Rechnungsprüfer
@@ -305,9 +312,16 @@ position is changed, nothing is submitted anywhere, and the practice remains res
 bills.
 
 **Rule coverage is partial and the response says so.** `enforced_rule_count` is what can suppress a
-position; `advisory_rule_count` is what only warns. Most extracted exclusion rules are still
-advisory. `unconfirmed_eur` and `coverage_ratio` are how much of the invoice this engine could
-actually reach a verdict on — treat them as the boundary of the answer, not as part of it.
+position; `advisory_rule_count` is what only warns; `suppressed_unverified_rule_count` is what a
+billing expert has not yet confirmed and which therefore does nothing.
+
+Read those three as a statement about the *rule set*, and `coverage_ratio` as a statement about
+*your invoice*. They are not the same measurement and the gap between them matters: almost every
+rule is enforced today, and this engine could still only reach a verdict on 44.8 % of the bundled
+example's money. The limit is **catalog reach** — a Ziffer no rule mentions cannot be judged however
+thoroughly the rule set has been verified — not rule confidence. So `unconfirmed_eur` and
+`coverage_ratio` are the boundary of the answer, and quoting an enforcement percentage as if it were
+an audit percentage would overstate what you are buying.
 
 **Synthetic data only, unless the deployment says otherwise.** A delivery flagged
 `auftrag/@echtdaten="1"` is refused with `REAL_DATA_REFUSED`. Enabling production data requires a

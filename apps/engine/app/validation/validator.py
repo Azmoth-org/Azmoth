@@ -537,8 +537,9 @@ class Validator:
                 severity="warning",
                 # Quotes `enforced_rules` over `total_constraint_rules` — the same pair as
                 # `verified_share` and as the `advisory_rules_present` warning. This line used to
-                # say "30 Ausschlussregeln" while the warning beside it said "35 Regeln", which
-                # left a reader to work out that the two were counting different things.
+                # count only exclusions while the warning beside it counted every constraint rule,
+                # which left a reader to work out that two figures on one screen meant different
+                # things. Both are now read from the same summary.
                 message=(
                     f"Regelabdeckung ist unvollständig: {summary['enforced_rules']} verifizierte "
                     f"Regeln von {summary['total_constraint_rules']} werden durchgesetzt, "

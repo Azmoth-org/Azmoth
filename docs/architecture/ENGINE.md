@@ -198,9 +198,9 @@ Datalog program carrying the rule that produced it, the rule id, and the paragra
 rests on. That is the machine-checkable answer to "why is this on my bill?", and the reason the rule
 ids travel with the conclusions: a proof step joins back to the exact CSV row and legal quote.
 
-**Rule coverage is published, not implied.** The engine enforces a *subset* of the GOÄ. 837 of the
-exclusion rules were extracted from the fee schedule's prose automatically and are unverified; under
-the default `UNVERIFIED_RULE_POLICY=warn` they suppress nothing and only warn. Every response
+**Rule coverage is published, not implied.** The engine enforces a *subset* of the GOÄ. Its rules
+were largely extracted from the fee schedule's prose automatically, and an unverified one suppresses
+nothing under the default `UNVERIFIED_RULE_POLICY=warn` — it only warns. Every response
 carries `enforced_rule_count`, `advisory_rule_count` and `suppressed_unverified_rule_count`, plus a
 warning whenever the advisory set is non-empty. The API must never let "no finding" read as "the
 rules confirmed it".
@@ -265,9 +265,8 @@ record now, rather than instead of one. Schema and migration commands:
   `claimed_total_eur` exactly, and `coverage_ratio` publishes the audited share.
 
   This replaced a single `at_risk_eur = claimed_total − defensible_total`. That subtraction merged
-  proof with ignorance, and because 837 of the 869 exclusion rules are machine-extracted and
-  unenforced under the default policy, ignorance was the larger part: on the bundled nine-line
-  example it reported 200.48 € of 251.54 € as at risk, where only 88.49 € is demonstrable. A
+  proof with ignorance, and ignorance is the larger part: on the bundled nine-line example it
+  reported 200.48 € of 251.54 € as at risk, where only 88.49 € is demonstrable. A
   practice told that 80 % of its revenue is disputed — when most of that is our own missing rule
   coverage — stops believing the audit. `unconfirmed` is not a finding against the practice.
 - **It does not maximise revenue.** See `@1`.

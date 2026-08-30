@@ -23,9 +23,9 @@ own later.
 
 **The three buckets are never merged.** At batch scale the temptation to print one "€X at risk"
 headline is strongest and the error is largest: `unconfirmed` is this engine's own rule-coverage
-gap — 837 of 869 exclusion rules are machine-extracted and unenforced under the default policy — so
-summing it across a year of invoices manufactures a six-figure accusation against a practice that
-may be billing correctly. `BatchAggregateSummary` keeps the split and re-checks the identity.
+gap, and at batch scale it is usually the largest of the three buckets — so summing it across a year
+of invoices manufactures a six-figure accusation against a practice that may be billing correctly.
+`BatchAggregateSummary` keeps the split and re-checks the identity.
 
 **Known limitation: `BackgroundTasks` is not durable.** A job is processed in the same process that
 accepted it, so a restart mid-batch abandons the run: the row is left at `PROCESSING`, or at

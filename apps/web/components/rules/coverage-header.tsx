@@ -8,7 +8,7 @@ import { progressPercent } from "@/lib/rules/format"
 import type { RuleCoverage } from "@/lib/rules/client"
 
 /**
- * "X von 894 Regeln verifiziert", and what the rest of them are.
+ * "X von Y Regeln verifiziert", and what the rest of them are.
  *
  * The bar has three segments rather than one, and that is the honest shape of the work: verified
  * (enforced), rejected (decided, and correctly never enforced), and undecided (the backlog). A

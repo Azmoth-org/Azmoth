@@ -102,7 +102,7 @@ class RuleCoverage(BaseModel):
     #: a refusal is a decision, not a gap in coverage.
     rejected_rule_count: int = 0
     #: Every constraint rule the engine loaded, enforced or not. The denominator for
-    #: "X of 894 verified"; excludes Analogansatz candidates, which can never constrain anything.
+    #: "X of Y verified"; excludes Analogansatz candidates, which can never constrain anything.
     total_constraint_rule_count: int = 0
 
     rule_coverage: str = "partial"

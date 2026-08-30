@@ -28,10 +28,11 @@ export default function RulesPage() {
           GOÄ-Regeln prüfen
         </h1>
         <p className="text-sm text-muted-foreground">
-          859 der 894 Regeln dieser Engine wurden automatisch aus dem
-          Verordnungstext der GOÄ extrahiert. Sie setzen nichts durch: eine
-          maschinell gelesene Regel darf keine berechnungsfähige Leistung
-          unterdrücken, bevor ein Mensch sie geprüft hat.
+          Die meisten Regeln dieser Engine wurden automatisch aus dem
+          Verordnungstext der GOÄ extrahiert. Eine ungeprüfte Regel setzt nichts
+          durch: sie darf keine berechnungsfähige Leistung unterdrücken, bevor
+          ein Mensch sie bestätigt hat. Der aktuelle Stand steht in der
+          Fortschrittsleiste darunter.
         </p>
         <p className="text-sm text-muted-foreground">
           Genau das ist der Grund, warum eine{" "}

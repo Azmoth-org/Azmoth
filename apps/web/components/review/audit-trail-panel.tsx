@@ -85,8 +85,8 @@ function scalarEntries(summary: Record<string, unknown>): [string, string][] {
  * it. The icon is derived from the value and never from the fact that a value exists: `rule_coverage`
  * is a tick only when the engine said `full`, `solver_status` only when the optimum was proven. A
  * green tick beside "the rules were applied" on a run with partial coverage would be the single most
- * dangerous pixel on this screen — it is the reading that turns "we checked 35 rules" into "the
- * invoice is compliant".
+ * dangerous pixel on this screen — it is the reading that turns "we checked the rules we have" into
+ * "the invoice is compliant".
  *
  * `llm_saw_goae_catalog: false` earns a tick on its own: it means no language model was in a
  * position to invent a Ziffer, because it never saw the catalog. That is a structural property of

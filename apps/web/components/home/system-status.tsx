@@ -26,7 +26,7 @@ import type {
  * The two figures here are the ones that decide how much any other screen's output is worth, and
  * both were previously invisible until you opened a proposal:
  *
- * * **Verified rules.** 859 of the 894 constraint rules were machine-extracted from the GOÄ's prose
+ * * **Verified rules.** Most constraint rules were machine-extracted from the GOÄ's prose
  *   and enforce nothing until a human confirms them. That is the direct cause of the `unbestätigt`
  *   bucket in every audit, so a reader has to be able to see where the number stands before reading
  *   a report that depends on it.
@@ -35,7 +35,7 @@ import type {
  *   showing an unattributable figure.
  *
  * Both are read live rather than baked in — a verified rule takes effect immediately, and a
- * hardcoded "859" would start lying the first time somebody used the rule queue.
+ * hardcoded count would start lying the first time somebody used the rule queue.
  *
  * ## The two solver figures report a probe, not an inventory
  *

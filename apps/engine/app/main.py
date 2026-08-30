@@ -33,18 +33,19 @@ from fastapi import FastAPI
 from app.api import audit, catalog, health, padnext, proposals, rules, settings_keys, solve
 from app.api.deps import batches, pipeline, reset_async
 from app.api.errors import register_error_handlers
-from app.config import get_settings
+from app.config import LogFormat, get_settings
 from app.core.limits import RequestSizeLimitMiddleware
+from app.core.observability import RequestContextMiddleware, configure_logging
 from app.db.session import get_database, init_models
 from app.errors import ErrorResponse
 from app.services.uploads import ensure_upload_root
 
 settings = get_settings()
 
-logging.basicConfig(
-    level=logging.DEBUG if settings.debug else logging.INFO,
-    format="%(levelname)s %(name)s: %(message)s",
-)
+# One JSON object per line, with the request id on every one of them. Configured at import time
+# rather than in the lifespan because the module-level work below (building the app, reading the
+# settings) already logs, and those lines belong in the same stream as everything else.
+configure_logging(debug=settings.debug, json_logs=settings.log_format is LogFormat.JSON)
 log = logging.getLogger(__name__)
 
 API_PREFIX = "/api/v1"
@@ -218,11 +219,17 @@ app = FastAPI(
         {
             "name": "rules",
             "description": (
-                "The rule verification workflow. 859 of 894 constraint rules were extracted from "
-                "the GOÄ's prose automatically and enforce nothing until a billing expert verifies "
-                "them; verifying one shrinks the `unconfirmed` bucket of every later audit. "
-                "Decisions are stored in Postgres and merged onto the versioned CSVs at load "
-                "time — the CSVs themselves are never written by this API."
+                "The rule verification workflow. Most of this engine's constraint rules were "
+                "extracted from the GOÄ's prose automatically; one enforces nothing until a "
+                "billing expert has verified it, and verifying one shrinks the `unconfirmed` "
+                "bucket of every later audit. Decisions are stored in Postgres and merged onto the "
+                "versioned CSVs at load time — the CSVs themselves are never written by this API."
+                "\n\n"
+                "**No count is quoted here on purpose.** How many rules are enforced changes every "
+                "time a reviewer decides one, and a number written into a static document is a "
+                "claim with no mechanism to stay true — this description carried a stale one for "
+                "weeks. `GET /api/v1/rules/coverage` and `GET /api/v1/health` report the live "
+                "figures, and every audit response carries them in `rule_coverage_detail`."
             ),
         },
     ],
@@ -240,6 +247,9 @@ register_error_handlers(app)
 # upload takes a larger archive, and the single partner audit takes a much smaller file. Both
 # numbers come from the same settings the endpoints enforce, so the perimeter and the handler
 # cannot disagree about them.
+# Registered LAST and therefore running FIRST — Starlette applies middleware in reverse order of
+# registration — so a request has an id before the size limiter can refuse it. A partner whose 60 MB
+# upload was rejected can still quote an id, which is precisely the request somebody asks about.
 app.add_middleware(
     RequestSizeLimitMiddleware,
     max_bytes=settings.max_request_bytes,
@@ -256,6 +266,8 @@ ERROR_RESPONSES: dict = {
     "4XX": {"model": ErrorResponse, "description": "See docs/errors.md for the codes."},
     "5XX": {"model": ErrorResponse, "description": "See docs/errors.md for the codes."},
 }
+
+app.add_middleware(RequestContextMiddleware)
 
 for router in (health, solve, proposals, padnext, catalog, rules, audit, settings_keys):
     app.include_router(router.router, prefix=API_PREFIX, responses=ERROR_RESPONSES)

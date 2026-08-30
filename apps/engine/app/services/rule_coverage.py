@@ -1,9 +1,12 @@
 """Rule-coverage transparency.
 
-The engine enforces a *subset* of the GOÄ. 837 of the exclusion rules were extracted from the fee
-schedule's prose automatically and are unverified; under the default `UNVERIFIED_RULE_POLICY=warn`
-they suppress nothing and only warn. A response that did not say so would let a reader take
-"no finding" for "the rules confirmed it".
+The engine enforces a *subset* of the GOÄ. Its rules were largely extracted from the fee schedule's
+prose automatically, and an unverified one suppresses nothing under the default
+`UNVERIFIED_RULE_POLICY=warn` — it only warns. A response that did not say so would let a reader
+take "no finding" for "the rules confirmed it".
+
+This module is the reason no count is written into any docstring or document that ships: it computes
+them, so anything that quotes a figure has a source that cannot go stale.
 
 So every solve and every audit carries the three counts and, when the advisory set is non-empty, a
 warning saying that unverified rules are NOT enforced.
