@@ -6,7 +6,7 @@ import type { HealthResponse, RuleCoverage } from "@/lib/dashboard/types"
  * The System Health card's data, fetched on the server.
  *
  * A thin async wrapper around `SystemStatus`, which already renders everything this card has to
- * say — engine status, catalog version, Soufflé and Clingo, and "X von 894 Regeln verifiziert" with
+ * say — engine status, catalog version, Soufflé and Clingo, and "X von Y Regeln verifiziert" with
  * its bar. It is not reimplemented here. The two figures it shows decide how much every other
  * screen's output is worth, and a second component computing "verified share" from the same two
  * counts is exactly how a dashboard and a workbench come to disagree about the same number.

@@ -292,9 +292,9 @@ class RuleStore:
     ) -> tuple[list[ExclusionRule], list[ExclusionRule]]:
         """One enforced rule per directed edge, preferring the hand-verified one.
 
-        Two rules can assert the same edge once a machine-extracted rule is verified: every one of
-        the 30 rules in `exclusions.manual.csv` is also derivable from the Anmerkungen prose, so the
-        auto table carries the same 30 edges. Both being enforced is not merely redundant, it is
+        Two rules can assert the same edge once a machine-extracted rule is verified: every rule in
+        `exclusions.manual.csv` is also derivable from the Anmerkungen prose, so the auto table
+        carries the same edges. Both being enforced is not merely redundant, it is
         visibly wrong in two places — `conflicts_arbitrated` lists the pair once per rule, so a
         reviewer sees "GOÄ 5 ↔ GOÄ 7" twice; and whichever rule the solver happens to cite supplies
         the `legal_basis`, so the curated "GOÄ Anmerkungen zu den Nummern 5, 6, 7, 8 (Abschnitt B I)"
@@ -542,7 +542,7 @@ class RuleStore:
 
         **Rejected rules are excluded.** They are not enforced, but they are not a gap either: a
         human read them and said no. Counting a refusal as "unverified" would mean the review
-        queue could never empty — a reviewer working through 859 rules and rejecting half of them
+        queue could never empty — a reviewer working through the backlog and rejecting half of it
         would watch the number they are trying to reduce stay where it was.
 
         Analog candidates are excluded too: they are offers under § 6 Abs. 2 GOÄ, never
@@ -585,11 +585,11 @@ class RuleStore:
         )
 
     def constraint_rule_count(self) -> int:
-        """The denominator the review dashboard counts towards. 894 in the shipped data."""
+        """The denominator the review dashboard counts towards."""
         return len(self.constraint_rules())
 
     def enforced_rule_count(self) -> int:
-        """Rules that may actually suppress a position right now. 35 in the shipped data.
+        """Rules that may actually suppress a position right now.
 
         The numerator of `verified_share`, and the single definition of "enforced" in the codebase:
         `app.services.rule_coverage.build` calls this rather than re-adding the four lists, so the
@@ -620,7 +620,7 @@ class RuleStore:
             "rejected_rules": self.rejected_rule_count(),
             "review_verified_rules": self.review_verified_rule_count(),
             "total_constraint_rules": self.constraint_rule_count(),
-            #: Enforced rules over every constraint rule loaded — "35/894" in the shipped data.
+            #: Enforced rules over every constraint rule loaded, as "enforced/total".
             #:
             #: It used to read `verified exclusions / enforced exclusions`, which was "30/30". That
             #: is 1/1 by construction: under `warn` only verified rules are ever admitted to

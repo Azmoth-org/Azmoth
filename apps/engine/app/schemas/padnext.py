@@ -236,9 +236,9 @@ class PadnextAuditReport(BaseModel):
     # removed rather than kept as an alias, and the reason is the whole point of these fields.
     #
     # That subtraction silently merged two things a practice must be able to tell apart: euros we
-    # can *prove* are not chargeable, and euros we simply have no verified rule to judge. Because
-    # 837 of the 869 exclusion rules are machine-extracted and unverified — and therefore not
-    # enforced under the default policy — the second group is the large one. A clinic uploading a
+    # can *prove* are not chargeable, and euros we simply have no verified rule to judge. The second
+    # group is usually the larger one — a Ziffer no rule mentions cannot be judged at all, however
+    # thoroughly the rule set has been verified. A clinic uploading a
     # year of invoices would have been told that most of its revenue was "at risk", when almost
     # all of that figure was the engine's own incomplete rule coverage. That is not a conservative
     # estimate; it is a false statement about the invoice, and it is the kind of number that

@@ -196,7 +196,7 @@ export function UnconfirmedNotice() {
  * than a convenience. This block is the reason the engine's schema changed, so it is worth stating
  * what it must never do: it must not add the three buckets back together into a single "at risk"
  * figure, and it must not colour `unconfirmed` as a defect. `unconfirmed` is the engine admitting
- * the limit of its own rule coverage — 837 of 869 exclusion rules are machine-extracted and
+ * the limit of its own rule coverage — most positions are reached by no verified rule at alld and
  * unenforced under the default policy — and presenting that as the practice's problem is the
  * overclaim the split exists to prevent. One implementation means that prohibition cannot be
  * honoured on one screen and quietly dropped on the other.

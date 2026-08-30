@@ -509,6 +509,7 @@ def test_the_migration_and_the_models_describe_the_same_schema(tmp_path):
         "doctor_profiles",
         "practices",
         "api_keys",
+        "error_log",
     }
     assert migrated == declared, (
         "alembic/versions/ has drifted from app/db/models.py — run "

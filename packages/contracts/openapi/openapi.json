@@ -5640,7 +5640,7 @@
       "name": "settings"
     },
     {
-      "description": "The rule verification workflow. 859 of 894 constraint rules were extracted from the GOÄ's prose automatically and enforce nothing until a billing expert verifies them; verifying one shrinks the `unconfirmed` bucket of every later audit. Decisions are stored in Postgres and merged onto the versioned CSVs at load time — the CSVs themselves are never written by this API.",
+      "description": "The rule verification workflow. Most of this engine's constraint rules were extracted from the GOÄ's prose automatically; one enforces nothing until a billing expert has verified it, and verifying one shrinks the `unconfirmed` bucket of every later audit. Decisions are stored in Postgres and merged onto the versioned CSVs at load time — the CSVs themselves are never written by this API.\n\n**No count is quoted here on purpose.** How many rules are enforced changes every time a reviewer decides one, and a number written into a static document is a claim with no mechanism to stay true — this description carried a stale one for weeks. `GET /api/v1/rules/coverage` and `GET /api/v1/health` report the live figures, and every audit response carries them in `rule_coverage_detail`.",
       "name": "rules"
     }
   ]

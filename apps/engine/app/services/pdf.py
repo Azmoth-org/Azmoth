@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 
-from app.schemas.batch import BatchAuditJob, BatchFileStatus
+from app.schemas.batch import BatchAggregateSummary, BatchAuditJob, BatchFileStatus
 
 log = logging.getLogger(__name__)
 
@@ -272,6 +272,73 @@ def _stamp(moment: datetime | None) -> str:
     return moment.strftime("%d.%m.%Y %H:%M UTC") if moment else "—"
 
 
+def _coverage_sentence(job: BatchAuditJob, summary: BatchAggregateSummary) -> str:
+    """Why this report could not judge everything — **counted, never asserted**.
+
+    This paragraph is the most consequential prose the product emits. It is printed on a document a
+    billing centre may hand to a payer, and it is the sentence that decides whether »nicht
+    beurteilbar« is read as "we could not check this" or as "we suspect this". Getting it wrong in
+    the second direction manufactures an accusation out of our own gap.
+
+    It used to be a fixed string claiming that most machine-extracted exclusion rules were still
+    unconfirmed and therefore not applied. That was true when it was written and is now false —
+    verification has since promoted almost all of them — so every PDF produced after that work
+    understated the engine on its own front page. A hardcoded number in a rendered artefact is a
+    claim with no mechanism to stay true, and this one had already stopped being true without
+    anything failing.
+
+    So the numbers come from the report being rendered. Two facts, and they are deliberately
+    different in kind:
+
+    * **How much of the rule set is enforced** — a property of the engine, the same on every
+      report, read from `rule_coverage_detail`.
+    * **How many of *these* positions no verified rule reached** — a property of this invoice,
+      which is what actually produced the amber bucket in front of the reader.
+
+    The second is the honest explanation and the first is the context for it. Stating only the
+    first would invite the reader to conclude that a high enforcement figure means a thorough
+    audit; they measure different things, and the gap between them is catalog reach.
+    """
+    detail = next(
+        (entry.report.rule_coverage_detail for entry in job.files if entry.report is not None),
+        None,
+    )
+    first = next((entry.report for entry in job.files if entry.report is not None), None)
+
+    parts: list[str] = []
+    if detail is not None and detail.total_constraint_rule_count:
+        parts.append(
+            f"Von {detail.total_constraint_rule_count} hinterlegten Regeln waren bei dieser "
+            f"Prüfung {detail.enforced_rule_count} durchgesetzt"
+        )
+        if detail.suppressed_unverified_rule_count:
+            parts.append(
+                f", {detail.suppressed_unverified_rule_count} weitere sind noch nicht von einer "
+                "Abrechnungsfachkraft bestätigt und werden deshalb nicht angewendet"
+            )
+        parts.append(". ")
+    elif first is not None:
+        parts.append(
+            f"Bei dieser Prüfung waren {first.enforced_rule_count} Regeln durchgesetzt und "
+            f"{first.advisory_rule_count} nur beratend. "
+        )
+
+    if summary.position_count and summary.unconfirmed_positions:
+        parts.append(
+            f"Für {summary.unconfirmed_positions} der {summary.position_count} abgerechneten "
+            "Positionen greift keine verifizierte Regel: der hinterlegte Regelsatz deckt diese "
+            "Ziffern noch nicht ab. Was hier fehlt, ist also die Reichweite der Regeln über den "
+            "Gebührenkatalog, nicht das Vertrauen in die Regeln selbst."
+        )
+    elif summary.position_count:
+        parts.append(
+            f"Für alle {summary.position_count} abgerechneten Positionen konnte eine verifizierte "
+            "Regel herangezogen werden."
+        )
+
+    return "".join(parts).strip()
+
+
 def render_batch_report(job: BatchAuditJob, *, organization_id: str) -> bytes:
     """A completed job as a Prüfbericht, ready to hand a Rechnungsprüfer.
 
@@ -390,11 +457,9 @@ def render_batch_report(job: BatchAuditJob, *, organization_id: str) -> bytes:
         "Zur Lesart. »Belegbar nicht abrechenbar« ist der einzige Betrag, der als Rückforderung "
         "gelesen werden darf: hier hat eine verifizierte Regel die Position beanstandet. "
         "»Nicht beurteilbar« ist ausdrücklich KEIN Befund gegen die Praxis — es ist die Grenze der "
-        "Regelabdeckung dieser Engine. Ein Grossteil der aus dem Verordnungstext maschinell "
-        "extrahierten Ausschlussregeln ist noch nicht von einer Abrechnungsfachkraft bestätigt und "
-        "wird deshalb nicht angewendet. Die drei Beträge werden nie zu einer Summe »Risiko« "
-        "zusammengefasst, weil genau diese Zusammenfassung aus einer Abdeckungslücke eine "
-        "Anschuldigung machen würde."
+        "Regelabdeckung dieser Engine. " + _coverage_sentence(job, summary) + " Die drei Beträge "
+        "werden nie zu einer Summe »Risiko« zusammengefasst, weil genau diese Zusammenfassung aus "
+        "einer Abdeckungslücke eine Anschuldigung machen würde."
     )
     canvas.space(4)
     canvas.paragraph(

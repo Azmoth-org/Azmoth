@@ -113,7 +113,8 @@ function Count({
  *
  * The distinction this card exists to protect: **only `enforced_rule_count` can suppress a
  * position.** A reader who took the advisory number for "rules that were applied" would believe the
- * invoice had been checked against 862 rules when it was checked against 35.
+ * invoice had been checked against every rule the engine holds, when it was checked against the
+ * enforced subset.
  *
  * The advisory set is published as its two components, so this no longer has to hedge about what is
  * in it. They are advisory for different reasons and the card says which:

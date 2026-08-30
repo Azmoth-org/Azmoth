@@ -1,9 +1,14 @@
 """The rule verification workflow — the internal tool that shrinks `unconfirmed`.
 
-859 of this engine's 894 constraint rules were extracted from the GOÄ's prose automatically. Under
-the default policy they enforce nothing, which is why a PADnext audit puts so much of an invoice in
-`unconfirmed`: that bucket is not an accusation, it is the boundary of what this engine has been
-allowed to conclude. These three endpoints are how a billing expert moves that boundary.
+Most of this engine's constraint rules were extracted from the GOÄ's prose automatically. Under the
+default policy an unverified one enforces nothing, which is part of why a PADnext audit puts so much
+of an invoice in `unconfirmed`: that bucket is not an accusation, it is the boundary of what this
+engine has been allowed to conclude. These three endpoints are how a billing expert moves it.
+
+**The counts are not written down anywhere in this module, deliberately.** They move every time
+somebody decides a rule, and a figure in a docstring is a claim nothing can keep true — the ones
+that used to be here went stale and misstated the engine by an order of magnitude. `GET
+/rules/coverage` is the answer, and it is computed.
 
     GET  /rules/review-queue        what is still undecided, with the evidence to decide it
     POST /rules/{rule_id}/review    a verdict, stored and merged immediately
@@ -20,7 +25,8 @@ That is per-process under multiple workers — stated in the service module rath
 the failure mode is a rule enforced slightly later on one worker, never a wrong answer.
 
 These path functions are `async def` because they do database I/O. The one CPU-bound step — the
-re-merge, which re-admits ~900 rules and rebuilds the three engines — goes to the threadpool via
+re-merge, which re-admits the whole rule table and rebuilds the three engines — goes to the
+threadpool via
 `run_in_threadpool`, the same shape `/solve` uses: the I/O is awaited on the loop, the work that
 would block it is not.
 """
@@ -50,9 +56,9 @@ router = APIRouter(prefix="/rules", tags=["rules"])
 
 #: How many queue entries one response may carry.
 #:
-#: The backlog is 859 rules, each with a full GOÄ sentence attached, so an unbounded response is a
-#: megabyte of JSON to render a table a reviewer reads twenty rows of. The count that matters —
-#: how much is actually left — is a field on the response, so paging never hides the backlog.
+#: The backlog can run to hundreds of rules, each with a full GOÄ sentence attached, so an unbounded
+#: response is a megabyte of JSON to render a table a reviewer reads twenty rows of. The count that
+#: matters — how much is actually left — is a field on the response, so paging never hides it.
 DEFAULT_QUEUE_LIMIT = 100
 MAX_QUEUE_LIMIT = 1000
 
@@ -132,7 +138,7 @@ async def review_queue(
         verified_rule_count=coverage.enforced_rule_count,
         review_verified_rule_count=coverage.review_verified_rule_count,
         rejected_rule_count=coverage.rejected_rule_count,
-        # The whole backlog, not the page and not the filter — so "showing 100 of 859" is honest.
+        # The whole backlog, not the page and not the filter — so "showing 100 of N" is honest.
         pending_rule_count=len(undecided),
         rules=filtered[:limit],
         truncated=len(filtered) > limit,
@@ -168,7 +174,8 @@ async def review_rule(rule_id: str, request: RuleReviewRequest) -> RuleReviewRes
     )
 
     # Re-merge before answering, so the coverage below is what the next solve will actually use.
-    # In a threadpool because re-parsing and re-admitting ~900 rules and rebuilding three engines
+    # In a threadpool because re-parsing and re-admitting the whole rule table and rebuilding the
+    # three engines
     # is CPU-bound, and it must not stall the loop for every other request in flight.
     await run_in_threadpool(pipe.apply_rule_reviews, await store.statuses())
 

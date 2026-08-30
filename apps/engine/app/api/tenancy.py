@@ -43,6 +43,7 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
+from app.core.observability import bind
 from app.errors import OrganizationRequired
 
 #: What the Next.js proxy sets. Lower-case because Starlette's header lookup is case-insensitive and
@@ -80,6 +81,11 @@ def require_organization(request: Request) -> str:
     as an error on the first request.
     """
     organization_id = _sanitise(request.headers.get(ORGANIZATION_ID_HEADER))
+    if organization_id:
+        # The web tier's half of what `app.api.apikeys` binds for a partner: from here every log
+        # line this request produces names the practice it was for. Both paths bind the same key,
+        # so a query over the logs does not have to know which door a request came through.
+        bind(organization_id=organization_id)
     if not organization_id:
         raise OrganizationRequired(
             "This request does not say which practice it is for. Every proposal and every batch "

@@ -348,10 +348,10 @@ def readme(job: BatchJobRecord, summary: BatchAggregateSummary | None) -> str:
     failed = summary.failed_file_count if summary else 0
     total = summary.file_count if summary else 0
 
-    # Read from the rule store rather than written into the prose. The sentence used to say
-    # "837 der 869 Ausschlussregeln", which was both stale — there are 867 exclusion rules, not
-    # 869 — and the wrong denominator: it counted only exclusions, while the buckets this
-    # paragraph explains turn on Zielleistung, specificity and factor caps too.
+    # Read from the rule store rather than written into the prose. The sentence used to carry a
+    # fixed pair of figures, which was both stale and the wrong denominator: it counted only
+    # exclusions, while the buckets this paragraph explains turn on Zielleistung, specificity and
+    # factor caps too. See tests/test_published_numbers.py for why no shipped text quotes a count.
     #
     # This is the shipped CSV store, not the pipeline's review-merged one, because `readme` is
     # handed a finished batch and not the engine that produced it. The two differ only by rules a

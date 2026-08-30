@@ -372,8 +372,8 @@ Plus a composite `(status, rule_id)` — "everything decided one way" is what th
 
 ### It is an overlay, not a copy
 
-859 of the engine's 894 constraint rules were extracted from the GOÄ's prose automatically and
-enforce nothing until a human checks them. This table is where that check is recorded. The CSVs are
+Most of the engine's constraint rules were extracted from the GOÄ's prose automatically, and one
+enforces nothing until a human checks it. This table is where that check is recorded. The CSVs are
 **never written**: they are versioned source data, a change to them is a reviewed PR needing a
 second approver (`CONTRIBUTING.md`), and an API that edited them would route around exactly that
 control.

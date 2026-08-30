@@ -600,7 +600,11 @@ async def test_an_unnamed_exception_still_produces_a_parsable_envelope():
 
     assert response.status_code == 500
     assert body["error_code"] == "INTERNAL_ERROR"
-    assert body["details"] == {"exception": "KeyError"}
+    # `request_id` joined `details` when the observability floor landed: it is what a caller quotes
+    # back, and a 500 with no id is a report nobody can act on. Empty here because this calls the
+    # handler directly, with no request and therefore no id — which is itself the contract: the
+    # field is always present, even when there is nothing to put in it.
+    assert body["details"] == {"exception": "KeyError", "request_id": ""}
     assert "secret_patient_id" not in response.body.decode(), (
         "an unhandled exception's message has not been vetted for what it might leak"
     )

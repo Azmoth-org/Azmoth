@@ -1,10 +1,18 @@
 """The rule verification workflow's contract.
 
-859 of this engine's 894 constraint rules were extracted from the GOÄ's prose automatically and are
-therefore not enforced: under the default policy a machine-read rule may not suppress a chargeable
-service until a human has checked it. That is the single largest reason the `unconfirmed` bucket in
-a PADnext audit is as big as it is — it is not a statement about anyone's billing, it is the
-boundary of what this engine has been allowed to conclude.
+Most of this engine's constraint rules were extracted from the GOÄ's prose automatically, and an
+unverified one is not enforced: under the default policy a machine-read rule may not suppress a
+chargeable service until a human has checked it. That is one reason the `unconfirmed` bucket in a
+PADnext audit is as big as it is — it is not a statement about anyone's billing, it is the boundary
+of what this engine has been allowed to conclude.
+
+The other reason, and now the larger one, is catalog reach: a Ziffer no rule mentions at all cannot
+be judged however thoroughly the rule set has been verified. The two are different gaps and the
+response reports them separately — `unverified_rule_count` is the first, and the `unconfirmed`
+bucket on an audit is where the second shows up.
+
+**No count appears in this module.** They move whenever a rule is decided, and a number in a
+docstring cannot be kept true; the figures live in `RuleCoverage`, which is computed.
 
 This module is the contract for the tool that shrinks that boundary. A billing expert works a queue
 of unverified rules, reads the GOÄ sentence each was extracted from, and either verifies it — after
@@ -95,7 +103,7 @@ class RuleReviewQueue(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    #: Every constraint rule the engine loaded — the denominator on the dashboard. 894 as shipped.
+    #: Every constraint rule the engine loaded — the denominator on the dashboard.
     total_constraint_rules: int = 0
     #: Rules with an effective `verified` flag: the CSV's own plus everything a reviewer promoted.
     verified_rule_count: int = 0
@@ -109,7 +117,7 @@ class RuleReviewQueue(BaseModel):
 
     #: The queue itself, after any `kind` filter and `limit`.
     rules: list[ReviewableRule] = Field(default_factory=list)
-    #: True when `limit` cut the list short — so a UI can say "showing 100 of 859" honestly rather
+    #: True when `limit` cut the list short — so a UI can say "showing 100 of N" honestly rather
     #: than implying the backlog is the page.
     truncated: bool = False
 

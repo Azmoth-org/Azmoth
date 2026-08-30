@@ -35,7 +35,7 @@ import {
 } from "@/lib/rules/client"
 import { KIND, KIND_ORDER, REVIEW_STATUS_LABEL } from "@/lib/rules/format"
 
-/** One page of the queue. The backlog is 859 rules with a full GOÄ sentence each. */
+/** One page of the queue. Each entry carries the full GOÄ sentence the rule was extracted from. */
 const PAGE_SIZE = 100
 
 /**
