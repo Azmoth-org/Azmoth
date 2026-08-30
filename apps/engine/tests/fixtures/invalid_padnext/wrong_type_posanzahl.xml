@@ -10,7 +10,7 @@
   invoice nobody cross-checked looks exactly like one that passed. That is why the counters are
   typed in the schema while the money leaves are not.
 -->
-<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+<rechnungen anzahl="1" echtdaten="false" xmlns="http://padinfo.de/ns/pad">
 
   <nachrichtentyp version="02.12">ADL</nachrichtentyp>
 

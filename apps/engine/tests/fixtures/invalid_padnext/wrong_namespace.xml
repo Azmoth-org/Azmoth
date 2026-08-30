@@ -10,7 +10,7 @@
   read and priced. A different namespace is a different document type, though, and only the schema
   is in a position to notice.
 -->
-<rechnungen anzahl="1" xmlns="http://example.invalid/ns/pad">
+<rechnungen anzahl="1" echtdaten="false" xmlns="http://example.invalid/ns/pad">
 
   <nachrichtentyp version="02.12">ADL</nachrichtentyp>
 

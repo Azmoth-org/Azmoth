@@ -7,9 +7,22 @@ Two things to have decided before you open a terminal in front of anyone:
 
 - **Which policy the stack is running.** `PADNEXT_SCHEMA_POLICY=warn` for a pilot against real
   exports; `strict` for the synthetic demo below. § 0 says how to check without guessing.
-- **That the delivery is synthetic.** `PADNEXT_ALLOW_REAL_DATA` is `false` in both compose files,
-  so a delivery flagged `echtdaten="true"` is refused with `REAL_DATA_REFUSED` — by design, and not
-  something to work around on a laptop. See `docs/compliance/PRIVATE_DATA_WARNING.md`.
+- **That the delivery is synthetic, and that it says so.** `PADNEXT_ALLOW_REAL_DATA` is `false` in
+  both compose files, so a delivery flagged `echtdaten="true"` is refused with
+  `REAL_DATA_REFUSED` — by design, and not something to work around on a laptop.
+
+  A delivery that says *nothing* is refused too, with `ECHTDATEN_UNDECLARED`: only `"0"` and
+  `"false"` get through, and `"ja"`, an empty value or a missing attribute do not. **If a practice
+  brings their own export to the demo, it will almost certainly be refused on this**, and that is
+  the moment to show them `scripts/anonymize_padnext.py` rather than the moment to be surprised:
+
+  ```bash
+  python3 scripts/anonymize_padnext.py ihr-export.padx -o demo.padx
+  ```
+
+  It needs nothing but Python 3.9, runs on their machine, and never touches the original. See
+  [`ANONYMIZATION_SPEC.md`](ANONYMIZATION_SPEC.md) — written to be handed to their DSB — and
+  `docs/compliance/PRIVATE_DATA_WARNING.md`.
 
 ---
 

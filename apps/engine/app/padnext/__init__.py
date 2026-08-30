@@ -5,11 +5,17 @@ identity — see the module docstrings for why. The models live in `app.schemas.
 other contract the engine speaks.
 """
 
-from app.padnext.audit import RealDataRefused, audit_delivery, real_data_allowed
+from app.padnext.audit import (
+    EchtdatenUndeclared,
+    RealDataRefused,
+    audit_delivery,
+    real_data_allowed,
+)
 from app.padnext.reader import (
     InvalidXmlError,
     PadnextError,
     PadnextSchemaError,
+    parse_echtdaten,
     read_delivery,
     read_file,
 )
@@ -23,6 +29,7 @@ from app.schemas.padnext import (
 )
 
 __all__ = [
+    "EchtdatenUndeclared",
     "InvalidXmlError",
     "PadnextAuditReport",
     "PadnextAuditedPosition",
@@ -35,6 +42,7 @@ __all__ = [
     "SchemaUnavailable",
     "SchemaViolation",
     "audit_delivery",
+    "parse_echtdaten",
     "read_delivery",
     "read_file",
     "real_data_allowed",

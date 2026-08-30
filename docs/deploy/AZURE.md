@@ -428,7 +428,23 @@ What it verifies:
 
 ### Then, by hand
 
-- [ ] Sign up, sign in, sign out in a browser
+- [ ] **Decide who may register, and check it took.** `SIGNUP_ALLOWLIST` in
+      `/opt/azmoth/shared/.env` is the whole of the admission control on a public box — there is no
+      invitation flow behind it, and an empty value admits nobody. `deploy.sh` writes what
+      `--signup-allowlist` gave it and defaults to `admin@<domain>` with a warning. Read it back
+      out of the **running container**, not out of the file, because a value added after the last
+      `up -d` is not in the process:
+
+      ```bash
+      make azure-shell   # then:
+      sudo COMPOSE_PROJECT_NAME=azmoth docker compose \
+        -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.azure.yml \
+        exec -T web printenv SIGNUP_ALLOWLIST
+      ```
+
+      `scripts/preflight.sh` runs exactly this and fails on an empty answer.
+- [ ] Sign up, sign in, sign out in a browser — and confirm an address that is **not** on the list
+      is refused
 - [ ] Upload a PADnext delivery and confirm the report renders
 - [ ] Confirm `schema_warnings` appears on a report from a non-conforming export
       (`PADNEXT_SCHEMA_POLICY=warn` is the pilot setting)

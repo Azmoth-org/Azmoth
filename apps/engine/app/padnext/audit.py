@@ -142,6 +142,35 @@ class RealDataRefused(EngineError, RuntimeError):
     http_status = 422
 
 
+class EchtdatenUndeclared(EngineError, RuntimeError):
+    """The delivery never said whether it holds real patients, so it is refused.
+
+    Three inputs land here and they are one situation: `@echtdaten` absent, `@echtdaten=""`, and
+    `@echtdaten="ja"` — anything outside the `0`/`false`/`1`/`true` the specification defines.
+
+    **Why this is a refusal and not a warning.** It used to be a warning: the reader mapped every
+    unrecognised value to `False`, the audit noted "Es wurde von Testdaten ausgegangen" on the
+    report, and the delivery was processed. Read that sequence again from the other end — a
+    practice exports from a PVS that writes `echtdaten="ja"`, uploads real patients, and the
+    system tells them it assumed they were fake. The assumption is load-bearing and the file is
+    the only thing that could have justified it.
+
+    The asymmetry decides it. Refusing an anonymised delivery that failed to say so costs one
+    command and one re-upload. Accepting a real one costs an Art. 9 GDPR processing of health data
+    with no lawful basis, § 203 StGB exposure for the practice, and a notification. A default is a
+    guess about which of those to make when the file is silent, and there is only one defensible
+    way to guess.
+
+    `422`, same as `RealDataRefused` and for the same reason: the request is well formed and the
+    *content* is refused. A separate `error_code`, because the client action is different —
+    "your file did not declare itself, run the anonymiser" is a fixable export problem, and
+    "you sent production data" is not.
+    """
+
+    error_code = ErrorCode.ECHTDATEN_UNDECLARED
+    http_status = 422
+
+
 def real_data_allowed(settings: Settings | None = None) -> bool:
     """Whether a delivery flagged as production data may be processed at all.
 
@@ -596,26 +625,65 @@ def audit_delivery(
     """
     started = time.perf_counter()
     settings = settings or get_settings()
-    if delivery.echtdaten is True and not real_data_allowed(settings):
-        raise RealDataRefused(
-            "Das Hochladen von Echtdaten ist im Pilotmodus nicht gestattet. Diese PADnext-"
-            "Lieferung ist als Echtdaten gekennzeichnet (auftrag/@echtdaten). Bitte nutzen Sie "
-            "das Azmoth-Anonymisierungsskript und laden Sie die Datei erneut hoch. "
-            "— This PADnext delivery is flagged as production data (auftrag/@echtdaten). This "
-            "deployment processes synthetic data only and has refused it. Set "
-            "PADNEXT_ALLOW_REAL_DATA=1 only if you have a lawful basis and appropriate controls."
-        )
+
+    # ── The anonymisation gate. Nothing above this line reads a position. ──────────────────────
+    #
+    # Three-valued and closed on two of the three. `PADNEXT_ALLOW_REAL_DATA` opens both refusals
+    # together and deliberately so: an operator who has established a lawful basis for processing
+    # real deliveries has, a fortiori, accepted a delivery that merely failed to declare itself.
+    # Two switches for one decision is a way to end up with the wrong one set.
+    if not real_data_allowed(settings):
+        if delivery.echtdaten is True:
+            raise RealDataRefused(
+                "Das Hochladen von Echtdaten ist im Pilotmodus nicht gestattet. Diese PADnext-"
+                "Lieferung ist als Echtdaten gekennzeichnet (auftrag/@echtdaten). Bitte nutzen Sie "
+                "das Azmoth-Anonymisierungsskript und laden Sie die Datei erneut hoch. "
+                "— This PADnext delivery is flagged as production data (auftrag/@echtdaten). This "
+                "deployment processes synthetic data only and has refused it. Set "
+                "PADNEXT_ALLOW_REAL_DATA=1 only if you have a lawful basis and appropriate controls."
+            )
+        if delivery.echtdaten is None:
+            # Quote the value back when there was one. "Das Feld ist ungültig" sends somebody to
+            # search a 3 MB export for a field they cannot see; "es steht 'ja'" is a one-line fix
+            # in the PVS export profile, and they can make it without opening the file.
+            declared = (delivery.echtdaten_declared or "").strip()
+            what = (
+                f"Das Feld 'echtdaten' enthält den Wert '{declared}', der in der PADnext-"
+                "Spezifikation nicht definiert ist (erlaubt sind '0'/'false' für Testdaten und "
+                "'1'/'true' für Echtdaten)."
+                if declared
+                else "Das Feld 'echtdaten' fehlt oder ist ungültig."
+            )
+            raise EchtdatenUndeclared(
+                f"{what} Diese Lieferung wird abgewiesen, weil ohne diese Angabe nicht "
+                "feststellbar ist, ob sie echte Patientendaten enthält — und eine fehlende Angabe "
+                "wird nicht als 'Testdaten' angenommen. Bitte nutzen Sie das "
+                "Anonymisierungsskript (scripts/anonymize_padnext.py); es setzt echtdaten=\"false\" "
+                "in der Auftragsdatei und in den Nutzdaten. "
+                "— This delivery does not declare whether it holds production data. An undeclared "
+                "delivery is refused rather than assumed to be synthetic. Run "
+                "scripts/anonymize_padnext.py and upload its output, or fix the export to emit "
+                "echtdaten=\"0\". Set PADNEXT_ALLOW_REAL_DATA=1 only with a lawful basis.",
+                details={"echtdaten_declared": delivery.echtdaten_declared},
+            )
 
     findings: list[PadnextFinding] = [_as_finding(w) for w in (read_findings or [])]
 
     if delivery.echtdaten is None:
+        # Only reachable with PADNEXT_ALLOW_REAL_DATA=1 — the gate above refuses this otherwise.
+        # `severity="warning"`, not `info`: on a deployment that has opened the door to real data,
+        # a delivery that cannot say what it holds is the one most worth a second look, and the
+        # old wording ("Es wurde von Testdaten ausgegangen") described an assumption this engine
+        # no longer makes.
         findings.append(
             PadnextFinding(
                 type="padnext_echtdaten_unknown",
-                severity="info",
+                severity="warning",
                 message=(
-                    "Ohne Auftragsdatei ist nicht erkennbar, ob es sich um Echt- oder Testdaten "
-                    "handelt (auftrag/@echtdaten). Es wurde von Testdaten ausgegangen."
+                    "Die Lieferung erklärt nicht, ob sie Echt- oder Testdaten enthält "
+                    "(auftrag/@echtdaten fehlt oder ist ungültig). Sie wurde nur geprüft, weil "
+                    "PADNEXT_ALLOW_REAL_DATA gesetzt ist; ohne diese Einstellung wird eine "
+                    "Lieferung ohne Angabe abgewiesen."
                 ),
             )
         )

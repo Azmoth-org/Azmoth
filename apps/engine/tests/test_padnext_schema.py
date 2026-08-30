@@ -218,7 +218,7 @@ def test_the_bundled_example_validates():
 
 
 PAYLOAD = """<?xml version="1.0" encoding="UTF-8"?>
-<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+<rechnungen anzahl="1" echtdaten="false" xmlns="http://padinfo.de/ns/pad">
   <nachrichtentyp version="02.12">ADL</nachrichtentyp>
   <rechnung id="x">
     <abrechnungsfall>

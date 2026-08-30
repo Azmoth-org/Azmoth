@@ -246,6 +246,34 @@ else
     bad "the engine is NOT on Postgres — approvals would not survive a redeploy"
   fi
 
+  # [SEC] Who may create an account, read out of the RUNNING container rather than out of the .env
+  # on disk. Those are two different questions: a value added to .env after the last `up -d` is not
+  # in the process's environment, and the process's environment is what apps/web/lib/auth-allowlist.ts
+  # actually reads. A stale container with an open door looks perfectly configured on disk.
+  #
+  # `printenv NAME` exits 1 when the variable is unset, so unset and empty are distinguished here —
+  # they mean different things in the source (see the note on `null` vs `[]` in auth-allowlist.ts)
+  # even though production refuses both.
+  allowlist="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$COMPOSE_CMD exec -T web printenv SIGNUP_ALLOWLIST" 2>/dev/null | tr -d '\r')"
+  if [ -n "$allowlist" ]; then
+    ok "[SEC] sign-up allowlist is set in the running web container: $allowlist"
+    case "$allowlist" in
+      *@*) : ;;
+      *) bad "[SEC] SIGNUP_ALLOWLIST does not look like an address list: '$allowlist'" ;;
+    esac
+    # A domain entry readmits everyone who can get an address at that domain. Legitimate for a
+    # billing centre, and never what somebody meant to write for a two-person pilot.
+    case ",$(printf '%s' "$allowlist" | tr -d ' ')," in
+      *,@*) note "it contains a whole-domain entry — confirm that is deliberate" ;;
+    esac
+  else
+    bad "[SEC] SIGNUP_ALLOWLIST is empty or unset in the running web container"
+    note "Nobody can register — /signup refuses every address with SIGNUP_NOT_ALLOWED."
+    note "Set it in $REMOTE_ROOT/shared/.env, copy it to repo/infra/docker/.env, then:"
+    note "  ssh $SSH_TARGET '$COMPOSE_CMD up -d web'"
+    note "Or redeploy: ./scripts/deploy.sh $HOST --signup-allowlist \"you@$DOMAIN\""
+  fi
+
   migration="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$COMPOSE_CMD exec -T engine alembic current" 2>/dev/null | tail -1)"
   [ -n "$migration" ] && ok "alembic current: $migration" || bad "alembic current returned nothing"
 
@@ -339,7 +367,12 @@ section "7. Do these by hand"
 
 cat <<MANUAL
       □ Sign up, sign in, sign out in a browser at https://$APP_HOST
+        — and confirm an address NOT on SIGNUP_ALLOWLIST is refused
       □ Upload a PADnext delivery and confirm the report renders
+      □ Confirm a delivery with no 'echtdaten' attribute is refused with
+        ECHTDATEN_UNDECLARED, and that scripts/anonymize_padnext.py produces one
+        that is accepted. This is the pilot's data-protection boundary; it is
+        worth seeing it work once rather than assuming it.
       □ Confirm 'schema_warnings' appears on a report from a non-conforming export
         (PADNEXT_SCHEMA_POLICY=warn is the pilot setting)
       □ Mint an API key in Einstellungen → API-Schlüssel, then from your laptop:

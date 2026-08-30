@@ -42,6 +42,16 @@
 #
 # So: .env is created if absent and LEFT ALONE if present. It lives outside the release directory,
 # at /opt/azmoth/shared/.env, so shipping a new source tree cannot overwrite it.
+#
+# ── The one exception: SIGNUP_ALLOWLIST is backfilled ─────────────────────────────────────────
+# "Created once, then never touched" has a failure mode of its own: a variable added to the
+# repository after the first deploy never reaches a box that has already been deployed to, and the
+# symptom is that a security control which reads as wired up in git is absent in production.
+#
+# SIGNUP_ALLOWLIST is not a secret and regenerating it costs nothing, so it is APPENDED to an
+# existing .env when the key is missing entirely. An existing key — whatever its value, including
+# empty — is left exactly as it is: the operator may have edited it on the box to add a pilot user,
+# and a deploy that silently reset the guest list would be worse than one that adds nothing.
 
 set -euo pipefail
 
@@ -52,6 +62,12 @@ SSH_USER="${SSH_USER:-azmoth}"
 DOMAIN="${DOMAIN:-azmoth.app}"
 ACME_EMAIL="${ACME_EMAIL:-}"
 SKIP_BUILD=false
+
+# Who may create an account on the deployed box. Inherited from the environment so that CI or a
+# personal shell profile can carry the pilot list rather than it living in a flag somebody has to
+# remember; `--signup-allowlist` overrides it. Empty here means "derive a default and shout about
+# it" — see the resolution below, after DOMAIN is known.
+SIGNUP_ALLOWLIST="${SIGNUP_ALLOWLIST:-}"
 
 usage() {
   cat <<USAGE
@@ -64,12 +80,18 @@ usage: ./scripts/deploy.sh <host> [options]
                          app.<domain>, api.<domain> and www.<domain> are derived from it
   --acme-email <addr>    where Let's Encrypt sends renewal failures
                          (default: ops@<domain>)
+  --signup-allowlist <list>
+                         WHO MAY CREATE AN ACCOUNT. Comma-separated addresses; an entry
+                         starting with '@' is a whole domain. This is the only thing
+                         between /signup and the open internet.
+                         (default: \$SIGNUP_ALLOWLIST, else admin@<domain>)
   --skip-build           restart with the images already on the box, do not rebuild
   -h, --help             this
 
 examples:
   ./scripts/deploy.sh 20.79.12.34
   ./scripts/deploy.sh 20.79.12.34 --domain azmoth.de --acme-email ops@azmoth.de
+  ./scripts/deploy.sh 20.79.12.34 --signup-allowlist "dr.b@praxis-nord.de,ops@azmoth.de"
   ./scripts/deploy.sh 20.79.12.34 --skip-build
 USAGE
 }
@@ -79,6 +101,7 @@ while [ $# -gt 0 ]; do
     --user)       SSH_USER="$2"; shift 2 ;;
     --domain)     DOMAIN="$2"; shift 2 ;;
     --acme-email) ACME_EMAIL="$2"; shift 2 ;;
+    --signup-allowlist) SIGNUP_ALLOWLIST="$2"; shift 2 ;;
     --skip-build) SKIP_BUILD=true; shift ;;
     -h|--help)    usage; exit 0 ;;
     -*)           echo "!! unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -103,6 +126,49 @@ SSH_OPTS=(-o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new)
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m !! %s\033[0m\n' "$*" >&2; }
 die()  { printf '\033[1;31m !! %s\033[0m\n' "$*" >&2; exit 1; }
+
+# ── Resolve and check the sign-up allowlist ───────────────────────────────────────────────────
+#
+# This is the one value in the generated .env that is a security control rather than a setting, so
+# it is resolved here — before a single byte is shipped — and checked rather than trusted.
+#
+# The default is `admin@<domain>`: one address, at the domain being deployed, which whoever runs
+# this can actually receive mail at. It is deliberately NOT empty and deliberately NOT a domain
+# entry. Empty admits nobody and would present as "the pilot cannot sign up" an hour after DNS
+# propagates; `@<domain>` would admit anybody who can get an address at the company domain.
+#
+# The format check is not pedantry. A typo here does not fail loudly — it produces a deployment
+# where the intended user is refused and the message deliberately does not say why (see
+# SIGNUP_REFUSED_MESSAGE in apps/web/lib/auth-allowlist.ts, which will not distinguish
+# "misconfigured" from "not on the list" to a stranger at a form). That is the correct behaviour
+# for the app and a terrible way to find out you wrote a comma where you meant a dot. So it is
+# caught here, where the operator is still watching a terminal.
+if [ -z "$SIGNUP_ALLOWLIST" ]; then
+  SIGNUP_ALLOWLIST="admin@$DOMAIN"
+  warn "no --signup-allowlist given; defaulting to '$SIGNUP_ALLOWLIST'."
+  warn "That is the ONLY address that will be able to register. Re-run with"
+  warn "  --signup-allowlist \"dr.b@praxis-nord.de,admin@$DOMAIN\""
+  warn "or edit SIGNUP_ALLOWLIST in /opt/azmoth/shared/.env and restart the web service."
+fi
+
+case "$SIGNUP_ALLOWLIST" in
+  # A quote or a '$' would be interpolated by Compose or would end the shell quoting that carries
+  # this value over ssh. Neither can appear in a legitimate address.
+  *\'*|*\"*|*'$'*) die "--signup-allowlist may not contain quotes or '\$': $SIGNUP_ALLOWLIST" ;;
+esac
+
+# Split on commas and whitespace, exactly as apps/web/lib/auth-allowlist.ts does, and check each
+# entry in the same two shapes it recognises: '@domain.tld' or 'local@domain.tld'.
+allowlist_count=0
+for entry in $(printf '%s' "$SIGNUP_ALLOWLIST" | tr ',' ' '); do
+  case "$entry" in
+    @*.*) warn "'$entry' admits EVERY address at that domain. Prefer exact addresses." ;;
+    *@*.*) : ;;   # one exact address: a local part, an '@', and a dotted domain after it
+    *) die "not an address or an @domain in --signup-allowlist: '$entry'" ;;
+  esac
+  allowlist_count=$((allowlist_count + 1))
+done
+[ "$allowlist_count" -gt 0 ] || die "--signup-allowlist parsed to nothing usable"
 
 # ── Local preflight ───────────────────────────────────────────────────────────────────────────
 
@@ -313,6 +379,7 @@ say "3/5 Environment and secrets"
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "
       REMOTE_ROOT='$REMOTE_ROOT' \
       DOMAIN='$DOMAIN' APP_HOST='$APP_HOST' API_HOST='$API_HOST' ACME_EMAIL='$ACME_EMAIL' \
+      SIGNUP_ALLOWLIST='$SIGNUP_ALLOWLIST' \
       bash -s" <<'ENVSETUP'
 set -euo pipefail
 
@@ -323,6 +390,23 @@ if [ -f "$ENV_FILE" ]; then
   echo "    (regenerating BETTER_AUTH_SECRET logs everyone out; regenerating POSTGRES_PASSWORD"
   echo "     is never applied to an existing volume and only breaks the connection — see the"
   echo "     header of scripts/deploy.sh)"
+
+  # The one backfill. A box deployed before the allowlist existed has no SIGNUP_ALLOWLIST line at
+  # all, and Compose would hand the web container "" — which admits nobody, so the pilot would find
+  # they cannot register. Add the key if and only if it is ABSENT. `grep -q '^SIGNUP_ALLOWLIST='`
+  # is anchored so a commented-out line does not count as present, and an existing key is never
+  # rewritten: the operator may have edited the guest list on the box, and a deploy that reset it
+  # would be a regression dressed as a fix.
+  if grep -q '^SIGNUP_ALLOWLIST=' "$ENV_FILE"; then
+    echo "    SIGNUP_ALLOWLIST already set in $ENV_FILE — left untouched"
+    echo "    (edit it there and 'docker compose ... up -d web' to change who may register)"
+  else
+    printf '\n# -- who may create an account (added by deploy.sh) --------------------------------------\n' >> "$ENV_FILE"
+    printf '# Comma-separated. An entry starting with @ admits a whole domain. EMPTY ADMITS NOBODY.\n' >> "$ENV_FILE"
+    printf '# See apps/web/lib/auth-allowlist.ts.\n' >> "$ENV_FILE"
+    printf 'SIGNUP_ALLOWLIST="%s"\n' "$SIGNUP_ALLOWLIST" >> "$ENV_FILE"
+    echo "    SIGNUP_ALLOWLIST was MISSING and has been appended: $SIGNUP_ALLOWLIST"
+  fi
 else
   echo "    generating $ENV_FILE"
 
@@ -368,6 +452,17 @@ POSTGRES_DB=azmoth
 
 # -- authentication --------------------------------------------------------------------------
 BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
+
+# ** WHO MAY CREATE AN ACCOUNT. **
+# There is no invitation flow and no email verification behind this line — it is the whole of the
+# admission control on a box with a public IP. Comma-separated; an entry starting with '@' admits
+# every address at that domain. EMPTY ADMITS NOBODY, which is the intended failure rather than a
+# bug: see apps/web/lib/auth-allowlist.ts.
+#
+# Changing it is an edit here plus:
+#     cd $REMOTE_ROOT/repo && docker compose ... up -d web
+# The value is read at request time, so no rebuild is needed — only a restart of the web service.
+SIGNUP_ALLOWLIST="$SIGNUP_ALLOWLIST"
 
 # Leave EMPTY unless you enable Google sign-in. Better Auth derives the origin per request and
 # apps/web/lib/auth.ts already trusts Caddy's x-forwarded-host, so the proxy needs nothing here.

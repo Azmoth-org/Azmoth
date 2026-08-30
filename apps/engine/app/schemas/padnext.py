@@ -125,8 +125,20 @@ class PadnextDelivery(BaseModel):
 
     nachrichtentyp: str = ""
     version: str = ""
-    #: `@echtdaten` — false means test data. See `audit.py` for why we refuse the true case.
+    #: `@echtdaten` as a decision: `True` production data, `False` test data, `None` **unknown**.
+    #:
+    #: `None` is not "probably test data" and must never be read as one. See `audit.py`, which
+    #: refuses all three of the unknown cases — absent, empty, and a value like "ja" that no
+    #: version of the spec defines.
     echtdaten: bool | None = None
+    #: `@echtdaten` exactly as it was written, or `None` if the delivery carried no such attribute.
+    #:
+    #: Kept beside the parsed value so a refusal can quote the file back at whoever exported it.
+    #: `echtdaten=None, echtdaten_declared=None` is "there was no declaration";
+    #: `echtdaten=None, echtdaten_declared="ja"` is "there was one and it is not a value this
+    #: engine will guess at". Those need different sentences, and the boolean cannot tell them
+    #: apart. Internal — `PadnextDelivery` is not part of the API contract.
+    echtdaten_declared: str | None = None
     declared_invoice_count: int | None = None
     invoices: list[PadnextInvoice] = Field(default_factory=list)
     #: Names of the files found inside a `.padx` container, for the audit trail.

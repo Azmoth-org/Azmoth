@@ -11,9 +11,23 @@ import { Label } from "@workspace/ui/components/label"
  * ## What this is for, and what it is honestly not
  *
  * It is **not** the control that stops real patient data being processed. That control is in the
- * engine: `app/padnext/audit.py` refuses a delivery flagged `echtdaten="true"` with
- * `REAL_DATA_REFUSED`, before a single position is read, and no checkbox on this page can switch
- * that off. A gate whose only enforcement is a tickbox in a browser is not a gate.
+ * engine: `app/padnext/audit.py` refuses the delivery before a single position is read, and no
+ * checkbox on this page can switch that off. A gate whose only enforcement is a tickbox in a
+ * browser is not a gate.
+ *
+ * That refusal is three-valued, and the middle case is the one this text has to get right:
+ *
+ *   - `echtdaten="1"` / `"true"`  → `REAL_DATA_REFUSED`
+ *   - `echtdaten="0"` / `"false"` → audited
+ *   - anything else, including **absent** → `ECHTDATEN_UNDECLARED`
+ *
+ * The third row is new and it changes what a user has to do rather than merely what they must not
+ * do. Before it, an export that said nothing was audited on the assumption that silence meant
+ * synthetic; a file therefore reached a report without anyone having run anything. Now a delivery
+ * that cannot declare itself is turned away, so `scripts/anonymize_padnext.py` is a step in the
+ * workflow and not a recommendation — and the sentence beside the checkbox has to say that,
+ * because a user who ticks a box asserting they ran a script they have never seen is being asked
+ * to lie.
  *
  * What it *is* for is the moment before the mistake. The realistic failure in a pilot is not
  * somebody defeating a control — it is somebody exporting from their PVS, forgetting the
@@ -60,12 +74,13 @@ export function AnonymisationGate({
             htmlFor="anonymisation-confirmed"
             className="text-xs leading-relaxed font-normal"
           >
-            Ich bestätige, dass ich das Azmoth-Anonymisierungsskript ausgeführt
-            habe und die hochgeladene Datei das Attribut{" "}
-            <code className="font-mono">echtdaten=&quot;false&quot;</code>{" "}
-            enthält. Das Hochladen von echten Patientendaten (
-            <code className="font-mono">echtdaten=&quot;true&quot;</code>) ist
-            strengstens untersagt und führt zur sofortigen Sperrung.
+            Ich bestätige, dass ich diese Datei mit dem
+            Azmoth-Anonymisierungsskript{" "}
+            <code className="font-mono">scripts/anonymize_padnext.py</code>{" "}
+            erzeugt habe und dass sie keine Patientendaten mehr enthält —
+            insbesondere keinen Namen, keine Anschrift, kein Geburtsdatum und
+            keine Versichertennummer. Das Hochladen echter Patientendaten ist
+            untersagt.
           </Label>
         </div>
 
@@ -73,11 +88,26 @@ export function AnonymisationGate({
           id="anonymisation-consequence"
           className="text-xs leading-relaxed text-amber-900/80 dark:text-amber-100/70"
         >
-          Diese Bestätigung ersetzt keine technische Prüfung: Die Engine weist
-          eine als Echtdaten gekennzeichnete Lieferung ohnehin ab, bevor eine
-          einzige Position gelesen wird. Sie steht hier, weil die
-          Verantwortung für die Pseudonymisierung bei der Praxis liegt und der
-          Zeitpunkt, an dem sie übernommen wird, benannt sein sollte.
+          Diese Bestätigung ersetzt keine technische Prüfung. Die Engine weist
+          eine Lieferung ab, die als Echtdaten gekennzeichnet ist — und ebenso
+          eine, die sich gar nicht erklärt: Fehlt das Attribut{" "}
+          <code className="font-mono">echtdaten</code> oder trägt es einen Wert
+          wie <code className="font-mono">&quot;ja&quot;</code>, wird die Datei
+          mit <code className="font-mono">ECHTDATEN_UNDECLARED</code>{" "}
+          zurückgewiesen. Eine fehlende Angabe gilt nicht als „Testdaten“. Das
+          Skript setzt{" "}
+          <code className="font-mono">echtdaten=&quot;false&quot;</code> in der
+          Auftragsdatei und in den Nutzdaten und ist damit der übliche Weg, eine
+          Datei überhaupt hochladbar zu machen.
+        </p>
+
+        <p className="text-xs leading-relaxed text-amber-900/80 dark:text-amber-100/70">
+          Das Skript entfernt keinen Freitext. Prüfen Sie die Felder{" "}
+          <code className="font-mono">text</code> und{" "}
+          <code className="font-mono">begruendung</code> selbst — das Skript
+          meldet auffällige Stellen am Ende seines Laufs. Was es genau entfernt
+          und warum das Ergebnis nicht mehr unter Art. 9 DSGVO fällt, steht in{" "}
+          <code className="font-mono">docs/pilot/ANONYMIZATION_SPEC.md</code>.
         </p>
       </div>
     </div>

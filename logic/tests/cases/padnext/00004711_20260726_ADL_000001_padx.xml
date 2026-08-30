@@ -9,6 +9,14 @@
   Note what is NOT here: no name, no address, no date of birth. The reader does not parse patient
   identity, so the example does not carry any.
 
+  echtdaten="false" on the root says the same thing in the form the engine checks. The attribute
+  belongs on <auftrag> per the spec, and the order file beside this one carries it there — but
+  this payload is also served BARE, by the public demo endpoint and by every test that reads it
+  without its container, and a bare payload has no <auftrag> to speak through. Since an undeclared
+  delivery is now refused rather than assumed synthetic (app/padnext/audit.py), a file that cannot
+  declare itself could not be audited at all. The subset schema permits it: <rechnungen> carries
+  xs:anyAttribute. scripts/anonymize_padnext.py writes it in both places for the same reason.
+
   This invoice contains DELIBERATE errors, one per position, so the audit has something to report:
 
     1  GOÄ 1     factor 3.5 is at the Höchstsatz with no begruendung      → § 12 Abs. 3
@@ -26,6 +34,7 @@
   "above the maximum", and the audit correctly disagreed.
 -->
 <rechnungen anzahl="1"
+            echtdaten="false"
             xmlns="http://padinfo.de/ns/pad"
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
             xsi:schemaLocation="http://padinfo.de/ns/pad http://www.padinfo.de/ns/pad/padx_adl_v2.12.xsd">

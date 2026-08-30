@@ -9,7 +9,7 @@
   ends up "" and the report states no message type at all. Everything else here is valid, so the
   only thing wrong is that the document does not identify itself.
 -->
-<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+<rechnungen anzahl="1" echtdaten="false" xmlns="http://padinfo.de/ns/pad">
 
   <rechnungsersteller>
     <name>Musterpraxis Dr. Beispiel (synthetisch)</name>
