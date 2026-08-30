@@ -125,6 +125,13 @@ class BaseFactorPolicy(StrEnum):
     SCHWELLENWERT = "schwellenwert"
 
 
+class LogFormat(StrEnum):
+    """How a log line is rendered. See `app.core.observability`."""
+
+    JSON = "json"
+    TEXT = "text"
+
+
 class PadnextSchemaPolicy(StrEnum):
     """What a PADnext delivery that violates the subset schema is allowed to do.
 
@@ -149,6 +156,12 @@ class Settings(BaseSettings):
     # -- service ------------------------------------------------------------------------
     app_env: AppEnv = AppEnv.DEVELOPMENT
     debug: bool = False
+
+    #: `json` or `text`. JSON is the default because production is where a log is read by something
+    #: other than a person — one object per line, so `jq`, Loki or CloudWatch all work on it — and
+    #: because a log nobody can query is the reason a pilot user's "it didn't work" has no answer.
+    #: `text` is the old human format plus the request id, for a developer watching a terminal.
+    log_format: LogFormat = LogFormat.JSON
 
     # -- extraction ---------------------------------------------------------------------
     #: Manual by default, and manual is the only value: the engine takes structured clinical

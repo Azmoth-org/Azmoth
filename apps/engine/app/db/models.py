@@ -34,7 +34,15 @@ And two standalone tables:
     rule_reviews        one row per rule a billing expert has decided about
     api_keys            one row per credential issued to a practice, stored as a hash
 
-`api_keys` is the newest and the one with the sharpest rule attached: the token itself is never
+And one more that exists purely so a failure can be asked about later:
+
+    error_log           one row per unhandled 5xx — type, message, route, request id, tenant
+
+It holds no body, no headers and no traceback locals, deliberately: a diagnostic table is the
+easiest place in a system for patient data to end up somewhere it should not be, and what is stored
+is enough to find the request in the logs without any of that.
+
+`api_keys` is the one with the sharpest rule attached: the token itself is never
 written anywhere. The row holds SHA-256 over it plus the public `key_id` prefix, so a database dump
 carries no usable credential and there is no code path that can show a caller their key a second
 time. It has no foreign key into Better Auth's `organization` for the same reason as everything
@@ -501,6 +509,7 @@ __all__ = [
     "AuditLogIsAppendOnly",
     "BatchFileRecord",
     "BatchJobRecord",
+    "ErrorLogRecord",
     "ProposalRecord",
     "RuleReviewRecord",
     "as_utc",
@@ -707,3 +716,70 @@ class ApiKeyRecord(Base):
     def __repr__(self) -> str:  # pragma: no cover - diagnostics only
         state = "revoked" if self.revoked_at else "active"
         return f"<ApiKeyRecord {self.key_id} {self.organization_id} {state}>"
+
+
+class ErrorLogRecord(Base):
+    """One unhandled failure, kept so somebody can be asked about it later.
+
+    Written by `app.core.observability.record_exception` from the last-resort exception handler —
+    so a row here means the engine produced a `500` that nobody in this codebase anticipated. A
+    handled `422` or `503` is *not* recorded: those are the contract working, and a table that
+    filled up with them would bury the ones that matter.
+
+    **This is a triage queue, not a log.** The container's stdout has the traceback and everything
+    else; this table exists so that "did anything break for this customer last week" is a query
+    rather than an archaeology exercise across whatever log retention a deployment happens to have.
+    It is also the seam a real error tracker plugs into — `set_error_hook` forwards the same
+    exception to Sentry or equivalent, and this row is what remains when nobody has wired one up.
+
+    **What is deliberately not here.** No request body, no headers, no traceback locals, no
+    filename from an upload. This engine handles billing data about identifiable treatment, and a
+    diagnostic table is the easiest place in a system for that to end up somewhere it should not
+    be. What is stored — the exception type, its message, the route, the request id, the tenant —
+    is enough to find the request in the logs and to ask the customer what they were doing, and it
+    can be read by whoever is on call rather than only by someone cleared for patient data.
+
+    Not append-only in the `audit_events` sense: nobody's liability attaches to it, and a retention
+    policy that deletes rows older than N days is a normal thing to want. It is simply never
+    updated, because there is nothing about a failure that later becomes untrue.
+    """
+
+    __tablename__ = "error_log"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The `X-Request-ID` the failing request carried. The join key to the logs, and the string a
+    #: support conversation quotes — which is why the client is given it in the `500` body too.
+    request_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False, default="")
+
+    occurred_at: Mapped[datetime] = mapped_column(
+        TimestampVariant, index=True, nullable=False, default=utcnow
+    )
+
+    #: `ZeroDivisionError`, `KeyError` — the class name alone. Indexed because the first triage
+    #: question is "how many distinct failures is this", and it is answered by grouping on this.
+    exception_type: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+
+    #: `str(exc)`, truncated by the store. `Text`, because an exception that explains itself in
+    #: three lines is the useful kind and a column width would cut off the explanation.
+    message: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
+    #: The route **template** (`/api/v1/audit/bulk/{job_id}`), never the resolved path. A resolved
+    #: path carries a job id, which is already a column, and would make every row a distinct value
+    #: for the one question this field answers: which endpoint is failing.
+    http_route: Mapped[str | None] = mapped_column(String(256), index=True, default=None)
+    http_method: Mapped[str | None] = mapped_column(String(8), default=None)
+
+    #: Whose request it was, where the request had got far enough to know. Both nullable: a failure
+    #: in the middleware happens before either is resolved, and a row with nulls is a better record
+    #: than no row.
+    organization_id: Mapped[str | None] = mapped_column(String(256), index=True, default=None)
+    api_key_id: Mapped[str | None] = mapped_column(String(64), index=True, default=None)
+
+    __table_args__ = (
+        # "What has been failing lately", which is the only query anyone runs against this.
+        Index("ix_error_log_occurred_at_exception_type", "occurred_at", "exception_type"),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return f"<ErrorLogRecord {self.exception_type} at {self.occurred_at}>"

@@ -30,6 +30,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
+from app.core.observability import record_exception
 from app.errors import EngineError, ErrorCode, error_envelope
 
 log = logging.getLogger(__name__)
@@ -138,24 +139,38 @@ async def validation_error_handler(
     return _json(422, body)
 
 
-async def unhandled_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """The last resort: an exception nobody in this codebase named.
 
     It exists so that the *shape* of an error response is unconditional — a client can parse
     `error_code` from any failure, including the ones we did not anticipate. The message is
     deliberately generic and the exception type is the only detail carried: an unhandled error is
     by definition one whose contents nobody has vetted for what they might leak.
+
+    **It is also the only writer of `error_log`.** A handled failure — a `422` for a malformed
+    delivery, a `503` for a missing Soufflé — is the error contract working, and recording those
+    would fill the table with noise and bury the rows that mean something is broken. Reaching here
+    means the engine did something nobody anticipated, which is exactly the set worth keeping.
+
+    **The request id goes in the body.** Not as decoration: it is the whole reason a user saying
+    "the upload didn't work" is answerable. They quote `details.request_id`, and it joins their
+    failure to the `error_log` row and to every log line the request produced. Emitting it here and
+    not only in the header is deliberate — a header is invisible to somebody reading a screenshot
+    of an error, and a screenshot is what a support conversation actually starts with.
     """
     log.exception("unhandled error: %s", exc)
+    request_id = await record_exception(exc, request=request)
     return _json(
         500,
         error_envelope(
             error_code=ErrorCode.INTERNAL_ERROR,
             message=(
                 "Die Engine hat einen unerwarteten Fehler ausgelöst. Der Vorgang wurde nicht "
-                "abgeschlossen; die Details stehen im Server-Log."
+                "abgeschlossen. Bitte nennen Sie bei einer Rückfrage die Vorgangsnummer "
+                f"{request_id or '(nicht verfügbar)'}. — An unexpected error occurred; quote the "
+                "request id when reporting it."
             ),
-            details={"exception": type(exc).__name__},
+            details={"exception": type(exc).__name__, "request_id": request_id},
             retry_after=None,
             http_status=500,
         ),

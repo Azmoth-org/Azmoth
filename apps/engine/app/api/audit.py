@@ -68,6 +68,7 @@ from app.api.deps import batches, pipeline
 from app.api.padnext import refuse_catalog_mismatch
 from app.api.ratelimit import BulkRateLimit, Decision, SingleRateLimit
 from app.config import get_settings
+from app.core.observability import bind
 from app.errors import EmptyRequestBody, UnsupportedInputFormat
 from app.padnext import audit_delivery, read_delivery
 from app.padnext.formats import FORMAT_ADVICE, InputFormat, detect_format
@@ -471,6 +472,10 @@ async def audit_bulk(
     # together or neither happens: if the write throws, no job row exists to point at a file that
     # is not there.
     batch_id = new_batch_id()
+    # Bound before the archive is written, so the two failures that can follow — a storage error
+    # and a database error — both name the job they were for. A `503` whose log line does not say
+    # which upload it was is a `503` nobody can follow up on.
+    bind(job_id=batch_id)
     try:
         upload_path = await run_in_threadpool(
             store_bulk_upload,
@@ -607,6 +612,7 @@ async def audit_bulk_status(job_id: str, key: RequestApiKey) -> BatchAuditJob:
     that could not be read is **not** a failed job, it is a `FAILED` entry in `files` with a reason,
     and the rest of the archive is still audited.
     """
+    bind(job_id=job_id)
     try:
         return await batches().load_batch(job_id, organization_id=key.organization_id)
     except BatchNotFound as exc:
@@ -653,6 +659,7 @@ async def audit_pdf(job_id: str, key: RequestApiKey) -> Response:
 
     Only `COMPLETED`. See `app.services.pdf` for why there is no PDF library behind this.
     """
+    bind(job_id=job_id)
     try:
         job = await batches().load_batch(job_id, organization_id=key.organization_id)
     except BatchNotFound as exc:

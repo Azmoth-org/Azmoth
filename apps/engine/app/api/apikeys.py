@@ -45,6 +45,7 @@ from typing import Annotated
 from fastapi import Depends, Security
 from fastapi.security import APIKeyHeader
 
+from app.core.observability import bind
 from app.errors import ApiKeyInvalid, ApiKeyRequired
 from app.services.api_keys import AuthenticatedKey
 
@@ -93,6 +94,12 @@ async def require_api_key(
         )
 
     key = await api_keys().verify(presented.strip())
+    if key is not None:
+        # Bound here, at the one point every partner request passes through, rather than in each
+        # route. From now on every log line the request emits — including ones from the reader and
+        # the solver, which know nothing about HTTP — carries who made it and for which practice.
+        # That is what turns "an upload failed at 14:32" into "this customer's upload failed".
+        bind(key_id=key.key_id, organization_id=key.organization_id)
     if key is None:
         raise ApiKeyInvalid(
             "Der API-Schlüssel ist ungültig, unbekannt oder wurde widerrufen. Prüfen Sie, ob er "
