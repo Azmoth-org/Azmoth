@@ -22,6 +22,11 @@ Three pieces, and each is stdlib:
     log line emitted anywhere under that request carries the id without a single call site changing
     — including the ones inside the solver and the reader, which know nothing about HTTP.
 
+It also carries one hook that is not about logging at all: the same `finally` that writes the
+request line hands the request to `app.services.usage`, because that is the single point every
+request passes through with its duration, its status and its resolved tenant all in scope. See
+`_meter`.
+
 ``record_exception``
     The single seam an error tracker attaches to. It writes an `error_log` row and, if a Sentry-like
     hook is registered, calls it. No `sentry-sdk` dependency: the hook is a function this module
@@ -260,6 +265,58 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                     "duration_ms": duration_ms,
                 },
             )
+            await _meter(request, route=route, status=status, duration_ms=duration_ms)
+
+
+async def _meter(request: Request, *, route: str, status: int, duration_ms: float) -> None:
+    """Hand one finished request to the usage meter, if it can be attributed to a practice.
+
+    Called from the same `finally` that writes the request line, and for the same reason: this is
+    the one place every request passes through with its duration, its status and the tenant the
+    dependencies resolved all in scope at once. A decorator per endpoint would be a list somebody
+    forgets to add to, and the failure would be a customer's usage silently under-counted.
+
+    **No tenant, no row.** An unauthenticated `401`, or a `413` refused at the perimeter before any
+    dependency ran, has nobody to attribute usage to — and a usage table with unattributable rows is
+    one whose totals nobody can reconcile. Those requests are still in the logs.
+
+    Only `/api/v1/*`. The OpenAPI document, `/docs` and the health probe are not consumption.
+
+    `bytes_processed` comes from `Content-Length`, which is what the caller declared rather than what
+    arrived. The two differ only for a request that was cut off — which the status code already
+    records — and reading the real figure would mean counting bytes through the body stream of every
+    request to improve a billing input by nothing.
+
+    **Nothing that happens in here may reach the client.** This runs in the middleware's `finally`,
+    after the handler has produced an answer, so an exception escaping would turn a successful audit
+    into a `500` over a bookkeeping row — and would additionally be recorded as an unhandled engine
+    error, which is a lie about what failed. `UsageMeter.record` guards itself as well; this guard
+    is the one that holds when the failure is *reaching* the meter rather than inside it, which is
+    the case a swallow inside `record` cannot cover.
+    """
+    try:
+        context = _request_context.get()
+        organization_id = context.get("organization_id")
+        if not organization_id or not route.startswith("/api/v1/"):
+            return
+
+        try:
+            declared = int(request.headers.get("content-length") or 0)
+        except ValueError:
+            declared = 0
+
+        from app.api.deps import usage_meter
+
+        await usage_meter().record(
+            organization_id=str(organization_id),
+            api_key_id=context.get("key_id"),
+            endpoint=route,
+            status_code=status,
+            duration_ms=duration_ms,
+            bytes_processed=declared,
+        )
+    except Exception:  # noqa: BLE001 - see docstring; a caller is never punished for our accounting
+        log.exception("could not meter %s %s; the request itself was unaffected", route, status)
 
 
 # ==============================================================================================

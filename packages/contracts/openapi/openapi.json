@@ -3774,6 +3774,154 @@
         "title": "Totals",
         "type": "object"
       },
+      "UsageByEndpoint": {
+        "additionalProperties": false,
+        "description": "One endpoint's share of a practice's consumption.",
+        "properties": {
+          "average_duration_ms": {
+            "default": 0.0,
+            "title": "Average Duration Ms",
+            "type": "number"
+          },
+          "bytes_processed": {
+            "default": 0,
+            "title": "Bytes Processed",
+            "type": "integer"
+          },
+          "endpoint": {
+            "description": "Die Route als Muster, nicht als aufgelöster Pfad — `/api/v1/audit/bulk/{job_id}` und nicht `/api/v1/audit/bulk/batch_9f1c…`. — The route template, so a breakdown is a list of endpoints rather than a list of ids.",
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "failed_requests": {
+            "default": 0,
+            "description": "Anfragen mit Status ≥ 400. — Calls that answered 4xx or 5xx.",
+            "title": "Failed Requests",
+            "type": "integer"
+          },
+          "requests": {
+            "default": 0,
+            "title": "Requests",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "UsageByEndpoint",
+        "type": "object"
+      },
+      "UsageByKey": {
+        "additionalProperties": false,
+        "description": "One API key's share. `key_id` is null for calls the web application made itself.",
+        "properties": {
+          "bytes_processed": {
+            "default": 0,
+            "title": "Bytes Processed",
+            "type": "integer"
+          },
+          "failed_requests": {
+            "default": 0,
+            "title": "Failed Requests",
+            "type": "integer"
+          },
+          "key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Der API-Schlüssel, oder `null` für Aufrufe aus der Weboberfläche selbst. — The key, or `null` for calls the web application made under a session rather than a key.",
+            "title": "Key Id"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "requests": {
+            "default": 0,
+            "title": "Requests",
+            "type": "integer"
+          }
+        },
+        "title": "UsageByKey",
+        "type": "object"
+      },
+      "UsageSummary": {
+        "additionalProperties": false,
+        "description": "What one practice consumed over one window.\n\nThe window is always stated rather than implied. A usage figure whose period a reader has to\nguess is one two people will compute differently from the same rows — and this is the number an\ninvoice is checked against.",
+        "properties": {
+          "by_endpoint": {
+            "items": {
+              "$ref": "#/components/schemas/UsageByEndpoint"
+            },
+            "title": "By Endpoint",
+            "type": "array"
+          },
+          "by_key": {
+            "items": {
+              "$ref": "#/components/schemas/UsageByKey"
+            },
+            "title": "By Key",
+            "type": "array"
+          },
+          "failed_requests": {
+            "default": 0,
+            "title": "Failed Requests",
+            "type": "integer"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "period_end": {
+            "description": "Ende des Zeitraums, einschliesslich. UTC. — Inclusive end, in UTC.",
+            "format": "date-time",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "description": "Beginn des Zeitraums, einschliesslich. UTC. — Inclusive start, in UTC.",
+            "format": "date-time",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "total_bytes_processed": {
+            "default": 0,
+            "description": "Summe der Anfrage-Bodys in Bytes. Die zweite Verbrauchseinheit neben der Anzahl: die Prüfung einer 3-kB-Lieferung und die eines 50-MB-Archivs sind nicht dieselbe Arbeit. — Request body bytes; the other unit of consumption besides the call count.",
+            "title": "Total Bytes Processed",
+            "type": "integer"
+          },
+          "total_duration_ms": {
+            "default": 0,
+            "title": "Total Duration Ms",
+            "type": "integer"
+          },
+          "total_requests": {
+            "default": 0,
+            "title": "Total Requests",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "organization_id",
+          "period_start",
+          "period_end"
+        ],
+        "title": "UsageSummary",
+        "type": "object"
+      },
       "VocabularyResponse": {
         "description": "What `GET /api/v1/vocabulary` returns.\n\nDeclared as a model rather than a bare dict for one concrete reason: an endpoint with no\nOpenAPI schema cannot have a TypeScript client generated for it, so the front end wrote one by\nhand and got the shape wrong in three ways — `entity_types` declared as a flat array when the\nAPI returns a mapping keyed by kind, options keyed on `value` rather than `entity_type`, and an\ninvented `sexes` list. None of it failed a type check on either side.\n\n`entity_types` is a mapping so a UI can group the pickers without re-deriving groups.",
         "properties": {
@@ -5510,6 +5658,93 @@
           }
         },
         "summary": "Einen API-Schlüssel widerrufen",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/v1/settings/usage": {
+      "get": {
+        "description": "Wie viele Anfragen, wie viele Bytes und wie viel Rechenzeit diese Praxis verbraucht hat.\n\nStandardmässig der laufende Kalendermonat in UTC — der Zeitraum, den eine Rechnung abbildet.\nDer tatsächlich verwendete Zeitraum steht immer in der Antwort (`period_start`, `period_end`):\neine Verbrauchszahl, deren Zeitraum der Leser raten muss, ist eine Zahl, die zwei Personen aus\ndenselben Daten unterschiedlich berechnen.\n\n**Gezählt wird jede zurechenbare Anfrage, auch die fehlgeschlagenen.** Eine Integration, die\ntäglich vierhundert `422` erzeugt, ist ein Problem, das man sehen will, bevor der Kunde\nabspringt — ein Bericht, der nur Erfolge zählte, würde genau diesen Kunden verbergen.\n\n`by_key` trennt die Integrationen voneinander; `key_id: null` sind Aufrufe aus der\nWeboberfläche selbst. `by_endpoint` zeigt, wofür der Verbrauch anfällt.\n\n---\n\nWhat this practice consumed: requests, request bytes and wall-clock time, for the current\ncalendar month in UTC unless `since` / `until` say otherwise. The window used is always stated\nin the response.\n\nReadable **either** with an API key — a partner checking their own spend — **or** from a\nsigned-in session in the web application. Whichever credential is presented determines the\norganisation; there is no parameter that names one.\n\nFailed calls are counted and reported separately, because an integration producing errors is\nthe customer most worth noticing.",
+        "operationId": "read_usage_api_v1_settings_usage_get",
+        "parameters": [
+          {
+            "description": "Beginn des Zeitraums, einschliesslich. ISO-8601; ohne Zeitzone als UTC gelesen. Standard: der 1. des laufenden Monats, 00:00 UTC. — Inclusive start; defaults to the first of the current month.",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Beginn des Zeitraums, einschliesslich. ISO-8601; ohne Zeitzone als UTC gelesen. Standard: der 1. des laufenden Monats, 00:00 UTC. — Inclusive start; defaults to the first of the current month.",
+              "title": "Since"
+            }
+          },
+          {
+            "description": "Ende des Zeitraums, einschliesslich. Standard: jetzt. — Inclusive end.",
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Ende des Zeitraums, einschliesslich. Standard: jetzt. — Inclusive end.",
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "security": [
+          {
+            "AzmothApiKey": []
+          }
+        ],
+        "summary": "Verbrauch dieser Praxis",
         "tags": [
           "settings"
         ]

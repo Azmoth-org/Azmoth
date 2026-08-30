@@ -1,6 +1,7 @@
 import {
   FileCheck2Icon,
   HistoryIcon,
+  KeyRoundIcon,
   LayersIcon,
   LayoutDashboardIcon,
   ListIcon,
@@ -77,6 +78,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     description:
       "Alle gespeicherten PADnext-Stapelprüfungen, filterbar nach Status. Nur synthetische Daten.",
     icon: HistoryIcon,
+  },
+  {
+    href: "/settings/api-keys",
+    label: "API-Schlüssel",
+    description:
+      "API-Schlüssel für die Anbindung eines PVS oder Rechnungszentrums erstellen, einsehen und widerrufen — und den Verbrauch der laufenden Abrechnungsperiode ansehen.",
+    icon: KeyRoundIcon,
+    internal: true,
   },
   {
     href: "/rules",

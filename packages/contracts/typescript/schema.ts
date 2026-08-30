@@ -725,6 +725,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Verbrauch dieser Praxis
+         * @description Wie viele Anfragen, wie viele Bytes und wie viel Rechenzeit diese Praxis verbraucht hat.
+         *
+         *     Standardmässig der laufende Kalendermonat in UTC — der Zeitraum, den eine Rechnung abbildet.
+         *     Der tatsächlich verwendete Zeitraum steht immer in der Antwort (`period_start`, `period_end`):
+         *     eine Verbrauchszahl, deren Zeitraum der Leser raten muss, ist eine Zahl, die zwei Personen aus
+         *     denselben Daten unterschiedlich berechnen.
+         *
+         *     **Gezählt wird jede zurechenbare Anfrage, auch die fehlgeschlagenen.** Eine Integration, die
+         *     täglich vierhundert `422` erzeugt, ist ein Problem, das man sehen will, bevor der Kunde
+         *     abspringt — ein Bericht, der nur Erfolge zählte, würde genau diesen Kunden verbergen.
+         *
+         *     `by_key` trennt die Integrationen voneinander; `key_id: null` sind Aufrufe aus der
+         *     Weboberfläche selbst. `by_endpoint` zeigt, wofür der Verbrauch anfällt.
+         *
+         *     ---
+         *
+         *     What this practice consumed: requests, request bytes and wall-clock time, for the current
+         *     calendar month in UTC unless `since` / `until` say otherwise. The window used is always stated
+         *     in the response.
+         *
+         *     Readable **either** with an API key — a partner checking their own spend — **or** from a
+         *     signed-in session in the web application. Whichever credential is presented determines the
+         *     organisation; there is no parameter that names one.
+         *
+         *     Failed calls are counted and reported separately, because an integration producing errors is
+         *     the customer most worth noticing.
+         */
+        get: operations["read_usage_api_v1_settings_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/solve": {
         parameters: {
             query?: never;
@@ -3059,6 +3104,115 @@ export interface components {
             rounding_policy: string;
         };
         /**
+         * UsageByEndpoint
+         * @description One endpoint's share of a practice's consumption.
+         */
+        UsageByEndpoint: {
+            /**
+             * Average Duration Ms
+             * @default 0
+             */
+            average_duration_ms: number;
+            /**
+             * Bytes Processed
+             * @default 0
+             */
+            bytes_processed: number;
+            /**
+             * Endpoint
+             * @description Die Route als Muster, nicht als aufgelöster Pfad — `/api/v1/audit/bulk/{job_id}` und nicht `/api/v1/audit/bulk/batch_9f1c…`. — The route template, so a breakdown is a list of endpoints rather than a list of ids.
+             */
+            endpoint: string;
+            /**
+             * Failed Requests
+             * @description Anfragen mit Status ≥ 400. — Calls that answered 4xx or 5xx.
+             * @default 0
+             */
+            failed_requests: number;
+            /**
+             * Requests
+             * @default 0
+             */
+            requests: number;
+        };
+        /**
+         * UsageByKey
+         * @description One API key's share. `key_id` is null for calls the web application made itself.
+         */
+        UsageByKey: {
+            /**
+             * Bytes Processed
+             * @default 0
+             */
+            bytes_processed: number;
+            /**
+             * Failed Requests
+             * @default 0
+             */
+            failed_requests: number;
+            /**
+             * Key Id
+             * @description Der API-Schlüssel, oder `null` für Aufrufe aus der Weboberfläche selbst. — The key, or `null` for calls the web application made under a session rather than a key.
+             */
+            key_id?: string | null;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /**
+             * Requests
+             * @default 0
+             */
+            requests: number;
+        };
+        /**
+         * UsageSummary
+         * @description What one practice consumed over one window.
+         *
+         *     The window is always stated rather than implied. A usage figure whose period a reader has to
+         *     guess is one two people will compute differently from the same rows — and this is the number an
+         *     invoice is checked against.
+         */
+        UsageSummary: {
+            /** By Endpoint */
+            by_endpoint?: components["schemas"]["UsageByEndpoint"][];
+            /** By Key */
+            by_key?: components["schemas"]["UsageByKey"][];
+            /**
+             * Failed Requests
+             * @default 0
+             */
+            failed_requests: number;
+            /** Organization Id */
+            organization_id: string;
+            /**
+             * Period End
+             * Format: date-time
+             * @description Ende des Zeitraums, einschliesslich. UTC. — Inclusive end, in UTC.
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date-time
+             * @description Beginn des Zeitraums, einschliesslich. UTC. — Inclusive start, in UTC.
+             */
+            period_start: string;
+            /**
+             * Total Bytes Processed
+             * @description Summe der Anfrage-Bodys in Bytes. Die zweite Verbrauchseinheit neben der Anzahl: die Prüfung einer 3-kB-Lieferung und die eines 50-MB-Archivs sind nicht dieselbe Arbeit. — Request body bytes; the other unit of consumption besides the call count.
+             * @default 0
+             */
+            total_bytes_processed: number;
+            /**
+             * Total Duration Ms
+             * @default 0
+             */
+            total_duration_ms: number;
+            /**
+             * Total Requests
+             * @default 0
+             */
+            total_requests: number;
+        };
+        /**
          * VocabularyResponse
          * @description What `GET /api/v1/vocabulary` returns.
          *
@@ -4191,6 +4345,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiKeyRevoked"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_usage_api_v1_settings_usage_get: {
+        parameters: {
+            query?: {
+                /** @description Beginn des Zeitraums, einschliesslich. ISO-8601; ohne Zeitzone als UTC gelesen. Standard: der 1. des laufenden Monats, 00:00 UTC. — Inclusive start; defaults to the first of the current month. */
+                since?: string | null;
+                /** @description Ende des Zeitraums, einschliesslich. Standard: jetzt. — Inclusive end. */
+                until?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageSummary"];
                 };
             };
             /** @description See docs/errors.md for the codes. */

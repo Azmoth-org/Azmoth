@@ -31,7 +31,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api import audit, catalog, health, padnext, proposals, rules, settings_keys, solve
-from app.api.deps import batches, pipeline, reset_async
+from app.api.deps import batches, pipeline, reset_async, usage_meter
 from app.api.errors import register_error_handlers
 from app.config import LogFormat, get_settings
 from app.core.limits import RequestSizeLimitMiddleware
@@ -161,6 +161,15 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
+        # Write out whatever the usage meter is still holding, BEFORE the pool it writes through is
+        # disposed. `app.services.usage` buffers rows so the audit path pays no database round trip
+        # per call; this is the other half of that bargain — a clean shutdown loses nothing, and
+        # only a kill leaves the last few rows unwritten.
+        pending = usage_meter().pending
+        if pending:
+            written = await usage_meter().flush()
+            log.info("flushed %d of %d buffered usage row(s) on shutdown", written, pending)
+
         # Dispose the pool on the way out. Without this, `TestClient` in a suite of hundreds of
         # cases accumulates one engine — and on SQLite one open file handle — per app instance.
         await reset_async()

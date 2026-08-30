@@ -101,3 +101,8 @@ apps/engine/*.db
 # billing data. A deployment points UPLOAD_DIR at a mounted volume instead; see
 # apps/engine/.env.example.
 data/uploads/
+
+# Database dumps. `make backup-db` writes here. They are a full copy of everything the deployment
+# holds — approvals, audit events, API key hashes — so a `git add -A` that swept one into a commit
+# would put a practice's records in a repository, permanently and irrevocably.
+backups/
