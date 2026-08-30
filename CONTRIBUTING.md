@@ -51,7 +51,7 @@ Everything below must pass before you open a pull request. CI runs the same comm
 # Engine (Python 3.11 + the souffle binary — see apps/engine/README.md)
 cd apps/engine
 .venv/bin/python scripts/engine_cli.py check     # engines, data, logic, end-to-end probe
-.venv/bin/python -m pytest                       # 731 tests, against in-memory SQLite
+.venv/bin/python -m pytest                       # 1161 tests, against in-memory SQLite
 
 # Whole workspace
 pnpm turbo typecheck lint build
@@ -167,7 +167,7 @@ Never type a field into TypeScript that the OpenAPI document does not have.
 ## Pull requests
 
 - Target `main`. Keep PRs small; stack them when work genuinely depends on earlier work.
-- Say what you verified, not just what you wrote. Paste the test line (`731 passed, 4 skipped`).
+- Say what you verified, not just what you wrote. Paste the test line (`1161 passed, 7 skipped`).
 - Call out anything touching money, a rule, the solver objective, or the compliance posture in the
   PR title so it gets the right reviewer.
 - A PR that changes `logic/` or `data/` needs a second approver.

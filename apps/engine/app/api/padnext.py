@@ -120,7 +120,7 @@ def padnext_audit(request: Request, body: bytes = Body(default=b"")) -> PadnextA
     delivery, read_findings = read_delivery(body, source_name=source_name)
 
     pipe = pipeline()
-    _refuse_if_no_position_is_in_the_catalog(delivery, pipe.catalog)
+    refuse_catalog_mismatch(delivery, pipe.catalog)
 
     # `RealDataRefused` (422) and `SouffleError` (503, retryable) likewise carry their own status.
     return audit_delivery(
@@ -133,7 +133,7 @@ def padnext_audit(request: Request, body: bytes = Body(default=b"")) -> PadnextA
     )
 
 
-def _refuse_if_no_position_is_in_the_catalog(delivery, catalog) -> None:
+def refuse_catalog_mismatch(delivery, catalog) -> None:
     """Refuse a delivery whose GOÄ positions are, without exception, unknown to this catalog.
 
     **This is narrow on purpose, and the narrowness is the whole design.** A delivery with *some*
@@ -152,6 +152,11 @@ def _refuse_if_no_position_is_in_the_catalog(delivery, catalog) -> None:
 
     Checked here in the route rather than inside `audit_delivery`, so the library keeps producing a
     report for any input and only the HTTP contract takes a position on it.
+
+    Public (it lost its leading underscore) because the commercial `POST /api/v1/audit/single`
+    makes the identical refusal and must keep making the identical one. Two endpoints that disagree
+    about whether a delivery is auditable would be a difference a partner discovers by getting two
+    different answers to the same file.
     """
     goae = [p for p in delivery.positions() if p.is_goae]
     if not goae:

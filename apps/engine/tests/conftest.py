@@ -23,6 +23,11 @@ answers `403` without it (`app.api.tenancy`), so the `client` fixture sets one o
 suite is a real caller. The tests that are *about* the boundary build their own clients with
 different ids, or with none, and live in `tests/test_tenancy.py`.
 
+**Uploads.** `UPLOAD_DIR` is forced to a fresh temporary directory here, for the same reason and at
+the same moment. Its default is `<repo>/data/uploads`, and `data/` is where the versioned catalog
+and rule tables live — a test run that wrote bulk uploads into it would drop untracked billing files
+into a directory git tracks. The directory is removed at interpreter exit.
+
 This means the suite does not exercise Postgres. `POSTGRES_TEST_URL` is honoured by
 `tests/test_db_persistence.py`, which runs the same assertions against a real server when one is
 pointed at — see that module for the command. CI runs SQLite; the dialect-specific behaviour
@@ -31,8 +36,11 @@ pointed at — see that module for the command. CI runs SQLite; the dialect-spec
 
 from __future__ import annotations
 
+import atexit
 import json
 import os
+import shutil
+import tempfile
 from decimal import Decimal
 
 import pytest
@@ -43,6 +51,15 @@ import pytest
 # shell happened to export one would be a serious accident.
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["DATABASE_AUTO_CREATE"] = "true"
+
+# And the same guard for the one other thing the engine writes outside the database. `UPLOAD_DIR`
+# defaults to the repo's own `data/` directory, which holds the versioned catalog and rule tables —
+# a suite that wrote bulk uploads in there would put untracked billing files inside data git
+# tracks, and `git status` would be the first anyone heard of it. Set before any `app.*` import for
+# the same reason as DATABASE_URL: `Settings` reads the environment once.
+_UPLOAD_ROOT = tempfile.mkdtemp(prefix="azmoth-test-uploads-")
+os.environ["UPLOAD_DIR"] = _UPLOAD_ROOT
+atexit.register(shutil.rmtree, _UPLOAD_ROOT, True)
 
 # The container image sets APP_ENV=production, and CI runs this suite inside it. Two production
 # guards would fire on that: `create_all` is refused in production (the schema must come from a

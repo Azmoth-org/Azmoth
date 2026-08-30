@@ -97,6 +97,18 @@ RUN python scripts/engine_cli.py check
 # Created after the COPYs so the app tree stays root-owned and read-only to the runtime user:
 # nothing in a request path writes to /srv, and the container should not be able to.
 RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin engine
+
+# The one directory the runtime user MAY write to, and it is deliberately outside /srv. A bulk
+# upload's ZIP lives here between the `202` and the report, so the engine needs somewhere writable
+# — and making part of the app tree writable to satisfy that would give up the property the line
+# above exists for. `UPLOAD_DIR` points here by default in the image; a deployment mounts a volume
+# over it (infra/docker/docker-compose.yml does), because without one the uploads are inside the
+# container's writable layer and a restart loses exactly the jobs the on-disk archive exists to
+# make resumable.
+RUN mkdir -p /var/lib/azmoth/uploads && chown -R 10001:10001 /var/lib/azmoth
+ENV UPLOAD_DIR=/var/lib/azmoth/uploads
+VOLUME ["/var/lib/azmoth/uploads"]
+
 USER 10001
 
 EXPOSE 8000

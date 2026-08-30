@@ -4,6 +4,203 @@
  */
 
 export interface paths {
+    "/api/v1/audit/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Aufträge dieses Schlüssels
+         * @description Die Aufträge dieser Organisation, neueste zuerst, ohne die einzelnen Berichte.
+         *
+         *     Ohne diese Liste wäre ein Auftrag verloren, sobald der Aufrufer seine `job_id` verliert — das
+         *     Ergebnis läge in der Datenbank und nichts könnte danach fragen. Die Zeilen tragen die
+         *     Gesamtauswertung, aber **nicht** `files`: eine Liste mit allen Einzelberichten wäre megabyteweise
+         *     JSON für eine Tabelle.
+         *
+         *     ---
+         *
+         *     This key's organisation's jobs, newest first, as headers without their per-delivery reports.
+         *
+         *     It exists for the same reason the web tier's batch listing does: a `job_id` is issued once, and
+         *     an integration that loses it — a restarted worker, a lost log line — would otherwise have a
+         *     finished job in the database that nothing can ask for. `total` is recounted under the filters,
+         *     so it says how many jobs match rather than how many rows exist.
+         */
+        get: operations["audit_bulk_list_api_v1_audit_bulk_get"];
+        put?: never;
+        /**
+         * Viele PADnext-Lieferungen als ZIP prüfen (asynchron)
+         * @description Nimmt ein ZIP mit vielen Lieferungen an und prüft sie im Hintergrund.
+         *
+         *     **Antwort.** Sofort `202` mit `job_id` (Feld `batch_id`) und `status: "PENDING"`. Die Prüfung
+         *     hat zu diesem Zeitpunkt noch nicht begonnen. `file_count` sagt bereits, wie viele Lieferungen
+         *     im Archiv gefunden wurden — das Archiv wird vor der Antwort geöffnet und geprüft, damit ein
+         *     unbrauchbares Archiv ein `400` ist und kein Auftrag, der nach 30 Sekunden fehlschlägt.
+         *
+         *     Den Fortschritt liefert `GET /api/v1/audit/bulk/{job_id}`; das Gesamtergebnis steht dort,
+         *     sobald `status` auf `COMPLETED` steht.
+         *
+         *     **Grenzen.** Archiv höchstens 50 MB, entpackt höchstens 256 MiB, höchstens 500 Lieferungen,
+         *     höchstens 10 Uploads pro Stunde und Schlüssel.
+         *
+         *     ---
+         *
+         *     Accepts a ZIP of PADnext deliveries and audits them in the background.
+         *
+         *     The archive is written to disk **before** the response is sent, and that is what distinguishes
+         *     this from the web tier's in-memory batch upload: the job survives a restart. A `202` here is a
+         *     promise that the work will happen, not that a process currently holding the bytes will manage
+         *     to finish.
+         *
+         *     Returns `202` immediately with the handle to poll. Errors carry `error_code`:
+         *     `UNSUPPORTED_INPUT_FORMAT` (400, not a ZIP), `ARCHIVE_UNREADABLE` (400, a corrupt ZIP),
+         *     `ARCHIVE_HAS_NO_DELIVERIES` (400, a valid ZIP holding no `.xml`/`.padx`), `ARCHIVE_TOO_LARGE`
+         *     (413), `REQUEST_TOO_LARGE` (413), `RATE_LIMIT_EXCEEDED` (429) and `UPLOAD_STORAGE_UNAVAILABLE`
+         *     (503, retryable — the deployment's upload volume is not writable).
+         */
+        post: operations["audit_bulk_api_v1_audit_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/bulk/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fortschritt und Ergebnis eines Auftrags
+         * @description Fortschritt des Auftrags — und, sobald er fertig ist, das vollständige Ergebnis.
+         *
+         *     **Während der Auftrag läuft** trägt `files` je Lieferung nur den Status und keinen Bericht: ein
+         *     Poll im Zwei-Sekunden-Takt über hundert Dateien darf nicht hundert vollständige Berichte pro
+         *     Abruf übertragen. `processed_file_count` / `file_count` ist der Fortschritt.
+         *
+         *     **Sobald `status` `COMPLETED` ist**, trägt jede geprüfte Lieferung ihren vollständigen
+         *     `PadnextAuditReport` — identisch zu dem, was `POST /api/v1/audit/single` für dieselbe Datei
+         *     geliefert hätte — und `aggregate_summary` die Gesamtauswertung.
+         *
+         *     `files` ist nach `confirmed_wrong_eur` absteigend sortiert: das Riskanteste zuerst. Die
+         *     Sortierung passiert hier, weil die Beträge exakte Dezimalzeichenketten sind, die ein
+         *     JavaScript-Client nicht in Zahlen zurückparsen darf.
+         *
+         *     ---
+         *
+         *     Progress while it runs, the aggregated result once it is done. Poll this; there is no webhook.
+         *
+         *     `PENDING` means queued and not yet started, `PROCESSING` means a worker has it, `COMPLETED`
+         *     means every delivery reached a verdict, and `FAILED` means the job itself broke — a delivery
+         *     that could not be read is **not** a failed job, it is a `FAILED` entry in `files` with a reason,
+         *     and the rest of the archive is still audited.
+         */
+        get: operations["audit_bulk_status_api_v1_audit_bulk__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/single": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eine PADnext-Lieferung prüfen (synchron)
+         * @description Prüft eine einzelne PADnext-Lieferung gegen die GOÄ und liefert den vollständigen Bericht.
+         *
+         *     **Antwort.** `200` mit dem kompletten `PadnextAuditReport`: jede Position mit Verdikt und
+         *     Begründung, alle Befunde (`findings`), die drei Beträge nach Belegbarkeit
+         *     (`confirmed_fine_eur`, `confirmed_wrong_eur`, `unconfirmed_eur`), die Prüfabdeckung und der
+         *     `receipt_hash` über Katalog, Regelstand, Logikprogramme, Solver-Versionen und Eingabe.
+         *
+         *     **`200` gilt auch für eine fehlerhafte Rechnung.** Der HTTP-Status beschreibt den API-Aufruf,
+         *     nicht die Rechnung: neun gefundene Fehler sind eine erfolgreiche Prüfung. Nicht-2xx bedeutet
+         *     ausschliesslich, dass gar kein Bericht erstellt werden konnte.
+         *
+         *     **Nicht beurteilbar ist kein Befund.** `unconfirmed_eur` ist die Grenze der Regelabdeckung
+         *     dieser Engine, nicht ein Vorwurf gegen die Praxis. Die drei Beträge dürfen nie zu einer Summe
+         *     zusammengefasst werden — siehe `docs/api/PARTNER_API.md`.
+         *
+         *     ---
+         *
+         *     Audits one PADnext delivery against the GOÄ and returns the complete report, synchronously.
+         *
+         *     The response is the same `PadnextAuditReport` the web tier's `/padnext/audit` returns, produced
+         *     by the same code against the same catalog — a delivery audited through either path gets the
+         *     same verdicts and the same `receipt_hash`.
+         *
+         *     Findings in the invoice are **not** an HTTP error: `200` means the audit ran. Errors carry
+         *     `error_code` — `UNSUPPORTED_INPUT_FORMAT` (400, a PDF or JSON body), `EMPTY_REQUEST_BODY`
+         *     (400), `INVALID_XML` (400), `REQUEST_TOO_LARGE` (413, above 5 MiB),
+         *     `PADNEXT_SCHEMA_VIOLATION` (422), `UNKNOWN_ZIFFER` (422, when no position is in this catalog),
+         *     `REAL_DATA_REFUSED` (422), `RATE_LIMIT_EXCEEDED` (429) and `RULES_ENGINE_UNAVAILABLE` (503).
+         *     See `docs/errors.md`.
+         *
+         *     Synchronous because one delivery is one Soufflé run of a few hundred milliseconds. The audit is
+         *     handed to the threadpool rather than run here: this is an `async def` (it has to read the body)
+         *     and a blocking solve on the event loop would serialise the whole service behind it.
+         */
+        post: operations["audit_single_api_v1_audit_single_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/{job_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prüfbericht als PDF
+         * @description Den abgeschlossenen Auftrag als druckbaren Prüfbericht.
+         *
+         *     Enthält die drei Beträge nach Belegbarkeit, die Prüfabdeckung, jede Lieferung einzeln (nach
+         *     Risiko sortiert) und die Prüfgrundlage: Katalogfassung, Katalog-Hash, Regel- und Logikstand.
+         *     Der Hinweis, dass »nicht beurteilbar« kein Befund gegen die Praxis ist, steht als Absatz neben
+         *     der Zahl — ein PDF überlebt den Bildschirm, von dem es kam, und wird von Menschen gelesen,
+         *     denen niemand die Lesart erklärt hat.
+         *
+         *     Nur ein `COMPLETED`-Auftrag kann gedruckt werden. Ein laufender ergäbe Zahlen aus einem nicht
+         *     identifizierbaren Moment, ein fehlgeschlagener hat gar keine Auswertung — beides ist `409`
+         *     statt einer Datei mit einem Vorbehalt, denn ein Vorbehalt überlebt es nicht, drei Wochen später
+         *     aus einem Ordner gezogen zu werden.
+         *
+         *     ---
+         *
+         *     A completed job as a printable Prüfbericht. `POST` rather than `GET` because it renders a
+         *     document rather than reading a stored one, and because that is the shape the brief specifies;
+         *     it is nonetheless read-only and idempotent — the same job produces byte-identical output every
+         *     time, exactly as the CSV export does.
+         *
+         *     Only `COMPLETED`. See `app.services.pdf` for why there is no PDF library behind this.
+         */
+        post: operations["audit_pdf_api_v1_audit__job_id__pdf_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog": {
         parameters: {
             query?: never;
@@ -440,6 +637,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * API-Schlüssel dieser Praxis
+         * @description Alle Schlüssel dieser Praxis, neueste zuerst — **ohne** die Geheimnisse.
+         *
+         *     Widerrufene Schlüssel bleiben in der Liste und tragen `revoked_at`. Das ist der Unterschied
+         *     zwischen »dieser Schlüssel wurde am 3. widerrufen« und »diesen Schlüssel gab es nie«, und genau
+         *     das ist die Frage, die jemand stellt, wenn eine Integration morgens aufhört zu funktionieren.
+         *
+         *     `last_used_at` ist auf etwa eine Minute genau: die Spalte wird bewusst nicht bei jeder Anfrage
+         *     geschrieben. Sie beantwortet »benutzt das noch jemand«, und das ist eine Frage über Tage.
+         *
+         *     ---
+         *
+         *     This practice's keys, newest first, with no secrets. Revoked keys are included and carry
+         *     `revoked_at`; `last_used_at` is accurate to about a minute by design.
+         */
+        get: operations["list_api_keys_api_v1_settings_api_keys_get"];
+        put?: never;
+        /**
+         * Einen neuen API-Schlüssel erzeugen
+         * @description Erzeugt einen API-Schlüssel für die aktive Praxis und gibt ihn **genau einmal** zurück.
+         *
+         *     Der Schlüssel hat die Form `azm_live_<id>_<secret>` und wird nur als SHA-256-Hash gespeichert.
+         *     Es gibt keinen Weg, ihn später erneut anzuzeigen — auch nicht für uns. Speichern Sie ihn sofort
+         *     im Secret-Store Ihrer Anwendung; geht er verloren, erzeugen Sie einen neuen und widerrufen den
+         *     alten.
+         *
+         *     Der Schlüssel handelt ausschliesslich für die Organisation, in der die Sitzung gerade aktiv
+         *     ist. Er kann keine andere angeben: die Organisation steckt in der Datenbankzeile, nicht in der
+         *     Anfrage.
+         *
+         *     Mehrfaches Aufrufen erzeugt mehrere gültige Schlüssel. Genau so wird rotiert: neuen erzeugen,
+         *     ausrollen, alten widerrufen (`DELETE /api/v1/settings/api-keys/{key_id}`).
+         *
+         *     ---
+         *
+         *     Mints a key for the session's active organisation and returns the token exactly once.
+         *
+         *     Only a SHA-256 hash is stored, so the secret cannot be shown again by anyone, including us.
+         *     Calling this twice yields two live keys — which is how a rotation is performed.
+         */
+        post: operations["generate_api_key_api_v1_settings_api_keys_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/api-keys/{key_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Einen API-Schlüssel widerrufen
+         * @description Widerruft einen Schlüssel. Ab sofort wird jede Anfrage damit mit `401` abgelehnt.
+         *
+         *     Die Zeile bleibt bestehen — widerrufen ist eine Spalte, kein `DELETE`. »Dieser Schlüssel war
+         *     von März bis Juli gültig« ist eine Frage, die in einer Abrechnungsstreitigkeit gestellt wird,
+         *     und eine gelöschte Zeile kann sie nicht beantworten.
+         *
+         *     Idempotent: ein bereits widerrufener Schlüssel bleibt widerrufen, mit dem ursprünglichen
+         *     Zeitpunkt. Ein Schlüssel einer anderen Praxis ergibt `404` und nicht `403` — sonst könnte man
+         *     durch Raten feststellen, welche Schlüssel-IDs überhaupt existieren.
+         *
+         *     ---
+         *
+         *     Revokes a key; every request carrying it is refused with `401` from now on. The row stays and
+         *     gains `revoked_at`. Idempotent, and a key belonging to another practice is a `404`.
+         */
+        delete: operations["revoke_api_key_api_v1_settings_api_keys__key_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/solve": {
         parameters: {
             query?: never;
@@ -535,6 +820,139 @@ export interface components {
             similarity: string;
             /** Ziffer */
             ziffer: string;
+        };
+        /**
+         * ApiKeyIssued
+         * @description A freshly minted key. **The only response that will ever carry the token.**
+         *
+         *     It extends `ApiKeySummary` rather than being a separate shape so that a client can treat the
+         *     creation response as a listing row with one extra field, which is what it is.
+         */
+        ApiKeyIssued: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By
+             * @description Better Auth user id of whoever minted it, where the request carried one.
+             */
+            created_by?: string | null;
+            /**
+             * Key Id
+             * @description Die öffentliche Hälfte des Schlüssels. Erscheint in Logs, im Ratenlimit und ist der Wert, mit dem ein Schlüssel widerrufen wird. — The public half: what a log line names, what the rate limit counts, and what you pass to revoke this key.
+             */
+            key_id: string;
+            /**
+             * Last Used At
+             * @description Letzte erfolgreiche Verwendung, auf etwa eine Minute genau — die Spalte wird absichtlich nicht bei jeder Anfrage geschrieben. `null` bedeutet: nie benutzt. — Last successful use, accurate to about a minute; `null` means never used.
+             */
+            last_used_at?: string | null;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /**
+             * Organization Id
+             * @description Die Organisation, für die dieser Schlüssel handelt. Jede Anfrage mit ihm sieht ausschließlich deren Daten. — The organisation this key acts for. Every request made with it reaches that practice's data and no other.
+             */
+            organization_id: string;
+            /**
+             * Revoked At
+             * @description Non-null means every request carrying this key is refused with a 401.
+             */
+            revoked_at?: string | null;
+            /**
+             * Token
+             * @description Der vollständige API-Schlüssel, im Format `azm_live_<id>_<secret>`. **Er wird genau einmal angezeigt und ist danach nicht wiederherstellbar** — gespeichert wird nur sein SHA-256-Hash. Bewahren Sie ihn sofort im Secret-Store Ihrer Anwendung auf; geht er verloren, erzeugen Sie einen neuen und widerrufen den alten. — The complete key. Shown exactly once and unrecoverable afterwards: only its SHA-256 hash is stored. Save it now.
+             */
+            token: string;
+        };
+        /**
+         * ApiKeyList
+         * @description This practice's keys, newest first.
+         *
+         *     No `total`, `limit` or `offset`, unlike the proposal and batch listings. A practice has a
+         *     handful of keys — the number is bounded by how many integrations it has, not by how long it has
+         *     been a customer — so a page would be a ceremony over a list that fits on a screen. If that ever
+         *     stops being true, adding the envelope is a change; adding it now would be a guess.
+         */
+        ApiKeyList: {
+            /** Keys */
+            keys?: components["schemas"]["ApiKeySummary"][];
+        };
+        /**
+         * ApiKeyRequest
+         * @description What a caller sends to mint a key: a label, and nothing else.
+         *
+         *     Nothing else, deliberately. Not the organisation — that comes from the session the web tier
+         *     already verified, and a body field naming a tenant would be an endpoint for issuing yourself a
+         *     credential to somebody else's data. Not an expiry either: an expiring key that nothing renews
+         *     is an integration that breaks at 3 a.m. for a reason nobody remembers, and rotation is a thing
+         *     to do deliberately (mint, deploy, revoke) rather than a thing to schedule and forget.
+         */
+        ApiKeyRequest: {
+            /**
+             * Name
+             * @description Bezeichnung des Schlüssels, z. B. 'PVS-Export nächtlich' oder 'Rechnungszentrum Süd'. Frei wählbar und der einzige Anhaltspunkt, um später zu erkennen, wozu ein Schlüssel gehört — das Geheimnis selbst ist nicht mehr einsehbar. — A human label. The secret is never shown again, so this is the only way to tell two keys apart.
+             * @default
+             */
+            name: string;
+        };
+        /**
+         * ApiKeyRevoked
+         * @description The answer to a revocation: which key, and when it stopped working.
+         */
+        ApiKeyRevoked: {
+            /** Key Id */
+            key_id: string;
+            /**
+             * Revoked
+             * @default true
+             */
+            revoked: boolean;
+        };
+        /**
+         * ApiKeySummary
+         * @description One key as it can be read back: everything about it except the secret.
+         *
+         *     `revoked_at` is present rather than the row being filtered out of a listing, because "this key
+         *     was revoked on the 3rd" and "this key never existed" are different answers to the question an
+         *     operator is asking when an integration stops working.
+         */
+        ApiKeySummary: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By
+             * @description Better Auth user id of whoever minted it, where the request carried one.
+             */
+            created_by?: string | null;
+            /**
+             * Key Id
+             * @description Die öffentliche Hälfte des Schlüssels. Erscheint in Logs, im Ratenlimit und ist der Wert, mit dem ein Schlüssel widerrufen wird. — The public half: what a log line names, what the rate limit counts, and what you pass to revoke this key.
+             */
+            key_id: string;
+            /**
+             * Last Used At
+             * @description Letzte erfolgreiche Verwendung, auf etwa eine Minute genau — die Spalte wird absichtlich nicht bei jeder Anfrage geschrieben. `null` bedeutet: nie benutzt. — Last successful use, accurate to about a minute; `null` means never used.
+             */
+            last_used_at?: string | null;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /**
+             * Revoked At
+             * @description Non-null means every request carrying this key is refused with a 401.
+             */
+            revoked_at?: string | null;
         };
         /** ApprovalRequest */
         ApprovalRequest: {
@@ -989,6 +1407,14 @@ export interface components {
             rule_id: string;
             /** Ziffer */
             ziffer: string;
+        };
+        /** Body_audit_bulk_api_v1_audit_bulk_post */
+        Body_audit_bulk_api_v1_audit_bulk_post: {
+            /**
+             * File
+             * @description Ein ZIP-Archiv mit den zu prüfenden PADnext-Lieferungen (`*.xml` / `*.padx`, auch in Unterordnern). Andere Dateien im Archiv werden übersprungen. — A ZIP holding the PADnext deliveries to audit; anything else in it is skipped.
+             */
+            file: string;
         };
         /** Body_padnext_batch_api_v1_padnext_batch_post */
         Body_padnext_batch_api_v1_padnext_batch_post: {
@@ -2758,6 +3184,231 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    audit_bulk_list_api_v1_audit_bulk_get: {
+        parameters: {
+            query?: {
+                /** @description Nur Aufträge in diesem Zustand. — Only jobs in this state; omit for every state. */
+                status?: components["schemas"]["BatchJobStatus"] | null;
+                /** @description Nur Aufträge ab diesem Zeitpunkt, **einschliesslich**. ISO-8601; ein Wert ohne Zeitzone wird als UTC gelesen. — Inclusive lower bound on creation time. */
+                created_after?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchAuditJobList"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    audit_bulk_api_v1_audit_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_audit_bulk_api_v1_audit_bulk_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchAuditAccepted"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    audit_bulk_status_api_v1_audit_bulk__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchAuditJob"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    audit_single_api_v1_audit_single_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Die PADnext-Lieferung selbst: eine `*_padx.xml` oder ein `.padx`-Container. Entweder als `multipart/form-data` im Feld `file`, oder als roher Request-Body mit `Content-Type: application/xml`. — The PADnext delivery itself, as multipart or as a raw body. */
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+                "application/xml": string;
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description *_padx.xml oder .padx
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PadnextAuditReport"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    audit_pdf_api_v1_audit__job_id__pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Der Prüfbericht als PDF, `{job_id}_pruefbericht.pdf`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description Der Auftrag ist noch nicht abgeschlossen. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     catalog_api_v1_catalog_get: {
         parameters: {
             query?: never;
@@ -3420,6 +4071,126 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RuleReviewResult"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_api_keys_api_v1_settings_api_keys_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyList"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    generate_api_key_api_v1_settings_api_keys_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApiKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyIssued"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revoke_api_key_api_v1_settings_api_keys__key_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyRevoked"];
                 };
             };
             /** @description See docs/errors.md for the codes. */

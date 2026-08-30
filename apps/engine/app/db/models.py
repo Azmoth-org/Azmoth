@@ -29,9 +29,17 @@ re-running the same files would simply produce another batch. There is nothing h
 log to protect, and no approval boundary to enforce — which is exactly why these two tables are
 plain and `proposals` is not.
 
-And one standalone table:
+And two standalone tables:
 
     rule_reviews        one row per rule a billing expert has decided about
+    api_keys            one row per credential issued to a practice, stored as a hash
+
+`api_keys` is the newest and the one with the sharpest rule attached: the token itself is never
+written anywhere. The row holds SHA-256 over it plus the public `key_id` prefix, so a database dump
+carries no usable credential and there is no code path that can show a caller their key a second
+time. It has no foreign key into Better Auth's `organization` for the same reason as everything
+below, and it is what `app.api.apikeys` turns an `X-API-Key` header into an `organization_id` with —
+the substitution that lets a billing centre reach only its own data.
 
 It has no foreign key because the thing it points at is not in this database: `rule_id` names a row
 in `data/rules/*.csv`, which is versioned source data the API must never write. The reviews are an
@@ -324,6 +332,20 @@ class BatchJobRecord(Base):
     #: other is a result.
     error_message: Mapped[str | None] = mapped_column(Text, default=None)
 
+    #: Where the uploaded archive is on disk, for a batch that came in through
+    #: `POST /api/v1/audit/bulk`. `NULL` for one that came in through `POST /api/v1/padnext/batch`,
+    #: which holds its files in memory and writes nothing.
+    #:
+    #: **This column is what makes a job resumable, and that is its real job.** The in-memory batch
+    #: path cannot survive a restart — its payloads died with the process — so the startup recovery
+    #: marks an interrupted one `FAILED`. A bulk job's bytes are still on disk, so the same restart
+    #: can put it back in the queue instead of failing it. `reap_interrupted_batches` therefore
+    #: branches on exactly this column being non-null; see it, and `app.services.bulk_audit`.
+    #:
+    #: An absolute path written by the engine itself, never a client-supplied name: the filename
+    #: inside the archive is data, and `app.services.uploads` is the only thing that builds a path.
+    upload_path: Mapped[str | None] = mapped_column(Text, default=None)
+
     #: Eagerly usable via the relationship because a batch is always read whole — the API returns
     #: every file's status with the job, and there is no "just the header" read of a batch.
     files: Mapped[list[BatchFileRecord]] = relationship(
@@ -473,6 +495,7 @@ def _reject_delete(_mapper, _connection, target: AuditEvent) -> None:
 
 
 __all__ = [
+    "ApiKeyRecord",
     "AuditEvent",
     "AuditEventType",
     "AuditLogIsAppendOnly",
@@ -602,3 +625,85 @@ class PracticeRecord(Base):
 
     def __repr__(self) -> str:  # pragma: no cover - diagnostics only
         return f"<PracticeRecord {self.organization_id} bsnr={self.bsnr}>"
+
+
+class ApiKeyRecord(Base):
+    """One API key issued to a practice, stored as a hash of itself.
+
+    This is the credential the commercial surface authenticates on: `POST /api/v1/audit/single`,
+    `/audit/bulk` and everything under them read `X-API-Key`, resolve it here, and take their
+    `organization_id` from *this row* rather than from a header the caller could choose. That
+    substitution is the whole point of the table — see `app.api.apikeys`.
+
+    **The secret is never stored.** `key_hash` is SHA-256 over the token, and the token itself
+    exists exactly once: in the body of the response that minted it. A database dump therefore
+    carries no usable credential, and "show me my key again" has no implementation because it has
+    no honest one — the answer is to mint another and revoke the old.
+
+    **`key_id` is the half that is safe to say out loud.** A token is `azm_live_<key_id><secret>`,
+    and only the `key_id` prefix is stored in the clear. It is what the lookup indexes (so
+    verification is one indexed read plus one hash comparison, not a table scan hashing every row),
+    what the rate limiter counts against, what a log line names, and what a caller passes to revoke
+    a key. It identifies the key without being able to use it.
+
+        api_keys  n ─── 1  organization        (by id; no FK — Better Auth owns that table)
+
+    Rows are never deleted. Revoking sets `revoked_at`, because "this key was live from March to
+    July and made these calls" is a question a billing dispute asks, and a deleted row cannot
+    answer it. `verify` refuses a revoked key, so a soft delete is a real one from the caller's
+    side.
+    """
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The public half of the token — `azm_live_` plus this is the first part of what the caller
+    #: sends. Unique and indexed: it is the lookup key on every authenticated request, and the
+    #: uniqueness is what lets that lookup be `scalar_one_or_none` rather than a scan.
+    key_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+
+    #: SHA-256 of the whole token, hex. 64 characters, fixed.
+    #:
+    #: Plain SHA-256 and not a password KDF, deliberately: this is a 256-bit random token, not a
+    #: human-chosen password, so there is no dictionary to slow an attacker down through. What
+    #: bcrypt buys against a password — making each guess expensive — buys nothing against a
+    #: secret with 2^256 candidates, and it would cost every request the same delay.
+    key_hash: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+
+    #: The Better Auth `organization.id` every call made with this key acts for. Not nullable,
+    #: unlike `proposals.organization_id`: there are no legacy rows here, the column is the entire
+    #: reason the table exists, and a key that named no tenant would authenticate a caller into
+    #: nothing while looking like it had worked.
+    organization_id: Mapped[str] = mapped_column(String(256), index=True, nullable=False)
+
+    #: What a human calls this key — "PVS-Export Nightly", "Rechnungszentrum Süd". Free text, and
+    #: the only field a caller supplies: with the secret unrecoverable, a list of keys is
+    #: unreadable without one.
+    name: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+
+    #: The Better Auth user id that minted it, forwarded by the web tier (`app.api.identity`).
+    created_by: Mapped[str | None] = mapped_column(String(256), default=None)
+
+    created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+
+    #: When this key was last accepted. Written on use, and deliberately the only mutable column
+    #: besides `revoked_at`: "nothing has used this key since April" is what tells an operator
+    #: which of six keys is safe to revoke.
+    #:
+    #: Not an audit log. It is one timestamp that is overwritten, not a row per call — a request
+    #: counter per key belongs in metrics, and a per-call record of who audited what belongs in a
+    #: table designed for it rather than in the credential.
+    last_used_at: Mapped[datetime | None] = mapped_column(TimestampVariant, default=None)
+
+    #: Set once, by a revocation. Non-null means every request carrying this key is refused.
+    revoked_at: Mapped[datetime | None] = mapped_column(TimestampVariant, default=None)
+
+    __table_args__ = (
+        # "This practice's keys, newest first" — the listing endpoint's whole query.
+        Index("ix_api_keys_organization_id_created_at", "organization_id", "created_at"),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        state = "revoked" if self.revoked_at else "active"
+        return f"<ApiKeyRecord {self.key_id} {self.organization_id} {state}>"

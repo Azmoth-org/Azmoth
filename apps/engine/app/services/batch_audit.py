@@ -38,21 +38,55 @@ from the lifespan, before the server accepts a request, and closes every interru
 that visibly failed and says why, rather than one that appears to still be running. Re-uploading the
 files produces a fresh batch. A durable queue is still the real fix when one is wanted; nothing here
 pretends to be one, and the reaper's own single-process assumption is documented on the method.
+
+## The bulk path, and how it differs
+
+`POST /api/v1/audit/bulk` — the commercial surface — writes its archive to disk before answering,
+and that one difference changes what the two paths can promise:
+
+    POST /padnext/batch    files in memory   → a restart loses them → reaped as FAILED
+    POST /audit/bulk       archive on disk   → a restart resumes it → requeued as PENDING
+
+So the bulk half of this module is a small **database-backed queue** rather than a task that owns
+its own payload. `batch_jobs` *is* the queue: `create_bulk_job` writes a `PENDING` row with
+`upload_path` set, and `drain_pending_jobs` claims rows out of it with a conditional UPDATE
+(`SET status='PROCESSING' WHERE status='PENDING'`), which is atomic on both dialects and needs no
+`FOR UPDATE` and no lock server. A `BackgroundTask` only *triggers* the drain; it carries nothing,
+so losing it loses no work — the row is still `PENDING` and the next drain, including the one at
+startup, picks it up.
+
+That is what makes `reap_interrupted_batches` branch on `upload_path`: an in-memory batch is dead
+and is failed, a bulk job is resumable and is requeued. Deliveries already `COMPLETED` before the
+interruption are not re-audited, because the drain only walks file rows that are still `PENDING`.
+
+Within one job the deliveries are audited concurrently, bounded by `BULK_SOLVE_CONCURRENCY` (4).
+The ceiling is about Soufflé rather than about Python: each audit is a subprocess, so unbounded
+concurrency would let one 500-file upload start 500 solvers.
+
+What this still is not is a distributed queue. The claim is atomic, so two processes cannot take
+the same job — but nothing renews a lease, so a job claimed by a process that then dies stays
+`PROCESSING` until a restart requeues it, and under `--workers > 1` that restart is the wrong
+process's. `REAP_INTERRUPTED_BATCHES=false` is the switch for that deployment, and the honest
+answer remains a real queue.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Any, Callable
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import selectinload
 from starlette.concurrency import run_in_threadpool
 
+from app.config import Settings, get_settings
 from app.db.models import BatchFileRecord, BatchJobRecord, as_utc, utcnow
 from app.db.session import Database, get_database
 from app.padnext import audit_delivery, read_delivery
@@ -67,7 +101,9 @@ from app.schemas.batch import (
     BatchJobStatus,
 )
 from app.schemas.padnext import PadnextAuditReport
+from app.services.bulk_archive import ArchiveMember, read_member
 from app.services.export import build_batch_zip
+from app.services.uploads import discard_bulk_upload
 
 # The actor vocabulary is defined once, next to the audit log that gave it meaning.
 from app.services.proposal_store import SYSTEM_ACTOR
@@ -106,6 +142,41 @@ INTERRUPTIBLE_STATUSES = (str(BatchJobStatus.PENDING), str(BatchJobStatus.PROCES
 #: What a reaped batch says happened to it. Written to `batch_jobs.error_message`, which the
 #: listing and the detail endpoint both return, and which the batch screen already renders.
 INTERRUPTED_MESSAGE = "Interrupted by server restart"
+
+
+#: How many `PENDING` rows one claim attempt looks at before giving up.
+#:
+#: A bound rather than the whole queue, because the claim re-reads its candidates every time round
+#: the drain loop: a queue of ten thousand would otherwise be re-selected in full for each job it
+#: contains. Twenty is far more than a single-process MVP will ever have queued at once, and the
+#: drain simply comes back for the next twenty.
+_CLAIM_CANDIDATE_LIMIT = 20
+
+
+@dataclass
+class _ExpansionBudget:
+    """How many more decompressed bytes one bulk job may produce.
+
+    The declared sizes were already checked when the archive was inspected, in the request handler.
+    This is the second guard, over the bytes that actually come out, because a declared size is a
+    number the archive's author wrote and a zip bomb's declared size is a lie.
+
+    **What it bounds exactly.** Up to `BULK_SOLVE_CONCURRENCY` members are decompressing at once
+    and each is allowed the budget that remained when it started, so a determined bomb can overrun
+    by a factor of the concurrency (4) before the counter catches up. That is stated rather than
+    engineered away: the memory that actually matters is what is resident at one instant, and that
+    is bounded by the same four members regardless. Making the reservation exact would mean
+    serialising the extractions, which would cost every honest upload its parallelism to close a
+    gap a factor of four wide.
+
+    Not thread-safe and does not need to be: `spend` is called from the event loop after an
+    `await`, never from inside the threadpool.
+    """
+
+    remaining: int
+
+    def spend(self, count: int) -> None:
+        self.remaining = max(0, self.remaining - count)
 
 
 def new_batch_id() -> str:
@@ -295,6 +366,12 @@ class BatchAuditService:
     ) -> None:
         self._database = database
         self._pipeline_factory = pipeline_factory
+
+        # One drain at a time within this process. Built here rather than at module scope because
+        # an `asyncio.Lock` created before a loop exists binds to the wrong one in Python's older
+        # semantics, and this class is instantiated lazily by `app.api.deps` inside a running app.
+        # It is not the cross-process guard — see `_claim_next_bulk_job`, which is.
+        self._drain_lock = asyncio.Lock()
 
     @property
     def database(self) -> Database:
@@ -566,6 +643,15 @@ class BatchAuditService:
         the files that happened to land before the process died is a number nobody can identify the
         moment of, and it is worse than none.
 
+        **A bulk job is requeued, not reaped.** `POST /api/v1/audit/bulk` writes its archive to
+        disk before answering, so an interrupted bulk job is not a run that can never continue — it
+        is a run that has not finished, and its bytes are still there. Those rows go back to
+        `PENDING` and the drain started by the lifespan resumes them; only the in-memory batches,
+        whose payloads died with the process, are failed. The branch is `upload_path IS NOT NULL`,
+        which is the whole reason that column exists. The returned list is the ids that were
+        *failed*; the requeued ones are logged and are not in it, because the caller's question is
+        "what did we have to give up on".
+
         **The honest limit: this assumes one process owns the table.** Under `--workers > 1`, or a
         rolling deploy where a new container starts while the old one is still draining, a starting
         process would reap a batch that is genuinely running on a sibling — turning a live job into a
@@ -590,8 +676,27 @@ class BatchAuditService:
             )
 
             reaped: list[str] = []
+            requeued: list[str] = []
             for job in stranded:
                 previous = job.status
+
+                # A bulk job's payload is still on disk, so this one is not a leftover to be
+                # closed — it is work that has not happened yet. Back to `PENDING`, and the drain
+                # the lifespan starts afterwards picks it up. The files that were already audited
+                # keep their `COMPLETED` rows and their reports: the drain only walks the ones
+                # still `PENDING`, so a restart costs the deliveries that were in flight and not
+                # the ones that had landed.
+                if job.upload_path:
+                    job.status = str(BatchJobStatus.PENDING)
+                    job.error_message = None
+                    requeued.append(job.batch_id)
+                    log.info(
+                        "batch %s was %s at startup and its archive is still on disk — requeued",
+                        job.batch_id,
+                        previous,
+                    )
+                    continue
+
                 job.status = str(BatchJobStatus.FAILED)
                 job.error_message = message
                 job.completed_at = now
@@ -615,6 +720,10 @@ class BatchAuditService:
                 "reaped %d interrupted batch(es): %s. Re-upload the files to audit them.",
                 len(reaped),
                 ", ".join(reaped),
+            )
+        if requeued:
+            log.info(
+                "requeued %d resumable bulk job(s): %s", len(requeued), ", ".join(requeued)
             )
         return reaped
 
@@ -740,6 +849,296 @@ class BatchAuditService:
                 job.completed_at = utcnow()
         except Exception:  # noqa: BLE001 - see docstring
             log.exception("batch %s: could not record the failure either", batch_id)
+
+    # -- the bulk path: a database-backed queue over the same table --------------------------
+
+    async def create_bulk_job(
+        self,
+        members: Sequence[ArchiveMember],
+        *,
+        upload_path: Path | str,
+        organization_id: str,
+        batch_id: str,
+        actor: str = SYSTEM_ACTOR,
+    ) -> BatchAuditAccepted:
+        """Enqueue an archive that is already on disk. One `PENDING` row per delivery inside it.
+
+        The file rows are written **now**, from the archive's own directory, rather than by the
+        worker once it opens it. That is what lets the very first status poll answer `0 / 12`
+        instead of `0 / ?`, and it means the caller's `202` already tells them how many deliveries
+        the engine agreed to audit — which is the number they will reconcile their own export
+        against.
+
+        `upload_path` is stored, and storing it is the difference between this and `create_batch`:
+        it says the payload survived the response, so an interrupted run is resumable rather than
+        lost. See `reap_interrupted_batches`.
+
+        No `EmptyBatch` guard here, unlike `create_batch`. An archive with nothing auditable in it
+        is refused earlier and more precisely, by `inspect_archive`, which can say *why* it found
+        no deliveries — the caller almost always zipped a folder of PDFs.
+
+        `batch_id` is supplied rather than minted here, which is the one place this differs from
+        `create_batch` in a way worth explaining. The archive has to be written *under* the id
+        before the row exists, so that a write failure leaves no job pointing at a file that is not
+        there — which means the caller has to know the id first. It comes from `new_batch_id()`
+        either way; the endpoint simply calls it one step earlier.
+        """
+        created_at = utcnow()
+        job = BatchJobRecord(
+            batch_id=batch_id,
+            status=str(BatchJobStatus.PENDING),
+            created_at=created_at,
+            created_by=actor or SYSTEM_ACTOR,
+            organization_id=organization_id,
+            upload_path=str(upload_path),
+        )
+
+        async with self.database.session() as session:
+            session.add(job)
+            for member in members:
+                session.add(
+                    BatchFileRecord(
+                        job=job, filename=member.name, status=str(BatchFileStatus.PENDING)
+                    )
+                )
+
+        log.info(
+            "bulk job %s queued with %d deliveries for organisation %s",
+            batch_id,
+            len(members),
+            organization_id,
+        )
+        return BatchAuditAccepted(
+            batch_id=batch_id,
+            status=BatchJobStatus.PENDING,
+            file_count=len(members),
+            created_at=as_utc(created_at),
+        )
+
+    async def drain_pending_jobs(self, *, settings: Settings | None = None) -> list[str]:
+        """Process every queued bulk job, oldest first. Returns the ids it ran. Never raises.
+
+        This is the worker, and it is deliberately a *drain* rather than a task per job. The
+        `BackgroundTask` a request schedules carries no payload — it only says "there may be work"
+        — so two uploads arriving together schedule two drains, the first of which does both jobs
+        and the second of which finds nothing. Losing a drain therefore loses nothing: the rows are
+        still `PENDING`, and the next upload (or the next restart) sweeps them up. That is the
+        property a task holding its own files cannot have.
+
+        Serialised within the process by `_drain_lock`, so those two drains do not interleave and
+        double-audit a job between the claim and the status write. Across processes the atomic
+        claim does that job instead — see `_claim_next_bulk_job`.
+
+        Never raises for the reason `process_batch` does not: it runs after a response has been
+        sent, so an exception would be logged by the framework and leave a row `PROCESSING`
+        forever. Each job's failure is written to its own row.
+        """
+        settings = settings or get_settings()
+        processed: list[str] = []
+
+        async with self._drain_lock:
+            while True:
+                claimed = await self._claim_next_bulk_job()
+                if claimed is None:
+                    return processed
+                batch_id, upload_path = claimed
+                processed.append(batch_id)
+                try:
+                    await self._process_bulk_job(batch_id, upload_path, settings=settings)
+                except Exception as exc:  # noqa: BLE001 - see docstring
+                    log.exception("bulk job %s failed", batch_id)
+                    await self._fail_quietly(batch_id, describe_failure(exc))
+                    # The archive is discarded on a failure too. The job is terminal either way,
+                    # and keeping the bytes of a run nobody can resume is retention without a
+                    # purpose. `RETAIN_BULK_UPLOADS=true` is what an operator debugging exactly
+                    # this case turns on.
+                    await run_in_threadpool(
+                        discard_bulk_upload, upload_path, settings=settings
+                    )
+
+    async def _claim_next_bulk_job(self) -> tuple[str, str] | None:
+        """Take the oldest queued job, or `None`. `(batch_id, upload_path)`.
+
+        The claim is a conditional UPDATE —
+
+            UPDATE batch_jobs SET status='PROCESSING' WHERE batch_id=? AND status='PENDING'
+
+        — and the `rowcount` decides. That is atomic on Postgres and on SQLite alike, and it needs
+        no `SELECT … FOR UPDATE` (which SQLite does not have) and no lock server (which this stack
+        deliberately does not have). Two processes racing for the same row: exactly one sees
+        `rowcount == 1` and runs it, the other sees `0` and moves on to the next candidate.
+
+        Candidates are re-read on each call rather than fetched once into a list, because the list
+        goes stale the moment another process claims something out of it.
+
+        `upload_path IS NOT NULL` is the filter that keeps this away from the in-memory batch path:
+        a `POST /padnext/batch` row is `PENDING` only for the moment between its `202` and its own
+        task's first write, and a drain that claimed one would set it `PROCESSING` and then find
+        nothing to process, because those bytes are in the other task's memory.
+        """
+        async with self.database.session() as session:
+            candidates = (
+                (
+                    await session.execute(
+                        select(BatchJobRecord.batch_id, BatchJobRecord.upload_path)
+                        .where(
+                            BatchJobRecord.status == str(BatchJobStatus.PENDING),
+                            BatchJobRecord.upload_path.is_not(None),
+                        )
+                        .order_by(BatchJobRecord.created_at)
+                        .limit(_CLAIM_CANDIDATE_LIMIT)
+                    )
+                )
+                .all()
+            )
+
+            for batch_id, upload_path in candidates:
+                result = await session.execute(
+                    update(BatchJobRecord)
+                    .where(
+                        BatchJobRecord.batch_id == batch_id,
+                        BatchJobRecord.status == str(BatchJobStatus.PENDING),
+                    )
+                    .values(status=str(BatchJobStatus.PROCESSING))
+                )
+                if result.rowcount == 1:
+                    return batch_id, str(upload_path)
+
+        return None
+
+    async def _process_bulk_job(
+        self, batch_id: str, upload_path: str, *, settings: Settings
+    ) -> None:
+        """Audit every delivery this job still owes, roll it up, and discard the archive.
+
+        Only rows still `PENDING` are audited. On a first run that is all of them; on a resumed run
+        it is the ones that were in flight when the process died, and the reports that had already
+        landed are left exactly as they were. Re-auditing a completed file would be harmless
+        arithmetically — the audit is deterministic — and would still be wrong: it would overwrite
+        a stored report with a fresh one produced under a possibly newer catalog, so a single
+        batch's rows could end up describing two different engine states.
+
+        The archive is read once into memory and every delivery is extracted from that buffer.
+        Re-opening the file per member would be tidier and would multiply the syscalls by the file
+        count for no gain; the buffer is bounded by `MAX_BULK_ZIP_BYTES`.
+        """
+        archive_path = Path(upload_path)
+        try:
+            content = await run_in_threadpool(archive_path.read_bytes)
+        except OSError as exc:
+            # The row says the archive is here and it is not. Nothing to audit and nothing to
+            # retry: a job whose payload is gone cannot be completed, and leaving it `PROCESSING`
+            # would strand it. It is FAILED with a message that names the path, because the cause
+            # is operational (a volume that was not mounted, a cleanup script) and the operator
+            # reading the row is the person who can fix it.
+            await self._fail_quietly(
+                batch_id,
+                f"Das hochgeladene Archiv ist nicht mehr lesbar ({archive_path}): {exc}. "
+                "— The uploaded archive could no longer be read.",
+            )
+            return
+
+        pending = await self._pending_files(batch_id)
+        if pending:
+            budget = _ExpansionBudget(remaining=settings.max_bulk_uncompressed_bytes)
+            semaphore = asyncio.Semaphore(settings.bulk_solve_concurrency)
+            # The audits run in parallel; the writes that record them do not. SQLite has one
+            # writer by definition, and the in-memory configuration this suite runs on shares a
+            # single connection through `StaticPool` — so four sessions committing at once is a
+            # race on the dialect the engine is developed against and a lock contention on the one
+            # it deploys to. Serialising just the write costs nothing worth measuring next to a
+            # Soufflé run, and it keeps the parallelism where the time actually goes.
+            write_lock = asyncio.Lock()
+            pipe = self.pipeline()
+            await asyncio.gather(
+                *(
+                    self._audit_archive_member(
+                        file_id,
+                        filename,
+                        content=content,
+                        pipe=pipe,
+                        semaphore=semaphore,
+                        budget=budget,
+                        write_lock=write_lock,
+                    )
+                    for file_id, filename in pending
+                )
+            )
+
+        await self._complete(batch_id)
+        await run_in_threadpool(discard_bulk_upload, upload_path, settings=settings)
+
+    async def _pending_files(self, batch_id: str) -> list[tuple[uuid.UUID, str]]:
+        """`(id, filename)` for every delivery in this job that has not been audited yet."""
+        async with self.database.session() as session:
+            job = await self._require(session, batch_id)
+            rows = (
+                (
+                    await session.execute(
+                        select(BatchFileRecord.id, BatchFileRecord.filename).where(
+                            BatchFileRecord.batch_job_id == job.id,
+                            BatchFileRecord.status == str(BatchFileStatus.PENDING),
+                        )
+                    )
+                )
+                .all()
+            )
+        return [(row[0], row[1]) for row in rows]
+
+    async def _audit_archive_member(
+        self,
+        file_id: uuid.UUID,
+        filename: str,
+        *,
+        content: bytes,
+        pipe: Any,
+        semaphore: asyncio.Semaphore,
+        budget: _ExpansionBudget,
+        write_lock: asyncio.Lock,
+    ) -> None:
+        """Extract one delivery and audit it, holding a concurrency slot for both.
+
+        The extraction is inside the semaphore as well as the audit, deliberately: decompression is
+        the step that allocates, so letting five hundred of them run while four audits proceed
+        would defeat the point of bounding anything. It also means at most
+        `BULK_SOLVE_CONCURRENCY` members are held decompressed at once, which is the real memory
+        ceiling on a job.
+
+        A failure here is a result, exactly as in `_audit_one_file`: the row records what went
+        wrong and the rest of the job continues. That is what makes one corrupt member out of a
+        hundred a line in a report rather than a failed upload.
+
+        Two separate limits, deliberately: `semaphore` bounds how much *work* runs at once and
+        `write_lock` bounds how many *writes* do. Merging them would serialise the audits, which is
+        the one thing that must stay parallel.
+        """
+        async with semaphore:
+            try:
+                delivery = await run_in_threadpool(
+                    read_member, content, filename, max_bytes=budget.remaining
+                )
+                budget.spend(len(delivery))
+                report = await run_in_threadpool(
+                    audit_bytes, delivery, filename=filename, pipe=pipe
+                )
+            except Exception as exc:  # noqa: BLE001 - one bad member must not cost the job
+                log.warning("bulk member %s (%s) failed: %s", file_id, filename, exc)
+                async with write_lock:
+                    await self._write_file_outcome(
+                        file_id,
+                        status=BatchFileStatus.FAILED,
+                        error_message=describe_failure(exc),
+                    )
+                return
+
+        # Outside the semaphore — the audit is done and its slot belongs to the next delivery —
+        # and inside the write lock, which is a different resource. See `_process_bulk_job`.
+        async with write_lock:
+            await self._write_file_outcome(
+                file_id,
+                status=BatchFileStatus.COMPLETED,
+                report_json=report.model_dump(mode="json"),
+            )
 
     # -- export ----------------------------------------------------------------------------
 

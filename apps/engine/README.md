@@ -68,6 +68,22 @@ Interactive docs at <http://localhost:8000/docs>.
 
 ### Endpoints
 
+There are **two surfaces here, with two different credentials**, and the difference is the whole of
+the security model:
+
+| | `/api/v1/audit/*`, `/api/v1/settings/api-keys` | everything else |
+| --- | --- | --- |
+| who calls it | a PVS vendor or billing centre, directly over the internet | our own web tier, through a trusted proxy |
+| credential | `X-API-Key`, **verified** against `api_keys` | `X-Organization-ID`, asserted by the proxy |
+| tenant comes from | the stored key row — no request field can name one | the header |
+| rate limited | yes, per key | no |
+
+The partner surface has its own contract document,
+[`docs/api/PARTNER_API.md`](../../docs/api/PARTNER_API.md), because it is published to people
+outside this repository. `POST /api/v1/settings/api-keys` is the seam: it mints the keys and is
+itself behind the session, necessarily — a first key cannot be issued to a caller who already holds
+one.
+
 **Every proposal and batch endpoint below is organisation-scoped.** They require an
 `X-Organization-ID` header naming the Better Auth organisation the caller acts for, and answer
 `403 ORGANIZATION_REQUIRED` without one — there is no default tenant. Rows are stamped with it on
@@ -105,6 +121,19 @@ require it — the first four are not tenant data, and the last stores nothing. 
 | `GET` | `/api/v1/catalog/ziffer/{ziffer}` | one position, with the rules that touch it |
 | `GET` | `/api/v1/vocabulary` | exactly the clinical vocabulary the bridge can map |
 
+And the partner surface, on `X-API-Key`:
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `POST` | `/api/v1/audit/single` | one delivery, synchronously → the full report. Multipart or a raw body. 5 MiB, 100/min |
+| `POST` | `/api/v1/audit/bulk` | a ZIP of deliveries → `202` with a `job_id`. 50 MB, 10/hour |
+| `GET` | `/api/v1/audit/bulk` | this key's jobs, newest first: `?status=&created_after=&limit=&offset=` |
+| `GET` | `/api/v1/audit/bulk/{job_id}` | progress, then the roll-up and every delivery's report |
+| `POST` | `/api/v1/audit/{job_id}/pdf` | a completed job as a printable Prüfbericht (`application/pdf`) |
+| `POST` | `/api/v1/settings/api-keys` | mint a key — **the token is returned once and never again** |
+| `GET` | `/api/v1/settings/api-keys` | this practice's keys, without their secrets |
+| `DELETE` | `/api/v1/settings/api-keys/{key_id}` | revoke; the row is kept with `revoked_at` |
+
 `POST /api/v1/solve` accepts either a bare extraction or `{"extraction": {...}, "setting": ...}`.
 
 `POST /api/v1/padnext/audit` splits the claimed total into three buckets rather than one "at risk"
@@ -114,7 +143,38 @@ the position) and `unconfirmed_eur` (no verified rule maps to the Ziffer, or onl
 They sum to `claimed_total_eur` exactly, and `coverage_ratio` says what share was audited at all.
 **`unconfirmed` is our missing rule coverage, not a finding against the practice** — see
 [`docs/architecture/ENGINE.md`](../../docs/architecture/ENGINE.md) for why the single figure was
-removed.
+removed. `POST /api/v1/audit/single` returns the identical document for the identical bytes;
+`tests/test_partner_api.py` compares the two field for field, because a partner and a reader looking
+at the same invoice must not be shown two different verdicts.
+
+### How a bulk job actually runs
+
+No Celery and no Redis. `batch_jobs` **is** the queue:
+
+```
+POST /audit/bulk   →  ZIP written to UPLOAD_DIR  →  row PENDING (+ one row per delivery)  →  202
+                      BackgroundTask says "there may be work"
+                                    ↓
+drain_pending_jobs  →  UPDATE … SET status='PROCESSING' WHERE status='PENDING'   (atomic; the claim)
+                    →  audit up to BULK_SOLVE_CONCURRENCY deliveries at once
+                    →  COMPLETED, roll-up stored, archive deleted
+```
+
+The background task carries no payload, so losing it loses no work — the row is still `PENDING`, and
+the next upload's drain or the one the lifespan runs at startup picks it up. That is what the
+on-disk archive buys, and it is the difference from `POST /padnext/batch`, whose files live in the
+process and whose interrupted jobs are therefore marked `FAILED` rather than resumed
+(`batch_jobs.upload_path` is the column the two paths are told apart by).
+
+The startup drain is **awaited before the server accepts a request**, for the same reason
+`reap_interrupted_batches` runs where it does: `DATABASE_URL` defaults to SQLite, which has one
+writer, and a drain transacting alongside the first requests interleaves on that single connection.
+A large requeued backlog therefore delays readiness; `REAP_INTERRUPTED_BATCHES=false` is the switch
+for a deployment that would rather resume from an admin step.
+
+`UPLOAD_DIR` **must be a writable volume and is not one by default in the container** — `/srv` is
+root-owned and the engine runs as uid 10001, deliberately, so that nothing in a request path can
+write into the image. The compose files mount a named volume at `/var/lib/azmoth/uploads`.
 
 ## Database
 

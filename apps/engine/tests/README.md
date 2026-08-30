@@ -1,6 +1,6 @@
 # `apps/engine/tests`
 
-1000 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
+1161 tests. Every one of them was either migrated from the POC unchanged in substance, or added for
 behaviour the POC did not have. **None was weakened to make the migration pass** — where a
 migrated test failed only because a path moved, the path was fixed; where it asserted on an
 artefact this monorepo does not contain (the POC's static UI), the assertion moved to the contract
@@ -34,7 +34,7 @@ count, or run in the image where the binary is always there.
 
 ```
 $ .venv/bin/python -m pytest -q
-1009 passed, 7 skipped in 90s   # 4 skips: the Postgres parametrisations, see below
+1161 passed, 7 skipped in 100s  # 4 skips: the Postgres parametrisations, see below
                                 # 3 skips: the benchmarks, see below
 ```
 
@@ -64,6 +64,8 @@ Run with `-rs` and pytest names the reason for each.
 | `test_api_envelope.py` | 10 | both accepted request shapes, and that tolerating the bare one did not weaken typo detection |
 | `test_import_goae.py` | 29 | the importer's parsing decisions — whether the catalog is trustworthy |
 | `test_request_limits.py` | 7 | oversized bodies refused at the perimeter, before they are buffered |
+| `test_partner_api.py` | 40 | **the commercial boundary** — that a request without a valid key gets nothing, that a key names its own organisation and no header can change it, that a runaway integration cannot spend the whole service, and that `/audit/single` reaches the *same verdict* as `/padnext/audit` for the same bytes |
+| `test_bulk_queue.py` | 38 | the parts of the bulk path that are not an endpoint — zip bombs, path traversal, the atomic claim, a restart that requeues a resumable job and fails an unresumable one, and the hand-written PDF |
 | `test_db_persistence.py` | 27 | **durability** — an approval survives a real restart; the lifecycle under a row lock; the migration matches the models |
 | `test_audit_log.py` | 15 | the audit log records what happened, in order, with an actor — and cannot be rewritten |
 | `test_pagination.py` | 31 | **paging and filtering the two list endpoints** — that `total` follows the filter rather than the table, that two pages never overlap, and that a limit outside its range is a `422` and not a clamped success |

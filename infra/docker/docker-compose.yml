@@ -109,9 +109,31 @@ services:
       # Refusing production data is the default and should stay that way. See
       # docs/compliance/PRIVATE_DATA_WARNING.md before changing it.
       PADNEXT_ALLOW_REAL_DATA: "false"
-    # No `volumes:` and no `command:` override here — this service runs exactly the image apps/engine/
-    # Dockerfile bakes: app/logic/data/migrations as COPYd at build time, uvicorn with no --reload.
-    # The dev overlay adds both; see infra/docker/docker-compose.dev.yml.
+
+      # -- the partner API -------------------------------------------------------------------
+      # Where POST /api/v1/audit/bulk writes an uploaded archive. Matches the volume below, and
+      # matches what the Dockerfile creates for uid 10001 — /srv is root-owned on purpose, so this
+      # cannot live under the app tree.
+      UPLOAD_DIR: /var/lib/azmoth/uploads
+      RATE_LIMIT_SINGLE_PER_MINUTE: "${RATE_LIMIT_SINGLE_PER_MINUTE:-100}"
+      RATE_LIMIT_BULK_PER_HOUR: "${RATE_LIMIT_BULK_PER_HOUR:-10}"
+      # In-process counters. Leave this on for the single-container shape this file describes; turn
+      # it off if a gateway in front is already doing the job, because two limiters that disagree
+      # are worse than one. See apps/engine/app/api/ratelimit.py.
+      RATE_LIMIT_ENABLED: "${RATE_LIMIT_ENABLED:-true}"
+    volumes:
+      # A named volume, NOT a bind mount into the repo, and for the same reason `postgres-data` is
+      # one: this holds uploaded billing deliveries, and a `git clean` must not be able to delete a
+      # job that has been accepted but not yet audited. It is what makes the on-disk archive
+      # actually survive a `docker compose up --build` — inside the container's writable layer it
+      # would not, and a restart would strand exactly the jobs the design exists to resume.
+      #
+      # This is the only writable path in the service. The rest of the image — app, logic, data,
+      # migrations — stays root-owned and read-only to the runtime user; see the Dockerfile.
+      - engine-uploads:/var/lib/azmoth/uploads
+    # No `command:` override here — this service runs exactly the image apps/engine/Dockerfile
+    # bakes: app/logic/data/migrations as COPYd at build time, uvicorn with no --reload. The dev
+    # overlay adds a bind mount and --reload; see infra/docker/docker-compose.dev.yml.
     healthcheck:
       test:
         [
@@ -332,3 +354,8 @@ volumes:
     # Named so it survives `docker compose down` and is removed only by `down -v`. It holds
     # approvals; deleting it is a decision, not a side effect of stopping the stack.
     name: azmoth-postgres-data
+  engine-uploads:
+    # Same reasoning, one step earlier in the life of a record: this holds bulk uploads that have
+    # been accepted with a `202` and may not have been audited yet. Losing it turns a promise the
+    # API already made into a job nothing will ever run.
+    name: azmoth-engine-uploads
