@@ -756,16 +756,40 @@ def test_the_curation_tooling_stays_out_of_the_image():
     only checks that no LLM SDK is in `requirements.txt` — which would also pass if the tooling file
     did not exist at all, or if the Dockerfile quietly installed it. This pins both halves, so the
     boundary holds because it is built that way rather than because nobody has crossed it yet.
+
+    The suite runs in two places and the invariant is not the same sentence in both, which the
+    first version of this test got wrong: it asserted the tooling file exists, and then failed in
+    CI *inside the container* — where that file is absent precisely because the boundary holds.
+    The Dockerfile is not copied into the image either, so its absence is what tells the two apart.
     """
+    import importlib.util
+
     from app.config import ENGINE_DIR
 
     tooling = ENGINE_DIR / "requirements-tooling.txt"
+    dockerfile = ENGINE_DIR / "Dockerfile"
+
+    if not dockerfile.exists():
+        # Inside the image. Here the property can be checked directly rather than read off a file:
+        # the SDK is not merely un-listed, it is not installed, so there is no model client in the
+        # process at all. That is a stronger statement than any assertion about the source tree.
+        assert not tooling.exists(), (
+            "requirements-tooling.txt reached the image — the Dockerfile is copying it in"
+        )
+        for package in ("anthropic", "openai", "google.genai"):
+            assert importlib.util.find_spec(package) is None, (
+                f"{package} is installed in the shipped image; the engine can reach a model API"
+            )
+        return
+
+    # A source checkout. The image is not here to inspect, so the guarantee is read off the two
+    # files that produce it: the tooling has its own pin, and the Dockerfile installs the other one.
     assert tooling.exists(), "the curation tooling's dependencies need a file of their own"
     assert "anthropic" in tooling.read_text(encoding="utf-8").lower()
 
-    dockerfile = (ENGINE_DIR / "Dockerfile").read_text(encoding="utf-8")
-    assert "requirements.txt" in dockerfile, "the image is expected to install the engine's deps"
-    assert "requirements-tooling" not in dockerfile, (
+    recipe = dockerfile.read_text(encoding="utf-8")
+    assert "requirements.txt" in recipe, "the image is expected to install the engine's deps"
+    assert "requirements-tooling" not in recipe, (
         "the image installed the curation tooling — the shipped engine would carry a model client"
     )
 
