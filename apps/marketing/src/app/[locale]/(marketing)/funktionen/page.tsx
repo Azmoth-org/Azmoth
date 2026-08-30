@@ -3,9 +3,10 @@ import { useTranslations } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowRightIcon, CheckIcon } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import {Card, CardContent, CardHeader} from "@workspace/ui/components/card";
 
 import { ButtonLink } from "@/components/button-link";
+import { CardHeading } from "@/components/card-heading";
 import { Section, SectionHeading } from "@/components/section";
 import { buildPageMetadata } from "@/lib/seo";
 import { getProductLinks } from "@/lib/site";
@@ -54,7 +55,7 @@ function FeatureGroups() {
         {groups.map((group) => (
           <Card key={group.titel} className="h-full">
             <CardHeader>
-              <CardTitle className="text-lg">{group.titel}</CardTitle>
+              <CardHeading className="text-lg">{group.titel}</CardHeading>
             </CardHeader>
             <CardContent>
               <ul className="flex flex-col gap-3">

@@ -20,17 +20,30 @@ import { routes, siteConfig } from "@/lib/site";
 
 const NAV_ITEMS = [
   { href: routes.funktionen, key: "funktionen" },
+  { href: routes.api, key: "api" },
   { href: routes.faq, key: "faq" },
   { href: routes.ueberUns, key: "ueberUns" },
   { href: routes.kontakt, key: "kontakt" },
 ] as const;
 
-export function SiteHeader({ login, signup }: { login: string; signup: string }) {
+export function SiteHeader({
+  login,
+  demo,
+}: {
+  login: string;
+  /*
+   * The demo, not signup — the same reasoning the hero follows. Registration is gated by
+   * `SIGNUP_ALLOWLIST`, so a persistent header button labelled "Kostenlose Demo testen"
+   * that led to a refusal would misfire on most of the traffic it catches. The pilot ask
+   * lives where it can be explained: the hero, the pilot band, and the contact page.
+   */
+  demo: string;
+}) {
   const t = useTranslations("navigation");
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-azm-hairline bg-white/80 backdrop-blur-md">
       <nav
         aria-label={t("ariaLabel")}
         className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6"
@@ -60,7 +73,7 @@ export function SiteHeader({ login, signup }: { login: string; signup: string })
           <ButtonLink external href={login} variant="ghost" size="sm">
             {t("anmelden")}
           </ButtonLink>
-          <ButtonLink external href={signup} size="sm">
+          <ButtonLink external href={demo} size="sm">
             {t("testen")}
           </ButtonLink>
         </div>
@@ -98,7 +111,7 @@ export function SiteHeader({ login, signup }: { login: string; signup: string })
               <ButtonLink external href={login} variant="outline">
                 {t("anmelden")}
               </ButtonLink>
-              <ButtonLink external href={signup}>{t("testen")}</ButtonLink>
+              <ButtonLink external href={demo}>{t("testen")}</ButtonLink>
             </div>
           </SheetContent>
         </Sheet>

@@ -10,16 +10,18 @@ export function generateStaticParams() {
 }
 
 /**
- * The only two namespaces any client component reads: the header (`navigation`)
- * and the cookie banner (`cookies`).
+ * The only namespace a client component reads: the header (`navigation`).
  *
- * `NextIntlClientProvider` serialises whatever it is given into the RSC payload, and
- * left to itself it takes the whole catalogue — every FAQ answer and both legal
- * drafts — into the browser on a page that renders none of it. Every other component
- * on this site is a server component and reads its strings during render, so only
- * these two need to cross.
+ * `NextIntlClientProvider` serialises whatever it is given into the RSC payload, and left
+ * to itself it takes the whole catalogue — every FAQ answer, the Impressum and the whole
+ * privacy notice — into the browser on a page that renders none of it. Every other
+ * component on this site is a server component and reads its strings during render.
+ *
+ * `cookies` used to be here too, for the consent banner. The banner is gone: reach
+ * measurement is now cookieless and stores nothing on the device, so there is nothing to
+ * ask permission for. See `lib/analytics.ts`.
  */
-const CLIENT_NAMESPACES = ["navigation", "cookies"] as const;
+const CLIENT_NAMESPACES = ["navigation"] as const;
 
 export default async function LocaleLayout({
   children,

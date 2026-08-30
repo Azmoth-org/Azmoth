@@ -1,51 +1,49 @@
-"use client";
+/**
+ * Reach measurement, off by default and cookieless when it is on.
+ *
+ * This used to load Google Analytics 4 behind a consent banner. That is defensible in
+ * general and a poor fit here specifically: the audience is German billing centres and
+ * PVS vendors, the home page argues for the product on DSGVO grounds, and several German
+ * supervisory authorities have found GA use unlawful over the US transfer question. A
+ * site making a data-protection argument should not open by asking permission to send
+ * its visitors to Google.
+ *
+ * So the provider is Plausible or Umami. Both are cookieless and store no identifier on
+ * the device, which changes what the page has to do rather than only who receives the
+ * data: § 25 TDDDG governs *storing or reading* information on a terminal device, and
+ * neither of these does. That is why there is no consent banner any more.
+ *
+ * **None of this runs unless it is configured.** With `NEXT_PUBLIC_ANALYTICS_PROVIDER`
+ * unset — which is the default, and the state the site launches in — `getAnalytics()`
+ * returns `null`, no script tag is emitted and nothing is measured. Maximum privacy is
+ * not a setting somebody has to remember to choose; it is what happens when nobody
+ * chooses anything.
+ */
 
-declare global {
-  interface Window {
-    dataLayer?: unknown[];
-    gtag?: (...args: unknown[]) => void;
-  }
-}
+type Provider = "plausible" | "umami";
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+export type AnalyticsConfig = {
+  provider: Provider;
+  /** The script URL, self-hosted or the vendor's cloud. */
+  src: string;
+  /** Plausible: the site domain. Umami: the website id. */
+  siteId: string;
+};
 
-/** Inject the GA4 gtag script + init. Called only after user consent. */
-export function enableAnalytics() {
-  if (!GA_ID || typeof window === "undefined") return;
-  if (window.gtag) return; // already loaded
-  try {
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-    document.head.appendChild(script);
+/**
+ * The configured provider, or `null` when there is none.
+ *
+ * Read through `NEXT_PUBLIC_` variables because the script tag is emitted in the browser
+ * bundle, and inlined at build time like every other value on this statically prerendered
+ * site — changing it means a rebuild, which is the same trade `APP_URL` makes.
+ */
+export function getAnalytics(): AnalyticsConfig | null {
+  const provider = process.env.NEXT_PUBLIC_ANALYTICS_PROVIDER;
+  const src = process.env.NEXT_PUBLIC_ANALYTICS_SRC;
+  const siteId = process.env.NEXT_PUBLIC_ANALYTICS_SITE_ID;
 
-    window.dataLayer = window.dataLayer || [];
-    window.gtag = function gtag(...args: unknown[]) {
-      window.dataLayer!.push(args);
-    };
-    window.gtag("js", new Date());
-    window.gtag("config", GA_ID, { anonymize_ip: true });
-  } catch {
-    /* analytics must never break the funnel */
-  }
-}
+  if (provider !== "plausible" && provider !== "umami") return null;
+  if (!src || !siteId) return null;
 
-/** Fire a GA4 event (no-op if GA isn't loaded). */
-export function track(event: string, params?: Record<string, unknown>) {
-  if (!GA_ID || typeof window === "undefined") return;
-  try {
-    if (typeof window.gtag === "function") {
-      window.gtag("event", event, params ?? {});
-    } else {
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({ event, ...params });
-    }
-  } catch {
-    /* analytics must never break the funnel */
-  }
-}
-
-/** Whether GA is configured (the cookie banner hides entirely when it isn't). */
-export function hasAnalytics(): boolean {
-  return Boolean(GA_ID);
+  return { provider, src, siteId };
 }

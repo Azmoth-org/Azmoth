@@ -3,7 +3,7 @@
 # Deploy Azmoth to the Azure VM, from your laptop, in one command.
 #
 #     ./scripts/deploy.sh 20.79.x.x
-#     ./scripts/deploy.sh azmoth-vm.example.com --domain azmoth.app
+#     ./scripts/deploy.sh azmoth-vm.example.com --domain azmoth.com
 #
 # Provision first with infra/azure/provision.sh, and point DNS at the address it prints BEFORE
 # running this — Caddy gets certificates over HTTP-01, which only works once the names resolve.
@@ -59,7 +59,7 @@ set -euo pipefail
 
 HOST=""
 SSH_USER="${SSH_USER:-azmoth}"
-DOMAIN="${DOMAIN:-azmoth.app}"
+DOMAIN="${DOMAIN:-azmoth.com}"
 ACME_EMAIL="${ACME_EMAIL:-}"
 SKIP_BUILD=false
 
@@ -90,8 +90,8 @@ usage: ./scripts/deploy.sh <host> [options]
 
 examples:
   ./scripts/deploy.sh 20.79.12.34
-  ./scripts/deploy.sh 20.79.12.34 --domain azmoth.de --acme-email ops@azmoth.de
-  ./scripts/deploy.sh 20.79.12.34 --signup-allowlist "dr.b@praxis-nord.de,ops@azmoth.de"
+  ./scripts/deploy.sh 20.79.12.34 --domain azmoth.com --acme-email ops@azmoth.com
+  ./scripts/deploy.sh 20.79.12.34 --signup-allowlist "dr.b@praxis-nord.de,ops@azmoth.com"
   ./scripts/deploy.sh 20.79.12.34 --skip-build
 USAGE
 }

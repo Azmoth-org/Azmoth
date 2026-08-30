@@ -1,24 +1,117 @@
 /*
- * Azmoth marketing — the styling entry point, and deliberately almost empty.
+ * Azmoth marketing — the styling entry point.
  *
- * Every colour, radius and font token lives in `@workspace/ui`, the same sheet the
- * product app loads. That is the point of importing it rather than restating it: a
- * brand colour changed once in `packages/ui` moves the marketing site and the
- * application together, instead of leaving two palettes that drift apart over a
- * few months until the "Anmelden" button is a different blue on either side of the
- * click.
+ * Two layers, and the split matters.
  *
- * What belongs here is only what a long scrolling public page needs and an
- * application screen does not.
+ * The base is `@workspace/ui`, the same sheet the product app loads: component
+ * internals (Button's focus ring, Card's spacing variable, Sheet's overlay) resolve
+ * against it, so importing it is what keeps this site's buttons from drifting out of
+ * sync with the application's over a few months.
+ *
+ * On top of it sits the *marketing brand layer* — the token set in
+ * `apps/marketing/DESIGN.md`. That file describes a public-page language the product
+ * screens deliberately do not share: an indigo CTA, deep-navy ink instead of the
+ * product's gray-900, thin display weights with negative tracking, a cream interlude
+ * band, and a gradient mesh over the hero. Redefining the shadcn token *names* here
+ * rather than adding a parallel palette is what lets `<Button>` and `<Card>` pick the
+ * brand up without a single call site passing a colour class.
+ *
+ * The product palette in `packages/ui` is untouched. A brochure and a screen holding
+ * a physician's signature are allowed to look different; what they may not do is
+ * disagree about what a focus ring or a disabled state means, and those still come
+ * from one place.
  */
 @import "@workspace/ui/globals.css";
 
 /* Tailwind scans from this file's project root, but naming the tree is explicit. */
 @source "../**/*.{ts,tsx}";
 
+/*
+ * The brand layer.
+ *
+ * Values are DESIGN.md's hexes converted to oklch, to match the notation the base
+ * sheet already uses — two colour spaces in one token set means two meanings for
+ * "the same grey". Each line carries its DESIGN.md source hex as a trailing comment,
+ * so a designer can grep the palette by the value they wrote.
+ */
+:root {
+  /* --- DESIGN.md palette, verbatim -------------------------------------- */
+  --azm-indigo: oklch(0.5211 0.2679 277.43); /* #533afd  primary        */
+  --azm-indigo-deep: oklch(0.4621 0.23 276.92); /* #4434d4  primary-deep   */
+  --azm-indigo-press: oklch(0.3614 0.1551 276.67); /* #2e2b8c  primary-press  */
+  --azm-indigo-soft: oklch(0.5836 0.2282 278.87); /* #665efd  primary-soft   */
+  --azm-indigo-subdued: oklch(0.8085 0.0899 284.21); /* #b9b9f9  subdued        */
+  --azm-navy: oklch(0.2701 0.0962 276.24); /* #1c1e54  brand-dark-900 */
+  --azm-ink: oklch(0.2591 0.0544 250.72); /* #0d253d  ink            */
+  --azm-ink-secondary: oklch(0.3405 0.0485 255.87); /* #273951                 */
+  --azm-ink-mute: oklch(0.5552 0.0435 259.24); /* #64748d                 */
+  --azm-canvas-soft: oklch(0.9807 0.0051 247.88); /* #f6f9fc                 */
+  --azm-canvas-cream: oklch(0.938 0.0307 81.75); /* #f5e9d4                 */
+  --azm-hairline: oklch(0.9289 0.0097 252.81); /* #e3e8ee                 */
+  --azm-ruby: oklch(0.6093 0.2282 10.76); /* #ea2261  mesh only      */
+  --azm-magenta: oklch(0.7461 0.2276 330.68); /* #f96bee  mesh only      */
+  --azm-lemon: oklch(0.5596 0.1016 68.39); /* #9b6829  mesh only      */
+
+  /*
+   * The three verdict colours.
+   *
+   * These are the one place the marketing site may not invent a palette: green /
+   * red / amber here have to be the same three the engine's report renders, because
+   * a visitor who reads "Nachweislich falsch" on the home page in one red and then
+   * sees the bucket in another red on the demo has been shown two different things.
+   * Tailwind green-700 / red-600 / amber-600 — the product's own.
+   */
+  --azm-confirmed: oklch(0.5273 0.1371 150.07); /* green-700 */
+  --azm-confirmed-bg: oklch(0.9819 0.0181 155.83); /* green-50  */
+  --azm-wrong: oklch(0.5771 0.2152 27.33); /* red-600   */
+  --azm-wrong-bg: oklch(0.9705 0.0129 17.38); /* red-50    */
+  --azm-unconfirmed: oklch(0.6658 0.1574 58.32); /* amber-600 */
+  --azm-unconfirmed-bg: oklch(0.9869 0.0214 95.28); /* amber-50  */
+
+  /* --- shadcn token names, repointed at the brand ----------------------- */
+  --background: var(--azm-canvas-soft);
+  --foreground: var(--azm-ink);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--azm-ink);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--azm-ink);
+  --primary: var(--azm-indigo);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.9807 0.0051 247.88);
+  --secondary-foreground: var(--azm-indigo-deep);
+  --muted: var(--azm-canvas-soft);
+  --muted-foreground: var(--azm-ink-mute);
+  --accent: var(--azm-canvas-soft);
+  --accent-foreground: var(--azm-ink);
+  --border: var(--azm-hairline);
+  --input: oklch(0.806 0.0483 248.43); /* #a8c3de hairline-input */
+  --ring: var(--azm-indigo-soft);
+  /* DESIGN.md `rounded.lg` is 12px, and every derived step follows from it. */
+  --radius: 0.75rem;
+}
+
+@theme inline {
+  --color-azm-indigo: var(--azm-indigo);
+  --color-azm-indigo-deep: var(--azm-indigo-deep);
+  --color-azm-navy: var(--azm-navy);
+  --color-azm-ink: var(--azm-ink);
+  --color-azm-ink-secondary: var(--azm-ink-secondary);
+  --color-azm-ink-mute: var(--azm-ink-mute);
+  --color-azm-canvas-soft: var(--azm-canvas-soft);
+  --color-azm-canvas-cream: var(--azm-canvas-cream);
+  --color-azm-hairline: var(--azm-hairline);
+  --color-azm-ruby: var(--azm-ruby);
+  --color-azm-confirmed: var(--azm-confirmed);
+  --color-azm-confirmed-bg: var(--azm-confirmed-bg);
+  --color-azm-wrong: var(--azm-wrong);
+  --color-azm-wrong-bg: var(--azm-wrong-bg);
+  --color-azm-unconfirmed: var(--azm-unconfirmed);
+  --color-azm-unconfirmed-bg: var(--azm-unconfirmed-bg);
+}
+
 @layer base {
   html {
-    /* In-page anchors (#funktionen, #preise) must clear the fixed header. */
+    /* In-page anchors (#loesung, #pilot) must clear the fixed header. */
     scroll-behavior: smooth;
     scroll-padding-top: 5rem;
   }
@@ -27,5 +120,122 @@
     html {
       scroll-behavior: auto;
     }
+  }
+
+  /*
+   * `ss01` globally, per DESIGN.md. Inter carries the stylistic set the brand's
+   * display face uses; on a fallback that does not, the declaration is inert rather
+   * than wrong, which is why it is safe to set once on the body.
+   */
+  body {
+    font-feature-settings: "ss01";
+  }
+
+  /*
+   * Pill buttons, site-wide.
+   *
+   * DESIGN.md is unambiguous — "Don't replace the pill shape with rounded-rectangles
+   * for buttons" — and the shared Button ships `rounded-4xl`, which at this radius is
+   * 31px: nearly a pill on a 40px control and visibly *not* one on anything taller or
+   * on a two-line mobile CTA. Overriding the slot rather than passing `rounded-full`
+   * at every call site means the twentieth button cannot get it wrong either.
+   */
+  [data-slot="button"] {
+    border-radius: 9999px;
+  }
+
+  /*
+   * Card geometry and lift, per DESIGN.md.
+   *
+   * The shared `Card` ships `rounded-4xl` — 31px against this radius scale — and a
+   * `shadow-md`. Both are tuned for a dashboard, where a card is a widget floating on a
+   * ground; DESIGN.md specifies `{rounded.lg}` 12px with its Level 1 shadow
+   * (`rgba(0,55,112,0.08) 0 1px 3px`) for a feature card, which is a much flatter,
+   * more editorial object. Same argument as the pill above: override the slot once
+   * rather than pass two classes at twenty call sites.
+   */
+  [data-slot="card"] {
+    border-radius: var(--radius);
+    box-shadow: rgba(0, 55, 112, 0.08) 0 1px 3px;
+  }
+}
+
+@layer components {
+  /*
+   * The gradient mesh — DESIGN.md's signature hero backdrop, and the one element it
+   * calls non-negotiable.
+   *
+   * Five overlapping radial gradients rather than an image: the mesh is decoration
+   * behind live text, so an image would cost a request and a layout-shift risk on the
+   * largest contentful paint for something the GPU composites for free. The organic
+   * shape DESIGN.md asks for comes from the stops being off-centre and differently
+   * sized, not from one linear wash.
+   *
+   * Stops are the documented ones — cream, sherbet, lavender, indigo, ruby — at low
+   * alpha, so the mesh tints the canvas instead of colouring it. Text above it stays
+   * on `--foreground` and keeps its full contrast ratio.
+   */
+  .azm-mesh {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: 46rem;
+    max-block-size: 100%;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(
+        60rem 26rem at 8% -6%,
+        color-mix(in oklch, var(--azm-canvas-cream) 78%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        44rem 22rem at 32% -2%,
+        color-mix(in oklch, var(--azm-lemon) 16%, transparent),
+        transparent 68%
+      ),
+      radial-gradient(
+        52rem 28rem at 66% -10%,
+        color-mix(in oklch, var(--azm-indigo) 26%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        40rem 24rem at 92% 2%,
+        color-mix(in oklch, var(--azm-ruby) 18%, transparent),
+        transparent 66%
+      ),
+      radial-gradient(
+        36rem 20rem at 50% 14%,
+        color-mix(in oklch, var(--azm-magenta) 12%, transparent),
+        transparent 70%
+      );
+    /* Fades into the canvas rather than ending on a visible edge. */
+    mask-image: linear-gradient(to bottom, black 0%, black 52%, transparent 100%);
+  }
+
+  /*
+   * DESIGN.md's display tier: weight 300 with negative tracking, stair-stepping
+   * 56 → 36px at the mobile breakpoint. Set as a class rather than per-heading
+   * utilities so the tracking and the weight cannot be applied one without the other
+   * — at weight 600 the negative tracking reads as a rendering bug.
+   */
+  .azm-display {
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+
+  /*
+   * Any element rendering money, a count or a duration. DESIGN.md's financial tell.
+   *
+   * Figures only — DESIGN.md pairs `tnum` with -0.42px tracking, and that half is left
+   * out on purpose. The tightening is specified for `body-tabular`, a 14px *table cell*;
+   * applied to the running paragraph that quotes the catalogue coverage it set that one
+   * block visibly tighter than the identical paragraph beside it, which reads as a
+   * rendering fault rather than as a detail. Tabular figures are the signal; the tracking
+   * was scenery.
+   */
+  .azm-tnum {
+    font-feature-settings: "tnum";
   }
 }

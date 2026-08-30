@@ -227,9 +227,9 @@ export AZURE_HOST=20.79.12.34
     ┌──────────────┐
     │    caddy     │  TLS, Let's Encrypt, renewals
     └──────┬───────┘
-           │   app.azmoth.app ─────────► web:3000 ──┐
-           │   www.azmoth.app ─────────► marketing  │  ENGINE_BASE_URL, server-side only
-           │   api.azmoth.app           :3000       │
+           │   app.azmoth.com ─────────► web:3000 ──┐
+           │   www.azmoth.com ─────────► marketing  │  ENGINE_BASE_URL, server-side only
+           │   api.azmoth.com           :3000       │
            │     /api/v1/audit/*  ─────► engine:8000◄┘
            │     everything else ─────► 404
            ▼
@@ -239,7 +239,7 @@ export AZURE_HOST=20.79.12.34
     └──────────────────────────────────────────────┘
 ```
 
-**`api.azmoth.app` is a path allowlist, not a proxy to the engine, and that is load-bearing.** The
+**`api.azmoth.com` is a path allowlist, not a proxy to the engine, and that is load-bearing.** The
 engine authenticates nobody — [`app/api/tenancy.py`](../apps/engine/app/api/tenancy.py) says so
 directly: `X-User-ID` and `X-Organization-ID` are asserted, not proven, and a caller who reaches the
 engine directly "can name any organisation they like". Only `/api/v1/audit/*` is published, because

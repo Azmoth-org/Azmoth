@@ -314,7 +314,7 @@ services:
   # HTML when the image is built. Setting it under `environment:` would do nothing — the page has
   # already been rendered. Changing where "Anmelden" points means rebuilding:
   #
-  #     APP_URL=https://app.azmoth.de docker compose -f infra/docker/docker-compose.yml build marketing
+  #     APP_URL=https://app.azmoth.com docker compose -f infra/docker/docker-compose.yml build marketing
   #
   # And the value is the address a VISITOR'S BROWSER can reach, so it is a public URL — never
   # http://web:3000, which resolves only inside this network. That is the opposite of
@@ -326,8 +326,8 @@ services:
       dockerfile: apps/marketing/Dockerfile
       args:
         # NEXT_PUBLIC_APP_URL is honoured as an alias, so either name in .env works.
-        APP_URL: "${APP_URL:-${NEXT_PUBLIC_APP_URL:-https://app.azmoth.de}}"
-        NEXT_PUBLIC_SITE_URL: "${MARKETING_SITE_URL:-https://www.azmoth.de}"
+        APP_URL: "${APP_URL:-${NEXT_PUBLIC_APP_URL:-https://app.azmoth.com}}"
+        NEXT_PUBLIC_SITE_URL: "${MARKETING_SITE_URL:-https://www.azmoth.com}"
     image: azmoth-marketing:0.3.0
     # No `container_name`, for the same reason nothing else here has one.
     ports:

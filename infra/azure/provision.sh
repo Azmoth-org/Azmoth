@@ -410,12 +410,12 @@ cat <<DONE
   these names over port 80. A name that does not resolve yet is a failed
   issuance and a retry backoff, not a warning.
 
-      A   app.azmoth.app    $PUBLIC_IP
-      A   api.azmoth.app    $PUBLIC_IP
-      A   azmoth.app        $PUBLIC_IP
-      A   www.azmoth.app    $PUBLIC_IP
+      A   app.azmoth.com    $PUBLIC_IP
+      A   api.azmoth.com    $PUBLIC_IP
+      A   azmoth.com        $PUBLIC_IP
+      A   www.azmoth.com    $PUBLIC_IP
 
-  Check with:  dig +short app.azmoth.app
+  Check with:  dig +short app.azmoth.com
 
   THEN:        ./scripts/deploy.sh $PUBLIC_IP
 ────────────────────────────────────────────────────────────────────────────────

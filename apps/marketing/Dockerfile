@@ -63,12 +63,12 @@ FROM base AS builder
 # Defaulted to the production domain so a plain `docker build` produces a correct image; a preview
 # or a staging deploy overrides it:
 #
-#     docker build -f apps/marketing/Dockerfile --build-arg APP_URL=https://app.staging.azmoth.de .
+#     docker build -f apps/marketing/Dockerfile --build-arg APP_URL=https://app.staging.azmoth.com .
 #
 # NEXT_PUBLIC_APP_URL is accepted as an alias by lib/site.ts, so either name works; APP_URL is
 # preferred because it never reaches the client bundle.
-ARG APP_URL="https://app.azmoth.de"
-ARG NEXT_PUBLIC_SITE_URL="https://www.azmoth.de"
+ARG APP_URL="https://app.azmoth.com"
+ARG NEXT_PUBLIC_SITE_URL="https://www.azmoth.com"
 ENV APP_URL=${APP_URL} \
     NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 
@@ -97,9 +97,9 @@ ENV NODE_ENV=production \
 #
 # There are no other variables to set. This app has no database, no session, no secret and no
 # upstream service — which is the whole reason the marketing site was separated from apps/web.
-# NEXT_PUBLIC_GA_MEASUREMENT_ID is the one thing a deployment may want, and it belongs at build
-# time like every other NEXT_PUBLIC_ value; unset means no analytics script is ever loaded and the
-# cookie banner does not appear.
+# The NEXT_PUBLIC_ANALYTICS_* trio is the one thing a deployment may want, and it belongs at build
+# time like every other NEXT_PUBLIC_ value; unset means no analytics script is ever loaded. The
+# measurement is cookieless, so there is no consent banner either way.
 
 WORKDIR /srv
 

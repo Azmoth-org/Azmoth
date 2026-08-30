@@ -13,8 +13,14 @@ export const config = {
    * and `/robots.txt` escape via the "has a dot" clause, but `/opengraph-image` and
    * `/twitter-image` have no extension — without naming them here they were rewritten
    * to `/de/opengraph-image`, which does not exist, and every social preview 404'd.
+   *
+   * **`api/` carries its trailing slash on purpose.** As a bare `api` this is a prefix
+   * match, so it swallowed every path merely *beginning* with those three letters —
+   * which is how `/api-dokumentation`, a perfectly ordinary marketing page, got excluded
+   * from locale routing and served a 404 while its neighbours worked. The slash pins the
+   * exclusion to the route segment it was always meant to name.
    */
   matcher: [
-    "/((?!_next|_vercel|api|favicon|opengraph-image|twitter-image|images|.*\\..*).*)",
+    "/((?!_next|_vercel|api/|favicon|opengraph-image|twitter-image|images|.*\\..*).*)",
   ],
 };

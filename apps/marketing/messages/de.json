@@ -4,95 +4,178 @@
     "menue": "Menü",
     "menueOeffnen": "Menü öffnen",
     "funktionen": "Funktionen",
+    "api": "API",
     "faq": "Häufige Fragen",
     "ueberUns": "Über uns",
     "kontakt": "Kontakt",
     "anmelden": "Anmelden",
-    "testen": "Kostenlos testen"
+    "testen": "Kostenlose Demo testen",
+    "pilot": "Pilot-Zugang anfordern"
   },
   "footer": {
-    "claim": "Deterministische GOÄ-Kodierung und Rechnungsprüfung — mit einer Begründung, die einer Rückfrage standhält.",
+    "claim": "Deterministische GOÄ-Prüfung mit einer Begründung, die einer Rückfrage standhält. Keine Blackbox-KI, keine geschätzten Risikosummen.",
     "produkt": "Produkt",
     "unternehmen": "Unternehmen",
+    "rechtliches": "Rechtliches",
+    "impressum": "Impressum",
+    "datenschutz": "Datenschutz",
+    "github": "GitHub",
+    "kontaktLabel": "Kontakt",
     "rechte": "Alle Rechte vorbehalten.",
-    "hinweis": "Azmoth ersetzt keine ärztliche oder rechtliche Beratung."
-  },
-  "cookies": {
-    "titel": "Cookie-Hinweis",
-    "text": "Wir verwenden Analyse-Cookies nur mit Ihrer Einwilligung. Ohne Zustimmung wird nichts geladen und nichts gemessen.",
-    "akzeptieren": "Akzeptieren",
-    "ablehnen": "Ablehnen"
+    "hinweis": "Azmoth ersetzt keine ärztliche oder rechtliche Beratung.",
+    "madeInGermany": "Made in Germany"
   },
   "startseite": {
     "hero": {
-      "badge": "Für Privatliquidation nach GOÄ",
-      "titel": "Jede Ziffer begründet. Jede Rechnung belastbar.",
-      "untertitel": "Azmoth liest Ihre Behandlungsdokumentation, schlägt die passenden GOÄ-Ziffern vor und legt für jede einzelne offen, aus welcher Regel sie folgt. Kein Blackbox-Vorschlag, den Sie der Erstattungsstelle nicht erklären können.",
-      "ctaPrimaer": "Live-Demo mit Beispieldaten",
-      "ctaSekundaer": "Mit eigenen Daten prüfen (Pilot-Zugang anfordern)",
-      "hinweis": "Die Demo läuft ohne Anmeldung und ohne Upload — geprüft wird eine synthetische Beispielrechnung. Der Pilotbetrieb mit eigenen, pseudonymisierten Daten ist derzeit auf freigeschaltete Teilnehmer beschränkt."
+      "badge": "Für Abrechnungsstellen, PVS-Hersteller und Privatliquidation nach GOÄ",
+      "titel": "Deterministische GOÄ-Prüfung. Mathematisch beweisbar. 100 % nachvollziehbar.",
+      "untertitel": "Azmoth ist keine Blackbox-KI. Jede akzeptierte oder blockierte Position wird mit einem verifizierbaren Beweis (Proof Atom) und exakter gesetzlicher Begründung geliefert.",
+      "ctaPrimaer": "Kostenlose Demo testen",
+      "ctaSekundaer": "Pilot-Zugang anfordern",
+      "hinweis": "Die Demo läuft ohne Anmeldung und ohne Upload — geprüft wird eine synthetische Beispiellieferung. Der Pilotbetrieb ist derzeit auf freigeschaltete Teilnehmer beschränkt."
+    },
+    "problem": {
+      "eyebrow": "Ausgangslage",
+      "titel": "GOÄ-Abrechnung ist komplex. Manuelle Prüfung kostet Zeit.",
+      "untertitel": "Drei Gründe, warum korrekte Privatliquidation in der Praxis so aufwendig bleibt.",
+      "punkte": [
+        {
+          "titel": "Zeitverlust",
+          "text": "Manuelle GOÄ-Prüfung bindet wertvolle Ressourcen Ihrer Abrechnungsstelle."
+        },
+        {
+          "titel": "Fehleranfälligkeit",
+          "text": "Menschliche Prüfer übersehen komplexe Ausschlussregeln und Zielleistungen."
+        },
+        {
+          "titel": "Intransparente KI-Tools",
+          "text": "Blackbox-KI-Systeme liefern keine nachvollziehbaren Begründungen – und sind im Zweifel nicht vertretbar."
+        }
+      ]
     },
     "ablauf": {
-      "titel": "Drei Schritte bis zur geprüften Rechnung",
-      "untertitel": "Vom Dokument zur nachvollziehbaren Position — ohne Zwischenschritt in einer Tabelle.",
+      "eyebrow": "Ablauf",
+      "titel": "So funktioniert Azmoth",
+      "untertitel": "Von der PADnext-Lieferung zum begründeten Prüfbericht — in drei Schritten, ohne Zwischenschritt in einer Tabelle.",
       "schritte": [
         {
-          "titel": "Dokumentation übergeben",
-          "text": "Behandlungsdokumentation oder eine bestehende Rechnung hochladen. PADnext-Lieferungen werden vor der Verarbeitung gegen das ADL-Schema geprüft — fehlerhafte Datensätze werden mit Zeilenangabe abgewiesen statt still verarbeitet."
+          "titel": "Upload",
+          "text": "Laden Sie Ihre PADnext-XML-Datei hoch (oder testen Sie mit Beispieldaten). Jede Lieferung wird vor der Verarbeitung gegen das ADL-Schema geprüft; fehlerhafte Datensätze werden mit Zeilenangabe abgewiesen statt still verarbeitet."
         },
         {
-          "titel": "Ziffern prüfen lassen",
-          "text": "Der Regelkern schlägt Ziffern vor, erkennt Ausschlüsse und Analogansätze und ordnet jede Position der Gebührenordnung zu, die zum Behandlungsdatum galt."
+          "titel": "Deterministische Prüfung",
+          "text": "Unsere Engine prüft jede Position gegen {regeln} durchgesetzte GOÄ-Regeln – mathematisch beweisbar, in rund {laufzeit} ms je Rechnung. Dieselbe Eingabe ergibt dasselbe Ergebnis: heute, morgen und in der Rückfrage in acht Monaten."
         },
         {
-          "titel": "Freigeben oder korrigieren",
-          "text": "Sie sehen jeden Vorschlag mit seiner Begründung, bevor etwas verbindlich wird. Freigabe, Änderung und Ablehnung werden protokolliert."
+          "titel": "Klares Ergebnis",
+          "text": "Erhalten Sie einen detaillierten Prüfbericht mit drei Kategorien: Bestätigt korrekt, Nachweislich falsch, Unbestätigt – inklusive PDF-Export."
         }
       ]
+    },
+    "buckets": {
+      "eyebrow": "Unser Unterschied",
+      "titel": "Radikale Transparenz. Kein Blackbox-Risiko.",
+      "untertitel": "Jede geprüfte Position landet in genau einer von drei Kategorien. Die dritte ist der Grund, warum Sie den ersten beiden trauen können.",
+      "spalten": [
+        {
+          "titel": "Bestätigt korrekt",
+          "text": "Positionen, die allen verifizierten Regeln standhalten."
+        },
+        {
+          "titel": "Nachweislich falsch",
+          "text": "Positionen mit exakter gesetzlicher Begründung (§ 4 Abs. 2a, § 5 GOÄ und weitere) sowie der Regel-ID, die den Befund erzeugt hat."
+        },
+        {
+          "titel": "Unbestätigt",
+          "text": "Positionen, für die keine verifizierte Regel greift. Wir sagen klar, was wir nicht prüfen können – statt zu raten."
+        }
+      ],
+      "kernaussageTitel": "Wir summieren diese Kategorien nicht zu einem Risikowert.",
+      "kernaussage": "Im Gegensatz zu anderen Tools rechnen wir die drei Kategorien NICHT zu einem einzigen „€X Risiko“-Wert zusammen. Transparenz bedeutet für uns: Wir behaupten nicht, was wir nicht beweisen können.",
+      "ehrlichkeitTitel": "Was das konkret heißt",
+      "ehrlichkeit": "Derzeit spricht mindestens eine durchgesetzte Regel zu {katalogGeprueft} der {katalogZiffern} Ziffern des geladenen GOÄ-Katalogs — {katalogAnteil}. Für den Rest liefert Azmoth keinen Befund, sondern die Kategorie „Unbestätigt“. Diese Zahl steht hier, weil sie in jedem Prüfbericht ohnehin steht: Ein Werkzeug, das seine eigene Reichweite verschweigt, ist genau das Blackbox-Verhalten, das wir ersetzen wollen."
     },
     "funktionen": {
-      "titel": "Was Azmoth tatsächlich prüft",
-      "untertitel": "Kein Sprachmodell, das plausibel klingt. Ein Regelwerk, das dieselbe Eingabe zweimal gleich beantwortet.",
+      "eyebrow": "Technik",
+      "titel": "Technische Exzellenz für professionelle Abrechnungsstellen",
+      "untertitel": "Was unter der Oberfläche läuft — für Abrechnungsprofis und für IT-Entscheider gleichermaßen nachprüfbar.",
       "punkte": [
         {
-          "titel": "Deterministische Kodierung",
-          "text": "Dieselbe Dokumentation ergibt dieselben Ziffern — heute, morgen und in der Rückfrage in acht Monaten."
+          "titel": "Deterministische Engine",
+          "text": "Answer Set Programming (Clingo) + Datalog (Soufflé). Keine KI, keine Halluzinationen. 100 % reproduzierbare Ergebnisse, abgesichert durch einen Receipt-Hash über Katalog, Regeln, Logik, Solver, Policy und Eingabe."
         },
         {
-          "titel": "Begründung je Position",
-          "text": "Zu jeder Ziffer die Regel, aus der sie folgt. Das ist der Unterschied zwischen einem Vorschlag und einer belastbaren Position."
+          "titel": "{regeln} durchgesetzte Regeln",
+          "text": "{anteil} der geladenen Ausschluss-, Zielleistungs-, Spezifitäts- und Steigerungsregeln werden tatsächlich durchgesetzt ({regeln} von {regelnGesamt}). Jede Regel mit exaktem Gesetzeszitat und eigener Regel-ID."
         },
         {
-          "titel": "Ausschlüsse und Analogansatz",
-          "text": "Nebeneinander nicht berechnungsfähige Leistungen werden erkannt. Ein Analogansatz unterliegt denselben Ausschlüssen wie jede andere Position."
+          "titel": "Belastbar schnell",
+          "text": "Rund {laufzeit} ms für eine vollständige Rechnung, gemessen statt geschätzt. Stapelverarbeitung hunderter Rechnungen als asynchroner Job."
         },
         {
-          "titel": "Zeitliche Zuordnung",
-          "text": "Eine Rechnung wird gegen die Fassung der Gebührenordnung geprüft, die am Behandlungstag galt — nicht gegen die heutige."
+          "titel": "PDF-Prüfbericht",
+          "text": "Professioneller, ausdruckbarer Bericht mit allen Befunden, gesetzlichen Grundlagen und Nachrechnungen — geeignet als Anlage zu einer Rückfrage."
         },
         {
-          "titel": "PADnext-Prüfung",
-          "text": "Stapelverarbeitung für PADnext-Lieferungen mit Schema-Validierung und einer nach Ursache getrennten Auswertung."
+          "titel": "B2B-API",
+          "text": "REST-API mit asynchroner Stapelverarbeitung und API-Key je Mandant. Nahtlose Integration in Ihre PVS-Software, OpenAPI-Schema inklusive."
         },
         {
-          "titel": "Prüfpfad",
-          "text": "Vorschlag, Änderung und Freigabe werden mit Zeitpunkt und Person festgehalten. Eine Rückfrage lässt sich beantworten, ohne zu rekonstruieren."
+          "titel": "DSGVO-konform",
+          "text": "Hosting in Deutschland (Azure Germany West Central). Keine Weitergabe von Patientendaten an Dritte. AVV verfügbar."
         }
       ]
     },
-    "grenzen": {
-      "titel": "Was Azmoth nicht ist",
-      "untertitel": "Ehrlicher als eine Funktionsliste, und für die Entscheidung nützlicher.",
-      "punkte": [
-        "Azmoth entscheidet nicht. Jede Position wird vorgeschlagen und von einem Menschen freigegeben — die ärztliche Verantwortung bleibt, wo sie hingehört.",
-        "Azmoth ist keine Praxisverwaltung. Es kodiert und prüft; Terminplanung, Karteiführung und Buchhaltung bleiben in Ihren bestehenden Systemen.",
-        "Azmoth ersetzt keine Rechtsberatung. Bei strittigen Erstattungsfragen liefert es die Begründung, nicht das Urteil."
+    "zielgruppen": {
+      "eyebrow": "Für wen",
+      "titel": "Entwickelt für Profis",
+      "untertitel": "Drei Rollen, drei Gründe. Wählen Sie die, die auf Sie zutrifft.",
+      "karten": [
+        {
+          "titel": "Abrechnungsstellen",
+          "text": "Reduzieren Sie Ihre manuelle Prüfzeit erheblich und finden Sie Fehler, die menschliche Prüfer übersehen — insbesondere Ausschlüsse und Zielleistungen über mehrere Positionen hinweg.",
+          "cta": "Pilot-Zugang anfordern"
+        },
+        {
+          "titel": "PVS-Hersteller",
+          "text": "Integrieren Sie Azmoth als GOÄ-Prüfmodul in Ihre Software. REST-API, Sandbox-Zugang, OpenAPI-Schema und technische Dokumentation.",
+          "cta": "Zur API-Dokumentation"
+        },
+        {
+          "titel": "Ärzte / MVZ",
+          "text": "Prüfen Sie Ihre Abrechnungen vor dem Versand. Vermeiden Sie Rückfragen von Erstattungsstellen und Privatpatienten — und beantworten Sie die, die dennoch kommen, ohne den Fall zu rekonstruieren.",
+          "cta": "Demo ansehen"
+        }
       ]
     },
+    "pilot": {
+      "eyebrow": "Pilotprogramm",
+      "titel": "Werden Sie Pilot-Partner",
+      "text": "Wir suchen fortschrittliche Abrechnungsstellen für einen kostenlosen Piloten. Testen Sie Azmoth mit Ihren eigenen (anonymisierten) Daten. Keine Verpflichtung. Kein Risiko.",
+      "punkte": [
+        "Kostenlos für die ersten zehn Partner",
+        "Anonymisierungsskript inklusive (DSGVO-konform)",
+        "Persönliche Einweisung und Support",
+        "Ihr Feedback formt die Produkt-Roadmap"
+      ],
+      "cta": "Pilot-Zugang anfordern",
+      "ctaSekundaer": "Erst die Demo ansehen",
+      "hinweis": "Der Pilotbetrieb verarbeitet ausschließlich anonymisierte Lieferungen. Das Anonymisierungsskript läuft bei Ihnen, bevor eine Datei unser Haus erreicht."
+    },
+    "api": {
+      "eyebrow": "Für Entwickler",
+      "titel": "Entwickler? Integration in 60 Sekunden.",
+      "text": "Unsere B2B-API ist dokumentiert, getestet und produktionsreif: PADnext hinein, JSON heraus, authentifiziert über einen API-Key. Der vollständige Vertrag inklusive Fehlercodes, Rate Limits und OpenAPI-Schema liegt im Repository.",
+      "cta": "API-Dokumentation ansehen",
+      "ctaSekundaer": "Vertrag auf GitHub",
+      "snippetLabel": "Eine Rechnung synchron prüfen",
+      "kopieren": "Befehl kopieren",
+      "kopiert": "Kopiert"
+    },
     "cta": {
-      "titel": "Sehen Sie es an Ihren eigenen Fällen",
-      "text": "Legen Sie einen Zugang an und prüfen Sie eine Rechnung, deren richtige Antwort Sie bereits kennen. Das ist der einzige Test, der etwas aussagt.",
-      "primaer": "Kostenlos testen",
+      "titel": "Sehen Sie es an einem Fall, dessen Antwort Sie kennen",
+      "text": "Der einzige Test, der etwas aussagt: eine Rechnung prüfen lassen, bei der Sie das richtige Ergebnis bereits kennen. Die Demo braucht dafür weder Konto noch Upload.",
+      "primaer": "Kostenlose Demo testen",
       "sekundaer": "Fragen? Sprechen Sie uns an"
     }
   },
@@ -192,7 +275,10 @@
     "emailLabel": "E-Mail",
     "hinweisTitel": "Bereits Kundin oder Kunde?",
     "hinweisText": "Support-Anfragen gehen am schnellsten direkt aus der Anwendung heraus.",
-    "hinweisCta": "Zur Anmeldung"
+    "hinweisCta": "Zur Anmeldung",
+    "pilotTitel": "Pilot-Zugang anfordern",
+    "pilotText": "Schreiben Sie uns kurz, welche Software Sie einsetzen und mit welchem Volumen Sie arbeiten. Wir melden uns mit einem Termin und dem Anonymisierungsskript.",
+    "pilotCta": "Pilot-Zugang anfordern"
   },
   "nichtGefunden": {
     "titel": "Seite nicht gefunden",
@@ -200,7 +286,7 @@
     "cta": "Zur Startseite"
   },
   "metadaten": {
-    "startseiteBeschreibung": "Mathematische Gewissheit für die medizinische Abrechnung. Keine Blackbox, keine KI-Halluzinationen. 100% nachvollziehbare GOÄ-Compliance.",
+    "startseiteBeschreibung": "Mathematisch beweisbare GOÄ-Abrechnungsprüfung. Keine Blackbox-KI. 100 % nachvollziehbare Befunde mit gesetzlichen Grundlagen.",
     "funktionenTitel": "Funktionen",
     "funktionenBeschreibung": "Kodierung, Prüfung und Nachvollziehbarkeit — von der Dokumentation bis zur freigegebenen Rechnung.",
     "ueberUnsTitel": "Über uns",
@@ -208,6 +294,178 @@
     "faqTitel": "Häufige Fragen",
     "faqBeschreibung": "Antworten zu Regelwerk, Freigabe, Datenhaltung und Einrichtung von Azmoth.",
     "kontaktTitel": "Kontakt",
-    "kontaktBeschreibung": "Fragen zur Einführung von Azmoth in Ihrer Praxis? Schreiben Sie uns."
+    "kontaktBeschreibung": "Fragen zur Einführung von Azmoth in Ihrer Praxis? Schreiben Sie uns.",
+    "apiTitel": "API-Dokumentation",
+    "apiBeschreibung": "B2B-REST-API für die deterministische GOÄ-Prüfung: PADnext hinein, JSON heraus. Für PVS-Hersteller und Abrechnungsstellen mit eigener Integration.",
+    "impressumTitel": "Impressum",
+    "impressumBeschreibung": "Anbieterkennzeichnung nach § 5 DDG und § 18 Abs. 2 MStV.",
+    "datenschutzTitel": "Datenschutz",
+    "datenschutzBeschreibung": "Wie Azmoth personenbezogene Daten auf dieser Website und im Pilotbetrieb verarbeitet — Information nach Art. 13 DSGVO."
+  },
+  "vertrauen": {
+    "madeInGermany": "Made in Germany",
+    "dsgvo": "DSGVO-konform",
+    "keinePatientendaten": "Keine Patienten-Daten im Pilot",
+    "deterministisch": "Deterministisch – keine KI-Halluzinationen"
+  },
+  "apiSeite": {
+    "titel": "API-Dokumentation",
+    "untertitel": "PADnext hinein, JSON heraus, authentifiziert über einen API-Key. Diese Seite ist die Orientierung; der vollständige Vertrag liegt versioniert neben der Engine, die ihn erfüllt.",
+    "vertragTitel": "Der vollständige Vertrag",
+    "vertragText": "Fehlercodes, Rate Limits, Stapelverarbeitung, Idempotenz und das maschinenlesbare OpenAPI-Schema stehen in PARTNER_API.md im Repository. Wir veröffentlichen hier bewusst keine zweite Kopie: Zwei Fassungen desselben Vertrags widersprechen sich spätestens beim dritten Release.",
+    "vertragCta": "PARTNER_API.md ansehen",
+    "schritte": [
+      {
+        "titel": "1. Schlüssel erzeugen",
+        "text": "Ein angemeldetes Mitglied Ihrer Abrechnungsstelle erzeugt den Schlüssel in der Anwendung unter Einstellungen. Der Schlüssel wird genau einmal angezeigt — gespeichert wird nur sein SHA-256-Hash."
+      },
+      {
+        "titel": "2. Lieferung senden",
+        "text": "Eine PADnext-Datei per multipart/form-data oder als Rohtext an /api/v1/audit/single. Der Schlüssel bestimmt den Mandanten; es gibt keinen Header und kein Feld, mit dem ein Aufrufer eine fremde Organisation benennen könnte."
+      },
+      {
+        "titel": "3. Bericht auswerten",
+        "text": "Die Antwort enthält jede Position mit Verdikt, Begründung und Beweis, jeden Befund mit gesetzlicher Grundlage und Regel-ID sowie die drei Bucket-Summen. Alle Eurobeträge sind Dezimal-Strings, niemals JSON-Zahlen."
+      }
+    ],
+    "snippetLabel": "Eine Lieferung synchron prüfen",
+    "antwortLabel": "Auszug aus der Antwort",
+    "hinweisTitel": "Drei Dinge, die eine Integration früh wissen sollte",
+    "hinweise": [
+      "Eurobeträge sind Dezimal-Strings. Wer sie in ein IEEE-Double liest, verliert Cent — und Cent sind genau das, worüber eine Rechnungsprüfung streitet.",
+      "Die Regel- und Abdeckungszahlen sind kein Vertragsbestandteil. Lesen Sie sie zur Laufzeit aus rule_coverage_detail oder aus GET /api/v1/rules/coverage, statt sie in Ihrer Integration fest zu verdrahten.",
+      "Ein Job, der mit einem Schlüssel erzeugt wurde, ist für jeden anderen Schlüssel unsichtbar. Die Abfrage beantwortet ihn mit 404 statt 403, damit ein Schlüssel nicht zum Aufspüren fremder Vorgänge taugt."
+    ]
+  },
+  "impressum": {
+    "titel": "Impressum",
+    "untertitel": "Angaben gemäß § 5 DDG (ehemals § 5 TMG) und § 18 Abs. 2 MStV.",
+    "platzhalterHinweis": "Diese Seite enthält noch Platzhalter. Vor der Veröffentlichung unter azmoth.com müssen alle mit „[BITTE ERGÄNZEN]“ markierten Angaben durch die tatsächlichen Registerdaten ersetzt werden — ein unvollständiges Impressum ist in Deutschland abmahnfähig.",
+    "abschnitte": [
+      {
+        "titel": "Diensteanbieter",
+        "zeilen": [
+          "[BITTE ERGÄNZEN] (Firmierung inkl. Rechtsform)",
+          "[BITTE ERGÄNZEN] (Straße und Hausnummer)",
+          "[BITTE ERGÄNZEN] (PLZ und Ort)",
+          "Deutschland"
+        ]
+      },
+      {
+        "titel": "Vertreten durch",
+        "zeilen": [
+          "[BITTE ERGÄNZEN] (Geschäftsführung / vertretungsberechtigte Person)"
+        ]
+      },
+      {
+        "titel": "Kontakt",
+        "zeilen": [
+          "E-Mail: {email}",
+          "Telefon: [BITTE ERGÄNZEN]"
+        ]
+      },
+      {
+        "titel": "Registereintrag",
+        "zeilen": [
+          "Registergericht: [BITTE ERGÄNZEN]",
+          "Registernummer: [BITTE ERGÄNZEN]"
+        ]
+      },
+      {
+        "titel": "Umsatzsteuer-Identifikationsnummer",
+        "zeilen": [
+          "USt-IdNr. gemäß § 27 a UStG: [BITTE ERGÄNZEN]"
+        ]
+      },
+      {
+        "titel": "Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV",
+        "zeilen": [
+          "[BITTE ERGÄNZEN] (Name)",
+          "[BITTE ERGÄNZEN] (Anschrift, sofern abweichend)"
+        ]
+      },
+      {
+        "titel": "Verbraucherstreitbeilegung",
+        "zeilen": [
+          "Wir sind nicht bereit und nicht verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen."
+        ]
+      },
+      {
+        "titel": "Haftung für Inhalte und Links",
+        "zeilen": [
+          "Die Inhalte dieser Seiten wurden mit Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen.",
+          "Unser Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte wir keinen Einfluss haben. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter verantwortlich.",
+          "Azmoth ist ein Prüfwerkzeug und ersetzt weder ärztliche noch rechtliche Beratung. Die Verantwortung für eine abgerechnete Position verbleibt bei der abrechnenden Stelle."
+        ]
+      }
+    ]
+  },
+  "datenschutz": {
+    "titel": "Datenschutzerklärung",
+    "untertitel": "Information gemäß Art. 13 und 14 DSGVO zur Verarbeitung personenbezogener Daten auf dieser Website und im Pilotbetrieb.",
+    "platzhalterHinweis": "Diese Seite enthält noch Platzhalter und ist ein Entwurf. Vor der Veröffentlichung sind alle mit „[BITTE ERGÄNZEN]“ markierten Angaben zu ergänzen und der Text ist anwaltlich zu prüfen — insbesondere die Abschnitte zu Auftragsverarbeitung und Hosting.",
+    "stand": "Stand: [BITTE ERGÄNZEN] (Datum der letzten Aktualisierung)",
+    "abschnitte": [
+      {
+        "titel": "1. Verantwortlicher",
+        "absaetze": [
+          "Verantwortlich für die Datenverarbeitung auf dieser Website im Sinne von Art. 4 Nr. 7 DSGVO ist:",
+          "[BITTE ERGÄNZEN] (Firmierung, Anschrift — identisch mit den Angaben im Impressum)",
+          "E-Mail: {email}"
+        ]
+      },
+      {
+        "titel": "2. Datenschutzbeauftragter",
+        "absaetze": [
+          "[BITTE ERGÄNZEN] — Name und Kontaktdaten des oder der Datenschutzbeauftragten, sofern nach Art. 37 DSGVO bzw. § 38 BDSG eine Bestellpflicht besteht. Besteht keine Bestellpflicht, ist dieser Abschnitt vor der Veröffentlichung ersatzlos zu streichen."
+        ]
+      },
+      {
+        "titel": "3. Aufruf dieser Website (Server-Logs)",
+        "absaetze": [
+          "Beim Aufruf dieser Website verarbeitet unser Hoster technisch notwendige Zugriffsdaten: IP-Adresse, Datum und Uhrzeit der Anfrage, aufgerufene Adresse, übertragene Datenmenge, Referrer und User-Agent.",
+          "Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt im sicheren und störungsfreien Betrieb der Website. Die Daten werden nach [BITTE ERGÄNZEN] Tagen gelöscht."
+        ]
+      },
+      {
+        "titel": "4. Hosting",
+        "absaetze": [
+          "Diese Website und die Anwendung werden in Deutschland betrieben (Microsoft Azure, Region Germany West Central). Mit dem Hoster besteht ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO.",
+          "Hoster und Vertragsdatum: [BITTE ERGÄNZEN]"
+        ]
+      },
+      {
+        "titel": "5. Reichweitenmessung",
+        "absaetze": [
+          "Diese Website setzt keine Cookies zu Analysezwecken und speichert keine Kennung auf Ihrem Endgerät. Ein Einwilligungsdialog erscheint daher nicht — es gibt nichts, wofür um Erlaubnis zu bitten wäre.",
+          "Sofern eine Reichweitenmessung aktiviert ist, erfolgt sie ausschließlich cookielos und ohne Speicherung oder Auslesen von Informationen auf Ihrem Endgerät (§ 25 Abs. 1 TDDDG greift daher nicht). Erhoben werden aggregierte Seitenaufrufe ohne Personenbezug; Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO mit unserem berechtigten Interesse an einer bedarfsgerechten Gestaltung dieser Website.",
+          "Google Analytics wird nicht eingesetzt. Es findet keine Übermittlung von Nutzungsdaten in Drittländer statt.",
+          "Eingesetztes Werkzeug, Betreiber und Hosting-Ort, sofern aktiviert: [BITTE ERGÄNZEN]"
+        ]
+      },
+      {
+        "titel": "6. Kontaktaufnahme",
+        "absaetze": [
+          "Wenn Sie uns per E-Mail schreiben, verarbeiten wir Ihre Angaben zur Bearbeitung der Anfrage. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO bei vorvertraglichen Anfragen, sonst Art. 6 Abs. 1 lit. f DSGVO.",
+          "Wir löschen die Anfragen, sobald sie abschließend bearbeitet sind und keine gesetzlichen Aufbewahrungspflichten entgegenstehen."
+        ]
+      },
+      {
+        "titel": "7. Daten im Pilotbetrieb",
+        "absaetze": [
+          "Im Pilotbetrieb verarbeitet Azmoth ausschließlich anonymisierte Abrechnungslieferungen. Das dafür bereitgestellte Anonymisierungsskript läuft bei Ihnen, bevor eine Datei uns erreicht; Namen, Geburtsdaten, Anschriften und Versichertennummern verlassen Ihr Haus nicht.",
+          "Verarbeiten Sie später echte Abrechnungsdaten mit Azmoth, sind Sie datenschutzrechtlich Verantwortlicher und wir Auftragsverarbeiter. Grundlage ist dann ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO, den wir Ihnen vor Beginn der Verarbeitung zur Verfügung stellen.",
+          "Abrechnungsdaten aus einer ärztlichen Behandlung sind Gesundheitsdaten im Sinne von Art. 9 DSGVO. Ihre Verarbeitung ohne die vertragliche Grundlage nach Art. 28 DSGVO ist ausgeschlossen — die Anwendung weist entsprechende Lieferungen im Pilotbetrieb technisch ab."
+        ]
+      },
+      {
+        "titel": "8. Ihre Rechte",
+        "absaetze": [
+          "Sie haben das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) sowie Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21 DSGVO).",
+          "Eine erteilte Einwilligung können Sie jederzeit mit Wirkung für die Zukunft widerrufen (Art. 7 Abs. 3 DSGVO).",
+          "Sie haben zudem das Recht auf Beschwerde bei einer Aufsichtsbehörde (Art. 77 DSGVO). Zuständig ist die Aufsichtsbehörde des Bundeslandes unseres Sitzes: [BITTE ERGÄNZEN]."
+        ]
+      }
+    ]
   }
 }

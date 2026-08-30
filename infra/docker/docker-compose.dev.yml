@@ -353,9 +353,11 @@ services:
       # Canonical URLs, the sitemap and og:url are built from this. Without it they would point at
       # the localhost default baked into lib/seo.ts.
       NEXT_PUBLIC_SITE_URL: "${MARKETING_SITE_URL:-http://localhost:${MARKETING_PORT:-3001}}"
-      # Unset means the cookie banner never appears and no analytics script is ever loaded, which
-      # is the right default for a development stack.
-      NEXT_PUBLIC_GA_MEASUREMENT_ID: "${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}"
+      # Cookieless reach measurement. Unset — the right default for a development stack — means no
+      # script is ever loaded and nothing is measured.
+      NEXT_PUBLIC_ANALYTICS_PROVIDER: "${NEXT_PUBLIC_ANALYTICS_PROVIDER:-}"
+      NEXT_PUBLIC_ANALYTICS_SRC: "${NEXT_PUBLIC_ANALYTICS_SRC:-}"
+      NEXT_PUBLIC_ANALYTICS_SITE_ID: "${NEXT_PUBLIC_ANALYTICS_SITE_ID:-}"
     volumes:
       # Live-edit, same idea as `web` above. `@workspace/ui` is consumed as source, so editing a
       # shared component has to reload here too — and `@workspace/typescript-config` is mounted for
