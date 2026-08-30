@@ -110,6 +110,19 @@ services:
       # docs/compliance/PRIVATE_DATA_WARNING.md before changing it.
       PADNEXT_ALLOW_REAL_DATA: "false"
 
+      # How hard the PADnext framing check bites: strict | warn | off.
+      #
+      # `strict` is the default here and not merely inherited from the application default, because
+      # this file is the production stack and the substitution is where an operator can see what
+      # they are changing. A delivery whose framing is wrong is refused with 422 and every
+      # violation named.
+      #
+      # `warn` is the pilot setting — see infra/docker/.env.example. It audits a 99 %-conforming
+      # real PVS export anyway and puts every violation on the report as `schema_warnings`, plus
+      # one structured log line per delivery carrying the request id. It does NOT relax anything
+      # about how positions are judged; only whether bad framing is fatal.
+      PADNEXT_SCHEMA_POLICY: "${PADNEXT_SCHEMA_POLICY:-strict}"
+
       # -- the partner API -------------------------------------------------------------------
       # Where POST /api/v1/audit/bulk writes an uploaded archive. Matches the volume below, and
       # matches what the Dockerfile creates for uid 10001 — /srv is root-owned on purpose, so this

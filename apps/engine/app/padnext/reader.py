@@ -42,6 +42,7 @@ as unsupported rather than half-handled.
 from __future__ import annotations
 
 import io
+import logging
 import re
 import zipfile
 from decimal import Decimal, InvalidOperation
@@ -51,6 +52,7 @@ from xml.etree import ElementTree
 from app.config import PadnextSchemaPolicy, get_settings
 from app.errors import EngineError, ErrorCode
 from app.padnext.schema import (
+    MAX_REPORTED_VIOLATIONS,
     SchemaViolation,
     describe_violations,
     validate_payload,
@@ -62,6 +64,8 @@ from app.schemas.padnext import (
     PadnextInvoice,
     PadnextPosition,
 )
+
+log = logging.getLogger(__name__)
 
 PAD_NS = "http://padinfo.de/ns/pad"
 
@@ -443,6 +447,58 @@ def _parse_case(element: ElementTree.Element, findings: list[Warning_]) -> Padne
     )
 
 
+def _log_violations(
+    violations: list[SchemaViolation],
+    *,
+    policy: PadnextSchemaPolicy,
+    source_name: str,
+) -> None:
+    """Record a framing violation as one structured line, whichever way the policy resolves it.
+
+    Under `warn` this is the *only* durable record that the delivery was not conforming: the
+    findings travel to whoever called the API, and nobody operating the pilot sees them. A file
+    that was let through has to be answerable three weeks later — which export, which rule, which
+    line — and the request id `JsonFormatter` attaches from the context ties it to the upload that
+    carried it (`app.core.observability`).
+
+    Logged under `strict` too, at `error`. A refusal already reaches the caller as a 422, but the
+    operator watching the pilot is the person who has to decide whether the policy should move,
+    and that decision needs both halves of the picture in the same stream.
+
+    **Nothing here identifies a patient.** `source_name` is a filename, and `rule`, `line`,
+    `column` and `path` are positions in a document — never element *content*, which is where a
+    name or a diagnosis would be. `message` is libxml2's, which quotes the offending value for a
+    datatype error (`'viele'` is not an integer); that is a control field by construction, since
+    the schema only constrains framing. Kept for that reason, and capped like the exception is.
+    """
+    detail = [
+        {
+            "rule": v.rule,
+            "line": v.line,
+            "column": v.column,
+            "path": v.path,
+            "message": v.message,
+        }
+        for v in violations[:MAX_REPORTED_VIOLATIONS]
+    ]
+    warned = policy != PadnextSchemaPolicy.STRICT
+    log.log(
+        logging.WARNING if warned else logging.ERROR,
+        "PADnext framing violated (%d violation(s)), policy=%s: %s",
+        len(violations),
+        str(policy),
+        "audited anyway" if warned else "delivery refused",
+        extra={
+            "event": "padnext_schema_violation",
+            "padnext_schema_policy": str(policy),
+            "padnext_schema_outcome": "audited" if warned else "refused",
+            "violation_count": len(violations),
+            "violations": detail,
+            "source_name": source_name,
+        },
+    )
+
+
 def read_delivery(
     data: bytes,
     *,
@@ -496,6 +552,7 @@ def read_delivery(
     policy = schema_policy or get_settings().padnext_schema_policy
     violations = validate_payload(payload, policy=policy)
     if violations:
+        _log_violations(violations, policy=policy, source_name=source_name)
         if policy == PadnextSchemaPolicy.STRICT:
             raise PadnextSchemaError(violations)
         findings.extend(v.as_finding() for v in violations)
@@ -534,6 +591,7 @@ def read_delivery(
         invoices=invoices,
         container_members=members,
         source_name=source_name,
+        schema_policy=str(policy),
     )
 
     # Consistency checks the spec explicitly puts these counters there for.

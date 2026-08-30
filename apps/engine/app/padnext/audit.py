@@ -42,6 +42,7 @@ from app.bridge.entity_to_ziffer import BridgeResult
 from app.catalog import Catalog
 from app.config import Settings, get_settings
 from app.errors import EngineError, ErrorCode
+from app.padnext.schema import SCHEMA_VIOLATION_FINDING_TYPE
 from app.schemas import (
     ClinicalAct,
     ClinicalExtraction,
@@ -1094,6 +1095,10 @@ def audit_delivery(
         setting_source=setting_source,
         positions=audited,
         findings=findings,
+        schema_warnings=[
+            f.message for f in findings if f.type == SCHEMA_VIOLATION_FINDING_TYPE
+        ],
+        schema_policy=delivery.schema_policy or str(settings.padnext_schema_policy),
         claimed_total_eur=claimed_total,
         recomputed_total_eur=recomputed_total,
         comparable_claimed_eur=comparable_claimed,

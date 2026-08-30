@@ -132,6 +132,11 @@ class PadnextDelivery(BaseModel):
     #: Names of the files found inside a `.padx` container, for the audit trail.
     container_members: list[str] = Field(default_factory=list)
     source_name: str = ""
+    #: Which `PADNEXT_SCHEMA_POLICY` the framing check actually ran under, recorded by the reader.
+    #: Carried on the delivery rather than re-read from settings by the audit, because
+    #: `read_delivery` takes a per-call override and a report that named a policy it did not run
+    #: under would be worse than one that named none. Empty for a delivery built by hand.
+    schema_policy: str = ""
 
     def positions(self) -> list[PadnextPosition]:
         return [p for inv in self.invoices for case in inv.cases for p in case.positions]
@@ -216,6 +221,26 @@ class PadnextAuditReport(BaseModel):
 
     positions: list[PadnextAuditedPosition] = Field(default_factory=list)
     findings: list[PadnextFinding] = Field(default_factory=list)
+
+    #: Framing violations this delivery was audited *in spite of* — non-empty only under
+    #: `PADNEXT_SCHEMA_POLICY=warn`, which is the pilot setting for real PVS exports.
+    #:
+    #: The same violations are already in `findings` with `type="padnext_schema_violation"`, and
+    #: this is deliberately a second, redundant copy at the top level. A client reading the report
+    #: has to be able to answer "was this file conforming?" without walking a findings list that
+    #: also holds every position-level defect the audit is *for* — and the answer changes what the
+    #: report means. Under `strict` the delivery would have been refused with a 422 and there would
+    #: be no report at all; under `warn` there is one, and the reader is entitled to know that the
+    #: document it was computed from did not match the schema.
+    #:
+    #: Empty under `strict` (nothing conforming-adjacent gets this far) and under `off` (the schema
+    #: is never consulted), so an empty list means "no known deviation", never "not checked". Read
+    #: `PadnextAuditReport.schema_policy` for which of those two it was.
+    schema_warnings: list[str] = Field(default_factory=list)
+
+    #: Which policy the framing check ran under, so `schema_warnings == []` can be interpreted.
+    #: `off` means the question was not asked.
+    schema_policy: Literal["strict", "warn", "off"] = "strict"
 
     #: What the file itself charges, across every position including ones we cannot price.
     claimed_total_eur: Dec = Decimal("0.00")
