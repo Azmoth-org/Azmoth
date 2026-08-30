@@ -308,7 +308,7 @@
       "suppressed_unverified_rule_count": 859,
       "total_constraint_rule_count": 894,
       "unverified_rule_count": 859,
-      "verified_share": "30/30"
+      "verified_share": "35/894"
     },
     "rule_summary": {
       "analog_candidates": 3,
@@ -331,7 +331,7 @@
       "total_constraint_rules": 894,
       "unverified_constraint_rules": 859,
       "unverified_rules_not_enforced": 859,
-      "verified_share": "30/30",
+      "verified_share": "35/894",
       "zielleistung_enforced": 3
     },
     "rules_engine": "souffle",
@@ -827,7 +827,7 @@
       },
       {
         "legal_basis": "",
-        "message": "Regelabdeckung ist unvollständig: 30 Ausschlussregeln werden durchgesetzt, 859 automatisch extrahierte Regeln sind NICHT verifiziert und wirken bei Policy 'warn' nicht blockierend. Die Rechnung ist ein Vorschlag und ersetzt keine ärztliche Prüfung.",
+        "message": "Regelabdeckung ist unvollständig: 35 verifizierte Regeln von 894 werden durchgesetzt, 859 automatisch extrahierte Regeln sind NICHT verifiziert und wirken bei Policy 'warn' nicht blockierend. Die Rechnung ist ein Vorschlag und ersetzt keine ärztliche Prüfung.",
         "rule_id": "",
         "severity": "warning",
         "type": "rule_coverage_incomplete",

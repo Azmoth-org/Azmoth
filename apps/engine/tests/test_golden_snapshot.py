@@ -57,6 +57,12 @@ FIELDS_ADDED_SINCE_POC = {
     "/audit_trail/rule_summary/rejected_rules",
     "/audit_trail/rule_summary/review_verified_rules",
     "/audit_trail/rule_summary/total_constraint_rules",
+    # The one definition of "enforced", so `rule_summary` and `rule_coverage_detail` cannot quote
+    # different totals for the same rule store — they did, 30 against 35, because each added up its
+    # own subset. It belongs in the contract for the same reason `total_constraint_rules` does: it
+    # is the numerator of `verified_share`, and a client should not have to re-derive it by summing
+    # four other fields and hoping it picked the same four.
+    "/audit_trail/rule_summary/enforced_rules",
 }
 
 

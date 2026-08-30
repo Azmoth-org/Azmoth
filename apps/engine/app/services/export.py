@@ -35,6 +35,7 @@ from datetime import datetime
 from typing import Any
 
 from app.db.models import BatchFileRecord, BatchJobRecord, ProposalRecord, as_utc
+from app.rules.rule_store import load_rules
 from app.schemas.batch import BatchAggregateSummary, BatchFileStatus
 from app.schemas.export import (
     AuditEventRecord,
@@ -347,6 +348,19 @@ def readme(job: BatchJobRecord, summary: BatchAggregateSummary | None) -> str:
     failed = summary.failed_file_count if summary else 0
     total = summary.file_count if summary else 0
 
+    # Read from the rule store rather than written into the prose. The sentence used to say
+    # "837 der 869 Ausschlussregeln", which was both stale — there are 867 exclusion rules, not
+    # 869 — and the wrong denominator: it counted only exclusions, while the buckets this
+    # paragraph explains turn on Zielleistung, specificity and factor caps too.
+    #
+    # This is the shipped CSV store, not the pipeline's review-merged one, because `readme` is
+    # handed a finished batch and not the engine that produced it. The two differ only by rules a
+    # reviewer has promoted, so this can understate `enforced` and never overstate it — the safe
+    # direction for a paragraph whose whole point is that the coverage is thinner than it looks.
+    rules = load_rules()
+    enforced = rules.enforced_rule_count()
+    constraint = rules.constraint_rule_count()
+
     return f"""GOÄ-Stapelprüfung — Export
 ==========================
 
@@ -380,8 +394,9 @@ unconfirmed       Keine Aussage möglich: für diese Ziffer liegt keine von eine
                   geprüfte Regel vor, oder die vorhandenen Regeln sind nur beratend.
 
 WICHTIG: "unconfirmed" ist KEIN Befund gegen die Praxis. Es ist die Grenze der Regelabdeckung
-dieser Engine — 837 der 869 Ausschlussregeln sind maschinell extrahiert und unter der
-Standard-Policy nicht durchgesetzt. Über viele Rechnungen summiert ist "unconfirmed" deshalb
+dieser Engine — nur {enforced} von {constraint} Regeln sind von einem Menschen verifiziert und
+werden durchgesetzt; der Rest ist maschinell extrahiert und unter der Standard-Policy nicht
+durchgesetzt. Über viele Rechnungen summiert ist "unconfirmed" deshalb
 in der Regel der größte der drei Beträge, und er sagt nichts über die Abrechnungsqualität aus.
 Die drei Beträge dürfen NICHT zu einer Summe "strittig" addiert werden.
 

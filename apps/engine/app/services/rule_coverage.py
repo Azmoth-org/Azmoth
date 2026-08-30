@@ -27,12 +27,10 @@ def build(rules: RuleStore, *, rule_coverage: str = "partial", rules_version: st
     summary = rules.summary()
     return RuleCoverage(
         policy_for_unverified_rules=summary["policy_for_unverified_rules"],
-        enforced_rule_count=(
-            summary["exclusions_enforced"]
-            + summary["zielleistung_enforced"]
-            + summary["specificity_enforced"]
-            + summary["factor_caps_enforced"]
-        ),
+        #: One definition of "enforced", owned by `RuleStore.enforced_rule_count`. Re-adding the
+        #: four lists here is what let this object say "35" while `summary["exclusions_enforced"]`
+        #: said "30" on the adjacent line of the same CLI output.
+        enforced_rule_count=summary["enforced_rules"],
         #: The advisory total, and then the two things it is made of. Reported separately because
         #: they are advisory for different reasons and a caller may need to say which: an analog
         #: candidate is an *offer* under § 6 Abs. 2 GOÄ and could never suppress a position, while a
@@ -59,7 +57,8 @@ def warnings_for(coverage: RuleCoverage) -> list[Warning_]:
                 type="advisory_rules_present",
                 severity="warning",
                 message=(
-                    f"{coverage.enforced_rule_count} Regeln werden durchgesetzt; "
+                    f"{coverage.enforced_rule_count} verifizierte Regeln von "
+                    f"{coverage.total_constraint_rule_count} werden durchgesetzt; "
                     f"{coverage.advisory_rule_count} Regeln sind nur beratend: "
                     f"{coverage.suppressed_unverified_rule_count} nicht verifizierte Regeln, die "
                     f"unter Policy '{coverage.policy_for_unverified_rules}' NICHT blockieren, und "
