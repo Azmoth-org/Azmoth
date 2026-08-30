@@ -26,6 +26,7 @@ there would let a catalog change be waved through by adding a broken file.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -84,6 +85,34 @@ def expected_line(name: str, needle: str) -> int:
         if needle in text:
             return number
     raise AssertionError(f"{needle!r} is not in the markup of {name}")
+
+
+@pytest.fixture
+def warn_client(monkeypatch):
+    """A `client` running the whole app under `PADNEXT_SCHEMA_POLICY=warn`.
+
+    Separate from `conftest.client` rather than a parameter on it, so the default fixture keeps
+    running under `strict` and every other test in the suite keeps asserting the strict baseline.
+    The env var is what a deployment actually sets, and `get_settings` is `lru_cache`d, so the
+    cache has to be cleared on both sides of the test — before, so the app builds under the pilot
+    policy, and after, so nothing else in the session inherits it.
+    """
+    from fastapi.testclient import TestClient
+
+    from app.api import deps
+    from app.config import get_settings
+    from app.main import app
+    from tests.conftest import ORGANIZATION_ID_HEADER, TEST_ORGANIZATION_ID
+
+    monkeypatch.setenv("PADNEXT_SCHEMA_POLICY", "warn")
+    get_settings.cache_clear()
+    deps.reset()
+    try:
+        with TestClient(app, headers={ORGANIZATION_ID_HEADER: TEST_ORGANIZATION_ID}) as c:
+            yield c
+    finally:
+        deps.reset()
+        get_settings.cache_clear()
 
 
 # ==========================================================================================
@@ -439,3 +468,176 @@ def test_every_fixture_declares_itself_synthetic_and_carries_no_identity(name):
     assert "VIOLATION:" in text, "a fixture must say what it violates, or it is just a broken file"
     for forbidden in ("versicherter", "geburtsdatum", "strasse", "<patient>"):
         assert forbidden not in text.lower()
+
+
+# ==========================================================================================
+# what `warn` owes an operator: a log line, and a report that admits what it was built from
+# ==========================================================================================
+#
+# `warn` is the pilot policy, and the thing that makes it safe rather than merely permissive is
+# that it is never silent. A delivery that was let through leaves two traces, and the tests below
+# are the guard on each:
+#
+#   the log      one structured line per delivery, carrying every violation's rule, line, column
+#                and path, under the request id of the upload. This is the only record an operator
+#                has — the findings go to the caller, not to us — and it is what a "why was this
+#                file accepted three weeks ago" question is answered from.
+#
+#   the report   `schema_warnings` at the top level, beside `schema_policy`. A client must be able
+#                to tell "audited a conforming file" from "audited a file that did not conform"
+#                without walking a findings list that also holds every position-level defect the
+#                audit exists to find.
+#
+# Under `strict` both are still true in the only sense they can be: the log line is emitted (at
+# ERROR) before the refusal, and there is no report because there is no audit.
+
+
+def test_warn_logs_one_structured_line_naming_every_violation(caplog):
+    """The operator's copy. Under `warn` nothing else tells us the file was non-conforming."""
+    with caplog.at_level(logging.WARNING, logger="app.padnext.reader"):
+        read_delivery(
+            fixture("wrong_type_posanzahl.xml"),
+            source_name="wrong_type_posanzahl.xml",
+            schema_policy=PadnextSchemaPolicy.WARN,
+        )
+
+    records = [r for r in caplog.records if getattr(r, "event", "") == "padnext_schema_violation"]
+    assert len(records) == 1, "one line per delivery, not one per violation"
+
+    record = records[0]
+    assert record.levelno == logging.WARNING
+    assert record.padnext_schema_policy == "warn"
+    assert record.padnext_schema_outcome == "audited"
+    assert record.violation_count >= 1
+    assert record.source_name == "wrong_type_posanzahl.xml"
+    assert len(record.violations) == record.violation_count
+    assert all(v["rule"] and v["message"] for v in record.violations)
+    assert any(v["line"] > 0 for v in record.violations), (
+        "a log line without a location is no more actionable than a 422 without one"
+    )
+
+
+def test_strict_logs_the_refusal_too_at_error(caplog):
+    """The other half of the same picture: the operator deciding whether the policy should move
+    needs the refusals in the same stream as the ones that were let through."""
+    with caplog.at_level(logging.ERROR, logger="app.padnext.reader"):
+        with pytest.raises(PadnextSchemaError):
+            read_delivery(
+                fixture("wrong_namespace.xml"), schema_policy=PadnextSchemaPolicy.STRICT
+            )
+
+    records = [r for r in caplog.records if getattr(r, "event", "") == "padnext_schema_violation"]
+    assert len(records) == 1
+    assert records[0].levelno == logging.ERROR
+    assert records[0].padnext_schema_outcome == "refused"
+
+
+def test_off_logs_nothing_because_nothing_was_checked(caplog):
+    with caplog.at_level(logging.DEBUG, logger="app.padnext.reader"):
+        read_delivery(fixture("wrong_namespace.xml"), schema_policy=PadnextSchemaPolicy.OFF)
+
+    assert [r for r in caplog.records if getattr(r, "event", "") == "padnext_schema_violation"] == []
+
+
+def test_a_conforming_delivery_logs_nothing_under_warn(caplog):
+    """`warn` must be quiet on the files it has nothing to say about, or the signal is worthless
+    on the day the pilot uploads four hundred of them."""
+    from app.config import PADNEXT_EXAMPLES_DIR
+
+    payload = (PADNEXT_EXAMPLES_DIR / "00004711_20260726_ADL_000001_padx.xml").read_bytes()
+    with caplog.at_level(logging.DEBUG, logger="app.padnext.reader"):
+        read_delivery(payload, schema_policy=PadnextSchemaPolicy.WARN)
+
+    assert [r for r in caplog.records if getattr(r, "event", "") == "padnext_schema_violation"] == []
+
+
+def test_the_reader_records_which_policy_it_actually_ran_under():
+    """Not the process-wide setting: `read_delivery` takes a per-call override, and a report that
+    named a policy it did not run under would be worse than one that named none."""
+    delivery, _ = read_delivery(
+        fixture("wrong_namespace.xml"), schema_policy=PadnextSchemaPolicy.WARN
+    )
+    assert delivery.schema_policy == "warn"
+
+    delivery, _ = read_delivery(
+        fixture("wrong_namespace.xml"), schema_policy=PadnextSchemaPolicy.OFF
+    )
+    assert delivery.schema_policy == "off"
+
+
+def test_warn_puts_the_deviations_on_the_report_and_the_audit_still_runs(warn_client):
+    """End to end under the pilot policy: 200 with a report, not 422 — and the report says out
+    loud that the file it was computed from did not conform."""
+    response = warn_client.post(
+        "/api/v1/padnext/audit",
+        content=fixture("wrong_type_posanzahl.xml"),
+        headers={"Content-Type": "application/xml", "x-padnext-filename": "messy.xml"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert body["schema_policy"] == "warn"
+    assert body["schema_warnings"], "a warn-policy audit of an invalid file must say so"
+    assert all(isinstance(w, str) and w for w in body["schema_warnings"])
+    assert body["positions"], "the whole point is that the engine got to audit it"
+
+    findings = [f for f in body["findings"] if f["type"] == "padnext_schema_violation"]
+    assert len(findings) == len(body["schema_warnings"]), (
+        "the top-level array is a view of the findings, not a second, divergent list"
+    )
+
+
+def test_a_conforming_delivery_reports_no_schema_warnings_under_warn(warn_client):
+    """The negative: `schema_warnings` is empty for a file that conforms, so a non-empty one is
+    always a real deviation rather than an artefact of the policy being on."""
+    from app.config import PADNEXT_EXAMPLES_DIR
+
+    payload = (PADNEXT_EXAMPLES_DIR / "00004711_20260726_ADL_000001_padx.xml").read_bytes()
+    response = warn_client.post(
+        "/api/v1/padnext/audit",
+        content=payload,
+        headers={"Content-Type": "application/xml"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["schema_warnings"] == []
+    assert response.json()["schema_policy"] == "warn"
+
+
+def test_strict_remains_the_baseline_and_reports_no_warnings(client):
+    """The guarantee this whole change must not cost: with the default policy, a conforming file
+    audits exactly as before and carries an empty `schema_warnings`. The invalid fixtures are
+    still 422 — `test_the_endpoint_answers_422_and_says_where` above owns that half."""
+    from app.config import PADNEXT_EXAMPLES_DIR
+
+    payload = (PADNEXT_EXAMPLES_DIR / "00004711_20260726_ADL_000001_padx.xml").read_bytes()
+    response = client.post(
+        "/api/v1/padnext/audit",
+        content=payload,
+        headers={"Content-Type": "application/xml"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["schema_warnings"] == []
+    assert body["schema_policy"] == "strict"
+
+
+def test_the_policy_default_survives_the_pilot_env_file():
+    """`infra/docker/.env.example` sets `warn` deliberately, and that file is copied by hand. The
+    application default and both compose files must still say `strict`, so the pilot setting is an
+    explicit act rather than something a fresh checkout inherits."""
+    from app.config import REPO_ROOT
+
+    docker = REPO_ROOT / "infra" / "docker"
+    if not docker.is_dir():
+        pytest.skip("no infra/ (running from a built image, not a source checkout)")
+
+    assert "PADNEXT_SCHEMA_POLICY=warn" in (docker / ".env.example").read_text(encoding="utf-8")
+
+    for name in ("docker-compose.yml", "docker-compose.dev.yml"):
+        text = (docker / name).read_text(encoding="utf-8")
+        assert 'PADNEXT_SCHEMA_POLICY: "${PADNEXT_SCHEMA_POLICY:-strict}"' in text, (
+            f"{name} must default the policy to strict, not inherit the pilot value"
+        )

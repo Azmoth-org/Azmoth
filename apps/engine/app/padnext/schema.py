@@ -48,6 +48,11 @@ PAD_NS = "http://padinfo.de/ns/pad"
 #: libxml2's own rule names (`SCHEMAV_*`) at a glance.
 RULE_MISSING_POSITIONEN = "PADX_ABRECHNUNGSFALL_WITHOUT_POSITIONEN"
 
+#: The `type` every framing violation carries as a finding. Named once here because three places
+#: depend on the exact string — the reader that produces it, `PadnextAuditReport.schema_warnings`
+#: that lifts it back out, and the tests that assert a `warn` delivery reports one.
+SCHEMA_VIOLATION_FINDING_TYPE = "padnext_schema_violation"
+
 #: Cap on how many violations travel in one error. A file with a systematic mistake produces one
 #: violation per position, and an exception carrying nine hundred of them helps nobody; the count
 #: is always reported honestly, so nothing is hidden by the truncation.
@@ -83,7 +88,7 @@ class SchemaViolation:
     def as_finding(self) -> Warning_:
         """The same violation as a finding, for `warn` policy. German, like every other finding."""
         return Warning_(
-            type="padnext_schema_violation",
+            type=SCHEMA_VIOLATION_FINDING_TYPE,
             severity="error",
             message=(
                 f"Die Lieferung verstößt gegen das PADnext-Schema ({self.location}): "

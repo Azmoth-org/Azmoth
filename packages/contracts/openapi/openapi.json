@@ -2497,6 +2497,23 @@
             "title": "Rules Version",
             "type": "string"
           },
+          "schema_policy": {
+            "default": "strict",
+            "enum": [
+              "strict",
+              "warn",
+              "off"
+            ],
+            "title": "Schema Policy",
+            "type": "string"
+          },
+          "schema_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Schema Warnings",
+            "type": "array"
+          },
           "setting": {
             "default": "ambulant",
             "enum": [

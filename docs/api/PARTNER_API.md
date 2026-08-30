@@ -158,6 +158,48 @@ was audited, not how much of it is wrong.
 
 **Limits.** 5 MiB per delivery, 100 requests per minute per key.
 
+### `schema_warnings` — when the deployment audits a non-conforming delivery anyway
+
+Before a single position is read, the delivery's *framing* is checked against our subset of the
+PADneXt v2.12 schema: root element, namespace, message type, the `anzahl` / `posanzahl` counters,
+`behandlungsart`, and whether an `abrechnungsfall` has positions at all. What a failure costs is a
+deployment setting, `PADNEXT_SCHEMA_POLICY`, and two fields on every report tell you which way it
+was set:
+
+| `schema_policy` | A delivery with bad framing | `schema_warnings` |
+|---|---|---|
+| `strict` *(default)* | `422 PADNEXT_SCHEMA_VIOLATION`; no report exists | always `[]` |
+| `warn` | audited; every violation is also a finding | one string per violation |
+| `off` | audited; the schema is never consulted | always `[]` |
+
+```jsonc
+{
+  "schema_policy": "warn",
+  "schema_warnings": [
+    "Die Lieferung verstößt gegen das PADnext-Schema (line 10 at rechnungen/rechnung/abrechnungsfall/positionen): Element '{http://padinfo.de/ns/pad}positionen', attribute 'posanzahl': 'drei' is not a valid value of the atomic type 'xs:nonNegativeInteger'."
+  ]
+}
+```
+
+**Read both fields, not just one.** `schema_warnings: []` under `strict` means the delivery
+conformed; under `off` it means nobody asked. Only `schema_policy` separates those.
+
+The array is a top-level view of the findings already carrying
+`type: "padnext_schema_violation"`, and the duplication is deliberate: a client has to be able to
+answer "was this file conforming?" without walking a findings list that also holds every
+position-level defect the audit exists to find — and the answer changes what the report means,
+because under `strict` there would have been no report at all.
+
+**`warn` changes nothing about how positions are judged.** A `goziffer` with no `@ziffer`, an
+unreadable `faktor`, a position type this engine does not model: always a finding, never a refusal,
+under every policy. And it does not relax `PADNEXT_ALLOW_REAL_DATA` — a delivery declaring
+production patient data is still `REAL_DATA_REFUSED`.
+
+Each affected delivery also emits one structured log line on our side
+(`event: padnext_schema_violation`) naming every violation's rule, line, column and element path,
+under the request id of the upload. If you are in the pilot and something was accepted that should
+not have been, quote the `X-Request-ID` from your response and we can find it.
+
 ---
 
 ## 3. `POST /api/v1/audit/bulk` — many deliveries, in the background

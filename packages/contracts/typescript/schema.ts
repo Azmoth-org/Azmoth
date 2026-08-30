@@ -2351,6 +2351,14 @@ export interface components {
              */
             rules_version: string;
             /**
+             * Schema Policy
+             * @default strict
+             * @enum {string}
+             */
+            schema_policy: "strict" | "warn" | "off";
+            /** Schema Warnings */
+            schema_warnings?: string[];
+            /**
              * Setting
              * @default ambulant
              * @enum {string}

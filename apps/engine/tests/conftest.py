@@ -69,6 +69,16 @@ atexit.register(shutil.rmtree, _UPLOAD_ROOT, True)
 # than on `Settings()`: the environment here belongs to the harness, not to the product.
 os.environ["APP_ENV"] = "development"
 
+# The suite's schema baseline. `strict` is the application default, but the pilot deployment sets
+# `PADNEXT_SCHEMA_POLICY=warn` in `infra/docker/.env`, and a developer who exported it into their
+# shell would silently turn every "this malformed delivery is refused" assertion into a test of the
+# escape hatch — the suite would still pass, and it would have stopped guarding the thing it exists
+# to guard. Assignment rather than `setdefault`, for the same reason as DATABASE_URL above: an
+# inherited value must be overridden, not respected. The `warn` and `off` cases are tested by
+# passing `schema_policy=` explicitly, or through the `warn_client` fixture in
+# `tests/test_padnext_schema.py`, which sets this variable itself and clears the settings cache.
+os.environ["PADNEXT_SCHEMA_POLICY"] = "strict"
+
 from app.api import deps
 from app.api.tenancy import ORGANIZATION_ID_HEADER
 from app.bridge.entity_to_ziffer import BridgeResult

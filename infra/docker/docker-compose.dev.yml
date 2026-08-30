@@ -115,6 +115,12 @@ services:
       # docs/compliance/PRIVATE_DATA_WARNING.md before changing it.
       PADNEXT_ALLOW_REAL_DATA: "false"
 
+      # strict | warn | off — how hard the PADnext framing check bites. Strict here too, and
+      # deliberately not looser than the production stack: a developer who cannot reproduce a
+      # pilot 422 locally is a developer who will not fix it. Set PADNEXT_SCHEMA_POLICY=warn in
+      # infra/docker/.env to work against a real, imperfect export.
+      PADNEXT_SCHEMA_POLICY: "${PADNEXT_SCHEMA_POLICY:-strict}"
+
       # -- the partner API -------------------------------------------------------------------
       # The one writable path in this service, and the reason it is not under /srv: every mount
       # below is `:ro` on purpose, and /srv is root-owned while the engine runs as uid 10001.
