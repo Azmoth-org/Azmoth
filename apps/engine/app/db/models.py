@@ -34,9 +34,14 @@ And two standalone tables:
     rule_reviews        one row per rule a billing expert has decided about
     api_keys            one row per credential issued to a practice, stored as a hash
 
-And one more that exists purely so a failure can be asked about later:
+And two that exist so the service can be operated and sold rather than only run:
 
     error_log           one row per unhandled 5xx — type, message, route, request id, tenant
+    api_usage_logs      one row per attributable request — key, endpoint, bytes, duration, status
+
+`api_usage_logs` is what an invoice is eventually built from, and what answers "which endpoint is
+that vendor actually hitting" when they call. Like `error_log` it holds no invoice content — only
+the shape of the request.
 
 It holds no body, no headers and no traceback locals, deliberately: a diagnostic table is the
 easiest place in a system for patient data to end up somewhere it should not be, and what is stored
@@ -79,7 +84,7 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import Boolean, ForeignKey, Index, String, Text, event
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Text, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, JSONVariant, TimestampVariant, UUIDVariant
@@ -508,6 +513,7 @@ __all__ = [
     "AuditEventType",
     "AuditLogIsAppendOnly",
     "BatchFileRecord",
+    "ApiUsageRecord",
     "BatchJobRecord",
     "ErrorLogRecord",
     "ProposalRecord",
@@ -783,3 +789,85 @@ class ErrorLogRecord(Base):
 
     def __repr__(self) -> str:  # pragma: no cover - diagnostics only
         return f"<ErrorLogRecord {self.exception_type} at {self.occurred_at}>"
+class ApiUsageRecord(Base):
+    """One row per API request, so a partner's consumption can be counted and eventually invoiced.
+
+    This is the foundation under a commercial API and it did not exist: `api_keys.last_used_at` is a
+    single overwritten timestamp, which answers "is anything still using this key" and nothing else.
+    It cannot answer "how many audits did this billing centre run in August", which is the question
+    an invoice is built from, and it cannot answer "which endpoint is that vendor actually hitting",
+    which is the question a support call starts with.
+
+    **Written for every `/api/v1/*` request that resolved an organisation**, whichever door it came
+    through. A partner call has `api_key_id` set; a call the web tier proxied has it `NULL`. Both are
+    kept rather than only the first, because "what is this practice's total load" and "what is this
+    *integration* costing us" are different questions and separating them afterwards is a `WHERE`
+    clause. A request that never resolved a tenant — an unauthenticated `401`, a malformed `400` at
+    the perimeter — writes nothing: there is nobody to attribute it to.
+
+    **Failures are recorded too.** A partner whose integration is producing four hundred `422`s a day
+    is a support problem worth seeing before they churn, and a usage report that counted only
+    successes would hide exactly the customer in trouble.
+
+    `request_count` is on the row rather than implied, and it is `1` for every row this code writes.
+    It is here so that a later roll-up — collapsing a month of rows into one per key per endpoint —
+    can reuse the same table and the same reader instead of needing a second one.
+
+    Not append-only in the `audit_events` sense, and deliberately so: this is operational counting,
+    not a record anybody's liability attaches to, and a retention policy that rolls up or deletes old
+    rows is a normal thing to want.
+    """
+
+    __tablename__ = "api_usage_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The public half of the key that made the call — `api_keys.key_id`, not the surrogate id, so a
+    #: log line, a rate-limit refusal and a usage row all name the same string. `NULL` for a request
+    #: that came through the web tier's session rather than a key.
+    #:
+    #: No foreign key. A revoked key's rows have to survive, and more importantly the usage of a key
+    #: that is later deleted is still usage that happened — a constraint here would make cleaning up
+    #: `api_keys` silently destroy billing history.
+    api_key_id: Mapped[str | None] = mapped_column(String(64), index=True, default=None)
+
+    #: Whose consumption this is. Never null: a row that cannot be attributed to a practice cannot
+    #: appear on anyone's usage report, so it is not written at all.
+    organization_id: Mapped[str] = mapped_column(String(256), index=True, nullable=False)
+
+    #: The route **template** — `/api/v1/audit/bulk/{job_id}` — never the resolved path. A resolved
+    #: path makes every job a distinct endpoint and turns a usage breakdown into a list of ids.
+    endpoint: Mapped[str] = mapped_column(String(256), index=True, nullable=False)
+
+    #: Always 1 from this writer. See the class docstring on why it is a column at all.
+    request_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    #: Request body bytes, from `Content-Length`. The other half of what a partner consumes: an
+    #: audit of one 3 kB delivery and an audit of a 50 MB archive are not the same unit of work, and
+    #: a price per request alone would charge them the same.
+    #:
+    #: Zero rather than null for a `GET`, so summing the column needs no `COALESCE`.
+    bytes_processed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    #: Wall clock for the whole request, as the caller experienced it. Averaged per endpoint it is
+    #: what tells us a partner's bulk uploads are getting slower before they tell us.
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    #: The HTTP status. Indexed with the timestamp because "how many of this key's calls failed
+    #: this week" is the query that finds a customer in trouble.
+    status_code: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+
+    timestamp: Mapped[datetime] = mapped_column(
+        TimestampVariant, index=True, nullable=False, default=utcnow
+    )
+
+    __table_args__ = (
+        # The usage report: one organisation, one billing period. Tenant-leading for the same
+        # reason as on `proposals` and `batch_jobs` — every read here is scoped to a practice first.
+        Index("ix_api_usage_logs_organization_id_timestamp", "organization_id", "timestamp"),
+        # And the per-key breakdown inside that report.
+        Index("ix_api_usage_logs_api_key_id_timestamp", "api_key_id", "timestamp"),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return f"<ApiUsageRecord {self.endpoint} {self.status_code} at {self.timestamp}>"

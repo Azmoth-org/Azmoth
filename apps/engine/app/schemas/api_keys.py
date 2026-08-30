@@ -127,6 +127,78 @@ class ApiKeyList(BaseModel):
     keys: list[ApiKeySummary] = Field(default_factory=list)
 
 
+class UsageByEndpoint(BaseModel):
+    """One endpoint's share of a practice's consumption."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint: str = Field(
+        description=(
+            "Die Route als Muster, nicht als aufgelöster Pfad — `/api/v1/audit/bulk/{job_id}` und "
+            "nicht `/api/v1/audit/bulk/batch_9f1c…`. — The route template, so a breakdown is a "
+            "list of endpoints rather than a list of ids."
+        )
+    )
+    requests: int = 0
+    bytes_processed: int = 0
+    failed_requests: int = Field(
+        default=0, description="Anfragen mit Status ≥ 400. — Calls that answered 4xx or 5xx."
+    )
+    average_duration_ms: float = 0.0
+
+
+class UsageByKey(BaseModel):
+    """One API key's share. `key_id` is null for calls the web application made itself."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key_id: str | None = Field(
+        default=None,
+        description=(
+            "Der API-Schlüssel, oder `null` für Aufrufe aus der Weboberfläche selbst. — The key, "
+            "or `null` for calls the web application made under a session rather than a key."
+        ),
+    )
+    requests: int = 0
+    bytes_processed: int = 0
+    failed_requests: int = 0
+    last_used_at: datetime | None = None
+
+
+class UsageSummary(BaseModel):
+    """What one practice consumed over one window.
+
+    The window is always stated rather than implied. A usage figure whose period a reader has to
+    guess is one two people will compute differently from the same rows — and this is the number an
+    invoice is checked against.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    organization_id: str
+    period_start: datetime = Field(
+        description="Beginn des Zeitraums, einschliesslich. UTC. — Inclusive start, in UTC."
+    )
+    period_end: datetime = Field(
+        description="Ende des Zeitraums, einschliesslich. UTC. — Inclusive end, in UTC."
+    )
+
+    total_requests: int = 0
+    total_bytes_processed: int = Field(
+        default=0,
+        description=(
+            "Summe der Anfrage-Bodys in Bytes. Die zweite Verbrauchseinheit neben der Anzahl: die "
+            "Prüfung einer 3-kB-Lieferung und die eines 50-MB-Archivs sind nicht dieselbe Arbeit. "
+            "— Request body bytes; the other unit of consumption besides the call count."
+        ),
+    )
+    total_duration_ms: int = 0
+    failed_requests: int = 0
+
+    by_endpoint: list[UsageByEndpoint] = Field(default_factory=list)
+    by_key: list[UsageByKey] = Field(default_factory=list)
+
+
 class ApiKeyRevoked(BaseModel):
     """The answer to a revocation: which key, and when it stopped working."""
 
@@ -143,4 +215,7 @@ __all__ = [
     "ApiKeyRequest",
     "ApiKeyRevoked",
     "ApiKeySummary",
+    "UsageByEndpoint",
+    "UsageByKey",
+    "UsageSummary",
 ]

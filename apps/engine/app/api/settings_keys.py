@@ -32,21 +32,28 @@ segment a caller could edit to mint themselves a key into a practice they are no
 from __future__ import annotations
 
 import logging
+from datetime import datetime
+from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Security, status
 
-from app.api.deps import api_keys
+from app.api.apikeys import api_key_scheme
+from app.api.deps import api_keys, usage
 from app.api.identity import RequestActor
-from app.api.tenancy import RequestOrganization
+from app.api.tenancy import RequestOrganization, require_organization
+from app.core.observability import bind
 from app.db.models import as_utc
+from app.errors import ApiKeyInvalid
 from app.schemas.api_keys import (
     ApiKeyIssued,
     ApiKeyList,
     ApiKeyRequest,
     ApiKeyRevoked,
     ApiKeySummary,
+    UsageSummary,
 )
 from app.services.proposal_store import ANONYMOUS_ACTOR
+from app.services.usage import month_to_date
 
 log = logging.getLogger(__name__)
 
@@ -167,3 +174,118 @@ async def revoke_api_key(key_id: str, organization: RequestOrganization) -> ApiK
             },
         )
     return ApiKeyRevoked(key_id=key_id, revoked=True)
+
+
+# ------------------------------------------------------------------------------------------
+# usage
+# ------------------------------------------------------------------------------------------
+
+
+async def resolve_reader(
+    request: Request,
+    presented: Annotated[str | None, Security(api_key_scheme)] = None,
+) -> str:
+    """Which organisation's usage the caller may read — by API key, or by session.
+
+    The one endpoint in this module that both kinds of caller want. A partner integrating against
+    the API needs to see what they are spending without opening a browser; a practice manager needs
+    to see it in the web application, where there is a session and no key.
+
+    **The branch cannot be used to get past either check**, which is the only property that matters
+    here. Presenting `X-API-Key` means it is verified and the tenant comes out of the row —
+    presenting a *wrong* one is a `401`, never a silent fall-through to the header. Presenting none
+    puts the request in the trusted-proxy regime every other endpoint in this service already uses,
+    with the same caveat `app.api.tenancy` documents at length. There is no combination of headers
+    that authenticates as one practice and reads another's.
+
+    Ordered key-first deliberately. A partner's request carries both headers when it goes through
+    our own proxy for testing, and the credential we can actually *verify* has to win.
+    """
+    if presented and presented.strip():
+        from app.api.deps import api_keys as key_store
+
+        key = await key_store().verify(presented.strip())
+        if key is None:
+            raise ApiKeyInvalid(
+                "Der API-Schlüssel ist ungültig, unbekannt oder wurde widerrufen. — The API key is "
+                "invalid, unknown or has been revoked.",
+                details={"header": "X-API-Key"},
+            )
+        bind(key_id=key.key_id, organization_id=key.organization_id)
+        return key.organization_id
+
+    return require_organization(request)
+
+
+#: What the usage endpoint annotates with. Deliberately *not* `RequestOrganization`: that one would
+#: refuse a partner holding a perfectly good key, because a key is not the header it reads.
+UsageReader = Annotated[str, Depends(resolve_reader)]
+
+
+@router.get(
+    "/usage",
+    response_model=UsageSummary,
+    summary="Verbrauch dieser Praxis",
+)
+async def read_usage(
+    organization: UsageReader,
+    since: datetime | None = Query(
+        default=None,
+        description=(
+            "Beginn des Zeitraums, einschliesslich. ISO-8601; ohne Zeitzone als UTC gelesen. "
+            "Standard: der 1. des laufenden Monats, 00:00 UTC. — Inclusive start; defaults to the "
+            "first of the current month."
+        ),
+    ),
+    until: datetime | None = Query(
+        default=None,
+        description="Ende des Zeitraums, einschliesslich. Standard: jetzt. — Inclusive end.",
+    ),
+) -> UsageSummary:
+    """Wie viele Anfragen, wie viele Bytes und wie viel Rechenzeit diese Praxis verbraucht hat.
+
+    Standardmässig der laufende Kalendermonat in UTC — der Zeitraum, den eine Rechnung abbildet.
+    Der tatsächlich verwendete Zeitraum steht immer in der Antwort (`period_start`, `period_end`):
+    eine Verbrauchszahl, deren Zeitraum der Leser raten muss, ist eine Zahl, die zwei Personen aus
+    denselben Daten unterschiedlich berechnen.
+
+    **Gezählt wird jede zurechenbare Anfrage, auch die fehlgeschlagenen.** Eine Integration, die
+    täglich vierhundert `422` erzeugt, ist ein Problem, das man sehen will, bevor der Kunde
+    abspringt — ein Bericht, der nur Erfolge zählte, würde genau diesen Kunden verbergen.
+
+    `by_key` trennt die Integrationen voneinander; `key_id: null` sind Aufrufe aus der
+    Weboberfläche selbst. `by_endpoint` zeigt, wofür der Verbrauch anfällt.
+
+    ---
+
+    What this practice consumed: requests, request bytes and wall-clock time, for the current
+    calendar month in UTC unless `since` / `until` say otherwise. The window used is always stated
+    in the response.
+
+    Readable **either** with an API key — a partner checking their own spend — **or** from a
+    signed-in session in the web application. Whichever credential is presented determines the
+    organisation; there is no parameter that names one.
+
+    Failed calls are counted and reported separately, because an integration producing errors is
+    the customer most worth noticing.
+    """
+    # Flush before reading. Without this the endpoint tells a partner who has just made five calls
+    # that they have made none — the buffer holds up to 25 rows or 15 seconds of traffic, and a
+    # quiet integration reaches neither. "Zero" is the one answer a usage screen must never give
+    # wrongly: it reads as "metering is broken", and the reader cannot tell that it is not.
+    #
+    # Safe here specifically because it happens *inside a request*: that is the same discipline
+    # `app.services.usage` is built around — no background task, so no transaction interleaving on
+    # SQLite's single writer. It costs one batched INSERT on an endpoint nobody polls.
+    from app.api.deps import usage_meter
+
+    await usage_meter().flush()
+
+    start, end = month_to_date()
+    return UsageSummary.model_validate(
+        await usage().summarise(
+            organization_id=organization,
+            since=since or start,
+            until=until or end,
+        )
+    )

@@ -11,6 +11,9 @@ from app.schemas.api_keys import (
     ApiKeyRequest,
     ApiKeyRevoked,
     ApiKeySummary,
+    UsageByEndpoint,
+    UsageByKey,
+    UsageSummary,
 )
 from app.schemas.batch import (
     BatchAggregateSummary,
@@ -195,6 +198,9 @@ __all__ = [
     "SolveRequest",
     "SolverHealth",
     "Totals",
+    "UsageByEndpoint",
+    "UsageByKey",
+    "UsageSummary",
     "ValidationViolation",
     "VocabularyResponse",
     "Warning_",

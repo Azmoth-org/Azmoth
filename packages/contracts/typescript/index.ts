@@ -223,6 +223,27 @@ export type LabelledOption = Schemas["LabelledOption"];
 export type BilingualOption = Schemas["BilingualOption"];
 export type ComplexityRef = Schemas["ComplexityRef"];
 
+/* -- API keys and usage --------------------------------------------------------------------- */
+
+/**
+ * A newly minted key. **The only shape in this package that carries a secret**, and it exists once:
+ * the engine stores a SHA-256 hash, so no later response can produce the token again. A UI built
+ * against this type has to show it immediately or lose it — which is the behaviour the storage
+ * decision requires, made visible in the type rather than left to a comment.
+ */
+export type ApiKeyIssued = Schemas["ApiKeyIssued"];
+
+/** A key as it can be read back: everything except the secret. Note the absence of `token`. */
+export type ApiKeySummary = Schemas["ApiKeySummary"];
+export type ApiKeyList = Schemas["ApiKeyList"];
+export type ApiKeyRequest = Schemas["ApiKeyRequest"];
+export type ApiKeyRevoked = Schemas["ApiKeyRevoked"];
+
+/** What one practice consumed over one stated window. The basis of an invoice. */
+export type UsageSummary = Schemas["UsageSummary"];
+export type UsageByEndpoint = Schemas["UsageByEndpoint"];
+export type UsageByKey = Schemas["UsageByKey"];
+
 /* -- shared enums -------------------------------------------------------------------------- */
 
 export type Setting = NonNullable<SolveRequest["setting"]>;
@@ -247,4 +268,7 @@ export const ENGINE_ROUTES = {
   ruleCoverage: "/api/v1/rules/coverage",
   ruleReviewQueue: "/api/v1/rules/review-queue",
   vocabulary: "/api/v1/vocabulary",
+  apiKeys: "/api/v1/settings/api-keys",
+  apiKeyDetail: "/api/v1/settings/api-keys/{key_id}",
+  usage: "/api/v1/settings/usage",
 } as const satisfies Record<string, EnginePath>;
