@@ -156,6 +156,47 @@ def test_a_schema_violation_lists_every_violation_with_a_position(client):
         assert {"line", "column", "path", "location"} <= set(violation)
 
 
+@pytest.mark.parametrize("spelling", ["ja", "yes", "nein", "2", ""])
+def test_an_undeclared_or_unrecognised_echtdaten_is_422_over_http(client, spelling):
+    """`echtdaten="ja"` reaches the caller as a refusal, not as a report.
+
+    The unit-level cases live in `tests/test_padnext.py`; this one exists because the gate is only
+    worth anything if it survives the API layer — a `RuntimeError` subclass that the error handler
+    did not know about would come back as a 500 with a stack trace and no `error_code`, and a
+    client would retry it.
+
+    The empty string is in here as its own case: `echtdaten=""` is what a template engine emits
+    for a variable it could not fill, so it is the spelling a broken export produces most often.
+    """
+    payload = re.sub(
+        rb'echtdaten="[^"]*"',
+        f'echtdaten="{spelling}"'.encode(),
+        VALID_DELIVERY.read_bytes(),
+    )
+
+    body = assert_envelope(
+        post_delivery(client, payload), status=422, code=ErrorCode.ECHTDATEN_UNDECLARED
+    )
+
+    assert "echtdaten" in body["message"]
+    assert "anonymize_padnext.py" in body["message"], "the message must name the way out"
+    assert body["details"]["echtdaten_declared"] == (spelling or None)
+
+
+def test_a_declared_test_delivery_is_not_caught_by_that_gate(client):
+    """The other side of it: `echtdaten="0"` and `="false"` both audit normally.
+
+    Without this, a gate that refused everything would pass every test above.
+    """
+    for spelling in (b"0", b"false", b"FALSE"):
+        payload = re.sub(
+            rb'echtdaten="[^"]*"', b'echtdaten="' + spelling + b'"', VALID_DELIVERY.read_bytes()
+        )
+        response = post_delivery(client, payload)
+        assert response.status_code == 200, (spelling, response.text)
+        assert response.json()["echtdaten"] is False
+
+
 def test_a_delivery_no_position_of_which_is_in_the_catalog_is_422(client):
     """A catalog *mismatch*, and it is deliberately not the same thing as partial coverage.
 

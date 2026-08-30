@@ -56,6 +56,7 @@ class ErrorCode(StrEnum):
     PADNEXT_SCHEMA_VIOLATION = "PADNEXT_SCHEMA_VIOLATION"
     UNKNOWN_ZIFFER = "UNKNOWN_ZIFFER"
     REAL_DATA_REFUSED = "REAL_DATA_REFUSED"
+    ECHTDATEN_UNDECLARED = "ECHTDATEN_UNDECLARED"
     UNSUPPORTED_INPUT_FORMAT = "UNSUPPORTED_INPUT_FORMAT"
 
     # -- the client may not do this ------------------------------------------------------------

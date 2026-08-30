@@ -47,7 +47,7 @@ def payload(positions: str, *, count: int, invoice_id: str) -> bytes:
     """
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!-- SYNTHETIC. No real patient, no real practice, no real invoice. -->
-<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+<rechnungen anzahl="1" echtdaten="false" xmlns="http://padinfo.de/ns/pad">
   <nachrichtentyp version="02.12">ADL</nachrichtentyp>
   <rechnung id="{invoice_id}">
     <abrechnungsfall>

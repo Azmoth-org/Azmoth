@@ -255,6 +255,14 @@ services:
       # Same-origin use — which is all this application does — needs nothing here.
       BETTER_AUTH_URL: "${BETTER_AUTH_URL:-}"
       #
+      # Who may create an account — see apps/web/lib/auth-allowlist.ts and the longer note in
+      # docker-compose.yml. Passed BARE here, and that is the one line where this file deliberately
+      # differs from the production one: bare means "hand it over if the host has one, and define
+      # nothing otherwise", and an UNDEFINED allowlist is the permissive case under a development
+      # NODE_ENV. `docker compose -f docker-compose.dev.yml up` must not require a variable before
+      # the first account can be created. Production defines it as "" and is shut by default.
+      SIGNUP_ALLOWLIST:
+      #
       # OPTIONAL, and off unless BOTH are set: with neither, the Google provider is not registered
       # and no button is rendered — email and password remain the way in. Setting one alone logs a
       # warning and counts as unset, so a typo here cannot take down sign-in generally.

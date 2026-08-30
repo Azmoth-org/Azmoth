@@ -247,6 +247,23 @@ services:
       # Same-origin use — which is all this application does — needs nothing here.
       BETTER_AUTH_URL: "${BETTER_AUTH_URL:-}"
       #
+      # REQUIRED IN PRODUCTION, and the door to the whole deployment. A comma- or
+      # whitespace-separated list of the addresses that may create an account:
+      #
+      #     SIGNUP_ALLOWLIST="anna@praxis-beispiel.de, @abrechnung-nord.de"
+      #
+      # An entry starting with `@` is a domain and admits everyone at it; anything else is one
+      # exact address. Matching is case-insensitive. See apps/web/lib/auth-allowlist.ts.
+      #
+      # Passed as "${SIGNUP_ALLOWLIST:-}" — the `:-` form, deliberately, and the opposite choice
+      # from GOOGLE_CLIENT_ID below. That form DEFINES the variable as "" when the host has none,
+      # and "" parses to an empty rule list, which admits nobody. A variable that is merely absent
+      # would be permissive under a non-production NODE_ENV. Defining it means this stack is shut
+      # by default whatever NODE_ENV says, and an operator who wants a pilot user has to name them.
+      # Nothing here can be shadowed by an apps/web/.env: the production image ships the standalone
+      # bundle and carries no such file.
+      SIGNUP_ALLOWLIST: "${SIGNUP_ALLOWLIST:-}"
+      #
       # OPTIONAL, and off unless BOTH are set: with neither, the Google provider is not registered
       # and no button is rendered — email and password remain the way in. Setting one alone logs a
       # warning and counts as unset, so a typo here cannot take down sign-in generally.

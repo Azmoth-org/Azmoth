@@ -13,7 +13,7 @@
   claiming nothing. claimed_total 0.00, recomputed_total 0.00, coverage_ratio 0.0, not one finding
   — a report indistinguishable from a clean audit of an empty invoice.
 -->
-<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+<rechnungen anzahl="1" echtdaten="false" xmlns="http://padinfo.de/ns/pad">
 
   <nachrichtentyp version="02.12">ADL</nachrichtentyp>
 

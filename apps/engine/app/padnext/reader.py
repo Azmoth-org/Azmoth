@@ -81,6 +81,41 @@ ZIP_MAGIC = b"PK\x03\x04"
 PADX_NAME = re.compile(r"^(?P<kunde>[^_]+)_(?P<datum>\d{8})_(?P<typ>[A-Z]+)_(?P<nr>\d+)_padx\.xml$")
 
 
+#: The only two spellings of `@echtdaten` that mean **production data**, and the only two that mean
+#: **test data**. Both sets are closed, and everything outside them is *unrecognised* — which is a
+#: third answer, not a synonym for the second.
+#:
+#: This used to be one line, `raw in {"1", "true"}`, and that line is the reason this comment
+#: exists. It answers a three-valued question with a boolean, so every value it did not recognise
+#: became `False` — "test data" — and a delivery whose order file said `echtdaten="ja"` was audited
+#: as anonymised on the strength of a word the parser had never heard of. The failure is silent,
+#: happens on exactly the exports a German PVS is most likely to produce, and produces no finding
+#: anybody could notice. `parse_echtdaten` returns `None` for that case instead, and
+#: `app.padnext.audit` refuses the delivery.
+ECHTDATEN_REAL = frozenset({"1", "true"})
+ECHTDATEN_TEST = frozenset({"0", "false"})
+
+
+def parse_echtdaten(raw: str | None) -> bool | None:
+    """`True` = production data, `False` = test data, `None` = absent or not recognised.
+
+    `None` deliberately conflates "the attribute was not there" with "the attribute said 'ja'":
+    both mean *this file has not told us whether it holds real patients*, and both are refused by
+    the audit for the same reason. The two are still distinguishable downstream, because the raw
+    string is carried alongside on `PadnextDelivery.echtdaten_declared` — the refusal message needs
+    to quote it back, since "your file says 'ja' and I do not know what that means" is actionable
+    and "something is wrong with echtdaten" is not.
+    """
+    if raw is None:
+        return None
+    value = raw.strip().lower()
+    if value in ECHTDATEN_REAL:
+        return True
+    if value in ECHTDATEN_TEST:
+        return False
+    return None
+
+
 class PadnextError(EngineError, RuntimeError):
     """The delivery cannot be read at all. Distinct from a finding, which is a readable problem.
 
@@ -311,10 +346,12 @@ def _read_order_file(data: bytes, findings: list[Warning_]) -> dict:
     if _local(root.tag) != "auftrag":
         return info
 
-    raw_echt = (root.get("echtdaten") or "").strip().lower()
-    if raw_echt:
-        # The spec allows both boolean spellings; "0"/"false" mean test data.
-        info["echtdaten"] = raw_echt in {"1", "true"}
+    raw_echt = root.get("echtdaten")
+    if raw_echt is not None and raw_echt.strip():
+        # Both the parsed tri-state and the string as written. The audit needs the first to decide
+        # and the second to explain — see `parse_echtdaten`.
+        info["echtdaten"] = parse_echtdaten(raw_echt)
+        info["echtdaten_declared"] = raw_echt.strip()
     info["transfernr"] = root.get("transfernr", "")
 
     typ = _child(root, "nachrichtentyp")
@@ -583,10 +620,35 @@ def read_delivery(
 
     declared_invoices = _int(root.get("anzahl", ""), field="rechnungen/@anzahl", findings=findings)
 
+    # ── Where the anonymisation declaration comes from ────────────────────────────────────────
+    #
+    # The order file first, because that is where the PADnext specification puts `@echtdaten` and
+    # a container that has one is the authoritative case.
+    #
+    # Then the payload root, which the specification does NOT define an `@echtdaten` for — it is an
+    # extension, permitted by the subset schema's `xs:anyAttribute` on `<rechnungen>`, and it exists
+    # for one situation: a BARE `*_padx.xml` uploaded without its order file. That is a supported
+    # input (the API takes either) and it has no `<auftrag>` to carry the flag, so before this it
+    # could not declare anything at all. Now that an undeclared delivery is refused, "cannot
+    # declare" would have meant "can never be audited", which would have removed a working path
+    # rather than securing one. `scripts/anonymize_padnext.py` writes the attribute in both places.
+    #
+    # The order file wins where both are present and disagree. It is the document the sending
+    # system signs the delivery with, and a payload that contradicts it is not a tie to break in
+    # the payload's favour.
+    declared = order.get("echtdaten_declared")
+    echtdaten = order.get("echtdaten")
+    if declared is None:
+        raw_root = root.get("echtdaten")
+        if raw_root is not None and raw_root.strip():
+            declared = raw_root.strip()
+            echtdaten = parse_echtdaten(raw_root)
+
     delivery = PadnextDelivery(
         nachrichtentyp=nachrichtentyp,
         version=version,
-        echtdaten=order.get("echtdaten"),
+        echtdaten=echtdaten,
+        echtdaten_declared=declared,
         declared_invoice_count=declared_invoices,
         invoices=invoices,
         container_members=members,

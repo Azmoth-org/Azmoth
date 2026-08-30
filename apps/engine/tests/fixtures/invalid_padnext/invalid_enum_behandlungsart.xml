@@ -13,7 +13,7 @@
   are accepted, then reported as `padnext_behandlungsart_not_mapped`. A value the specification
   does not define is a different thing from one this engine has no § 6a opinion about.
 -->
-<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+<rechnungen anzahl="1" echtdaten="false" xmlns="http://padinfo.de/ns/pad">
 
   <nachrichtentyp version="02.12">ADL</nachrichtentyp>
 

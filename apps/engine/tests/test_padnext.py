@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import zipfile
 from decimal import Decimal
 from pathlib import Path
@@ -16,12 +17,15 @@ from pathlib import Path
 import pytest
 
 from app.padnext import (
+    EchtdatenUndeclared,
     PadnextError,
     RealDataRefused,
     audit_delivery,
+    parse_echtdaten,
     read_delivery,
     read_file,
 )
+from app.errors import ErrorCode
 from app.config import PADNEXT_EXAMPLES_DIR, UnverifiedRulePolicy
 from app.core.canonical import canonical
 from app.padnext.audit import build_audit_input, derive_setting
@@ -93,14 +97,75 @@ def test_reads_the_bundled_payload(payload_bytes):
 
 
 def test_reads_a_padx_container_and_learns_echtdaten(order_bytes, payload_bytes):
-    """Without the order file there is no way to know whether the data is real."""
-    bare, _ = read_delivery(payload_bytes)
-    assert bare.echtdaten is None
-
+    """The order file's `@echtdaten` reaches the delivery, and so does the payload root's."""
     delivery, _ = read_delivery(make_container(order_bytes, payload_bytes))
     assert delivery.echtdaten is False
+    assert delivery.echtdaten_declared == "0"
     assert set(delivery.container_members) == {ORDER_NAME, PAYLOAD_NAME}
     assert len(delivery.positions()) == 9
+
+    # The bundled payload also carries the attribute on <rechnungen>, so it can declare itself when
+    # it is uploaded bare — which is how the public demo serves it. See the comment in the fixture.
+    bare, _ = read_delivery(payload_bytes)
+    assert bare.echtdaten is False
+    assert bare.echtdaten_declared == "false"
+
+
+def without_declaration(payload: bytes) -> bytes:
+    """The bundled payload with `@echtdaten` taken off its root element.
+
+    Targeted at the `<rechnungen …>` start tag rather than done with a blanket byte replace: the
+    fixture's comment header also spells the attribute out, and a test that accidentally edited a
+    comment instead of the document would pass for the wrong reason.
+    """
+    # Anchored at the start of a line: the fixture's comment header names `<rechnungen>` too, and
+    # an unanchored search edits the prose instead of the document — which is a test that passes
+    # for the wrong reason.
+    match = re.search(rb"^<rechnungen\b", payload, re.MULTILINE)
+    assert match, "no <rechnungen> root element at the start of a line"
+    start = match.start()
+    end = payload.index(b">", start)
+    tag = re.sub(rb'\s*echtdaten\s*=\s*"[^"]*"', b"", payload[start:end])
+    assert b"echtdaten" not in tag, tag
+    return payload[:start] + tag + payload[end:]
+
+
+def test_a_bare_payload_with_no_declaration_at_all_reads_as_unknown(payload_bytes):
+    """Strip the declaration and the reader says `None` — it does not guess, in either direction."""
+    delivery, _ = read_delivery(without_declaration(payload_bytes))
+    assert delivery.echtdaten is None
+    assert delivery.echtdaten_declared is None
+
+
+@pytest.mark.parametrize("raw", ["ja", "yes", "nein", "no", "wahr", "TRUE-ish", "2", "  "])
+def test_an_unrecognised_echtdaten_is_unknown_and_never_test_data(raw):
+    """The regression this exists for.
+
+    `parse_echtdaten` used to be `raw in {"1", "true"}`, which answered a three-valued question
+    with a boolean and made every value it did not recognise mean "test data". A German PVS
+    writing `echtdaten="ja"` therefore had its real deliveries audited as synthetic, silently.
+    `None` is the only honest answer to a word the specification does not define.
+    """
+    assert parse_echtdaten(raw) is None
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("1", True), ("true", True), ("TRUE", True), (" True ", True),
+     ("0", False), ("false", False), ("FALSE", False), (" false ", False),
+     (None, None), ("", None)],
+)
+def test_the_two_spellings_the_spec_defines_are_the_only_ones_recognised(raw, expected):
+    assert parse_echtdaten(raw) is expected
+
+
+def test_the_order_file_outranks_the_payload_root(order_bytes, payload_bytes):
+    """Both can carry `@echtdaten`. The order file is the one the sender signs the delivery with."""
+    real_order = order_bytes.replace(b'echtdaten="0"', b'echtdaten="1"')
+    delivery, _ = read_delivery(make_container(real_order, payload_bytes))
+
+    assert b'echtdaten="false"' in payload_bytes, "the payload claims to be test data"
+    assert delivery.echtdaten is True, "and the order file's contradiction wins"
 
 
 def test_the_committed_container_matches_the_committed_sources(order_bytes, payload_bytes):
@@ -175,7 +240,7 @@ def test_position_count_mismatch_is_reported(payload_bytes):
 
 def test_a_position_without_a_ziffer_is_reported_not_dropped():
     xml = """<?xml version="1.0"?>
-    <rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+    <rechnungen anzahl="1" echtdaten="false" xmlns="http://padinfo.de/ns/pad">
       <nachrichtentyp version="02.12">ADL</nachrichtentyp>
       <rechnung id="x"><abrechnungsfall><behandlungsart>0</behandlungsart>
         <positionen posanzahl="1"><goziffer positionsnr="1"><anzahl>1</anzahl></goziffer></positionen>
@@ -190,7 +255,7 @@ def test_unmodelled_position_types_are_reported_not_dropped():
     """Auslagen, Entschädigungen and GOZ positions are real. Skipping them silently would
     understate an invoice without saying so."""
     xml = """<?xml version="1.0"?>
-    <rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+    <rechnungen anzahl="1" echtdaten="false" xmlns="http://padinfo.de/ns/pad">
       <nachrichtentyp version="02.12">ADL</nachrichtentyp>
       <rechnung id="x"><abrechnungsfall><behandlungsart>0</behandlungsart>
         <positionen posanzahl="2">
@@ -205,7 +270,7 @@ def test_unmodelled_position_types_are_reported_not_dropped():
 
 def test_an_unparsable_number_is_reported_rather_than_silently_zero():
     xml = """<?xml version="1.0"?>
-    <rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">
+    <rechnungen anzahl="1" echtdaten="false" xmlns="http://padinfo.de/ns/pad">
       <nachrichtentyp version="02.12">ADL</nachrichtentyp>
       <rechnung id="x"><abrechnungsfall><behandlungsart>0</behandlungsart>
         <positionen posanzahl="1">
@@ -263,6 +328,105 @@ def test_the_example_carries_no_patient_identity(payload_bytes):
         assert tag not in text
 
 
+@pytest.mark.parametrize("spelling", ["ja", "yes", "nein", "no", "wahr", "2", "TEST"])
+def test_an_unrecognised_echtdaten_is_refused_not_treated_as_test_data(
+    pipeline, order_bytes, payload_bytes, monkeypatch, spelling
+):
+    """The headline case: `echtdaten="ja"`.
+
+    A German PVS writing "ja" means *yes, this is real data*. The old parser did not recognise the
+    word, mapped it to `False`, and audited a real delivery as synthetic — the exact inversion of
+    what the file was trying to say, and with no finding anybody could have noticed. Every value
+    outside the four the specification defines now refuses.
+
+    Parametrised over both polarities on purpose: "nein" is refused too. The rule is not "refuse
+    the ones that look affirmative", it is "refuse anything this engine would have to guess at" —
+    a rule that tried to interpret German would eventually meet a word it interpreted backwards.
+    """
+    monkeypatch.delenv("PADNEXT_ALLOW_REAL_DATA", raising=False)
+    order = order_bytes.replace(b'echtdaten="0"', f'echtdaten="{spelling}"'.encode())
+    delivery, findings = read_delivery(
+        make_container(order, without_declaration(payload_bytes)),
+        source_name="ja_padx.xml",
+    )
+
+    assert delivery.echtdaten is None, "unrecognised is not False"
+    assert delivery.echtdaten_declared == spelling
+
+    with pytest.raises(EchtdatenUndeclared) as excinfo:
+        audit_delivery(
+            delivery,
+            catalog=pipeline.catalog,
+            rules=pipeline.rules,
+            souffle_run=pipeline.souffle.run,
+            read_findings=findings,
+        )
+
+    error = excinfo.value
+    assert error.http_status == 422
+    assert error.error_code is ErrorCode.ECHTDATEN_UNDECLARED
+    # The refusal quotes the value back. "Something is wrong with echtdaten" sends somebody
+    # searching a 3 MB export; "it says 'ja'" is a one-line fix in the export profile.
+    assert f"'{spelling}'" in str(error)
+    assert error.details["echtdaten_declared"] == spelling
+    assert "anonymize_padnext.py" in str(error)
+
+
+def test_an_unrecognised_echtdaten_is_still_refused_when_the_payload_says_false(
+    pipeline, order_bytes, payload_bytes, monkeypatch
+):
+    """The order file outranks the payload, including when it outranks it into a refusal.
+
+    Otherwise the escape from this gate would be to leave `echtdaten="ja"` in the order file and
+    write `echtdaten="false"` in the payload — and the delivery whose two halves disagree about
+    whether it holds real patients is precisely the one that must not be audited.
+    """
+    monkeypatch.delenv("PADNEXT_ALLOW_REAL_DATA", raising=False)
+    order = order_bytes.replace(b'echtdaten="0"', b'echtdaten="ja"')
+    assert b'echtdaten="false"' in payload_bytes
+
+    delivery, findings = read_delivery(make_container(order, payload_bytes))
+    assert delivery.echtdaten is None
+
+    with pytest.raises(EchtdatenUndeclared):
+        audit_delivery(
+            delivery,
+            catalog=pipeline.catalog,
+            rules=pipeline.rules,
+            souffle_run=pipeline.souffle.run,
+            read_findings=findings,
+        )
+
+
+def test_an_operator_with_a_lawful_basis_can_still_audit_an_undeclared_delivery(
+    pipeline, order_bytes, payload_bytes, monkeypatch
+):
+    """`PADNEXT_ALLOW_REAL_DATA=1` opens both refusals, and the report carries a warning.
+
+    One switch, not two. Somebody who has established a lawful basis for real deliveries has
+    already accepted the weaker case of one that merely failed to declare itself, and a second
+    flag for that would be a second thing to get wrong.
+    """
+    monkeypatch.setenv("PADNEXT_ALLOW_REAL_DATA", "1")
+    order = order_bytes.replace(b'echtdaten="0"', b'echtdaten="ja"')
+    delivery, findings = read_delivery(
+        make_container(order, without_declaration(payload_bytes)), source_name="ja_padx.xml"
+    )
+
+    report = audit_delivery(
+        delivery,
+        catalog=pipeline.catalog,
+        rules=pipeline.rules,
+        souffle_run=pipeline.souffle.run,
+        read_findings=findings,
+    )
+
+    assert report.echtdaten is None
+    warning = next(f for f in report.findings if f.type == "padnext_echtdaten_unknown")
+    assert warning.severity == "warning", "not `info` — this is the delivery most worth a look"
+    assert "PADNEXT_ALLOW_REAL_DATA" in warning.message
+
+
 def test_real_data_is_refused_by_default(pipeline, order_bytes, payload_bytes, monkeypatch):
     monkeypatch.delenv("PADNEXT_ALLOW_REAL_DATA", raising=False)
     real = order_bytes.replace(b'echtdaten="0"', b'echtdaten="1"')
@@ -296,10 +460,34 @@ def test_real_data_can_be_allowed_only_by_an_explicit_opt_in(
     assert report.echtdaten is True
 
 
-def test_a_delivery_of_unknown_provenance_says_so(report):
-    """A bare payload has no order file, so we cannot know it is test data. Say that, do not
-    assume it."""
-    assert "padnext_echtdaten_unknown" in finding_types(report)
+def test_a_delivery_of_unknown_provenance_is_refused_rather_than_assumed_synthetic(
+    payload_bytes, pipeline
+):
+    """The posture this replaced was a finding on a report that was produced anyway.
+
+    A delivery that does not declare itself used to be audited with an `info` finding reading "Es
+    wurde von Testdaten ausgegangen" — an assumption the file had said nothing to support. It is
+    now a refusal, because the cost of the two mistakes is not comparable: a re-upload against an
+    Art. 9 processing of health data with no lawful basis.
+    """
+    delivery, findings = read_delivery(
+        without_declaration(payload_bytes), source_name="no_declaration_padx.xml"
+    )
+    assert delivery.echtdaten is None
+
+    with pytest.raises(EchtdatenUndeclared) as excinfo:
+        audit_delivery(
+            delivery,
+            catalog=pipeline.catalog,
+            rules=pipeline.rules,
+            souffle_run=pipeline.souffle.run,
+            read_findings=findings,
+        )
+
+    assert excinfo.value.error_code is ErrorCode.ECHTDATEN_UNDECLARED
+    assert excinfo.value.http_status == 422
+    assert "fehlt oder ist ungültig" in str(excinfo.value)
+    assert "anonymize_padnext.py" in str(excinfo.value)
 
 
 # ------------------------------------------------------------------------------------------
@@ -1125,6 +1313,9 @@ def _mutual_delivery(*positions: tuple[str, str, str]) -> PadnextDelivery:
     return PadnextDelivery(
         nachrichtentyp="ADL",
         version="02.12",
+        # Synthetic, and it has to say so: audit_delivery refuses a delivery that does not declare
+        # itself, whether it came from a file or was built here.
+        echtdaten=False,
         source_name="mutual_padx.xml",
         invoices=[
             PadnextInvoice(
@@ -1270,7 +1461,7 @@ def _one_position_delivery(ziffer: str, faktor: str, punktzahl: str, betrag: str
     """A minimal ADL payload with a single position, for probing one rule at a time."""
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
-        '<rechnungen anzahl="1" xmlns="http://padinfo.de/ns/pad">'
+        '<rechnungen anzahl="1" echtdaten="false" xmlns="http://padinfo.de/ns/pad">'
         '<nachrichtentyp version="02.12">ADL</nachrichtentyp>'
         "<rechnungsersteller><name>Synthetisch</name></rechnungsersteller>"
         '<leistungserbringer id="01"><name>Dr. Test</name></leistungserbringer>'
