@@ -776,8 +776,18 @@ def test_the_curation_tooling_stays_out_of_the_image():
         assert not tooling.exists(), (
             "requirements-tooling.txt reached the image — the Dockerfile is copying it in"
         )
+        def installed(name: str) -> bool:
+            """`find_spec` RAISES for a dotted name whose parent is absent, rather than returning
+            None — so `find_spec("google.genai")` blows up in the image, where there is no `google`
+            package at all, instead of reporting the absence it was asked about. A missing parent
+            is the strongest possible "not installed", so it is caught and answered as such."""
+            try:
+                return importlib.util.find_spec(name) is not None
+            except (ImportError, ValueError):
+                return False
+
         for package in ("anthropic", "openai", "google.genai"):
-            assert importlib.util.find_spec(package) is None, (
+            assert not installed(package), (
                 f"{package} is installed in the shipped image; the engine can reach a model API"
             )
         return
