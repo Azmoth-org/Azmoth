@@ -166,10 +166,19 @@ def test_the_pdf_caveat_counts_rather_than_asserts():
     Asserted against the module rather than a rendered document because the failure being guarded
     is somebody replacing the computed sentence with a fixed one — which is exactly what was there
     before, and which no assertion about a *rendered* PDF would notice until the figures next moved.
+
+    The source comes from the imported module rather than from a path built on `REPO_ROOT`. In a
+    checkout the two agree; in the container image they do not — the app is installed at `/srv/app`
+    and `REPO_ROOT` resolves to `/srv`, so `REPO_ROOT / "apps/engine/app/services/pdf.py"` names a
+    file that does not exist and this test could never pass where CI actually runs it. Asking the
+    module object where it came from is also the stronger assertion: it reads the code that was
+    imported, not a file we hope is the same one.
     """
+    import inspect
+
     from app.services import pdf
 
-    source = (REPO_ROOT / "apps/engine/app/services/pdf.py").read_text(encoding="utf-8")
+    source = inspect.getsource(pdf)
 
     assert hasattr(pdf, "_coverage_sentence"), (
         "the PDF's coverage caveat must be computed from the report; see _coverage_sentence"
