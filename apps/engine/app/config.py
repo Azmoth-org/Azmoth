@@ -228,6 +228,71 @@ class Settings(BaseSettings):
     #: `app.services.batch_audit.BatchAuditService.reap_interrupted_batches`.
     reap_interrupted_batches: bool = True
 
+    # -- the partner API ----------------------------------------------------------------
+    #
+    # Everything below serves `/api/v1/audit/*` — the surface a PVS vendor or a billing centre
+    # integrates against with an API key. The web tier does not use any of it: it reaches the
+    # engine through the trusted proxy headers instead (`app.api.tenancy`), which is why none of
+    # these have a "turn the credential off" escape hatch. A deployment that wanted one would be
+    # publishing an unauthenticated audit endpoint to the internet.
+
+    #: Largest single PADnext delivery `POST /api/v1/audit/single` accepts, in bytes.
+    #:
+    #: 5 MiB rather than the perimeter's 32 MiB, because this endpoint takes exactly one invoice
+    #: and the bundled synthetic example is 3 kB. A real ADL delivery that exceeds this is either a
+    #: container holding a year of invoices — which belongs on `/audit/bulk` — or a mistake.
+    max_single_xml_bytes: int = Field(default=5 * 1024 * 1024, gt=0)
+
+    #: Largest ZIP `POST /api/v1/audit/bulk` accepts, in bytes. Above the perimeter's default, so
+    #: `RequestSizeLimitMiddleware` carries a per-path override for this one route; see
+    #: `app.core.limits`.
+    max_bulk_zip_bytes: int = Field(default=50 * 1024 * 1024, gt=0)
+
+    #: How many members a bulk archive may hold, and how many bytes they may expand to.
+    #:
+    #: The second is the one that matters: a 50 MiB ZIP of zeroes expands to gigabytes, and a
+    #: worker that unpacked it would take the process down. Both are checked while the archive is
+    #: being read, entry by entry, so a bomb is refused before it is written anywhere.
+    max_bulk_archive_members: int = Field(default=500, gt=0)
+    max_bulk_uncompressed_bytes: int = Field(default=256 * 1024 * 1024, gt=0)
+
+    #: How many deliveries inside one bulk job may be audited at the same time.
+    #:
+    #: Four, and the number is about Soufflé rather than about Python: each audit is a subprocess,
+    #: so the ceiling is what bounds the memory and the CPU one upload can claim. Unbounded
+    #: concurrency here would let a 500-file job start 500 solvers.
+    bulk_solve_concurrency: int = Field(default=4, ge=1)
+
+    #: Keep a bulk upload's ZIP on disk after the job reaches a terminal status.
+    #:
+    #: False by default, and the default is the compliance-relevant one: a billing delivery is
+    #: retained only for as long as it is needed to produce the report, which is until the job
+    #: finishes. It is a setting rather than an unconditional delete because an operator debugging
+    #: a systematically failing integration needs the file that failed — and because the deletion
+    #: is what makes a *pending* job resumable, so this switch must never be read anywhere but on
+    #: the terminal transition. See `app.services.uploads`.
+    retain_bulk_uploads: bool = False
+
+    #: Where uploads are written. **Must be a writable volume, and it is not one by default in
+    #: the container**: `/srv` is root-owned and the runtime user is 10001, deliberately, so
+    #: nothing in a request path can write into the image. `infra/docker/docker-compose.yml`
+    #: mounts a named volume and points this at it.
+    #:
+    #: The default is right for a checkout — `./data/uploads`, beside the catalogs, git-ignored.
+    upload_dir: Path = DATA_DIR / "uploads"
+
+    #: Requests per minute per API key on `POST /api/v1/audit/single`, and bulk uploads per hour
+    #: per API key on `POST /api/v1/audit/bulk`. Both are per **key**, not per organisation: a
+    #: partner who needs more throughput for a second integration takes a second key, and one
+    #: runaway integration cannot spend the whole practice's budget.
+    rate_limit_single_per_minute: int = Field(default=100, ge=1)
+    rate_limit_bulk_per_hour: int = Field(default=10, ge=1)
+
+    #: Turn the limiter off. For the test cases that are not about it, and for a deployment that
+    #: has a real gateway in front doing the same job — an in-process counter behind a load
+    #: balancer counts one worker's share and nothing more (see `app.api.ratelimit`).
+    rate_limit_enabled: bool = True
+
     # -- paths --------------------------------------------------------------------------
     logic_dir: Path = LOGIC_DIR
     data_dir: Path = DATA_DIR
@@ -305,6 +370,16 @@ class Settings(BaseSettings):
     @property
     def schemas_dir(self) -> Path:
         return self.data_dir / "schemas"
+
+    @property
+    def bulk_upload_dir(self) -> Path:
+        """Where a bulk job's ZIP goes: `<upload_dir>/bulk`.
+
+        A property rather than a second setting, so an operator points `UPLOAD_DIR` at one volume
+        and every kind of upload lands under it — one thing to mount, one thing to back up, one
+        thing to apply a retention policy to.
+        """
+        return self.upload_dir / "bulk"
 
     @property
     def padnext_xsd_path(self) -> Path:

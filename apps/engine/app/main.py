@@ -1,8 +1,17 @@
 """FastAPI surface.
 
-Six routers, one prefix (`/api/v1`), no UI. The engine serves an API and nothing else: the POC's
+Eight routers, one prefix (`/api/v1`), no UI. The engine serves an API and nothing else: the POC's
 static pages, its demo endpoints and its experimental free-text path are deliberately absent — see
 `docs/migration/MIGRATION_PLAN.md` §2.
+
+**Two authentication boundaries, and they are not interchangeable.** Six of the routers are reached
+by our own web tier through a trusted proxy that has already resolved a Better Auth session, and
+they take their tenant from an asserted `X-Organization-ID` header (`app.api.tenancy`). The
+`audit` router is the commercial surface: it is reached directly by a PVS vendor or a billing
+centre over the internet, so it verifies an `X-API-Key` and takes the tenant from the *stored row*
+rather than from anything in the request (`app.api.apikeys`). `settings_keys` is the seam between
+them — it mints the keys, and it is behind the session, because a first key cannot be issued to a
+caller who already has one. `docs/api/PARTNER_API.md` is the contract those two publish.
 
 No solver ever runs on the event loop. Soufflé is a subprocess and Clingo runs in-process; both
 block, so a solve either sits in a plain `def` path function (which FastAPI dispatches to its
@@ -21,13 +30,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import catalog, health, padnext, proposals, rules, solve
+from app.api import audit, catalog, health, padnext, proposals, rules, settings_keys, solve
 from app.api.deps import batches, pipeline, reset_async
 from app.api.errors import register_error_handlers
 from app.config import get_settings
 from app.core.limits import RequestSizeLimitMiddleware
 from app.db.session import get_database, init_models
 from app.errors import ErrorResponse
+from app.services.uploads import ensure_upload_root
 
 settings = get_settings()
 
@@ -81,6 +91,12 @@ async def lifespan(_app: FastAPI):
             "stay PENDING/PROCESSING until something else closes it"
         )
 
+    # The upload volume, before the first partner can post to it. A failure here is a log line
+    # rather than a startup refusal: an engine that cannot write uploads still serves /solve,
+    # /audit/single and every read endpoint, and taking the whole service down over one feature
+    # would be the wrong trade. The bulk endpoint answers 503 on its own — see app/services/uploads.
+    ensure_upload_root(settings)
+
     if not p.souffle.available():
         log.error(
             "Soufflé binary '%s' not found — /solve and /padnext/audit will fail. See README.",
@@ -118,6 +134,29 @@ async def lifespan(_app: FastAPI):
         settings.solver_timeout_seconds,
     )
     log.info("database: %s (durable=%s)", database.url, settings.database_is_durable)
+
+    # Resume the bulk queue. `reap_interrupted_batches` above put every interrupted bulk job back
+    # to `PENDING` (its archive is still on disk, unlike an in-memory batch's payloads), so this
+    # picks up exactly the work a restart interrupted, plus anything queued and never drained.
+    #
+    # **Awaited here, before the server accepts a request, and that is not a stylistic choice.** An
+    # earlier version started it as a background task so startup would not wait on a backlog, and
+    # it was wrong on the default database: `DATABASE_URL` is SQLite, whose in-memory form shares
+    # one connection through `StaticPool` and whose file form has exactly one writer. A drain
+    # transacting while the first requests transact interleaves `BEGIN`/`COMMIT`/`ROLLBACK` on that
+    # single connection, and a rollback issued by the drain discards the *request's* write — a
+    # batch inserted by an endpoint that then vanished before its own background task could find
+    # it. That is the same reasoning `reap_interrupted_batches` states for running where it does:
+    # before anything is being served, nothing else is writing.
+    #
+    # The cost is stated rather than hidden: a large requeued backlog delays readiness, and a
+    # container's healthcheck `start_period` has to cover it. `REAP_INTERRUPTED_BATCHES=false` is
+    # the switch for a deployment that would rather resume from an admin step — it suppresses the
+    # requeue above, and there is then nothing here to drain.
+    resumed = await batches().drain_pending_jobs()
+    if resumed:
+        log.info("resumed %d queued bulk job(s) at startup: %s", len(resumed), ", ".join(resumed))
+
     try:
         yield
     finally:
@@ -155,6 +194,28 @@ app = FastAPI(
         {"name": "padnext", "description": "Audit an already-coded PADnext delivery."},
         {"name": "catalog", "description": "Catalog provenance and the mappable vocabulary."},
         {
+            "name": "audit",
+            "description": (
+                "**Die kommerzielle Schnittstelle.** PADnext hinein, JSON heraus, authentifiziert "
+                "mit `X-API-Key`. Einzelprüfung synchron, Massenprüfung als ZIP im Hintergrund, "
+                "Prüfbericht als PDF. Die Organisation ergibt sich aus dem Schlüssel — es gibt "
+                "keinen Header, mit dem ein Aufrufer eine andere angeben könnte.\n\n"
+                "**The commercial surface.** PADnext in, JSON out, authenticated by API key. One "
+                "delivery synchronously, an archive of many in the background, and a printable "
+                "report. The full contract is in `docs/api/PARTNER_API.md`."
+            ),
+        },
+        {
+            "name": "settings",
+            "description": (
+                "API-Schlüssel erzeugen, auflisten und widerrufen. Hinter der Sitzung, nicht "
+                "hinter einem Schlüssel — der erste Schlüssel kann niemandem ausgestellt werden, "
+                "der schon einen hat. — Mint, list and revoke API keys. Behind the session rather "
+                "than behind a key, because a first key cannot be issued to a caller who already "
+                "holds one."
+            ),
+        },
+        {
             "name": "rules",
             "description": (
                 "The rule verification workflow. 859 of 894 constraint rules were extracted from "
@@ -174,7 +235,19 @@ register_error_handlers(app)
 
 # Registered before anything else so an oversized body is refused at the perimeter, not after
 # FastAPI has already buffered it. See app/core/limits.py for the Content-Length caveat.
-app.add_middleware(RequestSizeLimitMiddleware, max_bytes=settings.max_request_bytes)
+#
+# The two overrides are the endpoints whose own limit differs from the global 32 MiB: the bulk
+# upload takes a larger archive, and the single partner audit takes a much smaller file. Both
+# numbers come from the same settings the endpoints enforce, so the perimeter and the handler
+# cannot disagree about them.
+app.add_middleware(
+    RequestSizeLimitMiddleware,
+    max_bytes=settings.max_request_bytes,
+    overrides=[
+        (f"{API_PREFIX}/audit/bulk", settings.max_bulk_zip_bytes),
+        (f"{API_PREFIX}/audit/single", settings.max_single_xml_bytes),
+    ],
+)
 
 #: Declared on every router so `ErrorResponse` is in the OpenAPI document and therefore in the
 #: generated TypeScript. Without this the envelope would be a shape clients discover by hitting it
@@ -184,5 +257,5 @@ ERROR_RESPONSES: dict = {
     "5XX": {"model": ErrorResponse, "description": "See docs/errors.md for the codes."},
 }
 
-for router in (health, solve, proposals, padnext, catalog, rules):
+for router in (health, solve, proposals, padnext, catalog, rules, audit, settings_keys):
     app.include_router(router.router, prefix=API_PREFIX, responses=ERROR_RESPONSES)

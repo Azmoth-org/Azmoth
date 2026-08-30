@@ -49,6 +49,198 @@
         "title": "AnalogDecision",
         "type": "object"
       },
+      "ApiKeyIssued": {
+        "additionalProperties": false,
+        "description": "A freshly minted key. **The only response that will ever carry the token.**\n\nIt extends `ApiKeySummary` rather than being a separate shape so that a client can treat the\ncreation response as a listing row with one extra field, which is what it is.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Better Auth user id of whoever minted it, where the request carried one.",
+            "title": "Created By"
+          },
+          "key_id": {
+            "description": "Die öffentliche Hälfte des Schlüssels. Erscheint in Logs, im Ratenlimit und ist der Wert, mit dem ein Schlüssel widerrufen wird. — The public half: what a log line names, what the rate limit counts, and what you pass to revoke this key.",
+            "title": "Key Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Letzte erfolgreiche Verwendung, auf etwa eine Minute genau — die Spalte wird absichtlich nicht bei jeder Anfrage geschrieben. `null` bedeutet: nie benutzt. — Last successful use, accurate to about a minute; `null` means never used.",
+            "title": "Last Used At"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "organization_id": {
+            "description": "Die Organisation, für die dieser Schlüssel handelt. Jede Anfrage mit ihm sieht ausschließlich deren Daten. — The organisation this key acts for. Every request made with it reaches that practice's data and no other.",
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Non-null means every request carrying this key is refused with a 401.",
+            "title": "Revoked At"
+          },
+          "token": {
+            "description": "Der vollständige API-Schlüssel, im Format `azm_live_<id>_<secret>`. **Er wird genau einmal angezeigt und ist danach nicht wiederherstellbar** — gespeichert wird nur sein SHA-256-Hash. Bewahren Sie ihn sofort im Secret-Store Ihrer Anwendung auf; geht er verloren, erzeugen Sie einen neuen und widerrufen den alten. — The complete key. Shown exactly once and unrecoverable afterwards: only its SHA-256 hash is stored. Save it now.",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_id",
+          "created_at",
+          "token",
+          "organization_id"
+        ],
+        "title": "ApiKeyIssued",
+        "type": "object"
+      },
+      "ApiKeyList": {
+        "additionalProperties": false,
+        "description": "This practice's keys, newest first.\n\nNo `total`, `limit` or `offset`, unlike the proposal and batch listings. A practice has a\nhandful of keys — the number is bounded by how many integrations it has, not by how long it has\nbeen a customer — so a page would be a ceremony over a list that fits on a screen. If that ever\nstops being true, adding the envelope is a change; adding it now would be a guess.",
+        "properties": {
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/ApiKeySummary"
+            },
+            "title": "Keys",
+            "type": "array"
+          }
+        },
+        "title": "ApiKeyList",
+        "type": "object"
+      },
+      "ApiKeyRequest": {
+        "additionalProperties": false,
+        "description": "What a caller sends to mint a key: a label, and nothing else.\n\nNothing else, deliberately. Not the organisation — that comes from the session the web tier\nalready verified, and a body field naming a tenant would be an endpoint for issuing yourself a\ncredential to somebody else's data. Not an expiry either: an expiring key that nothing renews\nis an integration that breaks at 3 a.m. for a reason nobody remembers, and rotation is a thing\nto do deliberately (mint, deploy, revoke) rather than a thing to schedule and forget.",
+        "properties": {
+          "name": {
+            "default": "",
+            "description": "Bezeichnung des Schlüssels, z. B. 'PVS-Export nächtlich' oder 'Rechnungszentrum Süd'. Frei wählbar und der einzige Anhaltspunkt, um später zu erkennen, wozu ein Schlüssel gehört — das Geheimnis selbst ist nicht mehr einsehbar. — A human label. The secret is never shown again, so this is the only way to tell two keys apart.",
+            "maxLength": 128,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "title": "ApiKeyRequest",
+        "type": "object"
+      },
+      "ApiKeyRevoked": {
+        "additionalProperties": false,
+        "description": "The answer to a revocation: which key, and when it stopped working.",
+        "properties": {
+          "key_id": {
+            "title": "Key Id",
+            "type": "string"
+          },
+          "revoked": {
+            "default": true,
+            "title": "Revoked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key_id"
+        ],
+        "title": "ApiKeyRevoked",
+        "type": "object"
+      },
+      "ApiKeySummary": {
+        "additionalProperties": false,
+        "description": "One key as it can be read back: everything about it except the secret.\n\n`revoked_at` is present rather than the row being filtered out of a listing, because \"this key\nwas revoked on the 3rd\" and \"this key never existed\" are different answers to the question an\noperator is asking when an integration stops working.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Better Auth user id of whoever minted it, where the request carried one.",
+            "title": "Created By"
+          },
+          "key_id": {
+            "description": "Die öffentliche Hälfte des Schlüssels. Erscheint in Logs, im Ratenlimit und ist der Wert, mit dem ein Schlüssel widerrufen wird. — The public half: what a log line names, what the rate limit counts, and what you pass to revoke this key.",
+            "title": "Key Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Letzte erfolgreiche Verwendung, auf etwa eine Minute genau — die Spalte wird absichtlich nicht bei jeder Anfrage geschrieben. `null` bedeutet: nie benutzt. — Last successful use, accurate to about a minute; `null` means never used.",
+            "title": "Last Used At"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Non-null means every request carrying this key is refused with a 401.",
+            "title": "Revoked At"
+          }
+        },
+        "required": [
+          "key_id",
+          "created_at"
+        ],
+        "title": "ApiKeySummary",
+        "type": "object"
+      },
       "ApprovalRequest": {
         "properties": {
           "approved_by": {
@@ -714,6 +906,21 @@
           "reason"
         ],
         "title": "BlockedCode",
+        "type": "object"
+      },
+      "Body_audit_bulk_api_v1_audit_bulk_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "Ein ZIP-Archiv mit den zu prüfenden PADnext-Lieferungen (`*.xml` / `*.padx`, auch in Unterordnern). Andere Dateien im Archiv werden übersprungen. — A ZIP holding the PADnext deliveries to audit; anything else in it is skipped.",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_audit_bulk_api_v1_audit_bulk_post",
         "type": "object"
       },
       "Body_padnext_batch_api_v1_padnext_batch_post": {
@@ -3789,6 +3996,14 @@
         "title": "ZifferResponse",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "AzmothApiKey": {
+        "description": "Der API-Schlüssel der Praxis bzw. des Rechnungszentrums, im Format `azm_live_<id>_<secret>`. Er bestimmt zugleich die Organisation, deren Daten die Anfrage sehen darf — es gibt keinen Header, mit dem ein Aufrufer eine andere Organisation angeben könnte.\n\nThe practice's API key. It also determines which organisation's data the request may reach; there is no header with which a caller could name a different one. Mint one with `POST /api/v1/settings/api-keys` from a signed-in session.",
+        "in": "header",
+        "name": "X-API-Key",
+        "type": "apiKey"
+      }
     }
   },
   "info": {
@@ -3798,6 +4013,370 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/audit/bulk": {
+      "get": {
+        "description": "Die Aufträge dieser Organisation, neueste zuerst, ohne die einzelnen Berichte.\n\nOhne diese Liste wäre ein Auftrag verloren, sobald der Aufrufer seine `job_id` verliert — das\nErgebnis läge in der Datenbank und nichts könnte danach fragen. Die Zeilen tragen die\nGesamtauswertung, aber **nicht** `files`: eine Liste mit allen Einzelberichten wäre megabyteweise\nJSON für eine Tabelle.\n\n---\n\nThis key's organisation's jobs, newest first, as headers without their per-delivery reports.\n\nIt exists for the same reason the web tier's batch listing does: a `job_id` is issued once, and\nan integration that loses it — a restarted worker, a lost log line — would otherwise have a\nfinished job in the database that nothing can ask for. `total` is recounted under the filters,\nso it says how many jobs match rather than how many rows exist.",
+        "operationId": "audit_bulk_list_api_v1_audit_bulk_get",
+        "parameters": [
+          {
+            "description": "Nur Aufträge in diesem Zustand. — Only jobs in this state; omit for every state.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/BatchJobStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nur Aufträge in diesem Zustand. — Only jobs in this state; omit for every state.",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Nur Aufträge ab diesem Zeitpunkt, **einschliesslich**. ISO-8601; ein Wert ohne Zeitzone wird als UTC gelesen. — Inclusive lower bound on creation time.",
+            "in": "query",
+            "name": "created_after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nur Aufträge ab diesem Zeitpunkt, **einschliesslich**. ISO-8601; ein Wert ohne Zeitzone wird als UTC gelesen. — Inclusive lower bound on creation time.",
+              "title": "Created After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchAuditJobList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "security": [
+          {
+            "AzmothApiKey": []
+          }
+        ],
+        "summary": "Aufträge dieses Schlüssels",
+        "tags": [
+          "audit"
+        ]
+      },
+      "post": {
+        "description": "Nimmt ein ZIP mit vielen Lieferungen an und prüft sie im Hintergrund.\n\n**Antwort.** Sofort `202` mit `job_id` (Feld `batch_id`) und `status: \"PENDING\"`. Die Prüfung\nhat zu diesem Zeitpunkt noch nicht begonnen. `file_count` sagt bereits, wie viele Lieferungen\nim Archiv gefunden wurden — das Archiv wird vor der Antwort geöffnet und geprüft, damit ein\nunbrauchbares Archiv ein `400` ist und kein Auftrag, der nach 30 Sekunden fehlschlägt.\n\nDen Fortschritt liefert `GET /api/v1/audit/bulk/{job_id}`; das Gesamtergebnis steht dort,\nsobald `status` auf `COMPLETED` steht.\n\n**Grenzen.** Archiv höchstens 50 MB, entpackt höchstens 256 MiB, höchstens 500 Lieferungen,\nhöchstens 10 Uploads pro Stunde und Schlüssel.\n\n---\n\nAccepts a ZIP of PADnext deliveries and audits them in the background.\n\nThe archive is written to disk **before** the response is sent, and that is what distinguishes\nthis from the web tier's in-memory batch upload: the job survives a restart. A `202` here is a\npromise that the work will happen, not that a process currently holding the bytes will manage\nto finish.\n\nReturns `202` immediately with the handle to poll. Errors carry `error_code`:\n`UNSUPPORTED_INPUT_FORMAT` (400, not a ZIP), `ARCHIVE_UNREADABLE` (400, a corrupt ZIP),\n`ARCHIVE_HAS_NO_DELIVERIES` (400, a valid ZIP holding no `.xml`/`.padx`), `ARCHIVE_TOO_LARGE`\n(413), `REQUEST_TOO_LARGE` (413), `RATE_LIMIT_EXCEEDED` (429) and `UPLOAD_STORAGE_UNAVAILABLE`\n(503, retryable — the deployment's upload volume is not writable).",
+        "operationId": "audit_bulk_api_v1_audit_bulk_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_audit_bulk_api_v1_audit_bulk_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchAuditAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "security": [
+          {
+            "AzmothApiKey": []
+          }
+        ],
+        "summary": "Viele PADnext-Lieferungen als ZIP prüfen (asynchron)",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/audit/bulk/{job_id}": {
+      "get": {
+        "description": "Fortschritt des Auftrags — und, sobald er fertig ist, das vollständige Ergebnis.\n\n**Während der Auftrag läuft** trägt `files` je Lieferung nur den Status und keinen Bericht: ein\nPoll im Zwei-Sekunden-Takt über hundert Dateien darf nicht hundert vollständige Berichte pro\nAbruf übertragen. `processed_file_count` / `file_count` ist der Fortschritt.\n\n**Sobald `status` `COMPLETED` ist**, trägt jede geprüfte Lieferung ihren vollständigen\n`PadnextAuditReport` — identisch zu dem, was `POST /api/v1/audit/single` für dieselbe Datei\ngeliefert hätte — und `aggregate_summary` die Gesamtauswertung.\n\n`files` ist nach `confirmed_wrong_eur` absteigend sortiert: das Riskanteste zuerst. Die\nSortierung passiert hier, weil die Beträge exakte Dezimalzeichenketten sind, die ein\nJavaScript-Client nicht in Zahlen zurückparsen darf.\n\n---\n\nProgress while it runs, the aggregated result once it is done. Poll this; there is no webhook.\n\n`PENDING` means queued and not yet started, `PROCESSING` means a worker has it, `COMPLETED`\nmeans every delivery reached a verdict, and `FAILED` means the job itself broke — a delivery\nthat could not be read is **not** a failed job, it is a `FAILED` entry in `files` with a reason,\nand the rest of the archive is still audited.",
+        "operationId": "audit_bulk_status_api_v1_audit_bulk__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchAuditJob"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "security": [
+          {
+            "AzmothApiKey": []
+          }
+        ],
+        "summary": "Fortschritt und Ergebnis eines Auftrags",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/audit/single": {
+      "post": {
+        "description": "Prüft eine einzelne PADnext-Lieferung gegen die GOÄ und liefert den vollständigen Bericht.\n\n**Antwort.** `200` mit dem kompletten `PadnextAuditReport`: jede Position mit Verdikt und\nBegründung, alle Befunde (`findings`), die drei Beträge nach Belegbarkeit\n(`confirmed_fine_eur`, `confirmed_wrong_eur`, `unconfirmed_eur`), die Prüfabdeckung und der\n`receipt_hash` über Katalog, Regelstand, Logikprogramme, Solver-Versionen und Eingabe.\n\n**`200` gilt auch für eine fehlerhafte Rechnung.** Der HTTP-Status beschreibt den API-Aufruf,\nnicht die Rechnung: neun gefundene Fehler sind eine erfolgreiche Prüfung. Nicht-2xx bedeutet\nausschliesslich, dass gar kein Bericht erstellt werden konnte.\n\n**Nicht beurteilbar ist kein Befund.** `unconfirmed_eur` ist die Grenze der Regelabdeckung\ndieser Engine, nicht ein Vorwurf gegen die Praxis. Die drei Beträge dürfen nie zu einer Summe\nzusammengefasst werden — siehe `docs/api/PARTNER_API.md`.\n\n---\n\nAudits one PADnext delivery against the GOÄ and returns the complete report, synchronously.\n\nThe response is the same `PadnextAuditReport` the web tier's `/padnext/audit` returns, produced\nby the same code against the same catalog — a delivery audited through either path gets the\nsame verdicts and the same `receipt_hash`.\n\nFindings in the invoice are **not** an HTTP error: `200` means the audit ran. Errors carry\n`error_code` — `UNSUPPORTED_INPUT_FORMAT` (400, a PDF or JSON body), `EMPTY_REQUEST_BODY`\n(400), `INVALID_XML` (400), `REQUEST_TOO_LARGE` (413, above 5 MiB),\n`PADNEXT_SCHEMA_VIOLATION` (422), `UNKNOWN_ZIFFER` (422, when no position is in this catalog),\n`REAL_DATA_REFUSED` (422), `RATE_LIMIT_EXCEEDED` (429) and `RULES_ENGINE_UNAVAILABLE` (503).\nSee `docs/errors.md`.\n\nSynchronous because one delivery is one Soufflé run of a few hundred milliseconds. The audit is\nhanded to the threadpool rather than run here: this is an `async def` (it has to read the body)\nand a blocking solve on the event loop would serialise the whole service behind it.",
+        "operationId": "audit_single_api_v1_audit_single_post",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "*_padx.xml oder .padx",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Die PADnext-Lieferung selbst: eine `*_padx.xml` oder ein `.padx`-Container. Entweder als `multipart/form-data` im Feld `file`, oder als roher Request-Body mit `Content-Type: application/xml`. — The PADnext delivery itself, as multipart or as a raw body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PadnextAuditReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "security": [
+          {
+            "AzmothApiKey": []
+          }
+        ],
+        "summary": "Eine PADnext-Lieferung prüfen (synchron)",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/audit/{job_id}/pdf": {
+      "post": {
+        "description": "Den abgeschlossenen Auftrag als druckbaren Prüfbericht.\n\nEnthält die drei Beträge nach Belegbarkeit, die Prüfabdeckung, jede Lieferung einzeln (nach\nRisiko sortiert) und die Prüfgrundlage: Katalogfassung, Katalog-Hash, Regel- und Logikstand.\nDer Hinweis, dass »nicht beurteilbar« kein Befund gegen die Praxis ist, steht als Absatz neben\nder Zahl — ein PDF überlebt den Bildschirm, von dem es kam, und wird von Menschen gelesen,\ndenen niemand die Lesart erklärt hat.\n\nNur ein `COMPLETED`-Auftrag kann gedruckt werden. Ein laufender ergäbe Zahlen aus einem nicht\nidentifizierbaren Moment, ein fehlgeschlagener hat gar keine Auswertung — beides ist `409`\nstatt einer Datei mit einem Vorbehalt, denn ein Vorbehalt überlebt es nicht, drei Wochen später\naus einem Ordner gezogen zu werden.\n\n---\n\nA completed job as a printable Prüfbericht. `POST` rather than `GET` because it renders a\ndocument rather than reading a stored one, and because that is the shape the brief specifies;\nit is nonetheless read-only and idempotent — the same job produces byte-identical output every\ntime, exactly as the CSV export does.\n\nOnly `COMPLETED`. See `app.services.pdf` for why there is no PDF library behind this.",
+        "operationId": "audit_pdf_api_v1_audit__job_id__pdf_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Der Prüfbericht als PDF, `{job_id}_pruefbericht.pdf`."
+          },
+          "409": {
+            "description": "Der Auftrag ist noch nicht abgeschlossen."
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "security": [
+          {
+            "AzmothApiKey": []
+          }
+        ],
+        "summary": "Prüfbericht als PDF",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
     "/api/v1/catalog": {
       "get": {
         "description": "Provenance and coverage — deliberately not the full 2000-entry dump.\n\nThe warnings are not decoration: rule coverage is `partial`, most exclusion rules were\nmachine-extracted and are unverified, and no Zielleistung pairs are loaded at all. Publishing\nthat is the difference between a defensible tool and one that overclaims.",
@@ -4792,6 +5371,150 @@
         ]
       }
     },
+    "/api/v1/settings/api-keys": {
+      "get": {
+        "description": "Alle Schlüssel dieser Praxis, neueste zuerst — **ohne** die Geheimnisse.\n\nWiderrufene Schlüssel bleiben in der Liste und tragen `revoked_at`. Das ist der Unterschied\nzwischen »dieser Schlüssel wurde am 3. widerrufen« und »diesen Schlüssel gab es nie«, und genau\ndas ist die Frage, die jemand stellt, wenn eine Integration morgens aufhört zu funktionieren.\n\n`last_used_at` ist auf etwa eine Minute genau: die Spalte wird bewusst nicht bei jeder Anfrage\ngeschrieben. Sie beantwortet »benutzt das noch jemand«, und das ist eine Frage über Tage.\n\n---\n\nThis practice's keys, newest first, with no secrets. Revoked keys are included and carry\n`revoked_at`; `last_used_at` is accurate to about a minute by design.",
+        "operationId": "list_api_keys_api_v1_settings_api_keys_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "API-Schlüssel dieser Praxis",
+        "tags": [
+          "settings"
+        ]
+      },
+      "post": {
+        "description": "Erzeugt einen API-Schlüssel für die aktive Praxis und gibt ihn **genau einmal** zurück.\n\nDer Schlüssel hat die Form `azm_live_<id>_<secret>` und wird nur als SHA-256-Hash gespeichert.\nEs gibt keinen Weg, ihn später erneut anzuzeigen — auch nicht für uns. Speichern Sie ihn sofort\nim Secret-Store Ihrer Anwendung; geht er verloren, erzeugen Sie einen neuen und widerrufen den\nalten.\n\nDer Schlüssel handelt ausschliesslich für die Organisation, in der die Sitzung gerade aktiv\nist. Er kann keine andere angeben: die Organisation steckt in der Datenbankzeile, nicht in der\nAnfrage.\n\nMehrfaches Aufrufen erzeugt mehrere gültige Schlüssel. Genau so wird rotiert: neuen erzeugen,\nausrollen, alten widerrufen (`DELETE /api/v1/settings/api-keys/{key_id}`).\n\n---\n\nMints a key for the session's active organisation and returns the token exactly once.\n\nOnly a SHA-256 hash is stored, so the secret cannot be shown again by anyone, including us.\nCalling this twice yields two live keys — which is how a rotation is performed.",
+        "operationId": "generate_api_key_api_v1_settings_api_keys_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyIssued"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "Einen neuen API-Schlüssel erzeugen",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/v1/settings/api-keys/{key_id}": {
+      "delete": {
+        "description": "Widerruft einen Schlüssel. Ab sofort wird jede Anfrage damit mit `401` abgelehnt.\n\nDie Zeile bleibt bestehen — widerrufen ist eine Spalte, kein `DELETE`. »Dieser Schlüssel war\nvon März bis Juli gültig« ist eine Frage, die in einer Abrechnungsstreitigkeit gestellt wird,\nund eine gelöschte Zeile kann sie nicht beantworten.\n\nIdempotent: ein bereits widerrufener Schlüssel bleibt widerrufen, mit dem ursprünglichen\nZeitpunkt. Ein Schlüssel einer anderen Praxis ergibt `404` und nicht `403` — sonst könnte man\ndurch Raten feststellen, welche Schlüssel-IDs überhaupt existieren.\n\n---\n\nRevokes a key; every request carrying it is refused with `401` from now on. The row stays and\ngains `revoked_at`. Idempotent, and a key belonging to another practice is a `404`.",
+        "operationId": "revoke_api_key_api_v1_settings_api_keys__key_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyRevoked"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "Einen API-Schlüssel widerrufen",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
     "/api/v1/solve": {
       "post": {
         "description": "Run the deterministic pipeline and store the result as a DRAFT proposal.\n\nThe response is a proposal, never an invoice: `status` is `DRAFT` and stays there until a\nnamed person approves it via `POST /api/v1/proposals/{id}/approve`. `receipt_hash` identifies\nthe catalog, rule tables, logic programs, solver versions, policy and input that produced it.\n\nThe draft is stamped with the calling organisation, which is what makes it visible to that\npractice and to no other. A request that does not name one is refused with `403` before the\nsolve runs — there is no default tenant to file a billing draft under, and inventing one would\nput a real encounter in a bucket nobody owns. See `docs/errors.md` under\n`ORGANIZATION_REQUIRED` for what to send.\n\nFailures carry `error_code`: `ORGANIZATION_REQUIRED` (403) if the request does not say which\npractice it is for, `VALIDATION_ERROR` (422) if the extraction does not match the schema,\n`SOLVER_TIMEOUT` (504) if the optimiser found no answer set inside `SOLVER_TIMEOUT_SECONDS`,\n`RULES_ENGINE_UNAVAILABLE` (503, retryable) if Soufflé could not be run, and\n`TRANSIENT_DB_FAILURE` (503, retryable) if the draft could not be stored. See `docs/errors.md`.",
@@ -4907,6 +5630,14 @@
     {
       "description": "Catalog provenance and the mappable vocabulary.",
       "name": "catalog"
+    },
+    {
+      "description": "**Die kommerzielle Schnittstelle.** PADnext hinein, JSON heraus, authentifiziert mit `X-API-Key`. Einzelprüfung synchron, Massenprüfung als ZIP im Hintergrund, Prüfbericht als PDF. Die Organisation ergibt sich aus dem Schlüssel — es gibt keinen Header, mit dem ein Aufrufer eine andere angeben könnte.\n\n**The commercial surface.** PADnext in, JSON out, authenticated by API key. One delivery synchronously, an archive of many in the background, and a printable report. The full contract is in `docs/api/PARTNER_API.md`.",
+      "name": "audit"
+    },
+    {
+      "description": "API-Schlüssel erzeugen, auflisten und widerrufen. Hinter der Sitzung, nicht hinter einem Schlüssel — der erste Schlüssel kann niemandem ausgestellt werden, der schon einen hat. — Mint, list and revoke API keys. Behind the session rather than behind a key, because a first key cannot be issued to a caller who already holds one.",
+      "name": "settings"
     },
     {
       "description": "The rule verification workflow. 859 of 894 constraint rules were extracted from the GOÄ's prose automatically and enforce nothing until a billing expert verifies them; verifying one shrinks the `unconfirmed` bucket of every later audit. Decisions are stored in Postgres and merged onto the versioned CSVs at load time — the CSVs themselves are never written by this API.",

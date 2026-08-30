@@ -5,6 +5,13 @@ symbolic layer), `solver`, `result`, `proposal`, `padnext`, `batch`, `export`, `
 import from here, so moving a model between them is not a breaking change.
 """
 
+from app.schemas.api_keys import (
+    ApiKeyIssued,
+    ApiKeyList,
+    ApiKeyRequest,
+    ApiKeyRevoked,
+    ApiKeySummary,
+)
 from app.schemas.batch import (
     BatchAggregateSummary,
     BatchAuditAccepted,
@@ -113,6 +120,11 @@ __all__ = [
     "EXPORT_FORMAT_VERSION",
     "AnalogDecision",
     "AnalogRequest",
+    "ApiKeyIssued",
+    "ApiKeyList",
+    "ApiKeyRequest",
+    "ApiKeyRevoked",
+    "ApiKeySummary",
     "ApprovalRequest",
     "AuditEventRecord",
     "AuditTrail",

@@ -13,12 +13,18 @@ engine is async and belongs to the lifespan, which is where `reset_async()` does
 
 `BatchAuditService` is the one that has to outlive its request: a `BackgroundTask` runs after the
 response, and it holds the bound method it was handed. Keeping the instance process-wide means the
-task cannot be running against an object the router has already discarded.
+task cannot be running against an object the router has already discarded. It is also where the
+bulk queue's per-process drain lock lives, so there must be exactly one of it — two instances would
+each hold their own lock and could drain the same queue at once.
+
+`ApiKeyStore` is on the hot path rather than outliving anything: it is asked to verify a credential
+on every request to `/api/v1/audit/*`.
 """
 
 from __future__ import annotations
 
 from app.db.session import reset_database
+from app.services.api_keys import ApiKeyStore
 from app.services.batch_audit import BatchAuditService
 from app.services.pipeline import Pipeline
 from app.services.proposal_store import ProposalStore
@@ -28,6 +34,7 @@ _pipeline: Pipeline | None = None
 _proposals: ProposalStore | None = None
 _batches: BatchAuditService | None = None
 _rule_reviews: RuleReviewStore | None = None
+_api_keys: ApiKeyStore | None = None
 
 
 def pipeline() -> Pipeline:
@@ -61,17 +68,40 @@ def rule_reviews() -> RuleReviewStore:
     return _rule_reviews
 
 
+def api_keys() -> ApiKeyStore:
+    """The store every partner request authenticates through.
+
+    A singleton for the same reason the other three are: it holds no connection of its own, and one
+    object per request would allocate for nothing. It is on the hot path — one call per
+    authenticated request — which is what makes "no connection pool of its own" load-bearing rather
+    than tidy: `get_database()` hands back the process's pool each time, so verification borrows a
+    connection and returns it rather than opening one.
+    """
+    global _api_keys
+    if _api_keys is None:
+        _api_keys = ApiKeyStore()
+    return _api_keys
+
+
 def reset() -> None:
     """Drop the in-process singletons. For tests that change settings between cases.
 
     Does not touch the database: the engine has to be disposed with an `await`, and a sync helper
     that quietly left a connection pool open would leak one per test. Use `reset_async`.
     """
-    global _pipeline, _proposals, _batches, _rule_reviews
+    global _pipeline, _proposals, _batches, _rule_reviews, _api_keys
     _pipeline = None
     _proposals = None
     _batches = None
     _rule_reviews = None
+    _api_keys = None
+
+    # The rate limiter's counters are process-wide state of exactly the same kind, and a test that
+    # exhausted a budget must not hand it to the next one. Cleared here rather than in a fixture of
+    # its own so there is one thing to call between tests.
+    from app.api.ratelimit import limiter
+
+    limiter().reset()
 
 
 async def reset_async() -> None:

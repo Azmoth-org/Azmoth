@@ -56,9 +56,15 @@ class ErrorCode(StrEnum):
     PADNEXT_SCHEMA_VIOLATION = "PADNEXT_SCHEMA_VIOLATION"
     UNKNOWN_ZIFFER = "UNKNOWN_ZIFFER"
     REAL_DATA_REFUSED = "REAL_DATA_REFUSED"
+    UNSUPPORTED_INPUT_FORMAT = "UNSUPPORTED_INPUT_FORMAT"
 
     # -- the client may not do this ------------------------------------------------------------
     ORGANIZATION_REQUIRED = "ORGANIZATION_REQUIRED"
+    API_KEY_REQUIRED = "API_KEY_REQUIRED"
+    API_KEY_INVALID = "API_KEY_INVALID"
+
+    # -- the client is doing it too often ------------------------------------------------------
+    RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
 
     # -- the client asked for something that is not there --------------------------------------
     CATALOG_NOT_FOUND = "CATALOG_NOT_FOUND"
@@ -263,6 +269,95 @@ class UnknownZifferError(EngineError):
         self.unknown_ziffern = sorted(set(unknown_ziffern))
 
 
+class UnsupportedInputFormat(EngineError):
+    """The caller sent something that is not PADnext XML. `400`, named rather than generic.
+
+    The commercial API takes one input format and it is worth being blunt about which: a PVS
+    integration that posts a PDF, a JSON body, or a bare ZIP to `/audit/single` is not going to
+    work out what happened from a schema violation three layers down. So the format is sniffed at
+    the edge — magic bytes and the first non-whitespace character, never the filename, which a
+    client controls and routinely gets wrong — and refused with the format it *looks* like named
+    in `details.detected`.
+
+    `400` rather than `415 Unsupported Media Type`: 415 is about the `Content-Type` header, and the
+    header is not what was wrong. A caller who declares `application/xml` and sends a PDF has sent
+    a bad *body*, and answering 415 would send them editing a header that was correct.
+    """
+
+    error_code = ErrorCode.UNSUPPORTED_INPUT_FORMAT
+    http_status = 400
+
+
+class ApiKeyRequired(EngineError):
+    """No `X-API-Key` on a request to the partner API. `401`.
+
+    `401`, and note the contrast with `ORGANIZATION_REQUIRED`, which is a `403` for what looks like
+    a similar refusal. The difference is real: the tenancy header is not a credential and the engine
+    cannot check one, so a `401` there would invite a client to retry with proof this service has no
+    way to verify. An API key *is* a credential, this endpoint *does* verify it, and a caller who
+    presents none has failed to authenticate — which is what `401` means.
+
+    A `WWW-Authenticate` header is deliberately not sent. The scheme is a bare header, not one of
+    the ones that header names, and advertising `Bearer` would send a client down an OAuth path
+    that does not exist here.
+    """
+
+    error_code = ErrorCode.API_KEY_REQUIRED
+    http_status = 401
+
+
+class ApiKeyInvalid(EngineError):
+    """The key does not resolve, or has been revoked. `401`.
+
+    Deliberately one exception for three different facts — no such key, a hash that does not match,
+    a key that was revoked — because the response must not distinguish them. A caller who could tell
+    "this key is unknown" from "this key was revoked" could enumerate which prefixes have ever been
+    issued, and a caller who could tell either from "the secret is wrong" could confirm a `key_id`
+    without holding its token. `details` carries nothing for the same reason.
+
+    The *message* does mention revocation, because the overwhelmingly likely reader is a partner
+    whose integration stopped working this morning, and "check whether this key was revoked" is the
+    sentence that saves them a support ticket. It says it as a possibility, not as a finding about
+    the key they sent.
+    """
+
+    error_code = ErrorCode.API_KEY_INVALID
+    http_status = 401
+
+
+class RateLimitExceeded(EngineError):
+    """The key has spent its budget for this window. `429`, with a `Retry-After`.
+
+    Retryable, and the one failure here where `retry_after` is a genuine promise rather than a
+    hint: the window is a fixed length and the limiter knows exactly when it rolls over, so the
+    value is computed from that instant rather than defaulted. See `app.api.ratelimit`.
+    """
+
+    error_code = ErrorCode.RATE_LIMIT_EXCEEDED
+    http_status = 429
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        limit: int,
+        window_seconds: int,
+        retry_after: int,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message,
+            details={
+                "limit": limit,
+                "window_seconds": window_seconds,
+                **(details or {}),
+            },
+            retry_after=retry_after,
+        )
+        self.limit = limit
+        self.window_seconds = window_seconds
+
+
 class SolverTimeoutError(EngineError):
     """The optimiser hit its hard ceiling before there was anything to return.
 
@@ -323,14 +418,18 @@ class EngineValidationDisagreement(EngineError):
 
 __all__ = [
     "DEFAULT_RETRY_AFTER_SECONDS",
+    "ApiKeyInvalid",
+    "ApiKeyRequired",
     "EmptyRequestBody",
     "EngineError",
     "EngineValidationDisagreement",
     "ErrorCode",
     "ErrorResponse",
+    "RateLimitExceeded",
     "RulesEngineUnavailable",
     "SolverTimeoutError",
     "TransientDatabaseError",
     "UnknownZifferError",
+    "UnsupportedInputFormat",
     "error_envelope",
 ]
