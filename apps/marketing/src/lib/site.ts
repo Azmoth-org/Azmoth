@@ -32,11 +32,21 @@ export function appHref(path: string): string {
   return new URL(path, getAppUrl()).toString();
 }
 
-/** The two product entry points every page links to. Server-side only. */
+/**
+ * The product entry points every page links to. Server-side only.
+ *
+ * `demo` is the one a stranger can actually use, and it is why the hero's primary call to action
+ * no longer points at `signup`. Registration is gated by `SIGNUP_ALLOWLIST` in the product app, so
+ * a "Kostenlos testen" button aimed there sends most visitors to a form that refuses them — which
+ * is a worse first impression than not offering it. `/demo` needs no account, takes no upload and
+ * shows the real engine on a synthetic delivery; `signup` stays as the deliberate second step for
+ * somebody who wants their own data audited.
+ */
 export function getProductLinks() {
   return {
     login: appHref("/login"),
     signup: appHref("/signup"),
+    demo: appHref("/demo"),
   };
 }
 

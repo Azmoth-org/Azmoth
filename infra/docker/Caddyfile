@@ -1,0 +1,179 @@
+# The only process on the box that listens on a public port.
+#
+# Caddy terminates TLS, gets its own certificates from Let's Encrypt over HTTP-01, renews them
+# unattended, and reverse-proxies to three containers that publish nothing to the host. Every
+# hostname below must already resolve to this VM's public IP before the first start, because
+# HTTP-01 works by Let's Encrypt fetching a token over port 80 — a DNS record added afterwards
+# means the first issuance failed and Caddy is in a retry backoff.
+#
+# Hostnames come from the environment, not from this file, so one config serves the pilot domain
+# and a staging one without an edit:
+#
+#     APP_DOMAIN=app.azmoth.app  API_DOMAIN=api.azmoth.app  MARKETING_DOMAIN=azmoth.app
+#     ACME_EMAIL=ops@azmoth.app
+#
+# Caddy substitutes {$VAR} when it loads the config. An unset variable becomes an empty string and
+# Caddy then refuses to start rather than serving an unnamed site, which is the failure you want.
+#
+# ── Why api.* is an allowlist rather than a reverse proxy ─────────────────────────────────────
+# The engine authenticates nobody. `app/api/identity.py` and `app/api/tenancy.py` both say so at
+# length: `X-User-ID` and `X-Organization-ID` are *asserted, not proven*, and what makes them
+# trustworthy is the deployment shape — one proxy in front, the engine unreachable otherwise.
+# tenancy.py puts it plainly: "A caller who can reach the engine directly can name any organisation
+# they like ... which is exactly why the engine must not be exposed."
+#
+# So a blanket `reverse_proxy engine:8000` on a public hostname would hand the internet
+# POST /api/v1/proposals and POST /api/v1/solve with a forgeable tenant header — anonymous writes
+# into an append-only audit log, and any practice's drafts readable by naming their organisation.
+#
+# What IS safe to publish is the commercial surface: `/api/v1/audit/*` takes `RequestApiKey`, whose
+# token is verified against the `api_keys` table on every call and whose tenant comes out of the
+# stored row, so no header can name someone else's practice. That is the contract in
+# docs/api/PARTNER_API.md, and it is exactly what this file exposes. Everything else on the engine
+# answers 404 from here and is reachable only from inside the compose network — which is where
+# `web` talks to it, over `ENGINE_BASE_URL=http://engine:8000`.
+#
+# Widening this is a security decision, not a configuration tweak. The change that earns it is the
+# one identity.py names: a Better Auth JWT the engine verifies itself.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+{
+	# Where Let's Encrypt sends expiry warnings if renewal has been failing. A real mailbox
+	# somebody reads — this is the only warning before a certificate lapses.
+	email {$ACME_EMAIL}
+
+	# No admin API. It is bound to localhost by default, but this box runs a container with a
+	# published port and there is nothing here that needs to reconfigure Caddy at runtime.
+	admin off
+
+	# One line per request, JSON, to stdout — so `docker compose logs caddy` is greppable the same
+	# way the engine's log is. Caddy's default is also JSON; stated here so the format is a
+	# property of this file rather than of a default that could change.
+	log {
+		output stdout
+		format json
+	}
+}
+
+# ── Snippets ──────────────────────────────────────────────────────────────────────────────────
+
+# Response headers every site gets. HSTS is deliberately NOT in here — see the note at app.* .
+(hardening) {
+	header {
+		# Stop a browser from MIME-sniffing a JSON error body into something executable.
+		X-Content-Type-Options "nosniff"
+		# This application is never framed. Clickjacking on an approval button is the concrete risk.
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Caddy advertises its version by default. It is not a vulnerability, it is a free hint.
+		-Server
+	}
+}
+
+# ── app.azmoth.app — the review and audit UI ──────────────────────────────────────────────────
+#
+# The only tier a browser talks to, and the tier that holds the Better Auth session. `web` reaches
+# the engine itself over the compose network; nothing here proxies to `engine`.
+{$APP_DOMAIN} {
+	import hardening
+
+	# HSTS, on the application host only. Not in the shared snippet, because `max-age` is a promise
+	# a browser will not let you take back for its duration: if this domain ever has to serve plain
+	# HTTP again, every browser that saw this header refuses to. It is right for the app — which is
+	# HTTPS-only for the life of the deployment and sets `Secure` session cookies (see
+	# `useSecureCookies` in apps/web/lib/auth.ts) — and it deliberately carries no `preload`, which
+	# is the same promise made irrevocably and to every browser at once.
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	encode zstd gzip
+
+	reverse_proxy web:3000 {
+		# Caddy sets X-Forwarded-For, X-Forwarded-Proto and X-Forwarded-Host on its own, and the
+		# web tier depends on all three: `trustedOrigins` in apps/web/lib/auth.ts compares the
+		# browser's `Origin` against `x-forwarded-host`, and reads `x-forwarded-proto` to know
+		# which scheme to trust. Without them every sign-in answers 403 INVALID_ORIGIN. They are
+		# not restated here — Caddy would set them anyway, and a hand-written copy is a thing that
+		# drifts.
+
+		# The container's own healthcheck already gates compose startup; this gates *routing*, so a
+		# web container that is up but not yet serving gets a 502 from Caddy rather than a hung
+		# request. Same endpoint the compose healthcheck uses, deliberately: it asks Next.js
+		# whether it can serve, and is not a proxy to the engine.
+		health_uri /api/health
+		health_interval 10s
+		health_timeout 5s
+	}
+}
+
+# ── api.azmoth.app — the partner API, and nothing else ────────────────────────────────────────
+#
+# Read the long note at the top of this file before adding a path here.
+{$API_DOMAIN} {
+	import hardening
+
+	encode zstd gzip
+
+	# A hostile client should not be able to fill the data disk with a single POST. The engine's
+	# own limits are 5 MiB for a single delivery and 50 MB for a bulk archive (apps/engine/app/api/
+	# audit.py), and it answers those with a structured `REQUEST_TOO_LARGE` an integrator can act
+	# on. This cap is set well above both so the engine's message is what a caller normally sees;
+	# Caddy's blunter 413 is the backstop for something an order of magnitude out.
+	request_body {
+		max_size 64MB
+	}
+
+	# The allowlist. `handle` blocks are mutually exclusive and matched in order, so the final
+	# bare `handle` catches everything not named above it.
+
+	# The commercial surface. Every endpoint under it takes `RequestApiKey`: the token in
+	# `X-API-Key` is verified against the `api_keys` table on each request and the tenant comes out
+	# of the stored row, so this is safe to publish in a way the rest of the engine is not.
+	handle /api/v1/audit* {
+		reverse_proxy engine:8000
+	}
+
+	# Liveness, for an uptime monitor. Read-only, no tenant, no data — it reports whether Soufflé
+	# loaded and the catalog is present.
+	handle /api/v1/health {
+		reverse_proxy engine:8000
+	}
+
+	# The machine-readable contract and its interactive copy, for an integrator wiring up a client.
+	# Both are static descriptions of the API, not access to it.
+	#
+	# Serving /docs also serves the "Try it out" button, which will fail against every endpoint an
+	# integrator has no key for — that is correct and is the point.
+	handle /openapi.json {
+		reverse_proxy engine:8000
+	}
+	handle /docs* {
+		reverse_proxy engine:8000
+	}
+
+	# Everything else on the engine — /api/v1/solve, /api/v1/proposals/*, /api/v1/padnext/*,
+	# /api/v1/settings/*, /api/v1/rules/*, /api/v1/demo/* — is the web application's own and
+	# authenticates by an asserted header. It is not published.
+	#
+	# 404 rather than 403: a 403 confirms the path exists, which tells someone probing this host
+	# exactly which endpoints to come back to when the auth model changes.
+	handle {
+		respond "Not Found" 404
+	}
+}
+
+# ── azmoth.app and www.azmoth.app — the public marketing site ─────────────────────────────────
+#
+# Holds no data, talks to nothing, has no session. It is in this file because it is the other thing
+# with a public hostname, not because it is part of the application.
+#
+# The apex redirects to www so there is one canonical origin — `MARKETING_SITE_URL` builds the
+# sitemap and every og:url from a single value, and two origins serving identical pages is what
+# splits them.
+{$MARKETING_DOMAIN} {
+	redir https://www.{$MARKETING_DOMAIN}{uri} permanent
+}
+
+www.{$MARKETING_DOMAIN} {
+	import hardening
+	encode zstd gzip
+	reverse_proxy marketing:3000
+}

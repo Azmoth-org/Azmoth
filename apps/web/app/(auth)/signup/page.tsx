@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
@@ -12,21 +13,30 @@ import { googleSignInEnabled } from "@/lib/auth-google"
 export const metadata: Metadata = {
   title: "Registrieren",
   description:
-    "Konto für die GOÄ-Prüfung anlegen. Interne Anwendung, nur synthetische Daten.",
+    "Konto für die GOÄ-Prüfung anlegen. Der Zugang ist derzeit auf freigeschaltete " +
+    "Pilot-Teilnehmer beschränkt.",
 }
 
 /**
- * Create an account.
+ * Create an account — for an address on `SIGNUP_ALLOWLIST`.
  *
- * Open to anyone who can reach this URL, which is a gap rather than a feature — see the note in
- * `lib/auth.ts` and `docs/compliance/PRIVATE_DATA_WARNING.md`. It is acceptable for a build that
- * holds only synthetic data and has to be closed (invite, or SSO) before one holds a real record.
- * Google does not narrow that gap and is not a substitute for closing it: any Google account can
- * register here, not only one from a particular Workspace domain.
+ * The gate is in `lib/auth.ts`'s `user.create.before` hook rather than on this screen, which means
+ * it covers Google sign-in as well as the password form: both create a user row, and both are
+ * refused by the same three lines. A check written here would guard one of the two doors.
+ *
+ * **The notice below is shown to everybody, before anyone types anything.** A form that accepts an
+ * email and a password and then refuses is a small cruelty and a support ticket; saying up front
+ * that the pilot is invite-only turns the same refusal into an expectation. It deliberately does
+ * not say whether a *particular* address is on the list — that answer only comes from submitting,
+ * and `SIGNUP_REFUSED_MESSAGE` is worded so that "not configured" and "not listed" are
+ * indistinguishable to a stranger.
+ *
+ * A visitor who only wants to see the product is sent to `/demo`, which needs no account at all.
+ * That link is the reason this screen can be strict without being a dead end.
  *
  * A new account belongs to no organisation. The rail's header says so ("Keine Organisation") and
- * offers to create one — registering does not silently make a practice on somebody's behalf, because
- * an organisation is a boundary and inventing one would be inventing the wrong one.
+ * offers to create one — registering does not silently make a practice on somebody's behalf,
+ * because an organisation is a boundary and inventing one would be inventing the wrong one.
  *
  * The Google button is the same component `/login` renders and reaches the same endpoint — OAuth has
  * one door, and whether it registers or signs in depends on the account rather than on which screen
@@ -53,7 +63,28 @@ export default async function SignupPage({
             <Alert variant="destructive" role="alert">
               <AlertDescription>{failure}</AlertDescription>
             </Alert>
-          ) : null
+          ) : (
+            <Alert>
+              <AlertDescription className="space-y-2">
+                <p>
+                  Die Registrierung ist derzeit auf{" "}
+                  <strong>freigeschaltete Pilot-Teilnehmer</strong> beschränkt.
+                  Wenn Ihre Adresse noch nicht freigegeben ist, schreiben Sie uns
+                  kurz — wir schalten sie frei.
+                </p>
+                <p>
+                  Sie möchten die Prüfung zuerst nur ansehen?{" "}
+                  <Link
+                    href="/demo"
+                    className="font-medium underline underline-offset-4"
+                  >
+                    Zur Demo mit Beispieldaten
+                  </Link>{" "}
+                  — ohne Konto und ohne Upload.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )
         }
         social={
           googleSignInEnabled() ? (

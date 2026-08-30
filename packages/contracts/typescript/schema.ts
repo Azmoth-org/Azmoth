@@ -242,6 +242,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/demo/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Beispiel-Lieferung prüfen (öffentlich, ohne Anmeldung)
+         * @description Die mitgelieferte synthetische Beispiel-Lieferung, geprüft.
+         *
+         *     **Ohne Anmeldung erreichbar und ohne Eingabe.** Der Endpunkt nimmt keine Datei entgegen — er
+         *     prüft ausschliesslich die im Repository hinterlegte synthetische Lieferung mit ihren neun
+         *     bewusst eingebauten Fehlern. Es gibt daher keine Anfrage, mit der ein Besucher eigene Daten in
+         *     dieses System bringen könnte; das ist der Grund, warum diese Demo öffentlich sein darf.
+         *
+         *     Die Antwort ist derselbe `PadnextAuditReport`, den `/api/v1/audit/single` für dieselbe Datei
+         *     liefert, aus demselben Code gegen denselben Katalog — gleiche Verdikte, gleicher
+         *     `receipt_hash`. Die Demo zeigt also das Produkt und nicht eine Nachbildung davon.
+         *
+         *     ---
+         *
+         *     The bundled nine-error synthetic delivery, audited. No authentication, and — more importantly —
+         *     no request body, so this cannot be turned into an upload endpoint by a caller. Deterministic
+         *     and memoised: see `app.services.demo`.
+         */
+        post: operations["demo_audit_api_v1_demo_audit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/report.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Beispiel-Prüfbericht als PDF (öffentlich, ohne Anmeldung)
+         * @description Derselbe Bericht als druckbares PDF, mit dem Demo-Hinweis im Dokument.
+         *
+         *     `POST` statt `GET`, wie beim Stapelbericht: der Endpunkt rendert ein Dokument, statt ein
+         *     gespeichertes zu lesen. Er ist trotzdem idempotent — dieselbe Lieferung ergibt dieselben Bytes.
+         *
+         *     ---
+         *
+         *     The same report as a printable PDF. The demo note is rendered *into* the document rather than
+         *     stamped over it, so that a forwarded copy still says what it is.
+         */
+        post: operations["demo_pdf_api_v1_demo_report_pdf_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -3628,6 +3691,89 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ZifferResponse"];
                 };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    demo_audit_api_v1_demo_audit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PadnextAuditReport"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    demo_pdf_api_v1_demo_report_pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Der Prüfbericht als PDF, `azmoth_demo_pruefbericht.pdf`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description Die Beispiel-Lieferung ist in dieser Installation nicht verfügbar. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description See docs/errors.md for the codes. */
             "4XX": {

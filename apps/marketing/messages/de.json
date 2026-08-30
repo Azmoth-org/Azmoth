@@ -28,9 +28,9 @@
       "badge": "Für Privatliquidation nach GOÄ",
       "titel": "Jede Ziffer begründet. Jede Rechnung belastbar.",
       "untertitel": "Azmoth liest Ihre Behandlungsdokumentation, schlägt die passenden GOÄ-Ziffern vor und legt für jede einzelne offen, aus welcher Regel sie folgt. Kein Blackbox-Vorschlag, den Sie der Erstattungsstelle nicht erklären können.",
-      "ctaPrimaer": "Kostenlos testen",
-      "ctaSekundaer": "Funktionen ansehen",
-      "hinweis": "Kein Zahlungsmittel erforderlich."
+      "ctaPrimaer": "Live-Demo mit Beispieldaten",
+      "ctaSekundaer": "Mit eigenen Daten prüfen (Pilot-Zugang anfordern)",
+      "hinweis": "Die Demo läuft ohne Anmeldung und ohne Upload — geprüft wird eine synthetische Beispielrechnung. Der Pilotbetrieb mit eigenen, pseudonymisierten Daten ist derzeit auf freigeschaltete Teilnehmer beschränkt."
     },
     "ablauf": {
       "titel": "Drei Schritte bis zur geprüften Rechnung",

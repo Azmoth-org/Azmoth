@@ -598,8 +598,11 @@ def audit_delivery(
     settings = settings or get_settings()
     if delivery.echtdaten is True and not real_data_allowed(settings):
         raise RealDataRefused(
-            "This PADnext delivery is flagged as production data (auftrag/@echtdaten). This "
-            "proof of concept processes synthetic data only and has refused it. Set "
+            "Das Hochladen von Echtdaten ist im Pilotmodus nicht gestattet. Diese PADnext-"
+            "Lieferung ist als Echtdaten gekennzeichnet (auftrag/@echtdaten). Bitte nutzen Sie "
+            "das Azmoth-Anonymisierungsskript und laden Sie die Datei erneut hoch. "
+            "— This PADnext delivery is flagged as production data (auftrag/@echtdaten). This "
+            "deployment processes synthetic data only and has refused it. Set "
             "PADNEXT_ALLOW_REAL_DATA=1 only if you have a lawful basis and appropriate controls."
         )
 

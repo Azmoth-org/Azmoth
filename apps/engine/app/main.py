@@ -30,7 +30,17 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import audit, catalog, health, padnext, proposals, rules, settings_keys, solve
+from app.api import (
+    audit,
+    catalog,
+    demo,
+    health,
+    padnext,
+    proposals,
+    rules,
+    settings_keys,
+    solve,
+)
 from app.api.deps import batches, pipeline, reset_async, usage_meter
 from app.api.errors import register_error_handlers
 from app.config import LogFormat, get_settings
@@ -204,6 +214,16 @@ app = FastAPI(
         {"name": "padnext", "description": "Audit an already-coded PADnext delivery."},
         {"name": "catalog", "description": "Catalog provenance and the mappable vocabulary."},
         {
+            "name": "demo",
+            "description": (
+                "The public demo. Reachable without a credential, and — the property that "
+                "makes that acceptable — it accepts no input: both endpoints audit one "
+                "committed synthetic delivery whose path is a constant, so no request can "
+                "cause this service to process a visitor's own data. Outside the partner "
+                "contract in `docs/api/PARTNER_API.md`; see `app/api/demo.py`."
+            ),
+        },
+        {
             "name": "audit",
             "description": (
                 "**Die kommerzielle Schnittstelle.** PADnext hinein, JSON heraus, authentifiziert "
@@ -278,5 +298,5 @@ ERROR_RESPONSES: dict = {
 
 app.add_middleware(RequestContextMiddleware)
 
-for router in (health, solve, proposals, padnext, catalog, rules, audit, settings_keys):
+for router in (health, solve, proposals, padnext, catalog, rules, audit, settings_keys, demo):
     app.include_router(router.router, prefix=API_PREFIX, responses=ERROR_RESPONSES)

@@ -4636,6 +4636,94 @@
         ]
       }
     },
+    "/api/v1/demo/audit": {
+      "post": {
+        "description": "Die mitgelieferte synthetische Beispiel-Lieferung, geprüft.\n\n**Ohne Anmeldung erreichbar und ohne Eingabe.** Der Endpunkt nimmt keine Datei entgegen — er\nprüft ausschliesslich die im Repository hinterlegte synthetische Lieferung mit ihren neun\nbewusst eingebauten Fehlern. Es gibt daher keine Anfrage, mit der ein Besucher eigene Daten in\ndieses System bringen könnte; das ist der Grund, warum diese Demo öffentlich sein darf.\n\nDie Antwort ist derselbe `PadnextAuditReport`, den `/api/v1/audit/single` für dieselbe Datei\nliefert, aus demselben Code gegen denselben Katalog — gleiche Verdikte, gleicher\n`receipt_hash`. Die Demo zeigt also das Produkt und nicht eine Nachbildung davon.\n\n---\n\nThe bundled nine-error synthetic delivery, audited. No authentication, and — more importantly —\nno request body, so this cannot be turned into an upload endpoint by a caller. Deterministic\nand memoised: see `app.services.demo`.",
+        "operationId": "demo_audit_api_v1_demo_audit_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PadnextAuditReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "Beispiel-Lieferung prüfen (öffentlich, ohne Anmeldung)",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
+    "/api/v1/demo/report.pdf": {
+      "post": {
+        "description": "Derselbe Bericht als druckbares PDF, mit dem Demo-Hinweis im Dokument.\n\n`POST` statt `GET`, wie beim Stapelbericht: der Endpunkt rendert ein Dokument, statt ein\ngespeichertes zu lesen. Er ist trotzdem idempotent — dieselbe Lieferung ergibt dieselben Bytes.\n\n---\n\nThe same report as a printable PDF. The demo note is rendered *into* the document rather than\nstamped over it, so that a forwarded copy still says what it is.",
+        "operationId": "demo_pdf_api_v1_demo_report_pdf_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Der Prüfbericht als PDF, `azmoth_demo_pruefbericht.pdf`."
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "503": {
+            "description": "Die Beispiel-Lieferung ist in dieser Installation nicht verfügbar."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "Beispiel-Prüfbericht als PDF (öffentlich, ohne Anmeldung)",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "description": "Versions, coverage, and whether both solvers just solved something.\n\nA plain `def`, so FastAPI dispatches it to the threadpool. That is load-bearing rather than\nincidental: the Soufflé probe spawns a subprocess and blocks on it, and running that on the\nevent loop would stall every other request for the length of an interpreter start. It is also\nwhy the probes are cached — see `app.services.solver_probe`.",
@@ -5882,6 +5970,10 @@
     {
       "description": "Catalog provenance and the mappable vocabulary.",
       "name": "catalog"
+    },
+    {
+      "description": "The public demo. Reachable without a credential, and — the property that makes that acceptable — it accepts no input: both endpoints audit one committed synthetic delivery whose path is a constant, so no request can cause this service to process a visitor's own data. Outside the partner contract in `docs/api/PARTNER_API.md`; see `app/api/demo.py`.",
+      "name": "demo"
     },
     {
       "description": "**Die kommerzielle Schnittstelle.** PADnext hinein, JSON heraus, authentifiziert mit `X-API-Key`. Einzelprüfung synchron, Massenprüfung als ZIP im Hintergrund, Prüfbericht als PDF. Die Organisation ergibt sich aus dem Schlüssel — es gibt keinen Header, mit dem ein Aufrufer eine andere angeben könnte.\n\n**The commercial surface.** PADnext in, JSON out, authenticated by API key. One delivery synchronously, an archive of many in the background, and a printable report. The full contract is in `docs/api/PARTNER_API.md`.",

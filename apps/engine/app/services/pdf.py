@@ -33,6 +33,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from app.schemas.batch import BatchAggregateSummary, BatchAuditJob, BatchFileStatus
+from app.schemas.padnext import PadnextAuditReport
 
 log = logging.getLogger(__name__)
 
@@ -538,10 +539,256 @@ def render_batch_report(job: BatchAuditJob, *, organization_id: str) -> bytes:
     return canvas.render()
 
 
+def _single_coverage_sentence(report: PadnextAuditReport) -> str:
+    """Why this one delivery could not be judged in full — counted from the report, never asserted.
+
+    The single-delivery twin of `_coverage_sentence`, and it exists for the identical reason: the
+    paragraph beside the amber number decides whether a reader takes »nicht beurteilbar« for "we
+    could not check this" or for "we suspect this", and a hardcoded claim about rule coverage is a
+    sentence with no mechanism to stay true. Every figure below comes off the report being printed.
+    """
+    parts: list[str] = []
+    detail = report.rule_coverage_detail
+
+    if detail is not None and detail.total_constraint_rule_count:
+        parts.append(
+            f"Von {detail.total_constraint_rule_count} hinterlegten Regeln waren bei dieser "
+            f"Prüfung {detail.enforced_rule_count} durchgesetzt"
+        )
+        if detail.suppressed_unverified_rule_count:
+            parts.append(
+                f", {detail.suppressed_unverified_rule_count} weitere sind noch nicht von einer "
+                "Abrechnungsfachkraft bestätigt und werden deshalb nicht angewendet"
+            )
+        parts.append(". ")
+    else:
+        parts.append(
+            f"Bei dieser Prüfung waren {report.enforced_rule_count} Regeln durchgesetzt und "
+            f"{report.advisory_rule_count} nur beratend. "
+        )
+
+    unconfirmed = sum(1 for p in report.positions if p.bucket == "unconfirmed")
+    total = len(report.positions)
+    if total and unconfirmed:
+        parts.append(
+            f"Für {unconfirmed} der {total} abgerechneten Positionen greift keine verifizierte "
+            "Regel: der hinterlegte Regelsatz deckt diese Ziffern noch nicht ab. Was hier fehlt, "
+            "ist also die Reichweite der Regeln über den Gebührenkatalog, nicht das Vertrauen "
+            "in die Regeln selbst."
+        )
+    elif total:
+        parts.append(
+            f"Für alle {total} abgerechneten Positionen konnte eine verifizierte Regel "
+            "herangezogen werden."
+        )
+
+    return "".join(parts).strip()
+
+
+#: Print order for the position table: what the practice must act on first, then what it must
+#: look at, then what is settled. The same ordering `load_batch` applies across a batch, applied
+#: here within one delivery — a reader who has seen one of these reports can read the other.
+_BUCKET_ORDER = {"confirmed_wrong": 0, "unconfirmed": 1, "confirmed_fine": 2}
+
+_BUCKET_LABEL = {
+    "confirmed_wrong": "belegbar nicht abrechenbar",
+    "unconfirmed": "nicht beurteilbar",
+    "confirmed_fine": "belegbar korrekt",
+}
+
+
+def render_single_report(report: PadnextAuditReport, *, note: str | None = None) -> bytes:
+    """One audited delivery as a Prüfbericht, ready to hand a Rechnungsprüfer.
+
+    The single-delivery counterpart to `render_batch_report`, and deliberately the same document in
+    the same order: what was checked, the three buckets with the caveat spelled out beside them,
+    then the positions riskiest first. A reader who has seen a batch report can read this one
+    without being told anything, which is the whole reason it is not laid out to suit itself.
+
+    Until this existed a single audit had no printable form at all — `/audit/single` returned JSON
+    and the only PDF in the product came from a completed *batch*. That gap is what the public
+    demo would otherwise have had to work around with a browser print dialog, and a second
+    rendering path is a second place for the money to be wrong.
+
+    `note` is stamped under the title, in the one register a PDF has for saying what it is: the
+    public demo passes the sentence that says this is synthetic. It is deliberately part of the
+    document rather than a watermark, because a watermark is the first thing a photocopier loses.
+
+    Deterministic, like everything else in this module: same report, same bytes.
+    """
+    canvas = PdfCanvas(title=f"Prüfbericht {report.source_name or 'PADnext'}")
+
+    canvas.text("Azmoth — GOÄ-Prüfbericht", size=17, bold=True, leading=24)
+    canvas.text(
+        "Systematische Prüfung einer PADnext-Lieferung gegen die GOÄ", size=10, leading=18
+    )
+    if note:
+        canvas.text(note, size=9, bold=True, leading=16)
+    canvas.rule(thickness=1)
+    canvas.space(4)
+
+    canvas.row([(0, "Datei"), (110, report.source_name or "-")], bold=False)
+    canvas.row([(0, "Nachrichtentyp"), (110, report.nachrichtentyp or "-")])
+    canvas.row([(0, "Setting (§ 6a)"), (110, f"{report.setting} ({report.setting_source or '-'})")])
+    canvas.row([(0, "Katalog"), (110, report.catalog_version or "-")])
+    canvas.row([(0, "Positionen"), (110, str(len(report.positions)))])
+    canvas.space(10)
+
+    # ---- the three buckets ------------------------------------------------------------------
+    canvas.text("Ergebnis nach Belegbarkeit", size=12, bold=True, leading=18)
+    canvas.row([(0, "Bewertung"), (250, "Positionen"), (330, "Betrag"), (450, "Anteil")], bold=True)
+    canvas.rule()
+
+    claimed = report.claimed_total_eur or Decimal("0.00")
+
+    def share(value: Decimal) -> str:
+        if not claimed:
+            return "-"
+        return f"{(Decimal(value) / claimed * 100):.1f} %".replace(".", ",")
+
+    def count(bucket: str) -> str:
+        return str(sum(1 for p in report.positions if p.bucket == bucket))
+
+    canvas.row(
+        [
+            (0, "Belegbar korrekt"),
+            (250, count("confirmed_fine")),
+            (330, _euro(report.confirmed_fine_eur)),
+            (450, share(report.confirmed_fine_eur)),
+        ]
+    )
+    canvas.row(
+        [
+            (0, "Belegbar nicht abrechenbar"),
+            (250, count("confirmed_wrong")),
+            (330, _euro(report.confirmed_wrong_eur)),
+            (450, share(report.confirmed_wrong_eur)),
+        ]
+    )
+    canvas.row(
+        [
+            (0, "Nicht beurteilbar"),
+            (250, count("unconfirmed")),
+            (330, _euro(report.unconfirmed_eur)),
+            (450, share(report.unconfirmed_eur)),
+        ]
+    )
+    canvas.rule()
+    canvas.row(
+        [
+            (0, "Abgerechnet gesamt"),
+            (250, str(len(report.positions))),
+            (330, _euro(report.claimed_total_eur)),
+            (450, "100,0 %"),
+        ],
+        bold=True,
+    )
+    canvas.space(6)
+    canvas.text(
+        f"Prüfabdeckung: {report.coverage_ratio * 100:.1f} % der abgerechneten Summe".replace(
+            ".", ","
+        ),
+        size=9,
+        bold=True,
+    )
+    canvas.space(8)
+
+    canvas.paragraph(
+        "Zur Lesart. »Belegbar nicht abrechenbar« ist der einzige Betrag, der als Rückforderung "
+        "gelesen werden darf: hier hat eine verifizierte Regel die Position beanstandet. "
+        "»Nicht beurteilbar« ist ausdrücklich KEIN Befund gegen die Praxis — es ist die Grenze "
+        "der Regelabdeckung dieser Engine. " + _single_coverage_sentence(report) + " Die drei "
+        "Beträge werden nie zu einer Summe »Risiko« zusammengefasst, weil genau diese "
+        "Zusammenfassung aus einer Abdeckungslücke eine Anschuldigung machen würde."
+    )
+    canvas.space(4)
+    canvas.paragraph(
+        "Auch »belegbar nicht abrechenbar« ist kein festgestellter Rückforderungsbetrag: bei zwei "
+        "sich gegenseitig ausschliessenden Positionen zählen beide hinein, weil die Engine nicht "
+        "errät, welche die Praxis behalten wollte. Die Rechnung ist in beiden Fällen zu "
+        "korrigieren, der tatsächlich strittige Betrag ist jedoch geringer."
+    )
+    canvas.space(10)
+
+    # ---- the positions, riskiest first --------------------------------------------------------
+    canvas.text("Positionen", size=12, bold=True, leading=18)
+    canvas.row(
+        [(0, "Ziffer"), (60, "Bewertung"), (200, "Abgerechnet"), (275, "Nachgerechnet"), (360, "Begründung")],
+        bold=True,
+    )
+    canvas.rule()
+
+    ordered = sorted(
+        report.positions,
+        key=lambda p: (_BUCKET_ORDER.get(p.bucket, 3), p.positionsnr),
+    )
+    for position in ordered:
+        canvas.row(
+            [
+                (0, position.ziffer or "-"),
+                (60, _BUCKET_LABEL.get(position.bucket, position.bucket)),
+                (200, _euro(position.claimed_amount_eur)),
+                (275, _euro(position.recomputed_amount_eur)),
+            ],
+            size=8,
+        )
+        reason = position.bucket_reason or position.reason
+        if reason:
+            canvas.paragraph(reason, size=7.5, indent=360.0)
+
+    canvas.space(10)
+
+    # ---- findings -----------------------------------------------------------------------------
+    if report.findings:
+        canvas.text(
+            f"Befunde ({len(report.findings)})", size=12, bold=True, leading=18
+        )
+        canvas.rule()
+        for finding in report.findings:
+            label = finding.ziffer or finding.positionsnr or finding.type
+            canvas.row([(0, str(label)), (60, finding.severity)], size=8, bold=True)
+            canvas.paragraph(finding.message, size=7.5, indent=60.0)
+            if finding.legal_basis or finding.rule_id:
+                basis = " · ".join(x for x in (finding.legal_basis, finding.rule_id) if x)
+                canvas.paragraph(basis, size=7, indent=60.0)
+        canvas.space(10)
+
+    # ---- provenance ---------------------------------------------------------------------------
+    canvas.rule()
+    canvas.text("Prüfgrundlage", size=9, bold=True, leading=14)
+    canvas.row([(0, "Katalog"), (110, report.catalog_version or "-")], size=8)
+    canvas.row([(0, "Katalog-Hash"), (110, (report.catalog_sha256 or "-")[:32])], size=8)
+    canvas.row([(0, "Regelstand"), (110, report.rules_version or "-")], size=8)
+    canvas.row([(0, "Logikstand"), (110, (report.logic_version or "-")[:32])], size=8)
+    canvas.row([(0, "Receipt-Hash"), (110, report.receipt_hash or "-")], size=8)
+    canvas.row(
+        [
+            (0, "Regelabdeckung"),
+            (
+                110,
+                f"{report.enforced_rule_count} durchgesetzt · "
+                f"{report.advisory_rule_count} hinweisend · "
+                f"{report.suppressed_unverified_rule_count} unbestätigt und unterdrückt",
+            ),
+        ],
+        size=8,
+    )
+    canvas.space(6)
+    canvas.paragraph(
+        "Dieser Bericht ist eine maschinelle Prüfung und ersetzt keine ärztliche oder "
+        "abrechnungsfachliche Entscheidung. Die Verantwortung für die Rechnung bleibt beim "
+        "Rechnungssteller.",
+        size=7.5,
+    )
+
+    return canvas.render()
+
+
 __all__ = [
     "PAGE_HEIGHT",
     "PAGE_WIDTH",
     "PdfCanvas",
     "render_batch_report",
+    "render_single_report",
     "wrap",
 ]

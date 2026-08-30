@@ -99,6 +99,28 @@ export default function DashboardPage() {
         </Suspense>
       </section>
 
+      {/*
+        The public demo, from inside the product. Not a sign-up call to action — this reader is
+        already signed in and telling them to request access would be nonsense. What they do need is
+        the link they can send a colleague, or open in front of one, without handing over a login:
+        `/demo` is outside the session gate and audits a synthetic delivery.
+      */}
+      <section className="rounded-xl border border-dashed p-4">
+        <h2 className="text-sm font-semibold">Demo zum Weitergeben</h2>
+        <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+          <Link
+            href="/demo"
+            className="font-medium underline underline-offset-4"
+          >
+            /demo
+          </Link>{" "}
+          zeigt dieselbe Prüfung an einer synthetischen Beispiellieferung —
+          ohne Anmeldung, ohne Upload und ohne Zugang zu Ihren Daten. Der Link
+          ist öffentlich und eignet sich, um die Prüfung jemandem zu zeigen, der
+          hier kein Konto hat.
+        </p>
+      </section>
+
       <section className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight">
           Arbeitsbereiche
