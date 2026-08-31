@@ -716,7 +716,7 @@ def test_the_mandated_disclaimer_appears_verbatim(demo_document):
 def test_the_report_names_its_data_protection_basis_and_a_contact(demo_document):
     printed = drawn_text(demo_document)
     assert "DSGVO" in printed
-    assert "kontakt@azmoth.com" in printed
+    assert "contact@azmoth.com" in printed
     assert "Azmoth" in printed
 
 
@@ -812,7 +812,7 @@ def test_a_batch_with_no_rollup_prints_the_absence_rather_than_zeros():
     assert "Kein Ergebnis" in printed
     assert "0,00 €" not in printed
     # The terms still have to be on it — an empty result is still a document that leaves the building.
-    assert "kontakt@azmoth.com" in printed
+    assert "contact@azmoth.com" in printed
 
 
 # ==========================================================================================

@@ -848,7 +848,7 @@ DATA_PROTECTION = (
     "hier nicht erscheinen."
 )
 
-CONTACT = "kontakt@azmoth.com"
+CONTACT = "contact@azmoth.com"
 
 #: The three buckets, in the order a reader must meet them, with the label each is printed under.
 #: One mapping, used by both reports, so a bucket cannot be called one thing in a single report and
