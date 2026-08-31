@@ -115,7 +115,7 @@ export function SignupForm({
     <form className="flex flex-col gap-6" onSubmit={submit} noValidate>
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Registrieren</h1>
+          <h1 className="text-display-md">Registrieren</h1>
           <p className="text-sm text-balance text-muted-foreground">
             Legen Sie ein Konto für die Prüfung von GOÄ-Abrechnungen an.
           </p>

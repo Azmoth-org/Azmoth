@@ -49,7 +49,7 @@ type Tone = "enforced" | "advisory" | "unverified" | "analog"
 
 const TONE_COLOR: Record<Tone, string> = {
   enforced: "text-emerald-700 dark:text-emerald-400",
-  advisory: "text-blue-700 dark:text-blue-400",
+  advisory: "text-azm-indigo-deep dark:text-azm-indigo-subdued",
   unverified: "text-muted-foreground",
   analog: "text-amber-600 dark:text-amber-400",
 }

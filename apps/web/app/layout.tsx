@@ -28,6 +28,32 @@ export const metadata: Metadata = {
   description:
     "Deterministische GOÄ-Kodierung und Rechnungsprüfung mit nachvollziehbarer Begründung. " +
     "Interne Anwendung, nur synthetische Daten.",
+  /*
+   * The Azmoth mark, replacing the Next.js starter's own `app/favicon.ico`. A reviewer keeps this
+   * application open beside four other tabs all day and finds it by its icon, so the icon being the
+   * framework's default was a real cost rather than a cosmetic one.
+   *
+   * Declared here rather than relying on Next's `app/favicon.ico` file convention, because the
+   * convention covers exactly that one file: the 96px PNG a high-DPI tab prefers and the
+   * `apple-touch-icon` iOS wants have to be named. The five files are at the root of `public/`, which
+   * is where a client that reads no `<link>` looks for `/favicon.ico` anyway.
+   *
+   * No SVG icon: the generated one is 2.0 MB (the monogram raster inside an `<svg>` wrapper) and
+   * browsers prefer an SVG when offered, so linking it would cost every cold load two megabytes for
+   * a 16-pixel image. `apps/marketing/src/lib/seo.ts` carries the same note.
+   *
+   * No Open Graph block. This application is behind a session; a link to it pasted into a chat should
+   * not render a preview card, because there is nothing here for someone without an account to see.
+   * The marketing site is what has a card.
+   */
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48 32x32 16x16" },
+      { url: "/favicon-96x96.png", type: "image/png", sizes: "96x96" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  manifest: "/site.webmanifest",
 }
 
 /**

@@ -19,12 +19,25 @@ import type {
   ApiKeyIssued,
   ApiKeyList,
   ApiKeyRevoked,
+  BillingInvoiceList,
+  BillingUsage,
+  PlanCatalog,
+  UpgradeResult,
   UsageSummary,
 } from "@workspace/contracts"
 
 import { toReviewError, type ReviewError } from "@/lib/review/types"
 
-export type { ApiKeyIssued, ApiKeyList, ApiKeyRevoked, UsageSummary }
+export type {
+  ApiKeyIssued,
+  ApiKeyList,
+  ApiKeyRevoked,
+  BillingInvoiceList,
+  BillingUsage,
+  PlanCatalog,
+  UpgradeResult,
+  UsageSummary,
+}
 export type { ReviewError }
 
 export type ApiKeyListResult =
@@ -41,6 +54,18 @@ export type RevokeResult =
 
 export type UsageResult =
   | { kind: "usage"; usage: UsageSummary }
+  | { kind: "error"; error: ReviewError }
+
+export type BillingUsageResult =
+  | { kind: "billing"; billing: BillingUsage }
+  | { kind: "error"; error: ReviewError }
+
+export type PlanCatalogResult =
+  | { kind: "plans"; catalog: PlanCatalog }
+  | { kind: "error"; error: ReviewError }
+
+export type UpgradeOutcome =
+  | { kind: "upgraded"; result: UpgradeResult }
   | { kind: "error"; error: ReviewError }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -225,4 +250,105 @@ export async function fetchUsage(signal?: AbortSignal): Promise<UsageResult> {
   if (!isUsageShape(parsed.body))
     return skew(response.status, parsed.body, "keine Verbrauchsübersicht")
   return { kind: "usage", usage: parsed.body }
+}
+
+/* -- subscription, quota and priced periods -------------------------------------------------- */
+
+/**
+ * The subscription block is checked structurally rather than trusted, like every other shape here.
+ *
+ * `monthly_invoice_quota` specifically: the usage meter divides by it. A `null` or a string would
+ * render as `NaN%` on a progress bar, which reads as a broken screen rather than as version skew —
+ * and version skew is exactly what it would be.
+ */
+function isBillingShape(value: unknown): value is BillingUsage {
+  if (!isRecord(value)) return false
+  const subscription = value.subscription
+  return (
+    typeof value.invoices_processed === "number" &&
+    typeof value.remaining === "number" &&
+    typeof value.overage_cents === "number" &&
+    isRecord(subscription) &&
+    typeof subscription.monthly_invoice_quota === "number" &&
+    typeof subscription.subscription_tier === "string"
+  )
+}
+
+/**
+ * What the practice's quota is and how much of it is gone.
+ *
+ * **The window is the billing period, not the calendar month** — `fetchUsage` above answers the
+ * calendar question and the two figures legitimately differ. Both responses state their window and
+ * the UI prints it, because two numbers that disagree are only confusing when neither says why.
+ */
+export async function fetchBillingUsage(
+  signal?: AbortSignal
+): Promise<BillingUsageResult> {
+  let response: Response
+  try {
+    response = await fetch("/api/engine/billing/usage", {
+      cache: "no-store",
+      signal,
+    })
+  } catch (cause) {
+    return unreachable(cause)
+  }
+
+  const parsed = await readJson(response)
+  if (!parsed.ok) return { kind: "error", error: parsed.error }
+  if (!isBillingShape(parsed.body))
+    return skew(response.status, parsed.body, "keine Tarifübersicht")
+  return { kind: "billing", billing: parsed.body }
+}
+
+/** The plans this practice may move to. Fetched only when the upgrade dialog opens. */
+export async function fetchPlans(
+  signal?: AbortSignal
+): Promise<PlanCatalogResult> {
+  let response: Response
+  try {
+    response = await fetch("/api/engine/billing/plans", {
+      cache: "no-store",
+      signal,
+    })
+  } catch (cause) {
+    return unreachable(cause)
+  }
+
+  const parsed = await readJson(response)
+  if (!parsed.ok) return { kind: "error", error: parsed.error }
+  if (!isRecord(parsed.body) || !Array.isArray(parsed.body.plans))
+    return skew(response.status, parsed.body, "keine Tarifliste")
+  return { kind: "plans", catalog: parsed.body as PlanCatalog }
+}
+
+/**
+ * Move this practice onto a plan, named by its exact code.
+ *
+ * By `plan_code` and never by `tier`, deliberately, even though the engine accepts both. The client
+ * has just rendered a list of plans with their prices; sending the code of the one the reader
+ * clicked means they get the plan they were shown. Sending a tier would let the engine resolve it to
+ * whatever revision is current, which could be a different price from the one on screen.
+ *
+ * Nothing here retries. A retry on an ambiguous failure would be a second plan change nobody asked
+ * for — and unlike a mint, the caller cannot tell from the outside whether the first one landed.
+ */
+export async function upgradePlan(planCode: string): Promise<UpgradeOutcome> {
+  let response: Response
+  try {
+    response = await fetch("/api/engine/billing/upgrade", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan_code: planCode }),
+      cache: "no-store",
+    })
+  } catch (cause) {
+    return unreachable(cause)
+  }
+
+  const parsed = await readJson(response)
+  if (!parsed.ok) return { kind: "error", error: parsed.error }
+  if (!isRecord(parsed.body) || !isRecord(parsed.body.subscription))
+    return skew(response.status, parsed.body, "keine Tarifbestätigung")
+  return { kind: "upgraded", result: parsed.body as UpgradeResult }
 }

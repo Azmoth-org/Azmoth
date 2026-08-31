@@ -165,8 +165,15 @@ bucket summary and the findings panel. Use this one with a clinician; use curl w
 
 ## 3. Fetch the PDF
 
-**The PDF is rendered for a bulk job, not for a single audit** — so the demo path is: zip the
-delivery, submit it, poll until it is done, print it. Three commands.
+**On the partner API the PDF is rendered for a bulk job, not for a single audit** — so the curl
+demo path is: zip the delivery, submit it, poll until it is done, print it. Three commands.
+
+In the application both are one click. `/padnext` renders the Prüfbericht for the delivery on
+screen (»Prüfbericht exportieren«, beside the report) and `/padnext/batch/history` renders the
+aggregated one for any completed batch. The single-delivery document is produced by auditing the
+delivery again rather than by reading a stored report — the single audit deliberately stores
+nothing — which is safe because the audit is deterministic: the `receipt_hash` printed on the PDF
+is the one in the JSON, and that is how a reader confirms the two are the same audit.
 
 ```bash
 # 1. one delivery in a ZIP (a real partner's archive holds a month of them)
@@ -323,7 +330,8 @@ as a clean bill of health. Target: no `wrong-alarming` answers at all.
 | Single audit | `POST /api/v1/audit/single` — 5 MiB, 100/min per key |
 | Bulk audit | `POST /api/v1/audit/bulk` — 50 MB, 500 members, 10/hour per key |
 | Job status | `GET /api/v1/audit/bulk/{job_id}` — poll; no webhook |
-| PDF | `POST /api/v1/audit/{job_id}/pdf` — `COMPLETED` jobs only |
+| PDF (Stapel) | `POST /api/v1/audit/{job_id}/pdf` — `COMPLETED` jobs only |
+| PDF (eine Lieferung) | `POST /api/v1/padnext/audit.pdf` — the file in, the report out |
 | Keys | `POST`/`GET`/`DELETE /api/v1/settings/api-keys` — session-gated, not key-gated |
 | Full contract | [`docs/api/PARTNER_API.md`](../api/PARTNER_API.md) |
 | Error codes | [`docs/errors.md`](../errors.md) |

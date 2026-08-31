@@ -23,6 +23,11 @@ on every request to `/api/v1/audit/*`.
 `UsageMeter` is the one that genuinely *has* state — a buffer of rows waiting to be written — so two
 instances would not merely be wasteful, they would each hold half the traffic and neither would
 reach the flush threshold. See `app.services.usage`.
+
+`BillingStore` is on the hot path beside `ApiKeyStore`: every audit asks it whether the practice is
+within its quota. It is stateless like the rest — the entitlement is in Postgres — and the two writes
+it performs on a read path (creating a first assignment, closing an ended period) are made safe by
+unique indexes rather than by there being one instance.
 """
 
 from __future__ import annotations
@@ -30,6 +35,7 @@ from __future__ import annotations
 from app.db.session import reset_database
 from app.services.api_keys import ApiKeyStore
 from app.services.batch_audit import BatchAuditService
+from app.services.billing import BillingStore
 from app.services.pipeline import Pipeline
 from app.services.proposal_store import ProposalStore
 from app.services.rule_reviews import RuleReviewStore
@@ -42,6 +48,7 @@ _rule_reviews: RuleReviewStore | None = None
 _api_keys: ApiKeyStore | None = None
 _usage_meter: UsageMeter | None = None
 _usage_store: UsageStore | None = None
+_billing: BillingStore | None = None
 
 
 def pipeline() -> Pipeline:
@@ -90,6 +97,26 @@ def api_keys() -> ApiKeyStore:
     return _api_keys
 
 
+def billing() -> BillingStore:
+    """The entitlement store every audit checks its quota against.
+
+    A singleton for the same reason `ApiKeyStore` is: it holds no connection of its own, and one
+    object per request would allocate for nothing. It is on the hot path — one `SUM` over the open
+    period per audit — which is what makes "no connection pool of its own" load-bearing rather than
+    tidy.
+
+    It is also the one store here that *writes* on a read path: the first audit by a new practice
+    creates their pilot assignment, and the first request of a new period closes the previous one
+    into an invoice. Both are guarded by unique indexes rather than by this object holding state, so
+    there is nothing about the singleton that the concurrency depends on — see
+    `app.services.billing`.
+    """
+    global _billing
+    if _billing is None:
+        _billing = BillingStore()
+    return _billing
+
+
 def usage_meter() -> UsageMeter:
     """The process-wide usage buffer.
 
@@ -119,7 +146,7 @@ def reset() -> None:
     that quietly left a connection pool open would leak one per test. Use `reset_async`.
     """
     global _pipeline, _proposals, _batches, _rule_reviews, _api_keys
-    global _usage_meter, _usage_store
+    global _usage_meter, _usage_store, _billing
     _pipeline = None
     _proposals = None
     _batches = None
@@ -129,6 +156,7 @@ def reset() -> None:
     # thrown away, and writing them would be writing into the next test's world.
     _usage_meter = None
     _usage_store = None
+    _billing = None
 
     # The rate limiter's counters are process-wide state of exactly the same kind, and a test that
     # exhausted a budget must not hand it to the next one. Cleared here rather than in a fixture of

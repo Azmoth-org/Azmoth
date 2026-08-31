@@ -9,6 +9,8 @@ import {
   StethoscopeIcon,
 } from "lucide-react"
 
+import { RULE_REVIEW_ENABLED } from "@/lib/features"
+
 /**
  * The application's screens, in the order the work happens.
  *
@@ -36,7 +38,19 @@ export type NavItem = {
 /** The dashboard's own path. Named because two things below have to agree about it. */
 export const DASHBOARD_HREF = "/"
 
-export const NAV_ITEMS: readonly NavItem[] = [
+/** The rule workbench's path. Named because the entry and the filter must agree about it. */
+export const RULE_REVIEW_HREF = "/rules"
+
+/**
+ * Every screen this application has, before feature flags.
+ *
+ * Private, because nothing should navigate by this list: `NAV_ITEMS` below is the same list with
+ * the deployment's disabled surfaces removed, and the sidebar, the mobile nav, the dashboard card
+ * grid and the 404's "back to" links all read *that*. Filtering in one place is what keeps a
+ * hidden screen from surviving in the one consumer somebody forgot — which is the same failure
+ * this module was written to prevent for *added* screens.
+ */
+const ALL_NAV_ITEMS: readonly NavItem[] = [
   {
     href: DASHBOARD_HREF,
     label: "Übersicht",
@@ -88,7 +102,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     internal: true,
   },
   {
-    href: "/rules",
+    href: RULE_REVIEW_HREF,
     label: "Regelprüfung",
     description:
       "Internes Werkzeug: maschinell extrahierte GOÄ-Regeln prüfen und freigeben, um die Gruppe „unbestätigt“ in künftigen Rechnungsprüfungen zu verkleinern.",
@@ -96,6 +110,18 @@ export const NAV_ITEMS: readonly NavItem[] = [
     internal: true,
   },
 ]
+
+/**
+ * The screens this deployment actually shows.
+ *
+ * `/rules` is the internal rule-verification workbench and is off unless a deployment opts in —
+ * see `lib/features.ts` for why that is the default and why this flag is not an access control.
+ * `activeHref` reads this list too, so a flagged-off screen reached by URL highlights nothing
+ * rather than highlighting an entry that is not on screen.
+ */
+export const NAV_ITEMS: readonly NavItem[] = ALL_NAV_ITEMS.filter(
+  (item) => item.href !== RULE_REVIEW_HREF || RULE_REVIEW_ENABLED
+)
 
 /**
  * Every screen except the dashboard — what the dashboard's own card grid renders.

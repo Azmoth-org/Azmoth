@@ -19,13 +19,13 @@ export default function PadnextPage() {
   return (
     <>
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-display-md">
           PADnext-Rechnung prüfen
         </h1>
         <p className="text-sm text-muted-foreground">
           Eine PADnext-Lieferung kommt fertig kodiert an, also ist dies keine
-          Kodierung, sondern eine Prüfung: dieselben Datalog-Regeln entscheiden,
-          welche Positionen bestehen, und der Betrag wird aus dem eigenen
+          Kodierung, sondern eine Prüfung: dieselbe deterministische
+          Regel-Engine entscheidet, welche Positionen bestehen, und der Betrag wird aus dem eigenen
           versionierten Katalog nachgerechnet. Die Datei wird nicht als
           Preisauskunft geglaubt — die GOÄ-Nachrechnung gilt.
         </p>

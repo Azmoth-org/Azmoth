@@ -1,5 +1,7 @@
 import Link from "next/link"
 
+import { AzmothMark } from "@/components/brand/azmoth-mark"
+
 /**
  * The frame both auth screens sit in: the wordmark, the form, the standing disclaimer, and the
  * panel on the right.
@@ -19,10 +21,11 @@ import Link from "next/link"
  * layout a phone gets. Nothing in it is required to sign in, so a narrow screen loses decoration
  * and no function.
  *
- * The mark is the same `AZ` tile the sidebar uses, at the same size and with the same tokens. It is
- * duplicated rather than imported from `app-shell.tsx`, which is a client component holding the
- * whole navigation: pulling that in to reuse eleven characters of markup would ship the sidebar to
- * a screen that must not have one.
+ * The mark is the real Azmoth monogram, from `@/components/brand/azmoth-mark` — the same component
+ * the sidebar renders. It used to be an `AZ` tile duplicated from `app-shell.tsx` rather than
+ * imported, because that file is a client component holding the whole navigation and pulling it in
+ * to reuse eleven characters of markup would ship the sidebar to a screen that must not have one.
+ * `AzmothMark` exists so both can share the mark without either importing the other.
  */
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
@@ -34,9 +37,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-2.5"
             aria-label="Azmoth"
           >
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary font-mono text-xs font-medium text-primary-foreground">
-              AZ
-            </span>
+            <AzmothMark className="size-9" />
             <span className="grid text-left leading-tight">
               <span className="text-base font-semibold">Azmoth</span>
               <span className="text-xs text-muted-foreground">GOÄ-Prüfung</span>

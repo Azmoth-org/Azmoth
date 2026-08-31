@@ -47,6 +47,19 @@ It holds no body, no headers and no traceback locals, deliberately: a diagnostic
 easiest place in a system for patient data to end up somewhere it should not be, and what is stored
 is enough to find the request in the logs without any of that.
 
+And two that exist so it can be *charged for*:
+
+    organization_billing  one row per organisation — which plan, what it promised, which period
+    billing_invoices      one row per closed period — the plan, the counts, the amounts in cents
+
+`organization_billing` is the entitlement the quota check reads before every audit, and it is a
+table of its own rather than columns on `organization` for the reason the two identity tables below
+give: `organization` is Better Auth's, created by a migrator this one does not control. It is also
+the only arrangement the *engine* can read, and the engine is where the quota is enforced.
+
+`billing_invoices` is what a period came to, computed once and then left alone. Neither holds a euro
+amount as anything but an integer count of cents.
+
 `api_keys` is the one with the sharpest rule attached: the token itself is never
 written anywhere. The row holds SHA-256 over it plus the public `key_id` prefix, so a database dump
 carries no usable credential and there is no code path that can show a caller their key a second
@@ -853,6 +866,23 @@ class ApiUsageRecord(Base):
     #: what tells us a partner's bulk uploads are getting slower before they tell us.
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
+    #: How many PADnext deliveries this request actually audited. **This is the billable unit.**
+    #:
+    #: A request count cannot be invoiced: one `POST /audit/single` is one invoice and one
+    #: `POST /audit/bulk` may be five hundred, so charging per request would price the same work
+    #: differently depending on how a partner batched it. `bytes_processed` is no better — an
+    #: archive's size says more about its compression than about how many audits it caused.
+    #:
+    #: Zero for everything that is not an audit (a status poll, a listing, a usage read) and zero
+    #: for an audit that failed before any delivery was read. It is written from the request
+    #: context: the handler that knows the number calls `observability.bind(invoices_processed=n)`
+    #: and the middleware picks it up, for the same reason the tenant is bound rather than passed —
+    #: one place records usage, and a per-endpoint hook is a list somebody forgets to add to.
+    #:
+    #: Not null and defaulted to 0 so `SUM` over the column needs no `COALESCE` and a row written by
+    #: a path that does not audit contributes nothing rather than nothing-shaped-like-null.
+    invoices_processed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
     #: The HTTP status. Indexed with the timestamp because "how many of this key's calls failed
     #: this week" is the query that finds a customer in trouble.
     status_code: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
@@ -871,3 +901,200 @@ class ApiUsageRecord(Base):
 
     def __repr__(self) -> str:  # pragma: no cover - diagnostics only
         return f"<ApiUsageRecord {self.endpoint} {self.status_code} at {self.timestamp}>"
+
+
+class OrganizationBillingRecord(Base):
+    """Which plan one practice is on, and what that plan promised them at the moment it was assigned.
+
+    This is the row the quota check reads on every audit, and it exists as its own table for a
+    reason that is structural rather than stylistic: **`subscription_tier` cannot go on the
+    `organization` table.** That table is Better Auth's. Its schema is computed by the library from
+    its own field definitions and created by the web tier's migrator (`pnpm --filter web
+    auth:migrate`), and `alembic/env.py` names it in the denylist so autogenerate does not offer to
+    drop every practice in the database. A billing column added there would be owned by neither
+    migrator and dropped by the next Better Auth upgrade — the same argument `doctor_profiles` and
+    `practices` are here for, reached from the commercial side instead of the identity side.
+
+    It is also the seam that has to be readable *from the engine*, which is where the quota is
+    enforced. The engine cannot query Better Auth's tables (see `app.api.tenancy` on why it does not
+    even check that an organisation exists), so an entitlement it must consult before every audit
+    has to live in a table Alembic owns.
+
+        organization_billing  n ─── 1  organization    (by id; no FK — Better Auth owns that table)
+
+    **The plan's numbers are copied onto this row, not read through `plan_code`.** That duplication
+    is the point. `app.services.billing_plans` is append-only by rule, but a rule is a convention and
+    this is a guarantee: a practice's quota is what was agreed when they were put on the plan, and
+    nothing that happens to the catalog afterwards — an edit despite the rule, a rollback to a
+    deployment that predates the code, a plan removed — can change it retroactively. Reading the
+    catalog for a *new* assignment is correct; reading it to answer "what is this practice entitled
+    to" would make every historical answer depend on today's file.
+
+    `plan_code` is kept beside the snapshot so an invoice can name the price it was computed from,
+    and so "move everyone off starter-2026.08" is a query rather than an archaeology exercise.
+
+    **Mutable, and only in the columns a plan change touches.** There is no history here: what
+    happened is in `billing_invoices`, one row per closed period, which names the plan and the
+    amounts that period was billed under. A plan change is therefore not lost — it is visible as the
+    period where the invoice's `plan_code` changes.
+    """
+
+    __tablename__ = "organization_billing"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The Better Auth `organization.id` this entitlement belongs to. Unique: one practice has one
+    #: plan at a time, and the constraint is what makes "get or create" safe under concurrency —
+    #: two simultaneous first audits race, one loses on the index, and both read the same row.
+    organization_id: Mapped[str] = mapped_column(
+        String(256), unique=True, index=True, nullable=False
+    )
+
+    #: The label a settings screen prints — `free`, `starter`, `pro`, `enterprise`. Stored as a
+    #: string rather than a native enum for the same reason `AuditEventType` is: adding a value to a
+    #: Postgres enum needs a migration and a table lock, and the closed set that matters is
+    #: `billing_plans.SubscriptionTier`.
+    #:
+    #: Denormalised from `plan_code` deliberately. It is what "show me every Pro practice" filters
+    #: on, and deriving it would mean the query could not be written without the catalog in scope.
+    subscription_tier: Mapped[str] = mapped_column(
+        String(32), index=True, nullable=False, default="free"
+    )
+
+    #: The SKU of the plan this practice is on — `pilot-2026.08`. See `app.services.billing_plans`
+    #: on why a price carries its revision.
+    plan_code: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+
+    #: How many invoices the period includes. Snapshotted — see the class docstring.
+    monthly_invoice_quota: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    #: What each invoice above the quota costs, in **euro cents**. An integer, and never a float:
+    #: money is counted in its smallest subdivision, because 0.15 has no exact binary form and a
+    #: few thousand overage invoices is where that stops being academic.
+    overage_rate_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    #: Whether an audit above the quota is charged (`True`) or refused with `429 QUOTA_EXCEEDED`.
+    #: Snapshotted, so a practice on deadline cannot be hard-stopped by a catalog change.
+    allow_overage: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    #: The billing period currently open, inclusive start and exclusive end.
+    #:
+    #: Stored rather than computed from the calendar, because a period is a commercial fact: a
+    #: practice that signed up on the 14th may be billed on the 14th, and an invoice has to be able
+    #: to state the window it covers years later without depending on today's rules about what a
+    #: month is. `BillingStore.roll_period` moves them forward.
+    current_period_start: Mapped[datetime] = mapped_column(
+        TimestampVariant, nullable=False, default=utcnow
+    )
+    current_period_end: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+
+    #: Touched on every plan change. Answers "when did this practice's entitlement last move",
+    #: which is the first question a billing dispute asks.
+    updated_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return (
+            f"<OrganizationBillingRecord {self.organization_id} {self.plan_code} "
+            f"quota={self.monthly_invoice_quota}>"
+        )
+
+
+class BillingInvoiceRecord(Base):
+    """One closed billing period, priced. What `GET /api/v1/billing/invoices` lists.
+
+    A record of what a period *came to*, computed once when the period closed and then left alone.
+    It is not a Rechnung in the legal sense — it carries no VAT, no invoice number series, no payment
+    terms, and nothing here is sent to anybody. It is the figure a real invoicing system (or a person
+    with a spreadsheet) is built from, and the thing that makes "what did we owe in August" a query
+    instead of a re-derivation from a usage table whose retention policy may have rolled rows up.
+
+    **Every amount is euro cents as an integer**, and every one of them is stored rather than
+    derived. Deriving `total_cents` on read would mean an invoice's total could change when the
+    rounding in a helper changed, which is the one thing an issued figure must not do.
+
+        billing_invoices  n ─── 1  organization    (by id; no FK — Better Auth owns that table)
+
+    **`(organization_id, period_start)` is unique**, so a period cannot be invoiced twice. That
+    constraint *is* the idempotency of period close: a second attempt loses on the index rather than
+    producing a duplicate charge, which is the failure mode that matters — a retry after a timeout
+    is normal, and double-billing a customer is not.
+
+    Mutable in one column only, `status`. An amount is never corrected in place: a wrong invoice is
+    voided and a new one issued, for the reason every accounting system works that way — the
+    corrected figure and the fact that a correction happened are both facts, and an `UPDATE` keeps
+    only the first.
+    """
+
+    __tablename__ = "billing_invoices"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The public handle — `inv_<hex>`. Opaque and not derived from the surrogate key, for the same
+    #: reason `proposals.public_id` is not: it appears in a URL and in a support conversation.
+    public_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+
+    organization_id: Mapped[str] = mapped_column(String(256), index=True, nullable=False)
+
+    #: The window this invoice covers, inclusive start and exclusive end — copied off the
+    #: `organization_billing` row as it was when the period closed.
+    period_start: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False)
+    period_end: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False)
+
+    #: The plan and tier this period was billed under, by name. Stored and not looked up: the plan
+    #: may be superseded, renamed or absent by the time anyone reads this row, and an invoice that
+    #: cannot say what it was priced under is not evidence of anything.
+    plan_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    subscription_tier: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    #: The recurring fee for the period.
+    base_fee_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    #: The quota the base fee bought, and what was actually audited against it. Both stored, because
+    #: "you used 3,140 of 2,500" is the sentence the overage line has to be checkable against.
+    invoices_included: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    invoices_processed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    #: `max(0, processed - included)`, and the rate it was charged at.
+    overage_invoices: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    overage_rate_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    overage_fee_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    #: `base_fee_cents + overage_fee_cents`. Stored — see the class docstring on why it is not
+    #: computed on read.
+    total_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    #: ISO 4217. `EUR` everywhere today. The column exists because a currency that is implicit is a
+    #: currency somebody eventually assumes wrongly, and adding it later means backfilling every row
+    #: with a guess.
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="EUR")
+
+    #: `DRAFT` while the period is open in a preview, `ISSUED` once closed, `VOID` when superseded
+    #: by a correction. The only mutable column.
+    status: Mapped[str] = mapped_column(String(16), index=True, nullable=False, default="ISSUED")
+
+    issued_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        # One invoice per practice per period. The idempotency of period close — see the docstring.
+        Index(
+            "ux_billing_invoices_organization_id_period_start",
+            "organization_id",
+            "period_start",
+            unique=True,
+        ),
+        # "This practice's invoices, newest first", which is the whole of the listing endpoint.
+        Index(
+            "ix_billing_invoices_organization_id_period_start",
+            "organization_id",
+            "period_start",
+        ),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return (
+            f"<BillingInvoiceRecord {self.public_id} {self.organization_id} "
+            f"{self.total_cents}c {self.status}>"
+        )

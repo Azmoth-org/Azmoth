@@ -66,9 +66,10 @@ from starlette.datastructures import UploadFile as FormUploadFile
 from app.api.apikeys import RequestApiKey
 from app.api.deps import batches, pipeline
 from app.api.padnext import refuse_catalog_mismatch
+from app.api.quota import SingleAuditQuota, apply as apply_quota, check_and_refuse
 from app.api.ratelimit import BulkRateLimit, Decision, SingleRateLimit
 from app.config import get_settings
-from app.core.observability import bind
+from app.core.observability import bind, record_invoices
 from app.errors import EmptyRequestBody, UnsupportedInputFormat
 from app.padnext import audit_delivery, read_delivery
 from app.padnext.formats import FORMAT_ADVICE, InputFormat, detect_format
@@ -277,6 +278,7 @@ async def audit_single(
     response: Response,
     key: RequestApiKey,
     limit: SingleRateLimit,
+    quota: SingleAuditQuota,
 ) -> PadnextAuditReport:
     """Prüft eine einzelne PADnext-Lieferung gegen die GOÄ und liefert den vollständigen Bericht.
 
@@ -357,7 +359,13 @@ async def audit_single(
         len(report.positions),
         report.coverage_ratio * 100,
     )
+    # One delivery audited, and only now that it demonstrably was. Declared *after* the audit
+    # rather than beside the quota check above, because the quota check is a question ("may I") and
+    # this is a fact ("I did") — a delivery that turned out to be unreadable is a `422` the practice
+    # is not charged for, and putting the count before the audit would bill it.
+    record_invoices(1)
     _apply(response, limit)
+    apply_quota(response, quota)
     return report
 
 
@@ -467,6 +475,15 @@ async def audit_bulk(
             status_code=400, detail={"error": "archive_unreadable", "message": str(exc)}
         ) from exc
 
+    # The quota, now that the archive has said how many deliveries are in it — and before a single
+    # one is queued. Refused as a unit: a job that audited 180 of 300 files and stopped because a
+    # ceiling was reached mid-run is a job somebody has to reconcile by hand, which is a worse
+    # outcome for the practice than being told up front that the archive is too big for what is
+    # left of their period.
+    #
+    # After the archive is opened and before it is written to disk, so a refusal costs no storage.
+    quota = await check_and_refuse(key.organization_id, requested=len(members))
+
     service = batches()
     # A batch id is minted before the row so the archive can be written under it. Both fail
     # together or neither happens: if the write throws, no job row exists to point at a file that
@@ -534,7 +551,19 @@ async def audit_bulk(
         accepted.file_count,
         key.key_id,
     )
+    # Counted on **acceptance**, not on completion, and that is a decision worth being explicit
+    # about. The audit itself happens in a background task, long after this response and its usage
+    # row; attributing the count there would mean the number depended on a `BackgroundTask` running,
+    # and a process restart between the two would lose billable work that the practice was told had
+    # been accepted. `file_count` is what the `202` promised, so it is what is counted.
+    #
+    # The consequence, stated: a delivery inside the archive that turns out to be unreadable is
+    # still counted, where `/audit/single` would not count it. The archive was opened and validated
+    # before this point, so the case is a malformed member rather than a malformed upload — and the
+    # engine did the work of trying either way.
+    record_invoices(accepted.file_count)
     _apply(response, limit)
+    apply_quota(response, quota)
     return accepted
 
 

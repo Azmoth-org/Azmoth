@@ -70,6 +70,49 @@ what you pass to revoke the key. It cannot be used to authenticate.
 `last_used_at` is accurate to about a minute — the column is deliberately not written on every
 request. It answers "is anything still using this key", which is a question about days.
 
+### Why this is not Better Auth's
+
+Better Auth issues the *session* the web application runs on, so the obvious question is why the
+partner API's credential is not its too. Two answers, and the second is the one that settles it.
+
+**There is no such plugin at the version this repository pins.** `better-auth@1.7.1` — and `1.7.2`,
+the current release — exports `admin`, `anonymous`, `bearer`, `jwt`, `organization`, `two-factor`,
+`username` and fourteen others from `better-auth/plugins`. There is no `apiKey` among them, and no
+`api-key` module in the distributed package. Nothing was passed over here; there was nothing to pass
+over.
+
+**And it could not do this job even if it existed.** Better Auth runs in the Next.js tier and
+validates in JavaScript against its own tables. `X-API-Key` is verified by the **engine**, which is
+Python, is the only thing a partner's integration talks to, and deliberately cannot query Better
+Auth's tables — [`app/api/tenancy.py`](../../apps/engine/app/api/tenancy.py) explains at length why
+it does not even check that an organisation exists. A credential the engine has to resolve on every
+request has to live in a table the engine owns. That is the same argument
+[`BILLING.md`](../BILLING.md) §3.2 makes about the subscription, reached from the credential side.
+
+So the implementation is custom, and it is held to the properties a review would ask for:
+
+| Property | Where |
+|---|---|
+| 192 bits from `secrets.token_bytes`, never `random` | [`services/api_keys.py`](../../apps/engine/app/services/api_keys.py) `generate_token` |
+| Only a SHA-256 hash is stored; the token exists in exactly one response body | `ApiKeyRecord.key_hash`, and there is no code path that can re-read a token |
+| Constant-time comparison, so the hash check is not a timing oracle | `hmac.compare_digest` in `verify` |
+| One indexed lookup per request, not a scan hashing every row | the public `key_id` half, `unique=True` |
+| Revocation is a column, and a revoked key's history survives | `revoked_at`; rows are never deleted |
+| Malformed, unknown, wrong-secret and revoked are one indistinguishable `401` | `ApiKeyInvalid` — telling them apart is an enumeration oracle |
+| Minting is behind a verified session, not behind a key | `app/api/settings_keys.py`, and see above on why it must be |
+| The token is shown once, in a modal, with a copy button and a warning | `components/settings/new-key-dialog.tsx` |
+| Revocation asks first | an `AlertDialog` in `components/settings/api-key-manager.tsx` |
+
+**On SHA-256 rather than bcrypt or Argon2**, since that is the line a checklist usually flags: a
+password KDF exists to make each guess expensive because human-chosen passwords come from a small
+space. This secret is 192 random bits. There is no space to search, so the work factor would buy
+nothing and would cost every authenticated request the same tens of milliseconds. What is required —
+and is there — is the constant-time comparison.
+
+The day Better Auth does ship an API-key plugin, the thing to reconsider is not the storage but the
+**boundary**: a Better Auth JWT the engine verifies itself would replace both this credential and the
+asserted `X-Organization-ID` header, and `tenancy.py` names the exact function that change lands in.
+
 ---
 
 ## 2. `POST /api/v1/audit/single` — one delivery, synchronously
@@ -277,7 +320,17 @@ engine identity the figures were produced under — catalog version and hash, ru
 The sentence about `unconfirmed` being a coverage gap rather than a finding is printed beside the
 number, because a PDF outlives the screen it came from.
 
-Read-only and idempotent: the same job renders byte-identical output every time.
+It closes with the terms it has to: the report is a draft requiring a physician's release, not an
+invoice; the data-protection basis; a contact address; and a ruled Freigabe line for the release to
+be recorded on. Every page carries `Seite X von Y` and the report id, so a page separated from the
+rest still says what it belongs to.
+
+A4, 20 mm margins, Helvetica, no embedded fonts and no images — so it is a few kilobytes, the text
+is selectable and searchable, and it prints correctly in monochrome. Nothing in it is distinguished
+by colour alone.
+
+Read-only and idempotent: the same job renders byte-identical output every time, because the
+document dates itself by the job's completion rather than by the clock.
 
 ---
 
@@ -344,6 +397,35 @@ refused; that is what they are for.
 
 The bulk budget is two orders of magnitude tighter because one call can be 500 deliveries and 500
 solver runs. The limit is on the work accepted, not on the requests made.
+
+### A quota is not a rate limit, and they do not return the same error
+
+The rate limit above protects the service. The **quota** — how many invoices your plan includes per
+billing period — protects the invoice, and it is a different refusal:
+
+| | `RATE_LIMIT_EXCEEDED` | `QUOTA_EXCEEDED` |
+|---|---|---|
+| HTTP | `429` | `429` |
+| Counted per | key | organisation |
+| Unit | requests | **invoices audited** |
+| Clears by | waiting a minute | the billing period rolling, or a plan change |
+| `Retry-After` | seconds | days |
+
+**Do not back off on `QUOTA_EXCEEDED` the way you back off on a rate limit.** It carries an honest
+`Retry-After` — the seconds until the period rolls — and a retry loop on it runs for weeks. Branch on
+`error_code`.
+
+`X-Quota-Limit`, `X-Quota-Remaining` and `X-Quota-Reset` are on every successful audit response, like
+the rate-limit trio and for the same reason.
+
+A bulk upload is checked **as a unit**: an archive of 300 deliveries with 40 invoices left in the
+period is refused whole rather than audited part-way, because a job that stopped at file 180 is a job
+somebody has to reconcile by hand.
+
+`GET /api/v1/billing/usage` answers what is left, and reads with either a key or a session.
+`POST /api/v1/billing/upgrade` needs a **session** — a key must not be able to escalate its own
+entitlements — so a refused integration is resolved by somebody at the practice, not from the API.
+[`BILLING.md`](../BILLING.md) has the whole model.
 
 ---
 

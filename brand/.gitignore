@@ -1,0 +1,23 @@
+# The redundant colour variants are not tracked, and this is the reason.
+#
+# Eleven of the sixteen exports embed the **byte-identical** raster (md5 a40b77353418) — the same
+# 2676x1492 monogram PNG — differing only in a background `<rect>` of black, white or #D9D9D9.
+# Committing all of them would store that one megabyte eleven times, for 13 MB in the repository's
+# history forever, to hold artwork that is already here once.
+#
+# What IS tracked:
+#
+#   tr-icon.svg     the master. Transparent, the raster every other variant embeds, and the file
+#                   `scripts/build-brand-assets.mjs` reads.
+#   *-text.svg      the four wordmark exports. Real vector paths, 5.7 kB each, no raster at all.
+#
+# Everything below is reproducible from `tr-icon.svg` by compositing a background, which is exactly
+# what the ignored files are. They are still on disk — nothing was deleted — so the full hand-over
+# is intact locally and can be re-exported at any time.
+#
+# **To commit one anyway:** `git add -f brand/<file>.svg`. If the whole set should be in history
+# after all, delete this file.
+
+*.svg
+!tr-icon.svg
+!*-text.svg

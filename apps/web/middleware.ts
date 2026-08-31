@@ -187,14 +187,43 @@ function forgetOnboarding(
   return clearOnboardingCookie(response)
 }
 
+/**
+ * Files under `public/` that must be reachable without a session.
+ *
+ * These were being redirected to `/login`, and the symptom was specific: the brand mark was
+ * **invisible on the login page and the demo**, because the CSS that paints it loads
+ * `/brand/azmoth-mark.png` and an anonymous request for that asset got a `307` to `/login` instead
+ * of a PNG. Every favicon and the web manifest had the same problem — a browser asking for
+ * `/apple-touch-icon.png` before anyone has signed in was told to go and sign in.
+ *
+ * It was latent rather than new: the matcher below has always excluded only `favicon.ico`, so this
+ * was true of any asset added to `public/`. It only became visible once `public/` held something a
+ * page renders.
+ *
+ * **Excluded in the matcher rather than added to `PUBLIC_PREFIXES`**, so the middleware does not run
+ * for them at all. That is the same argument the matcher's own comment makes about `_next/static`: a
+ * function invocation per asset that protects nothing. It is also why this list is explicit rather
+ * than a "anything with a file extension" pattern — a rule that un-gates every future path
+ * containing a dot is a rule nobody will remember when they add one.
+ *
+ * Regex-escaped where it matters: a `.` is written `\\.` so `favicon.ico` cannot also match
+ * `faviconXico`. It has to be **one string literal**: Turbopack parses `matcher` at compile time and
+ * refuses a concatenation outright, which is a build failure rather than a subtle one.
+ */
 export const config = {
   /**
-   * Everything except Next's own assets and the favicon.
+   * Everything except Next's own build output and the files under `public/`.
    *
    * `_next/static` and `_next/image` are build output and image optimisation — running middleware
-   * on them costs a function invocation per asset and protects nothing. Everything else, pages and
-   * API routes alike, goes through the function above and is refused unless `PUBLIC_PREFIXES` names
-   * it.
+   * on them costs a function invocation per asset and protects nothing. The brand and icon files
+   * listed after them are `public/` assets for the same reason, and see the note above for the bug
+   * that omitting them caused. Everything else, pages and API routes alike, goes through the
+   * function above and is refused unless `PUBLIC_PREFIXES` names it.
    */
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // One literal, unwrapped and unjoined. Turbopack parses `matcher` at compile time and refuses a
+  // concatenation with "Entry `matcher[0]` need to be static strings" — which is worth knowing
+  // before reaching for a prettier line length.
+  matcher: [
+    "/((?!_next/static|_next/image|brand/|favicon\\.ico|favicon-96x96\\.png|apple-touch-icon\\.png|web-app-manifest-192x192\\.png|web-app-manifest-512x512\\.png|site\\.webmanifest|llms\\.txt).*)",
+  ],
 }

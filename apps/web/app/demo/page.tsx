@@ -48,7 +48,7 @@ export default function DemoPage() {
       <DemoModeBanner />
 
       <header className="space-y-4 pt-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+        <h1 className="text-display-lg text-balance sm:text-display-xl">
           GOÄ-Prüfung, die jede Entscheidung belegen kann
         </h1>
         <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
@@ -79,7 +79,7 @@ export default function DemoPage() {
           <ValueCard
             icon={<ScaleIcon aria-hidden className="size-5 text-primary" />}
             title="Deterministisch, nicht geraten"
-            body="Dieselbe Rechnung ergibt immer dasselbe Ergebnis. Ein Datalog-Programm entscheidet, welche Positionen bestehen; ein unabhängiger Prüflauf rechnet das Ergebnis nach. Jede Position trägt ihren Beweisbaum mit Regel-ID und Paragraphenbezug."
+            body="Dieselbe Rechnung ergibt immer dasselbe Ergebnis. Eine deterministische Regel-Engine entscheidet, welche Positionen bestehen; ein unabhängiger Prüflauf rechnet das Ergebnis nach. Jede Position trägt ihren Beweisbaum mit Regel-ID und Paragraphenbezug."
           />
           <ValueCard
             icon={<SplitIcon aria-hidden className="size-5 text-primary" />}

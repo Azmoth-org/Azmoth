@@ -97,6 +97,34 @@ def require_organization(request: Request) -> str:
     return organization_id
 
 
+def optional_organization(request: Request) -> str:
+    """The organisation this request names, or `""` when it names none. Never refuses.
+
+    The counterpart to `require_organization`, for the two endpoints that are unscoped by design and
+    still want the tenant when it is there: `POST /padnext/audit` and `/padnext/audit.pdf` store
+    nothing, so there is no row for a tenant to own — but a call the web tier proxied *does* carry a
+    session's organisation, and it is what the quota is counted against and what the PDF prints as
+    "Praxis / Konto".
+
+    **This must never become the tenant filter.** Nothing that reads or writes a row may take its
+    organisation from here: an empty string would silently mean "no filter", which is the shape of
+    the worst possible tenancy bug. `tests/test_tenancy.py` enforces that by classification — an
+    endpoint under a scoped prefix has to appear in `SCOPED_OPERATIONS` (and use
+    `require_organization`) or in `UNSCOPED_BY_DESIGN` with a written reason.
+
+    Same sanitising as the required read, so a value that reaches a log line or a usage row has been
+    through the same filter either way — and the same `bind`, which is load-bearing rather than
+    cosmetic: `app.core.observability._meter` writes **no usage row at all** for a request whose
+    context names no organisation, because there would be nobody to attribute it to. Without the
+    bind here, an audit the web tier proxied would be checked against the practice's quota and then
+    not counted towards it, which is the one combination that is worse than either alone.
+    """
+    organization_id = _sanitise(request.headers.get(ORGANIZATION_ID_HEADER))
+    if organization_id:
+        bind(organization_id=organization_id)
+    return organization_id
+
+
 #: What path functions annotate with. `Annotated[...]` rather than a default value so FastAPI keeps
 #: the parameter out of the OpenAPI document — see the module docstring.
 RequestOrganization = Annotated[str, Depends(require_organization)]
@@ -106,5 +134,6 @@ __all__ = [
     "MAX_ORGANIZATION_ID_LENGTH",
     "ORGANIZATION_ID_HEADER",
     "RequestOrganization",
+    "optional_organization",
     "require_organization",
 ]

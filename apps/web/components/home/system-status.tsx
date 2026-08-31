@@ -206,12 +206,12 @@ export function SystemStatus({
             mono
           />
           <SolverFigure
-            label="Soufflé"
+            label="Regel-Engine"
             version={health.souffle_version}
             probe={solvers.souffle}
           />
           <SolverFigure
-            label="Clingo"
+            label="Solver"
             version={health.clingo_version}
             probe={solvers.clingo}
           />

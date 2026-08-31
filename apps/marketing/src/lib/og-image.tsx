@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 
+import { AZMOTH_MARK_DATA_URI } from "@/lib/brand-mark";
 import { siteConfig } from "@/lib/site";
 
 /**
@@ -10,10 +11,18 @@ import { siteConfig } from "@/lib/site";
  * original author's artwork. This renders from the same `siteConfig` strings the
  * pages use, so the card and the site cannot disagree.
  *
- * Deliberately typographic: no logo file to embed, no font to fetch over the
- * network at build time (a fetch that fails takes the whole route with it). The
- * colours are the light palette's literal values — `oklch()` and CSS custom
- * properties are not available in Satori, which is what renders this.
+ * **It now carries the mark.** The card used to be deliberately typographic because
+ * there was no logo to embed; there is one, and a social preview without it is the
+ * one place the brand is guaranteed to be seen by somebody who has never heard of
+ * us. It arrives as a bundled data URI (`brand-mark.ts`) rather than a URL Satori
+ * would have to fetch — the note below about a fetch failing applies just as much to
+ * an image as to a font, and an OG route that 500s when a CDN blinks is a preview
+ * that silently stops working.
+ *
+ * Still no font over the network at request time (a fetch that fails takes the whole
+ * route with it), so the type is the platform's own sans. The colours are the light
+ * palette's literal values — `oklch()` and CSS custom properties are not available in
+ * Satori, which is what renders this.
  */
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/png";
@@ -38,8 +47,22 @@ export function renderOgImage() {
           fontFamily: "sans-serif",
         }}
       >
-        {/* A rule in the brand blue, so the card is not a slab of text. */}
-        <div style={{ display: "flex", width: 96, height: 8, backgroundColor: BLUE }} />
+        {/*
+          The mark, at the top where a masthead goes, with the rule beside it. Satori
+          supports a subset of flexbox and no `gap` on some versions, so the spacing is a
+          margin rather than a gap — a card that renders with the two elements touching
+          is not worth the tidier property.
+        */}
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <img
+            src={AZMOTH_MARK_DATA_URI}
+            width={72}
+            height={72}
+            alt=""
+            style={{ marginRight: 24 }}
+          />
+          <div style={{ display: "flex", width: 96, height: 8, backgroundColor: BLUE }} />
+        </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div

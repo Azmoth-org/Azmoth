@@ -244,6 +244,42 @@ export type UsageSummary = Schemas["UsageSummary"];
 export type UsageByEndpoint = Schemas["UsageByEndpoint"];
 export type UsageByKey = Schemas["UsageByKey"];
 
+/* -- subscriptions, quota and priced periods ------------------------------------------------ */
+
+/**
+ * Two conventions run through every shape below, and both matter at a call site.
+ *
+ * **Every euro amount is an integer count of cents**, named `*_cents`. `9900` is 99,00 €. There is
+ * no field anywhere carrying a formatted or decimal amount, because a JSON number that looks like
+ * money invites `parseFloat`, and the sum of a few thousand overage lines is where that stops being
+ * harmless. Format with `Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" })` on
+ * `cents / 100` at the point of display, and nowhere else.
+ *
+ * **The billable unit is invoices, not requests.** `invoices_processed` is what a quota is spent
+ * against and what an invoice is built from; one bulk upload of 300 deliveries is one request and
+ * 300 invoices. `requests` sits beside it for context only.
+ */
+export type BillingUsage = Schemas["BillingUsage"];
+
+/**
+ * What a practice is entitled to. The numbers come from the practice's own row rather than from the
+ * plan catalog — they were snapshotted when the plan was assigned, so a later change to the catalog
+ * cannot alter what was agreed. `plan_code` says what they were taken from.
+ */
+export type SubscriptionSummary = Schemas["SubscriptionSummary"];
+
+/** One plan in the catalog. `code` carries its revision: prices are superseded, never edited. */
+export type PlanSummary = Schemas["PlanSummary"];
+export type PlanCatalog = Schemas["PlanCatalog"];
+
+/** One closed period, priced. Not a Rechnung in the legal sense — see `docs/BILLING.md`. */
+export type BillingInvoice = Schemas["BillingInvoice"];
+export type BillingInvoiceList = Schemas["BillingInvoiceList"];
+
+/** A plan change. Name exactly one of `tier` or `plan_code`; both or neither is a 422. */
+export type UpgradeRequest = Schemas["UpgradeRequest"];
+export type UpgradeResult = Schemas["UpgradeResult"];
+
 /* -- shared enums -------------------------------------------------------------------------- */
 
 export type Setting = NonNullable<SolveRequest["setting"]>;
@@ -271,4 +307,8 @@ export const ENGINE_ROUTES = {
   apiKeys: "/api/v1/settings/api-keys",
   apiKeyDetail: "/api/v1/settings/api-keys/{key_id}",
   usage: "/api/v1/settings/usage",
+  billingUsage: "/api/v1/billing/usage",
+  billingPlans: "/api/v1/billing/plans",
+  billingUpgrade: "/api/v1/billing/upgrade",
+  billingInvoices: "/api/v1/billing/invoices",
 } as const satisfies Record<string, EnginePath>;

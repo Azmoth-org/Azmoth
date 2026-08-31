@@ -192,10 +192,14 @@ def test_no_solve_ever_runs_on_the_event_loop():
     serialise the whole service behind one request.
 
     There are two ways to honour that and both are in use, so this test checks the property rather
-    than one spelling of it. `/padnext/audit` is a plain `def`, which FastAPI dispatches to its
-    threadpool. `/solve` became `async def` when it gained a database write to await — so it has to
-    hand the solve to that same threadpool explicitly, and this asserts it does: the handler is a
-    coroutine AND it calls `run_in_threadpool`, never `pipeline().propose(...)` directly.
+    than one spelling of it. A plain `def` handler is dispatched to FastAPI's threadpool for free.
+    An `async def` handler is not, so it has to hand the blocking work to that threadpool
+    explicitly — and then the assertion is that it calls `run_in_threadpool` and never runs the
+    solve inline.
+
+    Both endpoints have now taken the second route, and for the same reason: `/solve` gained a
+    database write to await, and `/padnext/audit` gained a quota read. That is why the check below
+    is written once and applied to each of them rather than hard-coding which spelling either uses.
 
     An earlier version of this test asserted `not iscoroutinefunction(solve.solve)`. That was a
     check on the mechanism, and it passed for the wrong reason the moment the mechanism changed —
@@ -205,9 +209,21 @@ def test_no_solve_ever_runs_on_the_event_loop():
 
     from app.api import padnext, solve
 
-    assert not inspect.iscoroutinefunction(padnext.padnext_audit), (
-        "the PADnext audit runs Soufflé; a plain def keeps it in the threadpool"
-    )
+    def assert_never_blocks(handler, *, inline_call: str) -> None:
+        """Either sync (threadpool for free) or async and explicitly dispatching to it."""
+        if not inspect.iscoroutinefunction(handler):
+            return
+        source = inspect.getsource(handler)
+        assert "run_in_threadpool" in source, (
+            f"{handler.__name__} is async and runs Soufflé; it MUST dispatch to the threadpool"
+        )
+        assert inline_call not in source, (
+            f"{handler.__name__} calls {inline_call} directly from an async handler, which blocks "
+            "the event loop for the whole solve"
+        )
+
+    # The audit reaches Soufflé through `audit_delivery`, which is what must not be called inline.
+    assert_never_blocks(padnext.padnext_audit, inline_call="audit_delivery(")
 
     assert inspect.iscoroutinefunction(solve.solve)
     source = inspect.getsource(solve.solve)

@@ -12,6 +12,11 @@ import { expect, test } from "@playwright/test"
  * The list is the protected routes named in the brief. Kept explicit rather than derived from
  * `NAV_ITEMS`, because a test that generated its expectations from the same list the application
  * navigates by would pass if an entry were removed from both.
+ *
+ * `/rules` is not in it, and its absence is the assertion rather than a gap. The screen is behind
+ * `NEXT_PUBLIC_RULE_REVIEW_ENABLED`, off by default, so on a default build it is a `404` and not a
+ * redirect to `/login` — a correct answer this spec would read as a failure. Its own guard is
+ * below: signed out, and whichever way the flag is set, `/rules` never renders the workbench.
  */
 const PROTECTED = [
   "/",
@@ -20,7 +25,6 @@ const PROTECTED = [
   "/padnext",
   "/padnext/batch",
   "/padnext/batch/history",
-  "/rules",
 ] as const
 
 test.use({ storageState: { cookies: [], origins: [] } })
@@ -33,6 +37,24 @@ for (const route of PROTECTED) {
     await expect(page.getByRole("heading", { name: "Anmelden" })).toBeVisible()
   })
 }
+
+/**
+ * `/rules` signed out, under either setting of the flag.
+ *
+ * Two acceptable answers and one unacceptable one. With the flag off the page calls `notFound()`
+ * and the reader gets a 404; with it on, the `(app)` layout's `requireSession()` sends them to
+ * `/login`. What must never happen is the workbench rendering, so that is what is asserted —
+ * rather than pinning a build-time flag this spec cannot see from the browser.
+ */
+test("/rules zeigt die Regelprüfung niemals ohne Anmeldung", async ({
+  page,
+}) => {
+  await page.goto("/rules")
+
+  await expect(
+    page.getByRole("heading", { name: "GOÄ-Regeln prüfen" })
+  ).toBeHidden()
+})
 
 test("die Anmeldeseite selbst ist öffentlich", async ({ page }) => {
   await page.goto("/login")
