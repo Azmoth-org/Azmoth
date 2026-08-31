@@ -103,7 +103,7 @@ export default async function OnboardingPage({
         */}
         <div className="flex w-full max-w-xl flex-col gap-6">
           <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-bold">Einrichtung</h1>
+            <h1 className="text-display-md">Einrichtung</h1>
             <p className="text-sm text-balance text-muted-foreground">
               Bevor Abrechnungen geprüft werden können, hinterlegen Sie bitte
               einmalig Ihr Arztprofil und Ihre Praxisdaten.

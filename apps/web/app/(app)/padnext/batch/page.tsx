@@ -39,7 +39,7 @@ export default async function PadnextBatchPage({
   return (
     <>
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-display-md">
           PADnext-Stapel prüfen
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -48,7 +48,8 @@ export default async function PadnextBatchPage({
           <Link href="/padnext" className="underline">
             Einzelprüfung
           </Link>{" "}
-          — dieselben Datalog-Regeln, derselbe versionierte Katalog — und die
+          — dieselbe deterministische Regel-Engine, derselbe versionierte
+          Katalog — und die
           Ergebnisse werden anschließend über alle Rechnungen zusammengefasst.
         </p>
         <p className="text-sm text-muted-foreground">

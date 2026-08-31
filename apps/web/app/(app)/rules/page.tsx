@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { notFound } from "next/navigation"
 
 import { RuleReviewWorkbench } from "@/components/rules/review-workbench"
+import { RULE_REVIEW_ENABLED } from "@/lib/features"
 
 export const metadata: Metadata = {
   title: "Regelprüfung",
@@ -19,12 +21,27 @@ export const metadata: Metadata = {
  * There is no `SyntheticDataBanner` here, and its absence is deliberate rather than an oversight:
  * this screen holds no invoice and no patient data at all. It shows the GOÄ's own published text
  * and the rule table the engine derived from it.
+ *
+ * ## Off unless the deployment asks for it
+ *
+ * This is our tooling, not a customer's. A pilot user who finds this screen reads it as an
+ * invitation to correct the engine, and "the verdicts are not something you tune" is the
+ * proposition the pilot is selling. So the screen is behind `RULE_REVIEW_ENABLED`, off by default,
+ * and a deployment that has not opted in answers `404` — the same answer a path that was never
+ * built gets, which is the right one for a screen this deployment does not have.
+ *
+ * `notFound()` and not a redirect: a redirect would say "this exists somewhere else", and it
+ * doesn't. The nav entry is filtered out by the same flag in `components/layout/nav.ts`, so with
+ * the flag off there is nothing to click; this is what closes the typed URL. Both are needed —
+ * `lib/features.ts` explains why neither is an access control.
  */
 export default function RulesPage() {
+  if (!RULE_REVIEW_ENABLED) notFound()
+
   return (
     <>
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-display-md">
           GOÄ-Regeln prüfen
         </h1>
         <p className="text-sm text-muted-foreground">

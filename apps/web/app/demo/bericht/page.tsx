@@ -89,7 +89,7 @@ export default async function DemoReportPage() {
       <DemoModeBanner />
 
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-display-md">
           Prüfbericht — Beispiellieferung
         </h1>
         <p className="max-w-3xl text-sm text-muted-foreground">

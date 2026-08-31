@@ -44,7 +44,7 @@ function SeverityIcon({
   if (severity === "warning") {
     return <AlertTriangleIcon className="text-amber-600 dark:text-amber-400" />
   }
-  return <InfoIcon className="text-blue-600 dark:text-blue-400" />
+  return <InfoIcon className="text-azm-indigo-deep dark:text-azm-indigo-subdued" />
 }
 
 /**

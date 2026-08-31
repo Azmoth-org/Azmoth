@@ -48,165 +48,433 @@
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
     --font-sans: var(--font-sans);
+
+    /*
+     * DESIGN.md's palette, exposed as utilities.
+     *
+     * The tokens above are shadcn's semantic names — `--primary` is "the thing you click",
+     * whatever colour that is this quarter. These are the *brand* names, and both are needed:
+     * a Button resolves `--primary` and picks the brand up without a call site knowing a hex,
+     * while a gradient stop or a cream interlude band has no semantic role to hide behind and
+     * has to name the colour it means. Every value carries its DESIGN.md source hex.
+     */
+    --color-azm-indigo: var(--azm-indigo);
+    --color-azm-indigo-deep: var(--azm-indigo-deep);
+    --color-azm-indigo-press: var(--azm-indigo-press);
+    --color-azm-indigo-soft: var(--azm-indigo-soft);
+    --color-azm-indigo-subdued: var(--azm-indigo-subdued);
+    --color-azm-navy: var(--azm-navy);
+    --color-azm-ink: var(--azm-ink);
+    --color-azm-ink-secondary: var(--azm-ink-secondary);
+    --color-azm-ink-mute: var(--azm-ink-mute);
+    --color-azm-canvas-soft: var(--azm-canvas-soft);
+    --color-azm-canvas-cream: var(--azm-canvas-cream);
+    --color-azm-hairline: var(--azm-hairline);
+    --color-azm-ruby: var(--azm-ruby);
+    --color-azm-magenta: var(--azm-magenta);
+    --color-azm-lemon: var(--azm-lemon);
+
+    /*
+     * The three buckets, as utilities. Not brand — these are the engine's verdicts rendered, and
+     * both apps have to reach them by name so that `bg-azm-wrong-bg` on the marketing site and on
+     * the demo report resolve to one value. They are the only colour pair in the system that
+     * changes between light and dark, because a green-700 chip on a navy card is a smudge.
+     */
+    --color-azm-confirmed: var(--azm-confirmed);
+    --color-azm-confirmed-bg: var(--azm-confirmed-bg);
+    --color-azm-wrong: var(--azm-wrong);
+    --color-azm-wrong-bg: var(--azm-wrong-bg);
+    --color-azm-unconfirmed: var(--azm-unconfirmed);
+    --color-azm-unconfirmed-bg: var(--azm-unconfirmed-bg);
+
+    /*
+     * The display tier, as real type tokens rather than three classes at each call site.
+     *
+     * DESIGN.md is explicit that the weight and the tracking are one decision — "at weight 400
+     * the brand's editorial air collapses", and negative tracking at weight 600 reads as a
+     * rendering fault. Tailwind v4 lets a `--text-*` token carry its own line-height, tracking
+     * *and* weight, so `text-display-xl` cannot be applied with half of it missing. That is the
+     * whole reason these are tokens: the failure mode DESIGN.md warns about is unreachable.
+     *
+     * Body sizes are deliberately absent. DESIGN.md's 15px body is one step off Tailwind's 16px
+     * base and the product screens are built on `text-sm` / `text-base`; introducing a third
+     * size would re-flow every table in the application to settle a 1px difference nobody asked
+     * about. The display tier is where the brand actually lives.
+     */
+    --text-display-xxl: 3.5rem;            /* 56px — hero headline        */
+    --text-display-xxl--line-height: 1.03;
+    --text-display-xxl--letter-spacing: -1.4px;
+    --text-display-xxl--font-weight: 300;
+    --text-display-xl: 3rem;               /* 48px — section opener       */
+    --text-display-xl--line-height: 1.15;
+    --text-display-xl--letter-spacing: -0.96px;
+    --text-display-xl--font-weight: 300;
+    --text-display-lg: 2rem;               /* 32px — card / sub-section   */
+    --text-display-lg--line-height: 1.1;
+    --text-display-lg--letter-spacing: -0.64px;
+    --text-display-lg--font-weight: 300;
+    --text-display-md: 1.625rem;           /* 26px — compact card title   */
+    --text-display-md--line-height: 1.12;
+    --text-display-md--letter-spacing: -0.26px;
+    --text-display-md--font-weight: 300;
+    --text-heading-lg: 1.375rem;           /* 22px — screen title         */
+    --text-heading-lg--line-height: 1.1;
+    --text-heading-lg--letter-spacing: -0.22px;
+    --text-heading-lg--font-weight: 300;
+
+    /*
+     * `{rounded.pill}`. DESIGN.md: "Don't replace the pill shape with rounded-rectangles for
+     * buttons." The remaining radii all derive from `--radius` above, which is DESIGN.md's
+     * `{rounded.lg}` of 12px — so `radius-sm` lands on 7px, `radius-md` on 10px, `radius-lg` on
+     * the specified 12px. DESIGN.md's spacing scale (2/4/8/12/16/24/32/64px) is Tailwind's own
+     * 4px ramp with no remapping needed, which is why no spacing tokens appear here.
+     */
+    --radius-pill: 9999px;
 }
 
 /*
- * The product palette.
+ * The palette, from `DESIGN.md`.
  *
- * This is billing software for a physician's working day, not a developer tool, and the palette is
- * the first thing that says which. Every value below is a Tailwind default so that a `gray-200`
- * hard-coded in a component and a `border` token resolve to the same colour rather than to two
- * greys that almost match.
+ * This file used to hold a second, unrelated palette — Tailwind `gray` with a blue-600 accent —
+ * on the argument that "a brochure and a screen holding a physician's signature are allowed to
+ * look different". That was a defensible position for a product with no brand yet. It is not one
+ * now: the marketing site had already implemented `DESIGN.md` by redefining these same token
+ * names in `apps/marketing/src/app/globals.css`, which meant the design system existed twice, and
+ * a prospect who signed up walked from an indigo pill on a navy wordmark straight into a blue
+ * button on a grey shell and had no way to tell it was the same company.
  *
- * **Light is the product, dark is a preference.** `ThemeProvider` opens light regardless of the
- * operating system — a screen carrying money and a signature should not change colour because
- * somebody's laptop switched at sunset — and the toggle in the top bar still switches.
+ * So `DESIGN.md` is now the source of truth for both surfaces and it lives here, once. The
+ * marketing app keeps only what is genuinely marketing — its `@source` scan and the hero mesh's
+ * placement — and picks the palette up from this import.
  *
- * **The ground is gray-50 and cards are white.** They were both white, which left a card
- * distinguishable from the page only by its shadow; on a screen holding six of them the separation
- * has to come from the surface, not from depth.
+ * **The two things that did not move.** The verdict colours below stay Tailwind green/red/amber
+ * because they are not brand, they are the engine's three buckets rendered; and dark mode is
+ * still a preference the toggle serves rather than an OS setting the product follows, because a
+ * screen carrying money and a signature should not change colour because somebody's laptop
+ * switched at sunset.
  *
- * **The rail follows the theme.** It used to be gray-900 in both modes, and under `variant="inset"`
- * `SidebarProvider` paints the whole page wrapper with `--sidebar` — so the frame *and* the ground
- * ignored the toggle. Every surface is now a light/dark pair, which is what shadcn's token set is
- * for: `:root` and `.dark` define the same names, and `class="dark"` on `<html>` swaps all of them
- * at once.
- *
- * **Blue is the only accent that means "do this".** `--primary` is blue-600 and nothing else on the
- * screen is blue: red is a suppression or an error, amber is unresolved, green is charged.
+ * Values are `DESIGN.md`'s hexes converted to oklch — the notation the rest of this file already
+ * uses, and mixing two colour spaces in one token set means two meanings for "the same grey".
+ * Each line carries its source hex so a designer can grep the palette by the value they wrote.
  */
 :root {
-    --background: oklch(0.985 0.002 247.839);  /* gray-50 */
-    --foreground: oklch(0.21 0.034 264.665);   /* gray-900 */
+    /* --- DESIGN.md palette, verbatim ------------------------------------- */
+    --azm-indigo: oklch(0.5211 0.2679 277.43);        /* #533afd  primary          */
+    --azm-indigo-deep: oklch(0.4621 0.2300 276.92);   /* #4434d4  primary-deep     */
+    --azm-indigo-press: oklch(0.3614 0.1551 276.67);  /* #2e2b8c  primary-press    */
+    --azm-indigo-soft: oklch(0.5836 0.2282 278.87);   /* #665efd  primary-soft     */
+    --azm-indigo-subdued: oklch(0.8085 0.0899 284.21);/* #b9b9f9  subdued          */
+    --azm-navy: oklch(0.2701 0.0962 276.24);          /* #1c1e54  brand-dark-900   */
+    --azm-ink: oklch(0.2591 0.0544 250.72);           /* #0d253d  ink              */
+    --azm-ink-secondary: oklch(0.3405 0.0485 255.87); /* #273951  ink-secondary    */
+    /*
+     * `ink-mute-2` (#61718a), not `ink-mute` (#64748d), and the 3px difference is load-bearing.
+     * This token is the only secondary text colour the system has, so it carries table labels and
+     * card descriptions as well as genuine small print. `ink-mute` measures 4.49:1 against the
+     * `canvas-soft` ground — a rounding error under AA, on a screen somebody reads for six hours.
+     * `ink-mute-2` is a documented DESIGN.md token, reads as the same grey, and measures 4.69:1.
+     */
+    --azm-ink-mute: oklch(0.5449 0.0437 259.24);      /* #61718a  ink-mute-2       */
+    --azm-canvas-soft: oklch(0.9807 0.0051 247.88);   /* #f6f9fc  canvas-soft      */
+    --azm-canvas-cream: oklch(0.9380 0.0307 81.75);   /* #f5e9d4  canvas-cream     */
+    --azm-hairline: oklch(0.9289 0.0097 252.81);      /* #e3e8ee  hairline         */
+    --azm-hairline-input: oklch(0.8060 0.0483 248.43);/* #a8c3de  hairline-input   */
+    --azm-ruby: oklch(0.6093 0.2282 10.76);           /* #ea2261  mesh / chart only*/
+    --azm-magenta: oklch(0.7461 0.2276 330.68);       /* #f96bee  mesh only        */
+    --azm-lemon: oklch(0.5596 0.1016 68.39);          /* #9b6829  mesh only        */
+    /*
+     * The rail, one step under `canvas-soft`. DESIGN.md documents a marketing surface and a dark
+     * dashboard shell but no light navigation rail, so this is derived rather than quoted: the
+     * same cool hue as `canvas-soft`, one step down, so the three surfaces the product needs —
+     * rail, ground, card — stay one step apart exactly as they do in dark mode.
+     */
+    --azm-canvas-rail: oklch(0.9526 0.0114 252.09);   /* #eaf0f7  derived          */
+
+    /* --- shadcn token names, repointed at the brand ----------------------- */
+    --background: var(--azm-canvas-soft);
+    --foreground: var(--azm-ink);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.21 0.034 264.665);
+    --card-foreground: var(--azm-ink);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.21 0.034 264.665);
-    --primary: oklch(0.546 0.245 262.881);     /* blue-600 */
+    --popover-foreground: var(--azm-ink);
+    /* White on indigo measures 6.19:1 — up from blue-600's 5.25:1 on the control that commits a
+     * physician to an invoice, which is the one label whose contrast must never be in question. */
+    --primary: var(--azm-indigo);
     --primary-foreground: oklch(1 0 0);
-    --secondary: oklch(0.967 0.003 264.542);   /* gray-100 */
-    --secondary-foreground: oklch(0.21 0.034 264.665);
-    --muted: oklch(0.967 0.003 264.542);
+    --secondary: var(--azm-canvas-soft);
+    --secondary-foreground: var(--azm-indigo-deep);
+    --muted: var(--azm-canvas-soft);
+    --muted-foreground: var(--azm-ink-mute);
+    --accent: var(--azm-canvas-soft);
+    --accent-foreground: var(--azm-ink);
+    --destructive: oklch(0.577 0.245 27.325);         /* red-600 — a verdict, not brand */
+    --border: var(--azm-hairline);
+    --input: var(--azm-hairline-input);
+    --ring: var(--azm-indigo-soft);
     /*
-     * gray-600, not the gray-500 a mockup would pick. This token is the only secondary text colour
-     * the system has, so it carries card descriptions and column labels as well as genuine small
-     * print, and gray-500 at 12px on white is 4.8:1 — legal, and thin for a screen somebody reads
-     * for six hours. The size difference already says "secondary"; the contrast does not have to.
+     * The chart ramp is the gradient mesh's own stops, in the order DESIGN.md lists them, which
+     * keeps a chart legend and the hero behind it speaking one vocabulary. Ruby and magenta are
+     * chart highlights here and buttons nowhere — DESIGN.md is explicit that they are "never a
+     * button".
      */
-    --muted-foreground: oklch(0.446 0.03 256.802);
-    --accent: oklch(0.967 0.003 264.542);
-    --accent-foreground: oklch(0.21 0.034 264.665);
-    --destructive: oklch(0.577 0.245 27.325);  /* red-600 */
-    --border: oklch(0.928 0.006 264.531);      /* gray-200 */
-    --input: oklch(0.928 0.006 264.531);
-    --ring: oklch(0.623 0.214 259.815);        /* blue-500 */
-    --chart-1: oklch(0.546 0.245 262.881);
-    --chart-2: oklch(0.707 0.165 254.624);
-    --chart-3: oklch(0.551 0.027 264.364);
-    --chart-4: oklch(0.373 0.034 259.733);
-    --chart-5: oklch(0.21 0.034 264.665);
-    --radius: 0.625rem;
-    /*
-     * The rail, in light mode.
-     *
-     * These eight were gray-900/gray-800 — a dark rail deliberately kept under a light document. It
-     * photographs well and it behaves badly: the toggle then changes every surface on screen except
-     * the one the eye uses to locate itself, so switching to dark looks like half the application
-     * failed to repaint. And because an inset layout paints the page wrapper with `--sidebar`, the
-     * ground behind the document was pinned to gray-900 in light mode too.
-     *
-     * Same stack as dark, one register up: the rail and the ground it bleeds into are gray-100, the
-     * inset document panel is `--background` (gray-50) and cards are white. Three surfaces, one step
-     * apart, in both modes — so the layout reads identically whichever theme is on.
-     */
-    --sidebar: oklch(0.967 0.003 264.542);             /* gray-100 */
-    --sidebar-foreground: oklch(0.21 0.034 264.665);   /* gray-900 */
-    --sidebar-primary: oklch(0.546 0.245 262.881);     /* blue-600 */
+    --chart-1: var(--azm-indigo);
+    --chart-2: var(--azm-indigo-soft);
+    --chart-3: var(--azm-ruby);
+    --chart-4: var(--azm-magenta);
+    --chart-5: var(--azm-navy);
+    /* DESIGN.md `{rounded.lg}` is 12px, and every derived step follows from it. */
+    --radius: 0.75rem;
+    /* Rail, ground, card — three surfaces one step apart, the same stack dark mode has. */
+    --sidebar: var(--azm-canvas-rail);
+    --sidebar-foreground: var(--azm-ink);
+    --sidebar-primary: var(--azm-indigo);
     --sidebar-primary-foreground: oklch(1 0 0);
-    /* gray-200: hover, and the current page. One step off the rail, the same step dark mode uses. */
-    --sidebar-accent: oklch(0.928 0.006 264.531);
-    --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
-    --sidebar-border: oklch(0.928 0.006 264.531);      /* gray-200 */
-    --sidebar-ring: oklch(0.623 0.214 259.815);        /* blue-500 */
+    --sidebar-accent: var(--azm-hairline);
+    --sidebar-accent-foreground: var(--azm-ink);
+    --sidebar-border: var(--azm-hairline);
+    --sidebar-ring: var(--azm-indigo-soft);
+
+    /*
+     * The three verdict colours.
+     *
+     * The one place neither app may invent a palette. Green / red / amber here have to be the same
+     * three the engine's report renders, because a visitor who reads "Nachweislich falsch" on the
+     * marketing home page in one red and then meets that bucket in another red on the demo has
+     * been shown two different things — and that had already happened: the marketing site rendered
+     * the confirmed bucket in Tailwind `green-700` (hue 150) while every audit screen in the
+     * product rendered it in `emerald-700` (hue 165). Two visibly different greens for one verdict.
+     * `emerald` wins because it is what the engine's report has always shown; the marketing site is
+     * the surface that moves.
+     */
+    --azm-confirmed: oklch(0.508 0.118 165.612);      /* emerald-700 */
+    --azm-confirmed-bg: oklch(0.979 0.021 166.113);   /* emerald-50  */
+    --azm-wrong: oklch(0.5771 0.2152 27.33);          /* red-600   */
+    --azm-wrong-bg: oklch(0.9705 0.0129 17.38);       /* red-50    */
+    --azm-unconfirmed: oklch(0.6658 0.1574 58.32);    /* amber-600 */
+    --azm-unconfirmed-bg: oklch(0.9869 0.0214 95.28); /* amber-50  */
 }
 
 /*
- * Dark, as a designed surface rather than an inverted one.
+ * Dark, as DESIGN.md's dashboard track rather than an inverted brochure.
  *
- * The old values were the scaffold's: pure-neutral greys at chroma 0, a near-black ground, pure
- * white text, and translucent-white borders. Three things were wrong with that, and they are the
- * three things that make a dark mode read as a terminal instead of a product.
+ * DESIGN.md describes exactly one dark surface — "the dashboard track flips polarity to a familiar
+ * dark-app shell", filled with `brand-dark-900` (#1c1e54). That is a card colour, not a whole
+ * theme, so the ramp around it is derived: the same navy hue and chroma, three steps, matching the
+ * light mode's rail / ground / card stack so the layout reads identically whichever theme is on.
+ * The previous dark mode was Tailwind `gray` at hue 260 — a near-neighbour of this navy, which is
+ * why the change reads as a saturation of the old theme rather than a different product.
  *
- * **Chroma 0 is not a colour, it is the absence of one.** The light palette is Tailwind's `gray`,
- * which carries a slight cool cast (chroma ~0.03 around hue 260). Switching to neutral grey in dark
- * mode changed the product's temperature between modes for no reason. These are the same family,
- * two ends of the same ramp: gray-950 / gray-900 / gray-800 / gray-700.
+ * **Indigo does not lift in dark.** A dark theme reaches for a lighter accent by reflex; here that
+ * would trade the label's contrast for the fill's. White on `indigo-soft` measures 4.58:1 and white
+ * on `indigo` measures 6.19:1, identically in both modes — the right answer for the one button on
+ * this screen whose meaning must never be in question. The focus ring is where the lighter indigo
+ * goes, because nothing has to be read off a ring.
  *
- * **Three surfaces, three values.** The rail is gray-950, the page ground is gray-900, and cards are
- * gray-800 — the same *stack* the light mode has (gray-100 rail, gray-50 ground, white cards), so the
- * layout reads identically in both. When card and ground were 0.145 and 0.205 of a neutral ramp, the
- * step existed but carried no hue to help the eye find the edge.
- *
- * **Borders are opaque and text is off-white.** `oklch(1 0 0 / 10%)` composites to something the eye
- * loses against a card at any size below a full panel edge; gray-700 is a line you can actually see.
- * And `#fff` on a dark ground vibrates — gray-100 is the off-white that every mature dark theme
- * lands on, with gray-400 under it for secondary text at about 5.5:1 on a card.
- *
- * Written in oklch, like the rest of this file. A prescription elsewhere suggested HSL; mixing two
- * colour spaces in one token set means two different meanings for "the same grey", and the light
- * palette above is already oklch Tailwind defaults. The intent — nuanced greys, no pure black, no
- * pure white — is what carries over, not the notation.
+ * **Borders are opaque, and the input border is not the card border.** A 1px `--border` separates
+ * two surfaces and only has to be visible; `--input` is the boundary of a control a person has to
+ * find, which WCAG 1.4.11 puts at 3:1. They were one value, at 1.5:1, so the form fields were the
+ * thing that disappeared. Now they are two: #3f4694 for hairlines, #6b76c9 for controls, at 3.71:1.
  */
 .dark {
-    --background: oklch(0.21 0.034 264.665);   /* gray-900 */
-    --foreground: oklch(0.967 0.003 264.542);  /* gray-100 — off-white, not #fff */
-    --card: oklch(0.278 0.033 256.848);        /* gray-800 */
-    --card-foreground: oklch(0.967 0.003 264.542);
-    --popover: oklch(0.278 0.033 256.848);
-    --popover-foreground: oklch(0.967 0.003 264.542);
-    /*
-     * blue-600, the same value light mode uses, not the blue-500 a dark theme reaches for by
-     * reflex. Lifting the accent makes the *fill* read better against a dark card and the *label*
-     * read worse: white on blue-500 measures 3.76:1, under AA for the one control on this screen
-     * that commits a physician to an invoice. blue-600 puts it at 5.25:1, and the primary action
-     * then looks identical in both modes — which is the right answer for a button whose meaning
-     * must never be in question. The focus ring stays blue-500, where nothing has to be read.
-     */
-    --primary: oklch(0.546 0.245 262.881);     /* blue-600 */
+    --background: oklch(0.2437 0.0796 275.77);        /* #171a45  ground, derived  */
+    --foreground: oklch(0.9409 0.0243 280.86);        /* #e8eafc  off-white, not #fff */
+    --card: oklch(0.2701 0.0962 276.24);              /* #1c1e54  brand-dark-900   */
+    --card-foreground: oklch(0.9409 0.0243 280.86);
+    --popover: oklch(0.2701 0.0962 276.24);
+    --popover-foreground: oklch(0.9409 0.0243 280.86);
+    --primary: var(--azm-indigo);
     --primary-foreground: oklch(1 0 0);
-    --secondary: oklch(0.373 0.034 259.733);   /* gray-700 */
-    --secondary-foreground: oklch(0.967 0.003 264.542);
-    --muted: oklch(0.373 0.034 259.733);
-    --muted-foreground: oklch(0.707 0.022 261.325);  /* gray-400 */
-    --accent: oklch(0.373 0.034 259.733);
-    --accent-foreground: oklch(0.967 0.003 264.542);
-    --destructive: oklch(0.704 0.191 22.216);  /* red-400 — red-600 is unreadable on gray-800 */
-    --border: oklch(0.373 0.034 259.733);      /* gray-700, opaque */
-    --input: oklch(0.373 0.034 259.733);
-    --ring: oklch(0.623 0.214 259.815);
-    --chart-1: oklch(0.623 0.214 259.815);
-    --chart-2: oklch(0.707 0.165 254.624);
-    --chart-3: oklch(0.707 0.022 261.325);
-    --chart-4: oklch(0.551 0.027 264.364);
-    --chart-5: oklch(0.373 0.034 259.733);
-    /* One step darker than the page, as in light mode — the rail is the frame, not another panel. */
-    --sidebar: oklch(0.13 0.028 261.692);      /* gray-950 */
-    --sidebar-foreground: oklch(0.872 0.01 258.338);   /* gray-300 */
-    --sidebar-primary: oklch(0.546 0.245 262.881);
+    --secondary: oklch(0.3232 0.1114 275.57);         /* #262a6b  raised, derived  */
+    --secondary-foreground: oklch(0.9409 0.0243 280.86);
+    --muted: oklch(0.3232 0.1114 275.57);
+    --muted-foreground: oklch(0.7239 0.0648 275.66);  /* #9aa3cf  6.25:1 on card   */
+    --accent: oklch(0.3232 0.1114 275.57);
+    --accent-foreground: oklch(0.9409 0.0243 280.86);
+    --destructive: oklch(0.704 0.191 22.216);         /* red-400 — red-600 is unreadable here */
+    --border: oklch(0.3814 0.1120 275.87);            /* #3f4694  hairline         */
+    --input: oklch(0.5290 0.1372 277.45);             /* #6b76c9  control boundary */
+    --ring: var(--azm-indigo-soft);
+    --chart-1: var(--azm-indigo-soft);
+    --chart-2: oklch(0.8085 0.0899 284.21);           /* indigo-subdued */
+    --chart-3: var(--azm-ruby);
+    --chart-4: var(--azm-magenta);
+    --chart-5: oklch(0.7239 0.0648 275.66);
+    /* One step darker than the ground — the rail is the frame, not another panel. */
+    --sidebar: oklch(0.2029 0.0640 276.46);           /* #101233  rail, derived    */
+    --sidebar-foreground: oklch(0.8584 0.0474 278.75);/* #c9cef0                   */
+    --sidebar-primary: var(--azm-indigo);
     --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-accent: oklch(0.278 0.033 256.848);      /* gray-800 */
-    --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
-    --sidebar-border: oklch(0.278 0.033 256.848);
-    --sidebar-ring: oklch(0.623 0.214 259.815);
+    --sidebar-accent: oklch(0.3232 0.1114 275.57);
+    --sidebar-accent-foreground: oklch(0.9409 0.0243 280.86);
+    --sidebar-border: oklch(0.3232 0.1114 275.57);
+    --sidebar-ring: var(--azm-indigo-soft);
+
+    /*
+     * The verdict colours, lifted for a dark ground and *only* here. The hue is the same claim;
+     * green-700 on a navy card is a smudge. Backgrounds become low-alpha washes of the same hue
+     * rather than the green-50 / red-50 / amber-50 tints, which on this ground would read as three
+     * light rectangles rather than three states.
+     */
+    --azm-confirmed: oklch(0.765 0.177 163.223);      /* emerald-400 */
+    --azm-confirmed-bg: oklch(0.393 0.075 165.61);
+    --azm-wrong: oklch(0.7040 0.1910 22.216);         /* red-400   */
+    --azm-wrong-bg: oklch(0.3960 0.1300 25.72);
+    --azm-unconfirmed: oklch(0.8290 0.1590 75.83);    /* amber-400 */
+    --azm-unconfirmed-bg: oklch(0.4140 0.0960 65.36);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
     }
+
+  /*
+   * `ss01` globally, per DESIGN.md: "Apply font-feature-settings: 'ss01' to the body element so
+   * the stylistic-set substitution is on for every text role." Inter — the open-source substitute
+   * DESIGN.md names for the proprietary Sohne — carries the set. On a fallback face that does not,
+   * the declaration is inert rather than wrong, which is what makes it safe to set once here.
+   */
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01";
     }
+
+  /*
+   * Pill buttons, everywhere.
+   *
+   * DESIGN.md is unambiguous — "Don't replace the pill shape with rounded-rectangles for buttons"
+   * — and the shared Button ships `rounded-4xl`, which against this radius scale is 31px: nearly a
+   * pill on a 40px control and visibly *not* one on anything taller, or on a two-line CTA that
+   * wraps on mobile. Overriding the slot once rather than passing `rounded-full` at every call
+   * site is what stops the twentieth button getting it wrong.
+   */
+  [data-slot="button"] {
+    border-radius: var(--radius-pill);
+    }
+
+  /*
+   * Card geometry and lift, per DESIGN.md.
+   *
+   * The shared Card ships `rounded-4xl` and a `shadow-md` — both tuned for a dashboard widget
+   * floating on a ground. DESIGN.md specifies `{rounded.lg}` 12px with its Level 1 shadow
+   * (`rgba(0,55,112,0.08) 0 1px 3px`) for a feature card, which is a flatter, more editorial
+   * object. The inner corners have to follow, or a card's header clips its own rounding against a
+   * radius 19px larger than the box it sits in.
+   *
+   * The shadow is light-mode only. `shadow-blue` is a navy at 8% alpha, which on the dark shell's
+   * own navy ground is invisible — there, the card's one step of surface lift is what separates
+   * it, and the `ring-1` the component already carries draws the edge.
+   */
+  [data-slot="card"] {
+    border-radius: var(--radius);
+    box-shadow: rgba(0, 55, 112, 0.08) 0 1px 3px;
+    }
+
+  .dark [data-slot="card"] {
+    box-shadow: none;
+    }
+
+  [data-slot="card-header"] {
+    border-start-start-radius: var(--radius);
+    border-start-end-radius: var(--radius);
+    }
+
+  [data-slot="card-footer"] {
+    border-end-start-radius: var(--radius);
+    border-end-end-radius: var(--radius);
+    }
+}
+
+@layer components {
+  /*
+   * The gradient mesh — DESIGN.md's signature hero backdrop, and the one element it calls
+   * non-negotiable.
+   *
+   * Five overlapping radial gradients rather than an image: the mesh is decoration behind live
+   * text, so an image would cost a request and a layout-shift risk on the largest contentful paint
+   * for something the GPU composites for free. The organic shape DESIGN.md asks for comes from the
+   * stops being off-centre and differently sized, not from one linear wash.
+   *
+   * Stops are the documented ones — cream, sherbet, lavender, indigo, ruby — at low alpha, so the
+   * mesh tints the canvas instead of colouring it. Text above it stays on `--foreground` and keeps
+   * its full contrast ratio.
+   *
+   * It lives here rather than in the marketing app because the public demo track in `apps/web` is
+   * the same visitor's next screen after the home page, and a mesh that stops at the domain
+   * boundary is exactly where a brand visibly ends. The signed-in `(app)` screens deliberately do
+   * not use it: those are a working day, not a first impression.
+   */
+  .azm-mesh {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: 46rem;
+    max-block-size: 100%;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(
+        60rem 26rem at 8% -6%,
+        color-mix(in oklch, var(--azm-canvas-cream) 78%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        44rem 22rem at 32% -2%,
+        color-mix(in oklch, var(--azm-lemon) 16%, transparent),
+        transparent 68%
+      ),
+      radial-gradient(
+        52rem 28rem at 66% -10%,
+        color-mix(in oklch, var(--azm-indigo) 26%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        40rem 24rem at 92% 2%,
+        color-mix(in oklch, var(--azm-ruby) 18%, transparent),
+        transparent 66%
+      ),
+      radial-gradient(
+        36rem 20rem at 50% 14%,
+        color-mix(in oklch, var(--azm-magenta) 12%, transparent),
+        transparent 70%
+      );
+    /* Fades into the canvas rather than ending on a visible edge. */
+    mask-image: linear-gradient(to bottom, black 0%, black 52%, transparent 100%);
+  }
+
+  /*
+   * The mesh, on the dark shell. Same five stops, a third of the alpha: at full strength on a navy
+   * ground the indigo and ruby stops stop being atmosphere and become two coloured blobs.
+   */
+  .dark .azm-mesh {
+    opacity: 0.35;
+  }
+
+  /*
+   * DESIGN.md's display tier as a class, for the case the `text-display-*` tokens do not cover:
+   * a heading whose size is already set by something else and only needs the brand's weight and
+   * tracking. Weight and tracking together, never one without the other — at weight 600 the
+   * negative tracking reads as a rendering fault.
+   */
+  .azm-display {
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+
+  /*
+   * Any element rendering money, a count or a duration. DESIGN.md's financial tell, and the one
+   * micro-detail it calls non-negotiable: "Don't render money cells without tnum."
+   *
+   * Figures only — DESIGN.md pairs `tnum` with -0.42px tracking, and that half is left out on
+   * purpose. The tightening is specified for `body-tabular`, a 14px *table cell*; applied to a
+   * running paragraph that quotes a catalogue figure it sets that block visibly tighter than the
+   * identical paragraph beside it, which reads as a rendering fault rather than as a detail.
+   * Tabular figures are the signal; the tracking was scenery.
+   */
+  .azm-tnum {
+    font-feature-settings: "tnum";
+  }
 }
 
 /*

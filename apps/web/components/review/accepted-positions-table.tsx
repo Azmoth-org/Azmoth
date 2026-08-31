@@ -374,7 +374,7 @@ export function AcceptedPositionsTable({ coding }: { coding: Coding }) {
           <li className="rounded-2xl border bg-muted/40 p-4">
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-base font-semibold">Gesamt</span>
-              <span className="text-2xl font-bold tabular-nums">
+              <span className="text-display-md tabular-nums">
                 {eur(total.amount_eur)}
               </span>
             </div>

@@ -30,7 +30,7 @@ export default function ApiKeysPage() {
   return (
     <>
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">API-Schlüssel</h1>
+        <h1 className="text-display-md">API-Schlüssel</h1>
         <p className="text-sm text-muted-foreground">
           Mit einem API-Schlüssel bindet ein Praxisverwaltungssystem oder ein
           Rechnungszentrum die Prüfung direkt in die eigene Software ein —{" "}
