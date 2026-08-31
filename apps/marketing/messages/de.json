@@ -160,7 +160,8 @@
       ],
       "cta": "Pilot-Zugang anfordern",
       "ctaSekundaer": "Erst die Demo ansehen",
-      "hinweis": "Der Pilotbetrieb verarbeitet ausschließlich anonymisierte Lieferungen. Das Anonymisierungsskript läuft bei Ihnen, bevor eine Datei unser Haus erreicht."
+      "hinweis": "Der Pilotbetrieb verarbeitet ausschließlich anonymisierte Lieferungen. Das Anonymisierungsskript läuft bei Ihnen, bevor eine Datei unser Haus erreicht.",
+      "hinweisKatalog": "Hinweis für den Pilotbetrieb: Azmoth prüft Abrechnungen anhand des aktuellen GOÄ-Katalogs. Für die höchste Genauigkeit bitten wir Sie, im Pilot ausschließlich Rechnungen der letzten 6–12 Monate einzureichen."
     },
     "api": {
       "eyebrow": "Für Entwickler",
@@ -253,7 +254,11 @@
       },
       {
         "q": "Wird gegen die aktuelle oder die damals gültige Gebührenordnung geprüft?",
-        "a": "Gegen die Fassung, die am Behandlungstag galt. Eine Rechnung über eine Behandlung aus dem Vorjahr wird nicht an heutigen Regeln gemessen."
+        "a": "Im Pilotbetrieb gegen den aktuellen GOÄ-Katalog. Die Engine ist auf mehrere Katalogstände ausgelegt und jeder Prüfbericht nennt die Fassung, gegen die er gerechnet wurde — historische Fassungen sind jedoch noch nicht hinterlegt. Deshalb bitten wir Sie, im Pilot Rechnungen der letzten 6–12 Monate einzureichen. Ältere Abrechnungen werden weiterhin vollständig geprüft; der Bericht weist dann ausdrücklich darauf hin, dass historische Regelabweichungen nicht erkannt werden können."
+      },
+      {
+        "q": "Welche Rechnungen soll ich für den Piloten einreichen?",
+        "a": "Rechnungen mit einem Leistungsdatum aus den letzten 6–12 Monaten. Das ist der Zeitraum, für den der geladene GOÄ-Katalog die maßgebliche Fassung ist. Ältere Lieferungen weisen wir nicht ab — sie werden geprüft und der Bericht kennzeichnet sie gesondert."
       },
       {
         "q": "Können bestehende Rechnungen geprüft werden?",

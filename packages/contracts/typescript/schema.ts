@@ -2781,6 +2781,11 @@ export interface components {
             /** Invoice Ids */
             invoice_ids?: string[];
             /**
+             * Latest Service Date
+             * @default
+             */
+            latest_service_date: string;
+            /**
              * Logic Version
              * @default
              */
@@ -2790,6 +2795,13 @@ export interface components {
              * @default
              */
             nachrichtentyp: string;
+            /**
+             * Pilot Scope Checked
+             * @default false
+             */
+            pilot_scope_checked: boolean;
+            /** Pilot Warnings */
+            pilot_warnings?: string[];
             /** Positions */
             positions?: components["schemas"]["PadnextAuditedPosition"][];
             /**

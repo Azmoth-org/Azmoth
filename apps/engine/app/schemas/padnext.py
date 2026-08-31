@@ -269,6 +269,37 @@ class PadnextAuditReport(BaseModel):
     #: `off` means the question was not asked.
     schema_policy: Literal["strict", "warn", "off"] = "strict"
 
+    #: Scope warnings about this delivery that are **not** defects in it — the pilot's own limits,
+    #: stated on the report rather than in a footnote somebody may not have read.
+    #:
+    #: Today it holds exactly one kind: the invoice's Leistungsdatum is older than
+    #: `PILOT_MAX_INVOICE_AGE_DAYS`, and this engine priced it against the *current* GOÄ because
+    #: that is the only real catalog edition it has (`data/catalogs/README.md`). That is a
+    #: statement about the engine, not about the practice, and keeping it out of `findings` is the
+    #: point: `findings` is the list of things wrong with the invoice, and a reviewer who reads
+    #: "12 Befunde" must not be counting our own missing feature among them.
+    #:
+    #: Deliberately **never** merged into `schema_warnings`. That array has one meaning — the file
+    #: did not match the ADL schema — and a client that reads a non-empty `schema_warnings` as
+    #: "this export is malformed" is reading it correctly today. Putting a temporal note in there
+    #: would make that reading wrong for every caller at once, including ones we do not ship.
+    #:
+    #: Empty means "nothing to flag", which includes the case where no position carried a `datum`
+    #: at all — an unparseable or absent date is not evidence of age. `pilot_scope_checked` is
+    #: what tells those apart.
+    pilot_warnings: list[str] = Field(default_factory=list)
+
+    #: Whether the temporal scope check above actually ran and had a date to look at. `False` means
+    #: either the check is switched off (`PILOT_MAX_INVOICE_AGE_DAYS=0`) or no position carried a
+    #: readable `<datum>` — so an empty `pilot_warnings` is "not checked", not "checked and fine".
+    pilot_scope_checked: bool = False
+
+    #: The most recent Leistungsdatum found across the delivery's positions, ISO `YYYY-MM-DD`, or
+    #: empty when none was readable. The *most recent* one, not the oldest: an invoice is as old as
+    #: its newest treatment, and taking the minimum would flag a normal invoice that happens to
+    #: carry one carried-over line from last year.
+    latest_service_date: str = ""
+
     #: What the file itself charges, across every position including ones we cannot price.
     claimed_total_eur: Dec = Decimal("0.00")
     #: Our recomputation, over the positions we could price at all.

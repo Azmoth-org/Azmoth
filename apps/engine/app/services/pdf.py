@@ -848,7 +848,27 @@ DATA_PROTECTION = (
     "hier nicht erscheinen."
 )
 
-CONTACT = "kontakt@azmoth.com"
+CONTACT = "contact@azmoth.com"
+
+def _catalog_footnote(catalog_version: str) -> str:
+    """The temporal caveat, printed under the terms of every report.
+
+    A Prüfbericht outlives the screen it came from. Somebody opens it in a client folder eighteen
+    months later, having been told nothing about which catalog edition it was computed against, and
+    reads a finding as though it were measured against the fee schedule that applied on the day of
+    treatment. It was not: this engine holds one real catalog edition, the current one
+    (`data/catalogs/README.md`), so the document has to name the edition it used and say what that
+    costs. Naming a version nobody can look up is provenance theatre; naming it beside the
+    consequence is a caveat.
+
+    A function rather than a constant because the version is per report. See `_legal_block`.
+    """
+    edition = catalog_version or "der zum Prüfzeitpunkt geladenen Fassung"
+    return (
+        f"Geprüft gegen den GOÄ-Katalog in der Fassung von {edition}. Für historische Rechnungen "
+        "(> 12 Monate) können abweichende Regelungen gelten."
+    )
+
 
 #: The three buckets, in the order a reader must meet them, with the label each is printed under.
 #: One mapping, used by both reports, so a bucket cannot be called one thing in a single report and
@@ -1045,18 +1065,36 @@ def _reading_note(canvas: PdfCanvas, coverage_sentence: str) -> None:
     )
 
 
-def _legal_block(canvas: PdfCanvas, number: int) -> None:
-    """The disclaimer, the data-protection note, the contact — and the line somebody signs.
+def _legal_block(
+    canvas: PdfCanvas,
+    number: int,
+    *,
+    catalog_version: str = "",
+    pilot_warnings: Sequence[str] = (),
+) -> None:
+    """The disclaimer, the data-protection note, the catalog caveat, the contact — and the line
+    somebody signs.
 
     Last, and deliberately not in the running footer. A footer is where a reader's eye stops
     going after page one; the statement that this document is a draft requiring a physician's
     release has to be a block they read, in the place a document's terms belong.
+
+    `pilot_warnings` is what the audit found *about itself* — today, that this invoice is older
+    than the catalog it was priced against. It prints above the general caveat and only when
+    non-empty, in the ink the rest of the terms are set in rather than in an alarm colour: it is a
+    limit of the engine, not a defect in the invoice, and a report that shouts about its own
+    coverage gap teaches the reader to skip the paragraph where the real ones are.
     """
     canvas.reserve(170)
     _section(canvas, number, "Rechtliche Hinweise")
     canvas.paragraph(DISCLAIMER, size=SIZE_SMALL)
     canvas.space(4)
     canvas.paragraph(DATA_PROTECTION, size=SIZE_SMALL, grey=GREY_MUTED)
+    canvas.space(4)
+    for warning in pilot_warnings:
+        canvas.paragraph(warning, size=SIZE_SMALL)
+        canvas.space(4)
+    canvas.paragraph(_catalog_footnote(catalog_version), size=SIZE_SMALL, grey=GREY_MUTED)
     canvas.space(4)
     canvas.paragraph(
         f"Erstellt von Azmoth — deterministische GOÄ-Prüfengine. Rückfragen: {CONTACT}",
@@ -1262,7 +1300,7 @@ def render_batch_report(
             "zu unterscheiden.",
             size=SIZE_SMALL,
         )
-        _legal_block(canvas, 2)
+        _legal_block(canvas, 2, catalog_version=first.catalog_version if first else "")
         return canvas.render()
 
     _section(canvas, 1, "Ergebnis nach Belegbarkeit", needs=150)
@@ -1340,7 +1378,10 @@ def render_batch_report(
             ),
         ]
     _provenance_block(canvas, 3, rows)
-    _legal_block(canvas, 4)
+    # No `pilot_warnings`: a batch is many deliveries and the roll-up has no single Leistungsdatum
+    # to warn about. The per-delivery Prüfberichte carry their own, and the general caveat below
+    # names the edition every one of them was priced against, which is the batch-level statement.
+    _legal_block(canvas, 4, catalog_version=first.catalog_version if first else "")
 
     return canvas.render()
 
@@ -1670,7 +1711,12 @@ def render_single_report(
             ),
         ],
     )
-    _legal_block(canvas, section + 1)
+    _legal_block(
+        canvas,
+        section + 1,
+        catalog_version=report.catalog_version,
+        pilot_warnings=report.pilot_warnings,
+    )
 
     return canvas.render()
 

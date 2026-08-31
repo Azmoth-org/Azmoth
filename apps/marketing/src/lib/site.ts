@@ -63,7 +63,7 @@ export const siteConfig = {
    * the Impressum and in the AVV, because a visitor who finds three different ones
    * concludes — correctly — that nobody is reading any of them.
    */
-  email: "kontakt@azmoth.com",
+  email: "contact@azmoth.com",
 } as const;
 
 /** Marketing routes, so a rename is one edit rather than a grep. */

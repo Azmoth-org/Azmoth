@@ -42,6 +42,7 @@ from app.bridge.entity_to_ziffer import BridgeResult
 from app.catalog import Catalog
 from app.config import Settings, get_settings
 from app.errors import EngineError, ErrorCode
+from app.padnext.pilot_scope import temporal_scope_warnings
 from app.padnext.schema import SCHEMA_VIOLATION_FINDING_TYPE
 from app.schemas import (
     ClinicalAct,
@@ -1146,6 +1147,20 @@ def audit_delivery(
         for w in rule_coverage_service.warnings_for(coverage)
     )
 
+    # ── The pilot's temporal scope, as a note on the report rather than a gate in front of it ──
+    #
+    # Read `app.padnext.pilot_scope` for why an old invoice is audited rather than refused. What
+    # matters here is where this sits: *after* every verdict, every bucket and every euro is
+    # final, and touching none of them. It reads `claimed` and produces strings.
+    #
+    # Deliberately outside the receipt below. The receipt hashes the inputs and the verdicts, and
+    # this is neither — it is a statement about the engine's own coverage. Folding it in would mean
+    # the same delivery, audited identically, hashed differently once its invoice crossed the
+    # twelve-month line, which would make the receipt a clock rather than a fingerprint.
+    pilot_warnings, pilot_scope_checked, latest_service = temporal_scope_warnings(
+        claimed, settings=settings
+    )
+
     receipt = receipt_hash(
         catalog_version=catalog.catalog_version,
         catalog_sha256=catalog.sha256(),
@@ -1174,6 +1189,9 @@ def audit_delivery(
             f.message for f in findings if f.type == SCHEMA_VIOLATION_FINDING_TYPE
         ],
         schema_policy=delivery.schema_policy or str(settings.padnext_schema_policy),
+        pilot_warnings=pilot_warnings,
+        pilot_scope_checked=pilot_scope_checked,
+        latest_service_date=latest_service,
         claimed_total_eur=claimed_total,
         recomputed_total_eur=recomputed_total,
         comparable_claimed_eur=comparable_claimed,
