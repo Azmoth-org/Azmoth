@@ -2455,6 +2455,13 @@
             "title": "Findings",
             "type": "array"
           },
+          "invoice_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Invoice Ids",
+            "type": "array"
+          },
           "logic_version": {
             "default": "",
             "title": "Logic Version",
@@ -4820,6 +4827,61 @@
         ]
       }
     },
+    "/api/v1/padnext/audit.pdf": {
+      "post": {
+        "description": "Dieselbe Prüfung wie `POST /padnext/audit`, als druckbarer Prüfbericht.\n\nDer Bericht trägt den Erstellungszeitpunkt, die Rechnungsnummer aus der Lieferung, die\nRechtsgrundlage und die Regel-ID zu jeder Beanstandung sowie die Freigabezeile, auf der die\närztliche Prüfung dokumentiert wird.\n\n---\n\nThe printable twin of `POST /padnext/audit`, and deliberately the same request: the file\nitself as the body, the same headers, the same refusals with the same `error_code`s.\n\n**It audits rather than looking a report up, and that is the honest shape here.** A single\naudit stores nothing — that is stated at the top of this module and is what keeps this endpoint\noutside tenancy — so there is no stored report to render and the only way to produce one is to\nrun the audit. The audit is deterministic and takes a few hundred milliseconds, so the PDF this\nreturns carries the *same* verdicts and the same `receipt_hash` as the JSON the caller already\nhas. The receipt hash printed on the document is what lets them confirm that.\n\nUnlike the JSON, this response carries a wall clock: `Erstellt am`, and `/CreationDate` in the\ndocument metadata. A report that goes into a client file has to say when it was drawn, so two\ndownloads of one delivery differ in exactly that stamp and in nothing else.",
+        "operationId": "padnext_audit_pdf_api_v1_padnext_audit_pdf_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "contentMediaType": "application/octet-stream",
+                "default": "",
+                "title": "Body",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Der Prüfbericht als PDF, `pruefbericht_<Datei>.pdf`."
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "Padnext Audit Pdf",
+        "tags": [
+          "padnext"
+        ]
+      }
+    },
     "/api/v1/padnext/batch": {
       "get": {
         "description": "A page of the batches this database holds, newest first, as headers without their files.\n\nThis is what makes a durable batch reachable again. A `batch_id` is issued once and the browser\nholds it in memory, so before this endpoint existed a page reload orphaned a finished batch —\nthe roll-up was still in Postgres and nothing could ask for it. It is also where an operator\nsees a batch that was `FAILED` by the startup recovery, and reads why in `error_message`.\n\nRows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every\ndelivery's full audit report would be megabytes to render a table. Open one with\n`GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.\n\nScoped to the calling organisation, and `total` is recounted under that filter as well, so a\npractice sees its own batches and its own count. `total` is recounted under `status` and\n`created_after` too, so it says how many batches match and never how many rows the table holds. The rows themselves stay in `jobs` — not `items`,\nwhich is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one\nshipped first and renaming a field in a contract already committed to `packages/contracts/`\nwould break a client to buy symmetry.\n\nThe page size ceiling is now 100, down from 500; `limit=200` is a `422` where it used to be\nserved. See `MAX_BATCH_LIST_LIMIT` for why.\n\nDeclared before `/batch/{batch_id}` for readability only — the two paths are distinct templates\nand neither shadows the other.",
@@ -5083,6 +5145,63 @@
           }
         },
         "summary": "Padnext Batch Export",
+        "tags": [
+          "padnext"
+        ]
+      }
+    },
+    "/api/v1/padnext/batch/{batch_id}/report.pdf": {
+      "post": {
+        "description": "Einen abgeschlossenen Stapel als druckbaren Prüfbericht.\n\n---\n\nThe web tier's route to the batch Prüfbericht. The partner API has carried this since the bulk\nendpoint shipped (`POST /api/v1/audit/{job_id}/pdf`); the application had only the CSV export\nbeside it, so the one artefact a Rechnungsprüfer actually files was reachable by API key and\nnot by the people using the product.\n\nBoth routes render through `app.services.pdf.render_batch_report` over the same\n`BatchAuditJob`, so a batch downloaded here and the same batch downloaded with an API key are\nbyte-identical — including the date, which comes from the job's own completion time rather\nthan from the clock. Re-downloading a finished batch next week gives the same file.\n\n`COMPLETED` only, for the reason the CSV export gives: a running batch would produce totals\nthat are a snapshot of an unidentifiable moment, and a caveat printed beside them does not\nsurvive the document being pulled out of a folder three weeks later.",
+        "operationId": "padnext_batch_report_pdf_api_v1_padnext_batch__batch_id__report_pdf_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Der Stapel-Prüfbericht als PDF, `<batch_id>_pruefbericht.pdf`."
+          },
+          "409": {
+            "description": "Der Stapel ist nicht abgeschlossen; es gibt keinen Bericht."
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "Padnext Batch Report Pdf",
         "tags": [
           "padnext"
         ]

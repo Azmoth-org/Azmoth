@@ -33,7 +33,8 @@ lives in the shared functions.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+import re
+from datetime import datetime, timezone
 
 from fastapi import (
     APIRouter,
@@ -68,6 +69,7 @@ from app.services.batch_audit import (
     EmptyBatch,
 )
 from app.services.export import attachment_headers, batch_export_filename
+from app.services.pdf import render_batch_report, render_single_report
 
 log = logging.getLogger(__name__)
 
@@ -131,6 +133,88 @@ def padnext_audit(request: Request, body: bytes = Body(default=b"")) -> PadnextA
         read_findings=read_findings,
         settings=pipe.settings,
     )
+
+
+@router.post(
+    "/audit.pdf",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "Der Prüfbericht als PDF, `pruefbericht_<Datei>.pdf`.",
+            "content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}},
+        },
+    },
+)
+def padnext_audit_pdf(
+    request: Request,
+    actor: RequestActor,
+    body: bytes = Body(default=b""),
+) -> Response:
+    """Dieselbe Prüfung wie `POST /padnext/audit`, als druckbarer Prüfbericht.
+
+    Der Bericht trägt den Erstellungszeitpunkt, die Rechnungsnummer aus der Lieferung, die
+    Rechtsgrundlage und die Regel-ID zu jeder Beanstandung sowie die Freigabezeile, auf der die
+    ärztliche Prüfung dokumentiert wird.
+
+    ---
+
+    The printable twin of `POST /padnext/audit`, and deliberately the same request: the file
+    itself as the body, the same headers, the same refusals with the same `error_code`s.
+
+    **It audits rather than looking a report up, and that is the honest shape here.** A single
+    audit stores nothing — that is stated at the top of this module and is what keeps this endpoint
+    outside tenancy — so there is no stored report to render and the only way to produce one is to
+    run the audit. The audit is deterministic and takes a few hundred milliseconds, so the PDF this
+    returns carries the *same* verdicts and the same `receipt_hash` as the JSON the caller already
+    has. The receipt hash printed on the document is what lets them confirm that.
+
+    Unlike the JSON, this response carries a wall clock: `Erstellt am`, and `/CreationDate` in the
+    document metadata. A report that goes into a client file has to say when it was drawn, so two
+    downloads of one delivery differ in exactly that stamp and in nothing else.
+    """
+    report = padnext_audit(request, body)
+    document = render_single_report(
+        report,
+        organization=request.headers.get("x-organization-id") or None,
+        generated_at=datetime.now(timezone.utc),
+    )
+    log.info(
+        "padnext/audit.pdf by %s: %d positions, %d pages",
+        actor,
+        len(report.positions),
+        document.count(b"/Type /Page /Parent"),
+    )
+    return Response(
+        content=document,
+        media_type="application/pdf",
+        headers={
+            **attachment_headers(pruefbericht_filename(report.source_name)),
+            # A Prüfbericht carries a timestamp and a practice's billing detail; it must not sit in
+            # a shared cache on the way back to the browser.
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+#: `[A-Za-z0-9._-]` is all `attachment_headers` will pass, because the value reaches a response
+#: header. A PADnext filename is client-supplied, so it is reduced to that set here rather than
+#: being trusted and rejected at the header.
+_UNSAFE_IN_FILENAME = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def pruefbericht_filename(source_name: str) -> str:
+    """`pruefbericht_00004711_20260726_ADL_000001_padx.pdf`, or a safe fallback.
+
+    The delivery's own name is carried into the download because a billing centre auditing forty
+    files needs the forty PDFs to sort beside the forty XMLs. It is sanitised rather than trusted:
+    the name arrives in a request header, and `attachment_headers` would otherwise refuse the whole
+    response over a space in it.
+    """
+    stem = _UNSAFE_IN_FILENAME.sub("_", source_name.rsplit("/", 1)[-1]).strip("._-")
+    for suffix in (".xml", ".padx", ".XML", ".PADX"):
+        if stem.endswith(suffix):
+            stem = stem[: -len(suffix)]
+    return f"pruefbericht_{stem}.pdf" if stem else "pruefbericht.pdf"
 
 
 def refuse_catalog_mismatch(delivery, catalog) -> None:
@@ -388,6 +472,68 @@ async def padnext_batch_status(
         return await batches().load_batch(batch_id, organization_id=organization)
     except BatchNotFound as exc:
         raise _batch_not_found(batch_id) from exc
+
+
+@router.post(
+    "/batch/{batch_id}/report.pdf",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "Der Stapel-Prüfbericht als PDF, `<batch_id>_pruefbericht.pdf`.",
+            "content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}},
+        },
+        409: {"description": "Der Stapel ist nicht abgeschlossen; es gibt keinen Bericht."},
+    },
+)
+async def padnext_batch_report_pdf(
+    batch_id: str, organization: RequestOrganization
+) -> Response:
+    """Einen abgeschlossenen Stapel als druckbaren Prüfbericht.
+
+    ---
+
+    The web tier's route to the batch Prüfbericht. The partner API has carried this since the bulk
+    endpoint shipped (`POST /api/v1/audit/{job_id}/pdf`); the application had only the CSV export
+    beside it, so the one artefact a Rechnungsprüfer actually files was reachable by API key and
+    not by the people using the product.
+
+    Both routes render through `app.services.pdf.render_batch_report` over the same
+    `BatchAuditJob`, so a batch downloaded here and the same batch downloaded with an API key are
+    byte-identical — including the date, which comes from the job's own completion time rather
+    than from the clock. Re-downloading a finished batch next week gives the same file.
+
+    `COMPLETED` only, for the reason the CSV export gives: a running batch would produce totals
+    that are a snapshot of an unidentifiable moment, and a caveat printed beside them does not
+    survive the document being pulled out of a folder three weeks later.
+    """
+    try:
+        job = await batches().load_batch(batch_id, organization_id=organization)
+    except BatchNotFound as exc:
+        raise _batch_not_found(batch_id) from exc
+
+    if job.status != BatchJobStatus.COMPLETED:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "batch_not_completed",
+                "message": (
+                    f"Stapel {batch_id} ist {job.status}, nicht COMPLETED. Ein Bericht wird erst "
+                    "erstellt, wenn jede Lieferung ein Verdikt hat. — The batch has not "
+                    "completed, so there is no report to render."
+                ),
+                "current_status": str(job.status),
+            },
+        ) from None
+
+    document = render_batch_report(job, organization_id=organization)
+    return Response(
+        content=document,
+        media_type="application/pdf",
+        headers={
+            **attachment_headers(f"{batch_id}_pruefbericht.pdf"),
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.post(

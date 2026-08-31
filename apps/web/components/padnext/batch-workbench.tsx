@@ -31,6 +31,7 @@ import {
   malformedIdError,
   toDeepLinkError,
 } from "@/lib/deep-link"
+import { BatchPruefberichtButton } from "@/components/padnext/pruefbericht-button"
 import { downloadBatchExport } from "@/lib/download"
 import {
   POLL_INTERVAL_MS,
@@ -96,6 +97,14 @@ function BatchExport({ job }: { job: BatchAuditJob }) {
     <div className="space-y-4">
       <Card>
         <CardContent className="flex flex-wrap items-center gap-4 pt-6">
+          {/* Two artefacts, two readers, deliberately side by side. The CSVs are for a
+              Rechnungsprüfer with a spreadsheet who wants to sort and filter; the Prüfbericht is
+              the document that gets printed, signed on its Freigabe line and put in a client file.
+              Neither substitutes for the other, so neither is hidden behind the other. */}
+          <BatchPruefberichtButton
+            batchId={job.batch_id}
+            completed={job.status === "COMPLETED"}
+          />
           <Button
             variant="outline"
             onClick={() => void download()}

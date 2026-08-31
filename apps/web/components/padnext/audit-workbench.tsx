@@ -15,6 +15,7 @@ import { AnonymisationGate } from "@/components/padnext/anonymisation-gate"
 import { BucketSummary } from "@/components/padnext/bucket-summary"
 import { FindingsPanel } from "@/components/padnext/findings-panel"
 import { PositionsTable } from "@/components/padnext/positions-table"
+import { SinglePruefberichtButton } from "@/components/padnext/pruefbericht-button"
 import { ReportProvenance } from "@/components/padnext/report-provenance"
 import { ErrorPanel } from "@/components/review/error-panel"
 import { auditPadnextFile } from "@/lib/padnext/client"
@@ -26,8 +27,17 @@ const ACCEPTED = ".padx,.xml,.auf"
 /**
  * Upload a PADnext delivery and render the audit.
  *
- * The file never touches component state — it is read straight into the request body and dropped, so
- * the browser holds no copy of a billing document longer than the request takes.
+ * The file's *bytes* never touch component state — they are read straight into the request body.
+ * What is kept, for exactly as long as a report is on screen, is the `File` handle itself, and only
+ * so `SinglePruefberichtButton` can produce the printable Prüfbericht from the same delivery. A
+ * `File` is a reference to bytes the browser already holds on behalf of the file input, not a
+ * second copy in JavaScript memory, and the next upload replaces it — so the window in which this
+ * page can name a billing document is the window in which it is displaying one.
+ *
+ * The alternative was to have the PDF button re-open the file picker, which asks a user to find the
+ * same file twice to get two views of one audit. The one it was weighed against — caching the
+ * rendered report on the server — is the option that would actually change what this endpoint is:
+ * the single audit stores nothing, and that is what keeps it outside tenancy.
  *
  * ## The gate in front of the picker
  *
@@ -50,6 +60,9 @@ export function AuditWorkbench() {
   const [result, setResult] = useState<PadnextResult | null>(null)
   const [pending, setPending] = useState(false)
   const [filename, setFilename] = useState<string | null>(null)
+  // The delivery the report on screen describes, kept so it can be rendered as a PDF. Cleared
+  // whenever the report it belongs to is — see the note above.
+  const [audited, setAudited] = useState<File | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -58,8 +71,13 @@ export function AuditWorkbench() {
     setFilename(file.name)
     setPending(true)
     setResult(null)
+    setAudited(null)
     try {
-      setResult(await auditPadnextFile(file))
+      const outcome = await auditPadnextFile(file)
+      setResult(outcome)
+      // Only alongside a report. A refusal has no document to export, and holding the file after
+      // one would keep a delivery around for a screen that is showing an error.
+      setAudited(outcome.kind === "report" ? file : null)
     } finally {
       setPending(false)
       // Per file, not per session — see `AnonymisationGate`. The next upload is a new statement.
@@ -122,6 +140,11 @@ export function AuditWorkbench() {
 
       {result?.kind === "report" ? (
         <>
+          {audited ? (
+            <div className="flex justify-end print:hidden">
+              <SinglePruefberichtButton file={audited} />
+            </div>
+          ) : null}
           <BucketSummary report={result.report} />
           <ReportProvenance report={result.report} />
           <PositionsTable report={result.report} />

@@ -1162,6 +1162,10 @@ def audit_delivery(
         source_name=delivery.source_name,
         nachrichtentyp=delivery.nachrichtentyp,
         echtdaten=delivery.echtdaten,
+        # Carried up from the parser so the printed Prüfbericht can name the invoice it is about.
+        # Not part of the receipt: the hash is computed over the claimed positions and our verdicts
+        # (above), so surfacing an identifier that was already parsed does not move it.
+        invoice_ids=[inv.invoice_id for inv in delivery.invoices if inv.invoice_id],
         setting=setting,
         setting_source=setting_source,
         positions=audited,
