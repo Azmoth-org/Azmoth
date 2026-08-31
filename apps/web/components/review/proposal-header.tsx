@@ -281,12 +281,12 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
                 length={12}
               />
               <Field
-                label="Solver (Clingo)"
+                label="Mathematischer Solver"
                 value={proposal.solver_version}
                 mono
               />
               <Field
-                label="Regel-Engine (Soufflé)"
+                label="Deterministische Regel-Engine"
                 value={proposal.rules_engine_version || "—"}
                 mono
               />

@@ -4,7 +4,7 @@
 > für Ärzte (GOÄ). Zu jeder Position wird offengelegt, aus welcher Regel sie folgt und
 > auf welcher gesetzlichen Grundlage sie beanstandet oder bestätigt wird.
 
-Der Kern ist ein Regelwerk aus Answer Set Programming und Datalog, kein Sprachmodell:
+Der Kern ist eine deterministische Regel-Engine mit mathematischem Solver, kein Sprachmodell:
 dieselbe Eingabe ergibt dasselbe Ergebnis, und jede Position ist gegenüber einer
 Erstattungsstelle begründbar. Azmoth trifft keine Abrechnungsentscheidung — jede
 Position wird vorgeschlagen und von einem Menschen freigegeben.

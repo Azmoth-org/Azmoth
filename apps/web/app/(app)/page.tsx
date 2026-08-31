@@ -68,12 +68,13 @@ export default function DashboardPage() {
   return (
     <>
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Übersicht</h1>
+        <h1 className="text-display-md">Übersicht</h1>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          Die Kodierung ist deterministisch und symbolisch: ein Datalog-Programm
-          entscheidet, was sicher berechnungsfähig ist, ein ASP-Programm löst
-          die verbleibenden Wahlmöglichkeiten, eine unabhängige Validierung
-          rechnet nach. Jede Position trägt einen Beweisbaum, jedes Ergebnis
+          Die Kodierung ist deterministisch und symbolisch: eine
+          deterministische Regel-Engine entscheidet, was sicher
+          berechnungsfähig ist, ein mathematischer Solver löst die
+          verbleibenden Wahlmöglichkeiten, eine unabhängige Validierung rechnet
+          nach. Jede Position trägt einen Beweisbaum, jedes Ergebnis
           einen Receipt-Hash über Katalog, Regeltabellen, Logikprogramme,
           Solver-Versionen und Eingabe. Es läuft kein Modell in diesem System.
         </p>

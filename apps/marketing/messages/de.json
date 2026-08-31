@@ -102,7 +102,7 @@
       "punkte": [
         {
           "titel": "Deterministische Engine",
-          "text": "Answer Set Programming (Clingo) + Datalog (Soufflé). Keine KI, keine Halluzinationen. 100 % reproduzierbare Ergebnisse, abgesichert durch einen Receipt-Hash über Katalog, Regeln, Logik, Solver, Policy und Eingabe."
+          "text": "Eine deterministische Regel-Engine und ein mathematischer Solver — kein Sprachmodell, keine Halluzinationen. 100 % reproduzierbare Ergebnisse, abgesichert durch einen Receipt-Hash über Katalog, Regeln, Logik, Solver, Policy und Eingabe."
         },
         {
           "titel": "{regeln} durchgesetzte Regeln",

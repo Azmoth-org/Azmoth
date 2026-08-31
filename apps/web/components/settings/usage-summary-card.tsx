@@ -75,25 +75,25 @@ export function UsageSummaryCard({
             <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div>
                 <dt className="text-xs text-muted-foreground">Anfragen</dt>
-                <dd className="text-2xl font-semibold tabular-nums">
+                <dd className="text-display-md tabular-nums">
                   {usage.total_requests.toLocaleString("de-DE")}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">davon fehlerhaft</dt>
-                <dd className="text-2xl font-semibold tabular-nums">
+                <dd className="text-display-md tabular-nums">
                   {usage.failed_requests.toLocaleString("de-DE")}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Übertragen</dt>
-                <dd className="text-2xl font-semibold tabular-nums">
+                <dd className="text-display-md tabular-nums">
                   {bytes(usage.total_bytes_processed)}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Rechenzeit</dt>
-                <dd className="text-2xl font-semibold tabular-nums">
+                <dd className="text-display-md tabular-nums">
                   {(usage.total_duration_ms / 1000).toFixed(1).replace(".", ",")} s
                 </dd>
               </div>

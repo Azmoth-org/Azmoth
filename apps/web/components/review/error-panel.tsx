@@ -16,13 +16,13 @@ const HINTS: Record<string, string> = {
   engine_unreachable:
     "Engine starten: cd apps/engine && .venv/bin/uvicorn app.main:app --port 8000 — oder ENGINE_BASE_URL prüfen.",
   engine_unreachable_timeout:
-    "Die Engine läuft, antwortet aber nicht. Prüfen, ob der Soufflé-Prozess hängt (GET /api/v1/health).",
+    "Die Engine läuft, antwortet aber nicht. Prüfen, ob der Prozess der Regel-Engine hängt (GET /api/v1/health).",
   proxy_unreachable:
     "Der Next.js-Server ist nicht erreichbar. pnpm dev neu starten.",
   solver_timeout:
     "Der Optimierer hat innerhalb von SOLVER_TIMEOUT_SECONDS kein Modell gefunden. Es wird bewusst KEIN Entwurf ausgegeben: ein leeres Ergebnis wäre nicht von „nichts ist berechnungsfähig“ zu unterscheiden.",
   rules_engine_failed:
-    "Die Regel-Engine (Soufflé) ist ausgefallen. Ist das souffle-Binary installiert? GET /api/v1/health zeigt souffle_available.",
+    "Die deterministische Regel-Engine ist ausgefallen. GET /api/v1/health zeigt unter „Regel-Engine“, ob sie auf diesem Host verfügbar ist.",
   validation_failed:
     "Die unabhängige Validierung hat dem Solver widersprochen. Das ist ein Defekt in der Engine, nicht in der Eingabe — es wird absichtlich kein Entwurf zurückgegeben.",
   validation_error:

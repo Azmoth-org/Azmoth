@@ -115,7 +115,7 @@ export function LoginForm({
             is the page's name, and a page with no level-1 heading gives a screen-reader user
             nothing to land on.
           */}
-          <h1 className="text-2xl font-bold">Anmelden</h1>
+          <h1 className="text-display-md">Anmelden</h1>
           <p className="text-sm text-balance text-muted-foreground">
             Melden Sie sich mit Ihrer dienstlichen E-Mail-Adresse an.
           </p>
