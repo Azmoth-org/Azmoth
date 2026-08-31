@@ -67,6 +67,13 @@ class ErrorCode(StrEnum):
     # -- the client is doing it too often ------------------------------------------------------
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
 
+    # -- the client has used up what their plan includes ---------------------------------------
+    #: Distinct from `RATE_LIMIT_EXCEEDED` even though both are `429`, and the distinction is the
+    #: one a client has to act on: a rate limit clears in a minute and is fixed by waiting, a quota
+    #: clears at the end of a billing period and is fixed by upgrading. A single code for both would
+    #: make every integration's backoff retry for three weeks.
+    QUOTA_EXCEEDED = "QUOTA_EXCEEDED"
+
     # -- the client asked for something that is not there --------------------------------------
     CATALOG_NOT_FOUND = "CATALOG_NOT_FOUND"
 
@@ -357,6 +364,58 @@ class RateLimitExceeded(EngineError):
         )
         self.limit = limit
         self.window_seconds = window_seconds
+
+
+class QuotaExceeded(EngineError):
+    """The practice has audited everything its plan includes and may not go over. `429`.
+
+    **Why this is not `RATE_LIMIT_EXCEEDED`, given both are `429`.** The two say opposite things
+    about what the caller should do. A rate limit is a safety valve on a Soufflé pool: wait a minute
+    and the same request succeeds, so a client's backoff is exactly right. A quota is a commercial
+    boundary: waiting works too, but the wait is up to a month, and the action that actually resolves
+    it is a plan change. An integration that could not tell them apart would sit in a retry loop for
+    three weeks and call it a backoff.
+
+    So `retry_after` is the seconds to the end of the billing period — a large, honest number rather
+    than a hopeful one — and `details` names the plan, what was used, and what the plan includes, so
+    the client can report something better than "429" to whoever has to decide about upgrading.
+
+    **Raised only when the plan forbids going over.** A plan with `allow_overage` set is *allowed*
+    past its quota and charged for it; that path returns `200` and adds a line to the invoice. See
+    `app.services.billing.QuotaDecision` — the decision is made there and the refusal is raised
+    here, because only the endpoint knows which language its message belongs in.
+    """
+
+    error_code = ErrorCode.QUOTA_EXCEEDED
+    http_status = 429
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        quota: int,
+        used: int,
+        requested: int,
+        plan_code: str,
+        subscription_tier: str,
+        retry_after: int,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message,
+            details={
+                "quota": quota,
+                "used": used,
+                "requested": requested,
+                "plan_code": plan_code,
+                "subscription_tier": subscription_tier,
+                **(details or {}),
+            },
+            retry_after=retry_after,
+        )
+        self.quota = quota
+        self.used = used
+        self.requested = requested
 
 
 class SolverTimeoutError(EngineError):

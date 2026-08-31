@@ -1,8 +1,19 @@
 # B2B monetisation — pricing models and what the schema still needs
 
-**Status: proposal.** Nothing in this document is implemented. It exists to be argued with before
-anyone writes a migration, because the schema change it recommends is the kind that is very cheap
-now and very expensive after the first invoice has been sent.
+**Status: proposal, partly implemented.** §§1–4 — which model, which segment, what a price is
+anchored to — are still a proposal and still the right place to argue about it. §5's schema and §6's
+order of work have largely shipped; **[`BILLING.md`](BILLING.md) describes what the code actually
+does**, including where it deliberately diverges from what is recommended below.
+
+| §6 step | Status |
+|---|---|
+| 1. a billable unit on `api_usage_logs`, and write it | **shipped** as `invoices_processed` (§5.1 proposed `billable_units`); `operation`, `billing_period` and `batch_job_id` deferred — see `BILLING.md` §10 |
+| 2. `environment` on `api_keys` | not done |
+| 3. surface invoices-audited in `/settings/api-keys` | **shipped** — the subscription card's usage meter |
+| 4. quotas and `QUOTA_EXCEEDED` | **shipped**, ahead of the order given here, as `organization_billing` rather than `billing_accounts`. `QUOTA_EXCEEDED` carries a `Retry-After`, against §5.4's recommendation; `BILLING.md` §6 gives the reasoning |
+
+The original note stands for what remains: the schema change is the kind that is very cheap now and
+very expensive after the first invoice has been sent.
 
 ---
 

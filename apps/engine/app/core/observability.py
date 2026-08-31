@@ -122,6 +122,33 @@ def bind(**values: Any) -> None:
     context.update(usable)
 
 
+def record_invoices(count: int) -> None:
+    """Declare how many PADnext deliveries the request in flight actually audited.
+
+    The one number on a usage row that a handler has to supply, because it is the only one the
+    middleware cannot observe: a status code, a duration and a byte count are properties of the HTTP
+    exchange, and "this was 300 invoices" is a property of what the engine did inside it.
+
+    It goes through the request context rather than a return value or a response header, for the same
+    reason the tenant does. `_meter` runs in the middleware's `finally` — one place, on the way out,
+    with everything in scope — and the alternative is a per-endpoint hook, which is a list somebody
+    forgets to add to. The failure mode of forgetting is a customer's usage silently under-counted,
+    which is the worst shape a billing bug can have: it looks like nothing is wrong.
+
+    **Additive across calls.** A handler that audits in two stages calls this twice and the row
+    carries the sum, because `bind` overwrites and a billable count must not. Zero and negative are
+    ignored — there is no such thing as auditing minus one delivery, and a `0` would only overwrite
+    a real figure with nothing.
+    """
+    if count <= 0:
+        return
+    context = _request_context.get()
+    if context is _NO_REQUEST:
+        bind(invoices_processed=count)
+        return
+    context["invoices_processed"] = int(context.get("invoices_processed") or 0) + count
+
+
 class JsonFormatter(logging.Formatter):
     """One JSON object per line.
 
@@ -282,6 +309,10 @@ async def _meter(request: Request, *, route: str, status: int, duration_ms: floa
 
     Only `/api/v1/*`. The OpenAPI document, `/docs` and the health probe are not consumption.
 
+    `invoices_processed` is the exception to "the middleware knows everything it needs": it is the
+    billable unit, and only the handler knows it. `record_invoices` puts it in the context and this
+    reads it out. A request that audited nothing contributes `0`, not a null.
+
     `bytes_processed` comes from `Content-Length`, which is what the caller declared rather than what
     arrived. The two differ only for a request that was cut off — which the status code already
     records — and reading the real figure would mean counting bytes through the body stream of every
@@ -314,6 +345,9 @@ async def _meter(request: Request, *, route: str, status: int, duration_ms: floa
             status_code=status,
             duration_ms=duration_ms,
             bytes_processed=declared,
+            # The billable unit, put here by whichever handler knew it — see `record_invoices`.
+            # Absent for every request that audited nothing, which is most of them.
+            invoices_processed=int(context.get("invoices_processed") or 0),
         )
     except Exception:  # noqa: BLE001 - see docstring; a caller is never punished for our accounting
         log.exception("could not meter %s %s; the request itself was unaffected", route, status)

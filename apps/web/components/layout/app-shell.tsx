@@ -26,6 +26,7 @@ import {
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip"
 
+import { AzmothMark } from "@/components/brand/azmoth-mark"
 import { NAV_ITEMS, activeHref } from "@/components/layout/nav"
 import {
   OrganisationSwitcher,
@@ -197,9 +198,12 @@ function Wordmark() {
       className="flex items-center gap-2 px-1.5 py-1.5"
       aria-label="Azmoth — GOÄ-Prüfung"
     >
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary font-mono text-[11px] font-medium text-primary-foreground">
-        AZ
-      </span>
+      {/*
+        The real monogram, replacing an `AZ` tile in `bg-primary` that stood in before the brand
+        existed. It takes `currentColor` through a CSS mask, so it follows the rail into dark mode
+        rather than needing a second file — see `AzmothMark`.
+      */}
+      <AzmothMark className="size-8" />
       <span className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
         <span className="truncate font-semibold">Azmoth</span>
         <span className="truncate text-xs text-sidebar-foreground/70">

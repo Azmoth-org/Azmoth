@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+
+import { AzmothMark } from "@/components/brand/azmoth-mark"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
@@ -85,9 +87,7 @@ export default async function OnboardingPage({
           className="flex items-center gap-2.5"
           aria-label="Azmoth"
         >
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary font-mono text-xs font-medium text-primary-foreground">
-            AZ
-          </span>
+          <AzmothMark className="size-9" />
           <span className="grid text-left leading-tight">
             <span className="text-base font-semibold">Azmoth</span>
             <span className="text-xs text-muted-foreground">GOÄ-Prüfung</span>

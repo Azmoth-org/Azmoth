@@ -34,14 +34,17 @@ import {
 
 import { ErrorPanel } from "@/components/review/error-panel"
 import { NewKeyDialog } from "@/components/settings/new-key-dialog"
+import { SubscriptionCard } from "@/components/settings/subscription-card"
 import { UsageSummaryCard } from "@/components/settings/usage-summary-card"
 import {
   fetchApiKeys,
+  fetchBillingUsage,
   fetchUsage,
   mintApiKey,
   revokeApiKey,
   type ApiKeyIssued,
   type ApiKeyList,
+  type BillingUsage,
   type ReviewError,
   type UsageSummary,
 } from "@/lib/settings/client"
@@ -77,6 +80,7 @@ function stamp(value: string | null | undefined): string {
 export function ApiKeyManager() {
   const [keys, setKeys] = React.useState<ApiKeyList | null>(null)
   const [usage, setUsage] = React.useState<UsageSummary | null>(null)
+  const [billing, setBilling] = React.useState<BillingUsage | null>(null)
   const [error, setError] = React.useState<ReviewError | null>(null)
   const [loading, setLoading] = React.useState(true)
 
@@ -88,9 +92,12 @@ export function ApiKeyManager() {
   const [pendingRevoke, setPendingRevoke] = React.useState<string | null>(null)
 
   const load = React.useCallback(async (signal?: AbortSignal) => {
-    const [keyResult, usageResult] = await Promise.all([
+    // Three requests in parallel rather than in sequence: they are independent reads and the screen
+    // shows all three, so serialising them would add two round trips to the first paint for nothing.
+    const [keyResult, usageResult, billingResult] = await Promise.all([
       fetchApiKeys(signal),
       fetchUsage(signal),
+      fetchBillingUsage(signal),
     ])
     if (signal?.aborted) return
 
@@ -100,9 +107,11 @@ export function ApiKeyManager() {
       setError(null)
     }
 
-    // A usage failure does not blank the screen. The keys are what the reader came for; the
-    // consumption card is context, and losing it must not cost them the table.
+    // Neither of the two consumption reads blanks the screen. The keys are what the reader came
+    // for; the meters are context, and losing one must not cost them the table. The quota itself is
+    // enforced server-side, so a card that failed to load withholds information rather than access.
     if (usageResult.kind === "usage") setUsage(usageResult.usage)
+    if (billingResult.kind === "billing") setBilling(billingResult.billing)
 
     setLoading(false)
   }, [])
@@ -148,6 +157,20 @@ export function ApiKeyManager() {
   return (
     <div className="space-y-6">
       {error ? <ErrorPanel error={error} /> : null}
+
+      {/*
+        Two meters, and the order is the point. The subscription card answers "how much of what we
+        pay for have we used", which is the question somebody opened this screen with; the usage
+        card below answers "what is the integration actually doing", which is the one they have once
+        something looks wrong. They cover different windows — a billing period and a calendar month
+        — and each says which.
+      */}
+      <SubscriptionCard
+        billing={billing}
+        loading={loading}
+        onUpgraded={() => void load()}
+        onError={setError}
+      />
 
       <UsageSummaryCard usage={usage} loading={loading} />
 

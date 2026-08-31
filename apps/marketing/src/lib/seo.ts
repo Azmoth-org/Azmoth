@@ -97,13 +97,28 @@ export const defaultMetadata: Metadata = {
   },
   description: siteConfig.description,
   /*
-   * SVG only. The .ico / .png / apple-touch set that used to be here was the
-   * original template author's artwork and was removed with the rest of their
-   * branding; pointing at files that no longer exist would serve 404s to every
-   * browser that asks. Phase 2 generates the raster set from the real Azmoth mark.
+   * The real set, generated from the Azmoth mark. It replaces a single 367-byte
+   * placeholder SVG — a blue rounded square with a tick — that stood in while the
+   * brand did not exist.
+   *
+   * **Raster only, and that is deliberate.** The generator also produced a
+   * `favicon.svg`, and it was 2.0 MB: the same 2676x1492 monogram raster wrapped in
+   * an `<svg>`. Browsers *prefer* an SVG icon when one is offered, so listing it
+   * would have made every cold visit download two megabytes before the page — for a
+   * 16-pixel tab icon. It is not shipped and not linked. `brand/` keeps it.
+   *
+   * `/favicon.ico` carries 48, 32 and 16 in one file, which is what a browser that
+   * reads no `<link>` at all fetches from the origin root. The 96px PNG is what a
+   * modern browser picks for a high-DPI tab; `apple-touch-icon` is iOS's home
+   * screen. All five live at the root of `public/` rather than in a subdirectory,
+   * because the automatic requests for the first two only work from there.
    */
   icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48 32x32 16x16" },
+      { url: "/favicon-96x96.png", type: "image/png", sizes: "96x96" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   manifest: "/site.webmanifest",
   openGraph: {

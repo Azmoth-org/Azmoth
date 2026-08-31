@@ -1,5 +1,7 @@
 import Link from "next/link"
 
+import { AzmothMark } from "@/components/brand/azmoth-mark"
+
 import { buttonVariants } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 
@@ -45,8 +47,14 @@ export default function DemoLayout({
         <div className="mx-auto flex w-full max-w-5xl items-center gap-4 px-4 py-3">
           <Link
             href="/demo"
-            className="flex min-w-0 items-baseline gap-2 rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="flex min-w-0 items-center gap-2 rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
+            {/*
+              The mark, on the one screen in this application a visitor reaches without signing in.
+              `items-center` rather than `items-baseline` now that there is a graphic beside the
+              words: a baseline is a property of type, and a 20px square has none.
+            */}
+            <AzmothMark className="size-5" />
             <span className="text-sm font-semibold tracking-tight">Azmoth</span>
             <span className="truncate text-xs text-muted-foreground">
               GOÄ-Prüfung

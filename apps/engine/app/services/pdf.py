@@ -9,10 +9,17 @@ Helvetica in a grid is implemented here, with no C extension, no fonts to ship a
 up to date.
 
 **What that subset is, and what it is not.** PDF 1.4, the fourteen standard fonts (so no font is
-embedded), `WinAnsiEncoding`, single-column text, filled rectangles and straight rules — no images,
-no curves, no charts. That is exactly enough for a Prüfbericht and is not enough for anything with
-a real layout. If this ever needs a chart or a raster logo, that is the moment to take the
-dependency — not before. The wordmark at the top of the report is set in type for the same reason.
+embedded), `WinAnsiEncoding`, single-column text, filled rectangles, straight rules and **one
+grayscale image** — no curves, no charts, no second image. That is exactly enough for a Prüfbericht
+and is not enough for anything with a real layout. If this ever needs a chart, that is the moment to
+take the dependency — not before.
+
+The one image is the Azmoth monogram in the masthead, and it cost no dependency: PDF's image XObject
+takes `/FlateDecode`, `zlib` is standard library, and what is committed is the already-deflated
+stream rather than a PNG somebody would have to decode. `app/services/pdf_mark.py` holds it and
+explains the three alternatives that were rejected. The letter-spaced wordmark beside it stays, and
+not out of inertia — it is text, so it survives a monochrome fax, a screen reader and a `pdftotext`,
+none of which a raster does.
 
 **Text is measured, not estimated.** `app.services.pdf_metrics` holds the Helvetica advance widths,
 so `wrap`, `fit` and every right-aligned amount ask how wide a string actually is. That is what lets
@@ -51,6 +58,13 @@ from app.schemas.batch import BatchAggregateSummary, BatchAuditJob, BatchFileSta
 from app.schemas.padnext import PadnextAuditReport, PadnextFinding
 
 from app.services.pdf_metrics import text_width
+from app.services.pdf_mark import (
+    MARK_BITS,
+    MARK_COLOR_SPACE,
+    MARK_HEIGHT,
+    MARK_WIDTH,
+    mark_stream,
+)
 
 log = logging.getLogger(__name__)
 
@@ -84,6 +98,18 @@ CONTINUATION_HEADER_HEIGHT = 22.0
 #: The fourteen standard fonts need no embedding, and these two are the only ones used.
 FONT_REGULAR = "F1"
 FONT_BOLD = "F2"
+
+#: The name the monogram's image XObject is reached by inside a content stream. One image, so one
+#: name; it is declared in every page's `/Resources` because a `q … Do … Q` on a page whose resources
+#: do not name it is a silently blank rectangle rather than an error.
+MARK_XOBJECT_NAME = "Im0"
+
+#: How large the monogram is drawn in the masthead, in points.
+#:
+#: 34 pt — a little taller than the wordmark and title stacked beside it, which is what makes it read
+#: as a mark rather than as a fourth line of type. `pdf_mark` supplies 128 px for it, which is about
+#: 270 dpi at this size and still above what an office laser resolves.
+MARK_SIZE = 34.0
 
 # The type scale. Stated once, used everywhere, so "make the report a point larger" is one edit.
 #
@@ -430,6 +456,30 @@ class PdfCanvas:
             )
         self.y -= step
 
+    def image(self, *, x: float, top: float, size: float) -> None:
+        """Draw the monogram in a `size` x `size` box whose top edge is at `top`. Advances nothing.
+
+        Absolutely positioned and deliberately outside the vertical flow, because that is the only
+        thing this writer needs an image for: a mark in a masthead corner, beside text that lays
+        itself out. A method that advanced `y` would make the title block's position depend on
+        whether the logo drew, which is a layout that breaks the day somebody changes the mark's
+        size.
+
+        The `cm` operator's matrix is `[width 0 0 height x y]` and `y` is the **bottom** edge, since
+        PDF's origin is bottom-left — hence `top - size`. `q`/`Q` bracket it so the transform does
+        not leak into the text that follows; without them every subsequent `Tm` would be composed
+        with this scale, and the report would render as a 26-point-wide column of stripes.
+
+        `x` is relative to the left margin, like every other coordinate here.
+        """
+        self._emit(
+            b"q "
+            + f"{size:.2f} 0 0 {size:.2f} {MARGIN + x:.2f} {top - size:.2f} cm".encode()
+            + b" /"
+            + MARK_XOBJECT_NAME.encode()
+            + b" Do Q"
+        )
+
     def rule(self, *, thickness: float = 0.5, grey: float = GREY_RULE, x: float = 0.0,
              width: float | None = None) -> None:
         """A horizontal line across the text column."""
@@ -549,13 +599,18 @@ class PdfCanvas:
         """The complete PDF.
 
         Object numbering is fixed rather than allocated: 1 catalogue, 2 page tree, 3 and 4 the two
-        fonts, 5 the document information dictionary, then a page and a content stream per page.
-        Fixed because it makes the cross-reference table computable in one pass and the output
-        byte-identical for identical input — an allocator keyed on insertion order would be the one
-        place non-determinism could creep in.
+        fonts, 5 the document information dictionary, 6 the monogram image, then a page and a content
+        stream per page. Fixed because it makes the cross-reference table computable in one pass and
+        the output byte-identical for identical input — an allocator keyed on insertion order would be
+        the one place non-determinism could creep in.
+
+        The image is object 6 and the pages start at 7. It is *always* written, even for a document
+        whose masthead never drew it: an object nobody references costs 4 kB and keeps the numbering a
+        constant, where making it conditional would make every page's object id depend on whether a
+        logo was drawn — and the xref table is computed from those ids.
         """
         objects: dict[int, bytes] = {}
-        page_ids = [6 + 2 * index for index in range(len(self._pages))]
+        page_ids = [7 + 2 * index for index in range(len(self._pages))]
 
         objects[1] = (
             b"<< /Type /Catalog /Pages 2 0 R /Lang (de-DE) "
@@ -576,13 +631,33 @@ class PdfCanvas:
         )
         objects[5] = self._info_object()
 
+        # The monogram. `/FlateDecode` is the only filter PDF needs here and `zlib` is standard
+        # library, so a raster logo cost this writer no dependency at all — see `pdf_mark`, which
+        # also explains why the committed data is already deflated rather than compressed here.
+        mark = mark_stream()
+        objects[6] = (
+            b"<< /Type /XObject /Subtype /Image /Name /"
+            + MARK_XOBJECT_NAME.encode()
+            + f" /Width {MARK_WIDTH} /Height {MARK_HEIGHT}".encode()
+            + b" /ColorSpace "
+            + MARK_COLOR_SPACE.encode()
+            + f" /BitsPerComponent {MARK_BITS}".encode()
+            + b" /Filter /FlateDecode /Length "
+            + str(len(mark)).encode()
+            + b" >>\nstream\n"
+            + mark
+            + b"\nendstream"
+        )
+
         for index, page in enumerate(self._pages):
             page_id = page_ids[index]
             stream_id = page_id + 1
             objects[page_id] = (
                 b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "
                 + f"{PAGE_WIDTH} {PAGE_HEIGHT}".encode()
-                + b"] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents "
+                + b"] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << /"
+                + MARK_XOBJECT_NAME.encode()
+                + b" 6 0 R >> >> /Contents "
                 + f"{stream_id} 0 R".encode()
                 + b" >>"
             )
@@ -790,13 +865,31 @@ _SEVERITY_LABEL = {"error": "Fehler", "warning": "Hinweis", "info": "Information
 
 
 def _masthead(canvas: PdfCanvas, *, note: str | None = None) -> None:
-    """The block at the top of page one: wordmark, title, one line of what this document is.
+    """The block at the top of page one: the mark, the wordmark, the title, and what this document is.
 
-    The wordmark is set in type rather than placed as an image, and that is a limitation stated
-    plainly rather than worked around: this writer draws no rasters, so a logo would mean either a
-    dependency or a hand-rolled image codec. Letter-spaced capitals read as a wordmark on paper and
-    cost neither.
+    **The monogram is drawn here, and it is the only image in the document.** It sits in the top
+    right corner rather than to the left of the type, which is a layout decision with a reason: the
+    title block sets itself, three lines deep and full width, and a mark to its left would mean
+    indenting all three by the mark's width — so changing the mark's size would move the title. In
+    the corner it is absolutely positioned and the text flow does not know it exists.
+
+    It cost no dependency. PDF's image XObject takes `/FlateDecode`, `zlib` is standard library, and
+    `app/services/pdf_mark.py` commits the already-deflated stream so there is no PNG to decode and
+    nothing to compress at render time. The comment that used to be here — that a logo would mean
+    "either a dependency or a hand-rolled image codec" — turned out to be false in a useful way:
+    neither was needed.
+
+    **The letter-spaced wordmark stays, beside the mark**, and not out of inertia. It is *text*: it
+    survives a monochrome fax, a screen reader, `pdftotext`, and a reader searching the document for
+    "Azmoth". A raster survives none of those. Two renderings of the same name is a small redundancy
+    and the cheapest accessibility this document has.
+
+    The mark's top edge is lifted 2 pt above the first baseline, which centres the box against the
+    wordmark-and-title pair rather than against either line alone. A square box aligned *to* a
+    baseline reads as sitting too low, because a baseline is where type rests and not where a box
+    does; the offset is what makes the two read as level.
     """
+    canvas.image(x=CONTENT_WIDTH - MARK_SIZE, top=canvas.y + 2.0, size=MARK_SIZE)
     canvas.text("A Z M O T H", size=SIZE_SMALL, bold=True, leading=15, grey=GREY_MUTED)
     canvas.text("GOÄ-Prüfbericht", size=SIZE_TITLE, bold=True, leading=25)
     canvas.text(

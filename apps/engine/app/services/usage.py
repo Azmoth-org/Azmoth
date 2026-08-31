@@ -82,6 +82,9 @@ class PendingUsage:
     status_code: int
     duration_ms: int
     bytes_processed: int
+    #: The billable unit — how many PADnext deliveries this request audited. `0` for everything
+    #: that is not an audit. See `app.db.models.ApiUsageRecord.invoices_processed`.
+    invoices_processed: int
     at: datetime
 
 
@@ -118,6 +121,7 @@ class UsageMeter:
         status_code: int,
         duration_ms: float,
         bytes_processed: int,
+        invoices_processed: int = 0,
     ) -> None:
         """Buffer one request, and flush if that made the buffer full or if it had gone stale.
 
@@ -135,6 +139,7 @@ class UsageMeter:
                 status_code=status_code,
                 duration_ms=int(duration_ms),
                 bytes_processed=max(0, bytes_processed),
+                invoices_processed=max(0, invoices_processed),
                 at=utcnow(),
             )
 
@@ -185,6 +190,7 @@ class UsageMeter:
                         endpoint=entry.endpoint,
                         request_count=1,
                         bytes_processed=entry.bytes_processed,
+                        invoices_processed=entry.invoices_processed,
                         duration_ms=entry.duration_ms,
                         status_code=entry.status_code,
                         timestamp=entry.at,

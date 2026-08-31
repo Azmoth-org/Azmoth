@@ -69,7 +69,18 @@ _RUN = re.compile(
     re.DOTALL,
 )
 
-_STREAM = re.compile(rb"stream\n(.*?)\nendstream", re.DOTALL)
+#: A page's **content** stream, and deliberately not every stream in the file.
+#:
+#: The document now also carries one image stream — the monogram in the masthead — and a bare
+#: `stream…endstream` match returns it too. That made `pages()` report one page more than the
+#: document has, with no text on it, and broke four assertions about page counts in a way whose
+#: cause was not obvious from any of them.
+#:
+#: Anchored on `<< /Length N >>`, which is exactly how `PdfCanvas.render` writes a content stream and
+#: is not how it writes the image (whose dictionary carries `/Type /XObject` and much else). So this
+#: selects content streams by their shape rather than by excluding today's one exception, and a
+#: second image added later would not need this line changed.
+_STREAM = re.compile(rb"<< /Length \d+ >>\nstream\n(.*?)\nendstream", re.DOTALL)
 
 
 class Run:
@@ -576,12 +587,30 @@ def test_every_page_is_a4(demo_document):
 
 
 def test_the_text_is_real_text_and_not_a_picture_of_text(demo_document):
-    """What makes Ctrl+F work in a reader, and what an archive's full-text index needs."""
+    """What makes Ctrl+F work in a reader, and what an archive's full-text index needs.
+
+    This used to assert `/Subtype /Image not in` the document, which was a proxy: with no images at
+    all, no page could be a scan. There is now exactly one image — the monogram in the masthead — so
+    the property is asserted directly instead, and the proxy is replaced by a bound.
+
+    **One image, and it is 128x128.** That is the check that would fail if somebody ever rendered a
+    page as a picture: a page-sized raster is not 128 points square, and a document that grew a
+    second image would have to come back through this test to say what it was for.
+    """
     assert b"/Subtype /Type1" in demo_document
     assert b"/BaseFont /Helvetica" in demo_document
     assert b"/Encoding /WinAnsiEncoding" in demo_document
-    assert b"/Subtype /Image" not in demo_document
     assert len(drawn_runs(demo_document)) > 100
+
+    images = re.findall(rb"/Subtype /Image[^>]*?/Width (\d+) /Height (\d+)", demo_document)
+    assert images == [(b"128", b"128")], (
+        "the only image this document may carry is the 128x128 monogram. A page rendered as a "
+        "picture would show up here, and so would a second image nobody documented."
+    )
+
+    # And the brand is in the text as well as in the raster, which is what makes it survive a
+    # monochrome fax, a screen reader and `pdftotext` — see `_masthead`.
+    assert "A Z M O T H" in drawn_text(demo_document)
 
 
 def test_a_report_of_a_hundred_positions_is_a_file_somebody_can_email():

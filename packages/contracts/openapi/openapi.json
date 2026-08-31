@@ -833,6 +833,183 @@
         "title": "BilingualOption",
         "type": "object"
       },
+      "BillingInvoice": {
+        "additionalProperties": false,
+        "description": "One closed period, priced. Every amount stored rather than derived on read.\n\nDerived totals would mean an issued figure could change when a helper's rounding changed, which\nis the one thing an amount somebody has been told must not do.",
+        "properties": {
+          "base_fee_cents": {
+            "title": "Base Fee Cents",
+            "type": "integer"
+          },
+          "currency": {
+            "description": "ISO 4217, derzeit immer `EUR`. — Currently always `EUR`.",
+            "title": "Currency",
+            "type": "string"
+          },
+          "invoice_id": {
+            "description": "`inv_<hex>` — opaque public handle.",
+            "title": "Invoice Id",
+            "type": "string"
+          },
+          "invoices_included": {
+            "description": "Das Kontingent, das die Grundgebühr umfasste. — The quota the base fee bought.",
+            "title": "Invoices Included",
+            "type": "integer"
+          },
+          "invoices_processed": {
+            "title": "Invoices Processed",
+            "type": "integer"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "overage_fee_cents": {
+            "title": "Overage Fee Cents",
+            "type": "integer"
+          },
+          "overage_invoices": {
+            "title": "Overage Invoices",
+            "type": "integer"
+          },
+          "overage_rate_cents": {
+            "title": "Overage Rate Cents",
+            "type": "integer"
+          },
+          "period_end": {
+            "format": "date-time",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date-time",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "plan_code": {
+            "description": "Der Tarif, unter dem dieser Zeitraum berechnet wurde — gespeichert, nicht nachgeschlagen. Er kann inzwischen abgelöst sein. — The plan this period was priced under, stored rather than looked up; it may since have been superseded.",
+            "title": "Plan Code",
+            "type": "string"
+          },
+          "status": {
+            "description": "`ISSUED` für einen abgeschlossenen Zeitraum, `VOID` wenn durch eine Korrektur ersetzt. Ein Betrag wird nie an Ort und Stelle korrigiert. — `ISSUED`, or `VOID` when superseded by a correction. An amount is never edited in place.",
+            "title": "Status",
+            "type": "string"
+          },
+          "subscription_tier": {
+            "title": "Subscription Tier",
+            "type": "string"
+          },
+          "total_cents": {
+            "description": "`base_fee_cents + overage_fee_cents`. — The sum, stored.",
+            "title": "Total Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invoice_id",
+          "organization_id",
+          "period_start",
+          "period_end",
+          "plan_code",
+          "subscription_tier",
+          "base_fee_cents",
+          "invoices_included",
+          "invoices_processed",
+          "overage_invoices",
+          "overage_rate_cents",
+          "overage_fee_cents",
+          "total_cents",
+          "currency",
+          "status",
+          "issued_at"
+        ],
+        "title": "BillingInvoice",
+        "type": "object"
+      },
+      "BillingInvoiceList": {
+        "additionalProperties": false,
+        "description": "This practice's invoices, newest period first.",
+        "properties": {
+          "invoices": {
+            "items": {
+              "$ref": "#/components/schemas/BillingInvoice"
+            },
+            "title": "Invoices",
+            "type": "array"
+          },
+          "total": {
+            "description": "Wie viele zurückgegeben wurden. — How many were returned.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total"
+        ],
+        "title": "BillingInvoiceList",
+        "type": "object"
+      },
+      "BillingUsage": {
+        "additionalProperties": false,
+        "description": "What the open period has consumed, and what it would cost if nothing more happened.\n\n`projected_total_cents` is deliberately **not** a forecast. It is the base fee plus the overage\naccrued so far, so it only ever goes up and two readers see the same number. Extrapolating from\nfour days of a month would produce a figure that changed every time somebody looked at it, on a\nscreen whose entire purpose is checking an invoice against.",
+        "properties": {
+          "base_fee_cents": {
+            "title": "Base Fee Cents",
+            "type": "integer"
+          },
+          "invoices_processed": {
+            "description": "Geprüfte Rechnungen im laufenden Zeitraum. **Die abrechenbare Einheit** — nicht die Anzahl der API-Aufrufe: ein Bulk-Upload mit 300 Lieferungen ist ein Aufruf und 300 Rechnungen. — Invoices audited in the open period; the billable unit.",
+            "title": "Invoices Processed",
+            "type": "integer"
+          },
+          "overage_cents": {
+            "description": "Bisher angefallene Mehrverbrauchskosten. — Overage accrued so far, in cents.",
+            "title": "Overage Cents",
+            "type": "integer"
+          },
+          "overage_invoices": {
+            "description": "Rechnungen über dem Kontingent. — Invoices above the quota.",
+            "title": "Overage Invoices",
+            "type": "integer"
+          },
+          "projected_total_cents": {
+            "description": "Grundgebühr plus bisheriger Mehrverbrauch. Keine Prognose — siehe die Beschreibung dieses Modells. — Base fee plus overage so far. Not a forecast.",
+            "title": "Projected Total Cents",
+            "type": "integer"
+          },
+          "remaining": {
+            "description": "Verbleibendes Kontingent, mindestens 0. — Remaining quota, floored at zero.",
+            "title": "Remaining",
+            "type": "integer"
+          },
+          "requests": {
+            "description": "Zurechenbare API-Aufrufe im selben Zeitraum, einschliesslich der fehlgeschlagenen. Nur zur Einordnung — berechnet wird nach Rechnungen. — Attributable API calls, for context only.",
+            "title": "Requests",
+            "type": "integer"
+          },
+          "subscription": {
+            "$ref": "#/components/schemas/SubscriptionSummary"
+          }
+        },
+        "required": [
+          "subscription",
+          "invoices_processed",
+          "requests",
+          "remaining",
+          "overage_invoices",
+          "overage_cents",
+          "base_fee_cents",
+          "projected_total_cents"
+        ],
+        "title": "BillingUsage",
+        "type": "object"
+      },
       "BlockedCode": {
         "properties": {
           "blocked_by": {
@@ -2889,6 +3066,73 @@
         "title": "Patient",
         "type": "object"
       },
+      "PlanCatalog": {
+        "additionalProperties": false,
+        "description": "Every plan a practice may move to, cheapest first.",
+        "properties": {
+          "plans": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSummary"
+            },
+            "title": "Plans",
+            "type": "array"
+          }
+        },
+        "title": "PlanCatalog",
+        "type": "object"
+      },
+      "PlanSummary": {
+        "additionalProperties": false,
+        "description": "One plan a practice could be on, as the catalog describes it.\n\nRead-only and derived from `app.services.billing_plans`, which is append-only: a plan a practice\nis already on keeps its numbers even after a newer revision supersedes it. `code` carries the\nrevision (`starter-2026.08`) so a client can name a price exactly rather than by tier.",
+        "properties": {
+          "allow_overage": {
+            "description": "Ob eine Prüfung über dem Kontingent erlaubt (und berechnet) wird oder mit `429 QUOTA_EXCEEDED` abgelehnt wird. — Whether going over is charged or refused.",
+            "title": "Allow Overage",
+            "type": "boolean"
+          },
+          "base_fee_cents": {
+            "description": "Grundgebühr je Abrechnungszeitraum in Euro-Cent. — Recurring fee per period, in euro cents.",
+            "title": "Base Fee Cents",
+            "type": "integer"
+          },
+          "code": {
+            "description": "Die Tarif-SKU mit Revision, z. B. `starter-2026.08`. Preise werden nie geändert, sondern durch eine neue Revision ersetzt. — The plan SKU including its revision; prices are superseded, never edited.",
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "description": "Anzeigename für die Oberfläche. — Display name.",
+            "title": "Label",
+            "type": "string"
+          },
+          "monthly_invoice_quota": {
+            "description": "Wie viele Rechnungen die Grundgebühr je Zeitraum umfasst. — How many invoices the base fee includes per period.",
+            "title": "Monthly Invoice Quota",
+            "type": "integer"
+          },
+          "overage_rate_cents": {
+            "description": "Preis je zusätzlicher Rechnung über dem Kontingent, in Euro-Cent. Ohne Bedeutung, wenn `allow_overage` false ist. — Price per invoice above the quota.",
+            "title": "Overage Rate Cents",
+            "type": "integer"
+          },
+          "tier": {
+            "description": "`free`, `starter`, `pro` oder `enterprise`.",
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "tier",
+          "label",
+          "base_fee_cents",
+          "monthly_invoice_quota",
+          "overage_rate_cents",
+          "allow_overage"
+        ],
+        "title": "PlanSummary",
+        "type": "object"
+      },
       "Procedure-Input": {
         "additionalProperties": false,
         "properties": {
@@ -3747,6 +3991,66 @@
         "title": "SolverHealth",
         "type": "object"
       },
+      "SubscriptionSummary": {
+        "additionalProperties": false,
+        "description": "What one practice is entitled to, and which period that entitlement is for.\n\n**These numbers come from the practice's own row, not from the plan catalog.** They were copied\nonto it when the plan was assigned, so a later change to the catalog cannot retroactively alter\nwhat was agreed — see `app.db.models.OrganizationBillingRecord`. `plan_code` says what they were\ntaken from; it is not where they are read from now.",
+        "properties": {
+          "allow_overage": {
+            "title": "Allow Overage",
+            "type": "boolean"
+          },
+          "current_period_end": {
+            "description": "Ende des laufenden Zeitraums, ausschliesslich, UTC. — Exclusive end of the open period.",
+            "format": "date-time",
+            "title": "Current Period End",
+            "type": "string"
+          },
+          "current_period_start": {
+            "description": "Beginn des laufenden Abrechnungszeitraums, einschliesslich, UTC. Der Zeitraum ist an den Tag gebunden, an dem die Praxis angelegt wurde — nicht an den Monatsersten. — Inclusive start of the open period, anchored on the practice's own billing day.",
+            "format": "date-time",
+            "title": "Current Period Start",
+            "type": "string"
+          },
+          "monthly_invoice_quota": {
+            "title": "Monthly Invoice Quota",
+            "type": "integer"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "overage_rate_cents": {
+            "title": "Overage Rate Cents",
+            "type": "integer"
+          },
+          "plan_code": {
+            "title": "Plan Code",
+            "type": "string"
+          },
+          "plan_label": {
+            "title": "Plan Label",
+            "type": "string"
+          },
+          "subscription_tier": {
+            "description": "`free`, `starter`, `pro` oder `enterprise`.",
+            "title": "Subscription Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "organization_id",
+          "subscription_tier",
+          "plan_code",
+          "plan_label",
+          "monthly_invoice_quota",
+          "overage_rate_cents",
+          "allow_overage",
+          "current_period_start",
+          "current_period_end"
+        ],
+        "title": "SubscriptionSummary",
+        "type": "object"
+      },
       "Totals": {
         "properties": {
           "amount_cent_unrounded": {
@@ -3796,6 +4100,68 @@
           }
         },
         "title": "Totals",
+        "type": "object"
+      },
+      "UpgradeRequest": {
+        "additionalProperties": false,
+        "description": "A plan change, named either by tier or by exact plan code.\n\nTwo ways to say it, because they answer different needs. `tier` is what a settings screen sends\n— \"put us on Pro\" — and resolves to today's selectable revision of that tier. `plan_code` names\none exactly, which is what an operator moving a practice onto a specific historical or bespoke\nprice needs.\n\nExactly one must be given. Both, or neither, is a `422` rather than a precedence rule nobody\nwould remember: a request that specified a tier *and* a mismatched code has two plausible\nreadings and no safe default.\n\nNothing here names an organisation. The practice is whichever one the session is active in, for\nthe same reason `ApiKeyRequest` carries no tenant: a body field naming one would be an endpoint\nfor changing somebody else's subscription.",
+        "properties": {
+          "plan_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Genaue Tarif-SKU, z. B. `pro-2026.08`. Alternative zu `tier`, wenn eine bestimmte Revision gemeint ist. — An exact plan SKU, as an alternative to `tier`.",
+            "title": "Plan Code"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Zieltarif: `free`, `starter`, `pro` oder `enterprise`. Löst auf die aktuell wählbare Revision dieses Tarifs auf. — Target tier; resolves to today's selectable revision.",
+            "title": "Tier"
+          }
+        },
+        "title": "UpgradeRequest",
+        "type": "object"
+      },
+      "UpgradeResult": {
+        "additionalProperties": false,
+        "description": "The subscription after the change, plus what it was before.\n\n`previous_*` is here so a client can render \"Starter → Pro\" without having read the state first,\nand so a log or an audit trail built on the response can say what actually moved. A response\nthat only carried the new state would make \"was this a no-op\" unanswerable.",
+        "properties": {
+          "changed": {
+            "description": "False, wenn die Praxis bereits auf diesem Tarif war. Der Aufruf ist dann ein erfolgreiches No-op und kein Fehler. — False when the practice was already on this plan; the call is a successful no-op, not an error.",
+            "title": "Changed",
+            "type": "boolean"
+          },
+          "previous_plan_code": {
+            "title": "Previous Plan Code",
+            "type": "string"
+          },
+          "previous_tier": {
+            "title": "Previous Tier",
+            "type": "string"
+          },
+          "subscription": {
+            "$ref": "#/components/schemas/SubscriptionSummary"
+          }
+        },
+        "required": [
+          "subscription",
+          "previous_plan_code",
+          "previous_tier",
+          "changed"
+        ],
+        "title": "UpgradeResult",
         "type": "object"
       },
       "UsageByEndpoint": {
@@ -4549,6 +4915,215 @@
         ]
       }
     },
+    "/api/v1/billing/invoices": {
+      "get": {
+        "description": "Die abgeschlossenen Abrechnungszeiträume dieser Praxis, neuester zuerst.\n\nEin Eintrag entsteht, wenn ein Zeitraum endet — nicht durch einen Zahlungsvorgang. Er nennt den\nTarif, unter dem der Zeitraum berechnet wurde, das enthaltene Kontingent, die tatsächlich\ngeprüften Rechnungen, den Mehrverbrauch und die Summe. Alle Beträge in Euro-Cent.\n\n**Ein Zeitraum ohne Verbrauch erhält ebenfalls einen Eintrag**, mit Summe 0. „August: nichts\nfällig\" und „August: kein Eintrag\" sind verschiedene Aussagen, und nur die erste lässt sich\nabgleichen.\n\n**Dies ist keine Rechnung im rechtlichen Sinn.** Keine Umsatzsteuer, keine Rechnungsnummer im\nSinne des § 14 UStG, keine Zahlungsbedingungen — es ist die Grundlage, aus der eine solche\nRechnung erstellt wird.\n\nDer laufende, noch nicht abgeschlossene Zeitraum steht in `GET /api/v1/billing/usage` und\nerscheint hier bewusst nicht: ein Betrag, der sich noch ändert, gehört nicht in eine Liste\nabgerechneter Zeiträume.\n\n---\n\nThe closed billing periods, newest first — one row per period that ended, with the plan it was\npriced under and every amount in euro cents. A period with no usage still gets a row, with a\nzero total. The open period is not listed; it is in `GET /api/v1/billing/usage`.\n\nNot a Rechnung in the legal sense: no VAT, no invoice-number series, no payment terms.",
+        "operationId": "read_invoices_api_v1_billing_invoices_get",
+        "parameters": [
+          {
+            "description": "Wie viele Zeiträume höchstens, neueste zuerst. — At most this many periods, newest first.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "description": "Wie viele Zeiträume höchstens, neueste zuerst. — At most this many periods, newest first.",
+              "maximum": 120,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingInvoiceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "security": [
+          {
+            "AzmothApiKey": []
+          }
+        ],
+        "summary": "Abgerechnete Zeiträume",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/api/v1/billing/plans": {
+      "get": {
+        "description": "Die Tarife, auf die diese Praxis wechseln kann — vom günstigsten zum teuersten.\n\nAbgelöste Revisionen erscheinen hier **nicht**. Preise werden nie geändert, sondern durch eine\nneue Revision ersetzt; eine Praxis auf einer älteren Revision behält deren Konditionen, aber\nneu wählbar ist nur die aktuelle. Der eigene Tarif steht in `GET /api/v1/billing/usage` und\nkann eine abgelöste Revision sein.\n\n**Alle Beträge in Euro-Cent als ganze Zahl.** `9900` bedeutet 99,00 €.\n\n---\n\nThe plans a practice may move to, cheapest first. Superseded revisions are excluded: prices are\nappend-only, so a practice on an older revision keeps its terms but only the current one can be\nnewly selected — their own plan is in `GET /api/v1/billing/usage` and may be a superseded code.\n\nRequires a credential (a key or a session) even though the catalog is not tenant data. That is a\ndeliberate choice rather than an oversight: a price list is commercially sensitive before launch,\nand the marketing site is where a public one belongs.",
+        "operationId": "read_plans_api_v1_billing_plans_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanCatalog"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "security": [
+          {
+            "AzmothApiKey": []
+          }
+        ],
+        "summary": "Verfügbare Tarife",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/api/v1/billing/upgrade": {
+      "post": {
+        "description": "Wechselt den Tarif dieser Praxis. Nur aus einer angemeldeten Sitzung, nicht mit API-Schlüssel.\n\nZieltarif entweder als `tier` (`free`, `starter`, `pro`, `enterprise` — löst auf die aktuell\nwählbare Revision auf) oder als genaue `plan_code`. Genau eine der beiden Angaben ist\nerforderlich.\n\n**Der Abrechnungszeitraum wird nicht neu gestartet.** Ein Wechsel mitten im Zeitraum erhöht das\nKontingent und lässt das Fenster unverändert: wer 480 von 500 Rechnungen verbraucht hat und auf\nPro wechselt, hat sofort 2.020 übrig — nicht ein neues Kontingent und eine Zeitraumgrenze mitten\nim Monat. Eine anteilige Berechnung der Grundgebühr (Proration) ist bewusst nicht implementiert;\nsiehe `docs/BILLING.md`.\n\n**Auch ein Wechsel nach unten ist erlaubt.** Der Aufruf heisst `upgrade`, weil das der Normalfall\nist; die Engine verweigert keinen Wechsel nach unten. Liegt der bisherige Verbrauch über dem\nneuen Kontingent, gilt ab sofort das neue: bei einem Tarif ohne Mehrverbrauch führt das zu\n`429 QUOTA_EXCEEDED`, bis der Zeitraum wechselt. `changed: false` heisst, die Praxis war bereits\nauf diesem Tarif — ein erfolgreiches No-op und kein Fehler.\n\nFehler: `422` wenn weder `tier` noch `plan_code` angegeben ist oder beide, `404` wenn der Tarif\nnicht existiert oder nicht (mehr) wählbar ist, `403` wenn die Anfrage keine Praxis nennt.\n\n---\n\nChange this practice's plan. Session only — not with an API key, because it is a commercial\ncommitment and a key must not be able to escalate its own entitlements. See the module docstring.\n\nTarget named by `tier` or by exact `plan_code`; exactly one. The period is not restarted, and a\ndowngrade is permitted. Idempotent in the sense that matters: naming the current plan succeeds\nand reports `changed: false`.",
+        "operationId": "upgrade_subscription_api_v1_billing_upgrade_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpgradeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpgradeResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "Tarif wechseln",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/api/v1/billing/usage": {
+      "get": {
+        "description": "Tarif, verbrauchte Rechnungen, verbleibendes Kontingent und angefallener Mehrverbrauch.\n\n**Gezählt werden Rechnungen, nicht Aufrufe.** Ein Bulk-Upload mit 300 Lieferungen ist ein\nAPI-Aufruf und 300 Rechnungen — `invoices_processed` ist die abrechenbare Einheit,\n`requests` steht nur zur Einordnung daneben.\n\nDer Zeitraum ist der Abrechnungszeitraum dieser Praxis und **nicht** der Kalendermonat: er ist\nan den Tag gebunden, an dem die Praxis angelegt wurde. `GET /api/v1/settings/usage` beantwortet\nbewusst die andere Frage — Verbrauch im laufenden Kalendermonat — und beide nennen den Zeitraum,\nden sie verwendet haben. Wer beide Zahlen vergleicht, muss auf diese Fenster achten.\n\n`projected_total_cents` ist keine Prognose, sondern Grundgebühr plus bisher angefallener\nMehrverbrauch: eine Zahl, die nur steigt und die zwei Leser gleich lesen.\n\n---\n\nThe open billing period: which plan, how many invoices audited, how many remain, what overage\nhas accrued. Readable with an API key or from a session; the credential decides the practice.\n\nThe window is the practice's own billing period, anchored on the day they were created — not the\ncalendar month, which is what `GET /api/v1/settings/usage` reports. Both state their window.\n\nReading this also **rolls the period** if the stored one has ended, which writes an invoice for\neach period that closed. There is no scheduler in this service, so the first request of a new\nperiod is what closes the previous one — see `app.services.billing`.",
+        "operationId": "read_billing_usage_api_v1_billing_usage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingUsage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "security": [
+          {
+            "AzmothApiKey": []
+          }
+        ],
+        "summary": "Kontingent und Verbrauch",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/api/v1/catalog": {
       "get": {
         "description": "Provenance and coverage — deliberately not the full 2000-entry dump.\n\nThe warnings are not decoration: rule coverage is `partial`, most exclusion rules were\nmachine-extracted and are unverified, and no Zielleistung pairs are loaded at all. Publishing\nthat is the difference between a defensible tool and one that overclaims.",
@@ -4775,7 +5350,7 @@
     },
     "/api/v1/padnext/audit": {
       "post": {
-        "description": "Audit a PADnext delivery against the GOÄ rules.\n\nThe body is the file itself, not a JSON wrapper or a multipart upload: either a `.padx`\ncontainer (a ZIP, sniffed by magic bytes) or a bare `*_padx.xml` payload. Taking raw bytes\navoids a `python-multipart` dependency for what is one file per request.\n\nA delivery flagged as production data is refused with 422 — see `app.padnext.audit` and\n`docs/compliance/PRIVATE_DATA_WARNING.md`.\n\nFailures carry `error_code`: `EMPTY_REQUEST_BODY` (400), `INVALID_XML` (400, with the line and\ncolumn in `details`), `PADNEXT_SCHEMA_VIOLATION` (422, every violation in `details`),\n`PADNEXT_UNREADABLE` (422), `UNKNOWN_ZIFFER` (422, when no position is in this catalog at\nall), `REAL_DATA_REFUSED` (422) and `RULES_ENGINE_UNAVAILABLE` (503, retryable). See\n`docs/errors.md`.",
+        "description": "Audit a PADnext delivery against the GOÄ rules.\n\nThe body is the file itself, not a JSON wrapper or a multipart upload: either a `.padx`\ncontainer (a ZIP, sniffed by magic bytes) or a bare `*_padx.xml` payload. Taking raw bytes\navoids a `python-multipart` dependency for what is one file per request.\n\nA delivery flagged as production data is refused with 422 — see `app.padnext.audit` and\n`docs/compliance/PRIVATE_DATA_WARNING.md`.\n\nFailures carry `error_code`: `EMPTY_REQUEST_BODY` (400), `INVALID_XML` (400, with the line and\ncolumn in `details`), `PADNEXT_SCHEMA_VIOLATION` (422, every violation in `details`),\n`PADNEXT_UNREADABLE` (422), `UNKNOWN_ZIFFER` (422, when no position is in this catalog at\nall), `REAL_DATA_REFUSED` (422), `QUOTA_EXCEEDED` (429, only for a caller that named a practice)\nand `RULES_ENGINE_UNAVAILABLE` (503, retryable). See `docs/errors.md`.\n\n**The billing quota applies here only when the caller names a practice.** This endpoint stores\nnothing and is unscoped by design, so the tenant is read optionally rather than required — the\ncontract, including the case of a call that names no practice at all, is unchanged. Every call\nthe web tier proxies does name one (it comes from the session, see `apps/web/lib/engine.ts`), so\nin practice a signed-in reader's audit is counted and checked, and `/demo`'s visitor is not.\n`app.api.quota` states the consequence of that in full.\n\n`async def` for one reason: the quota check is a database read. The audit itself is handed to the\nthreadpool, because a blocking solve on the event loop would serialise the whole service — see\n`_audit_bytes`.",
         "operationId": "padnext_audit_api_v1_padnext_audit_post",
         "requestBody": {
           "content": {
@@ -4829,7 +5404,7 @@
     },
     "/api/v1/padnext/audit.pdf": {
       "post": {
-        "description": "Dieselbe Prüfung wie `POST /padnext/audit`, als druckbarer Prüfbericht.\n\nDer Bericht trägt den Erstellungszeitpunkt, die Rechnungsnummer aus der Lieferung, die\nRechtsgrundlage und die Regel-ID zu jeder Beanstandung sowie die Freigabezeile, auf der die\närztliche Prüfung dokumentiert wird.\n\n---\n\nThe printable twin of `POST /padnext/audit`, and deliberately the same request: the file\nitself as the body, the same headers, the same refusals with the same `error_code`s.\n\n**It audits rather than looking a report up, and that is the honest shape here.** A single\naudit stores nothing — that is stated at the top of this module and is what keeps this endpoint\noutside tenancy — so there is no stored report to render and the only way to produce one is to\nrun the audit. The audit is deterministic and takes a few hundred milliseconds, so the PDF this\nreturns carries the *same* verdicts and the same `receipt_hash` as the JSON the caller already\nhas. The receipt hash printed on the document is what lets them confirm that.\n\nUnlike the JSON, this response carries a wall clock: `Erstellt am`, and `/CreationDate` in the\ndocument metadata. A report that goes into a client file has to say when it was drawn, so two\ndownloads of one delivery differ in exactly that stamp and in nothing else.",
+        "description": "Dieselbe Prüfung wie `POST /padnext/audit`, als druckbarer Prüfbericht.\n\nDer Bericht trägt den Erstellungszeitpunkt, die Rechnungsnummer aus der Lieferung, die\nRechtsgrundlage und die Regel-ID zu jeder Beanstandung sowie die Freigabezeile, auf der die\närztliche Prüfung dokumentiert wird.\n\n---\n\nThe printable twin of `POST /padnext/audit`, and deliberately the same request: the file\nitself as the body, the same headers, the same refusals with the same `error_code`s.\n\n**It audits rather than looking a report up, and that is the honest shape here.** A single\naudit stores nothing — that is stated at the top of this module and is what keeps this endpoint\noutside tenancy — so there is no stored report to render and the only way to produce one is to\nrun the audit. The audit is deterministic and takes a few hundred milliseconds, so the PDF this\nreturns carries the *same* verdicts and the same `receipt_hash` as the JSON the caller already\nhas. The receipt hash printed on the document is what lets them confirm that.\n\nUnlike the JSON, this response carries a wall clock: `Erstellt am`, and `/CreationDate` in the\ndocument metadata. A report that goes into a client file has to say when it was drawn, so two\ndownloads of one delivery differ in exactly that stamp and in nothing else.\n\n**This endpoint is deliberately not counted against the billing quota**, even though it runs a\nreal audit. It renders a report for a delivery the practice has already been charged for once,\nand charging again for the printable copy — or refusing the download because the quota ran out\nbetween reading the verdicts and printing them — would be indefensible. The consequence is that\na caller who only ever used this endpoint would audit for free; it is reachable from the web\ntier, behind a session, by the same reader who just paid for the JSON, and closing that would\nmean either double-billing or storing reports, which is what the module docstring rules out.",
         "operationId": "padnext_audit_pdf_api_v1_padnext_audit_pdf_post",
         "requestBody": {
           "content": {

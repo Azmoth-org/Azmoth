@@ -49,9 +49,13 @@ from fastapi import (
     status,
 )
 
+from starlette.concurrency import run_in_threadpool
+
 from app.api.deps import batches, pipeline
 from app.api.identity import RequestActor
+from app.api.quota import apply as apply_quota, check_and_refuse, optional_quota
 from app.api.tenancy import RequestOrganization
+from app.core.observability import record_invoices
 from app.errors import EmptyRequestBody, UnknownZifferError
 from app.padnext import audit_delivery, read_delivery
 from app.schemas import (
@@ -92,22 +96,18 @@ MAX_BATCH_FILE_BYTES = 8 * 1024 * 1024
 MAX_BATCH_TOTAL_BYTES = 64 * 1024 * 1024
 
 
-@router.post("/audit", response_model=PadnextAuditReport)
-def padnext_audit(request: Request, body: bytes = Body(default=b"")) -> PadnextAuditReport:
-    """Audit a PADnext delivery against the GOÄ rules.
+def _audit_bytes(body: bytes, *, source_name: str) -> PadnextAuditReport:
+    """Read one delivery and audit it. Synchronous, and the only place that work happens.
 
-    The body is the file itself, not a JSON wrapper or a multipart upload: either a `.padx`
-    container (a ZIP, sniffed by magic bytes) or a bare `*_padx.xml` payload. Taking raw bytes
-    avoids a `python-multipart` dependency for what is one file per request.
+    Extracted so the JSON endpoint and the PDF endpoint cannot drift: the two must return the same
+    verdicts and the same `receipt_hash` for the same bytes, and the way to guarantee that is for
+    there to be one function rather than two that look alike.
 
-    A delivery flagged as production data is refused with 422 — see `app.padnext.audit` and
-    `docs/compliance/PRIVATE_DATA_WARNING.md`.
-
-    Failures carry `error_code`: `EMPTY_REQUEST_BODY` (400), `INVALID_XML` (400, with the line and
-    column in `details`), `PADNEXT_SCHEMA_VIOLATION` (422, every violation in `details`),
-    `PADNEXT_UNREADABLE` (422), `UNKNOWN_ZIFFER` (422, when no position is in this catalog at
-    all), `REAL_DATA_REFUSED` (422) and `RULES_ENGINE_UNAVAILABLE` (503, retryable). See
-    `docs/errors.md`.
+    **Deliberately not `async`.** The solve is a blocking subprocess. `POST /padnext/audit` is an
+    `async def` (it awaits a quota read) and hands this to the threadpool; `POST /padnext/audit.pdf`
+    is a plain `def`, which FastAPI dispatches to the threadpool itself. Either way the event loop
+    is never blocked — `tests/test_production_fixes.py::test_no_solve_ever_runs_on_the_event_loop`
+    is the guard rail that says so, and it is the reason this split exists at all.
     """
     if not body:
         raise EmptyRequestBody(
@@ -115,7 +115,6 @@ def padnext_audit(request: Request, body: bytes = Body(default=b"")) -> PadnextA
             "payload — with Content-Type application/xml or application/octet-stream."
         )
 
-    source_name = request.headers.get("x-padnext-filename", "")
     # `read_delivery` raises `InvalidXmlError` (400, with the line and column), `PadnextSchemaError`
     # (422, with every violation) or a bare `PadnextError` (422). All three are in the catalog and
     # all three are rendered by the handler, so there is nothing to translate here.
@@ -133,6 +132,54 @@ def padnext_audit(request: Request, body: bytes = Body(default=b"")) -> PadnextA
         read_findings=read_findings,
         settings=pipe.settings,
     )
+
+
+@router.post("/audit", response_model=PadnextAuditReport)
+async def padnext_audit(
+    request: Request, response: Response, body: bytes = Body(default=b"")
+) -> PadnextAuditReport:
+    """Audit a PADnext delivery against the GOÄ rules.
+
+    The body is the file itself, not a JSON wrapper or a multipart upload: either a `.padx`
+    container (a ZIP, sniffed by magic bytes) or a bare `*_padx.xml` payload. Taking raw bytes
+    avoids a `python-multipart` dependency for what is one file per request.
+
+    A delivery flagged as production data is refused with 422 — see `app.padnext.audit` and
+    `docs/compliance/PRIVATE_DATA_WARNING.md`.
+
+    Failures carry `error_code`: `EMPTY_REQUEST_BODY` (400), `INVALID_XML` (400, with the line and
+    column in `details`), `PADNEXT_SCHEMA_VIOLATION` (422, every violation in `details`),
+    `PADNEXT_UNREADABLE` (422), `UNKNOWN_ZIFFER` (422, when no position is in this catalog at
+    all), `REAL_DATA_REFUSED` (422), `QUOTA_EXCEEDED` (429, only for a caller that named a practice)
+    and `RULES_ENGINE_UNAVAILABLE` (503, retryable). See `docs/errors.md`.
+
+    **The billing quota applies here only when the caller names a practice.** This endpoint stores
+    nothing and is unscoped by design, so the tenant is read optionally rather than required — the
+    contract, including the case of a call that names no practice at all, is unchanged. Every call
+    the web tier proxies does name one (it comes from the session, see `apps/web/lib/engine.ts`), so
+    in practice a signed-in reader's audit is counted and checked, and `/demo`'s visitor is not.
+    `app.api.quota` states the consequence of that in full.
+
+    `async def` for one reason: the quota check is a database read. The audit itself is handed to the
+    threadpool, because a blocking solve on the event loop would serialise the whole service — see
+    `_audit_bytes`.
+    """
+    # Before the body is parsed, so a practice over its quota is refused without the engine doing
+    # the work — and before the empty-body check, because "you have no quota left" is the more
+    # actionable of the two answers for a caller who managed to send both problems at once.
+    quota = await optional_quota(request, requested=1)
+
+    report = await run_in_threadpool(
+        _audit_bytes, body, source_name=request.headers.get("x-padnext-filename", "")
+    )
+
+    # One delivery, counted only once it demonstrably was audited — the same rule `/audit/single`
+    # follows. A request that named no practice writes no usage row at all (there is nobody to
+    # attribute it to), so this is a no-op for `/demo`.
+    if quota is not None:
+        record_invoices(1)
+    apply_quota(response, quota)
+    return report
 
 
 @router.post(
@@ -171,8 +218,18 @@ def padnext_audit_pdf(
     Unlike the JSON, this response carries a wall clock: `Erstellt am`, and `/CreationDate` in the
     document metadata. A report that goes into a client file has to say when it was drawn, so two
     downloads of one delivery differ in exactly that stamp and in nothing else.
+
+    **This endpoint is deliberately not counted against the billing quota**, even though it runs a
+    real audit. It renders a report for a delivery the practice has already been charged for once,
+    and charging again for the printable copy — or refusing the download because the quota ran out
+    between reading the verdicts and printing them — would be indefensible. The consequence is that
+    a caller who only ever used this endpoint would audit for free; it is reachable from the web
+    tier, behind a session, by the same reader who just paid for the JSON, and closing that would
+    mean either double-billing or storing reports, which is what the module docstring rules out.
     """
-    report = padnext_audit(request, body)
+    # The shared audit, not the JSON endpoint: that one is a coroutine now (it awaits a quota
+    # read), and this handler is a plain `def` so FastAPI keeps dispatching it to the threadpool.
+    report = _audit_bytes(body, source_name=request.headers.get("x-padnext-filename", ""))
     document = render_single_report(
         report,
         organization=request.headers.get("x-organization-id") or None,
@@ -288,6 +345,7 @@ def _batch_not_found(batch_id: str) -> HTTPException:
 )
 async def padnext_batch(
     background_tasks: BackgroundTasks,
+    response: Response,
     actor: RequestActor,
     organization: RequestOrganization,
     files: list[UploadFile] = File(
@@ -383,6 +441,14 @@ async def padnext_batch(
             )
         uploads.append((name, content))
 
+    # The quota, once the parts have been read and counted, and before any of them is queued.
+    # Refused as a unit for the same reason `/audit/bulk` is: a batch that audited eleven of thirty
+    # files because a ceiling was reached mid-run is worse for the practice than being told up front.
+    #
+    # The tenant here is required rather than optional — this endpoint writes rows and is in
+    # `SCOPED_OPERATIONS` — so there is no "unmetered" branch, unlike `/padnext/audit`.
+    quota = await check_and_refuse(organization, requested=len(uploads))
+
     service = batches()
     try:
         accepted, payloads = await service.create_batch(
@@ -392,6 +458,10 @@ async def padnext_batch(
         raise HTTPException(status_code=400, detail={"error": "empty_batch", "message": str(exc)}) from exc
 
     background_tasks.add_task(service.process_batch, accepted.batch_id, payloads)
+    # On acceptance, not on completion — `/audit/bulk` carries the full reasoning. `file_count` is
+    # what the `202` promised, so it is what is counted.
+    record_invoices(accepted.file_count)
+    apply_quota(response, quota)
     return accepted
 
 

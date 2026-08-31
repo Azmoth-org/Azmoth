@@ -32,6 +32,7 @@ from fastapi import FastAPI
 
 from app.api import (
     audit,
+    billing,
     catalog,
     demo,
     health,
@@ -298,5 +299,16 @@ ERROR_RESPONSES: dict = {
 
 app.add_middleware(RequestContextMiddleware)
 
-for router in (health, solve, proposals, padnext, catalog, rules, audit, settings_keys, demo):
+for router in (
+    health,
+    solve,
+    proposals,
+    padnext,
+    catalog,
+    rules,
+    audit,
+    settings_keys,
+    billing,
+    demo,
+):
     app.include_router(router.router, prefix=API_PREFIX, responses=ERROR_RESPONSES)
