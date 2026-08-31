@@ -4,7 +4,7 @@ import { Separator } from "@workspace/ui/components/separator";
 
 import { Logo } from "@/components/logo";
 import { Link } from "@/i18n/navigation";
-import { routes, siteConfig } from "@/lib/site";
+import { apiDocsUrl, routes, siteConfig } from "@/lib/site";
 
 /**
  * Four columns, and the fourth is the one German law cares about.
@@ -79,14 +79,19 @@ export function SiteFooter() {
                   {t("datenschutz")}
                 </Link>
               </li>
+              {/*
+                This row used to be a GitHub link. The repository is private, so it led
+                every visitor to a sign-in wall; the interactive API reference is the
+                thing an integrator actually wanted and is served to anyone.
+              */}
               <li>
                 <a
-                  href={siteConfig.github}
+                  href={apiDocsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={linkClass}
                 >
-                  {t("github")}
+                  {t("apiReferenz")}
                 </a>
               </li>
               <li>

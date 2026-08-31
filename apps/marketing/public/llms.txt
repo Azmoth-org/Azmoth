@@ -17,7 +17,7 @@ verifizierte Regel. Die drei Kategorien werden bewusst **nicht** zu einem einzel
 Risikobetrag summiert.
 
 Der Anteil des GOÄ-Katalogs, zu dem überhaupt eine durchgesetzte Regel existiert, wird
-auf der Startseite genannt und ist über die API abrufbar (`GET /api/v1/rules/coverage`).
+auf der Startseite genannt und steht als `rule_coverage_detail` auf jeder API-Antwort.
 Diese Zahlen ändern sich; sie sollten zur Laufzeit gelesen und nicht zitiert werden.
 
 ## Wichtige Adressen

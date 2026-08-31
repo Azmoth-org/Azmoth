@@ -64,8 +64,6 @@ export const siteConfig = {
    * concludes — correctly — that nobody is reading any of them.
    */
   email: "kontakt@azmoth.com",
-  /** Where the partner API contract and the anonymisation script live. */
-  github: "https://github.com/oussamakhadraoui/azmoth",
 } as const;
 
 /** Marketing routes, so a rename is one edit rather than a grep. */
@@ -81,13 +79,20 @@ export const routes = {
 } as const;
 
 /**
- * The partner API contract, in the repository.
+ * The machine-readable contract, and its interactive copy.
  *
  * `/api-dokumentation` on this site is the orientation page — what the API is, one
- * runnable call, and the constraints an integrator needs before they read anything
- * else. The contract itself is `docs/api/PARTNER_API.md`, which is versioned with the
- * engine that implements it. Publishing a second copy here is how the two disagree by
- * the third release, so the page links out rather than restating it.
+ * runnable call, and the constraints an integrator needs before they read anything else.
+ * The contract itself is the OpenAPI schema the engine serves, which is by construction
+ * the one the running engine implements. Restating it here is how the two disagree by
+ * the third release, so the page links out.
+ *
+ * **Not GitHub.** The obvious link is `docs/api/PARTNER_API.md`, and it was the first
+ * thing here — but the repository is private, so every visitor clicking it would get a
+ * sign-in wall on the page whose whole argument is "the contract is public, go and read
+ * it". These two URLs are served to anyone by `infra/docker/Caddyfile`, which publishes
+ * `/docs` and `/openapi.json` on the API host precisely so an integrator can wire up a
+ * client without an account.
  */
-export const apiContractUrl =
-  "https://github.com/oussamakhadraoui/azmoth/blob/main/docs/api/PARTNER_API.md";
+export const apiDocsUrl = "https://api.azmoth.com/docs";
+export const apiSchemaUrl = "https://api.azmoth.com/openapi.json";

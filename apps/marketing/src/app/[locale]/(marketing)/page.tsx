@@ -34,7 +34,7 @@ import { TrustBadges } from "@/components/trust-badges";
 import { CURL_EXAMPLE } from "@/lib/api-example";
 import { engineFacts } from "@/lib/engine-facts";
 import { buildPageMetadata } from "@/lib/seo";
-import { apiContractUrl, getProductLinks, routes, siteConfig } from "@/lib/site";
+import { apiDocsUrl, getProductLinks, routes, siteConfig } from "@/lib/site";
 
 /*
  * Icons live beside the copy they illustrate only by index — the strings themselves are
@@ -536,12 +536,11 @@ function ApiTeaser() {
               <ArrowRightIcon data-icon="inline-end" />
             </ButtonLink>
             {/*
-              `rel="noreferrer"` alongside `noopener`: this is the only outbound link on
-              the page and it leads to the repository, so there is no reason to hand a
-              third party this site's referrer.
+              `rel="noreferrer"` alongside `noopener`: the destination is a different
+              origin, and there is no reason to hand it this site's referrer.
             */}
             <a
-              href={apiContractUrl}
+              href={apiDocsUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-10 items-center justify-center rounded-full border border-white/25 px-4 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-white/10"

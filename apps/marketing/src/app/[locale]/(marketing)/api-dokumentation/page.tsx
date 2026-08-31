@@ -10,7 +10,7 @@ import { CardHeading } from "@/components/card-heading";
 import { Section, SectionHeading } from "@/components/section";
 import { CURL_EXAMPLE, RESPONSE_EXAMPLE } from "@/lib/api-example";
 import { buildPageMetadata } from "@/lib/seo";
-import { apiContractUrl } from "@/lib/site";
+import { apiDocsUrl, apiSchemaUrl } from "@/lib/site";
 
 /**
  * The integrator's landing page — orientation, not the contract.
@@ -128,15 +128,25 @@ function ApiContent() {
           <div className="rounded-xl bg-azm-navy p-8 text-white lg:self-start">
             <h2 className="text-lg font-medium">{t("vertragTitel")}</h2>
             <p className="mt-3 leading-relaxed text-white/75">{t("vertragText")}</p>
-            <a
-              href={apiContractUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-white px-4 text-sm font-medium text-azm-navy transition-colors hover:bg-white/90"
-            >
-              {t("vertragCta")}
-              <ArrowRightIcon aria-hidden="true" className="size-4" />
-            </a>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                href={apiDocsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-white px-4 text-sm font-medium whitespace-nowrap text-azm-navy transition-colors hover:bg-white/90"
+              >
+                {t("vertragCta")}
+                <ArrowRightIcon aria-hidden="true" className="size-4" />
+              </a>
+              <a
+                href={apiSchemaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-10 items-center justify-center rounded-full border border-white/25 px-4 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-white/10"
+              >
+                {t("schemaCta")}
+              </a>
+            </div>
           </div>
         </div>
       </Section>

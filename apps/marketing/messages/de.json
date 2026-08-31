@@ -19,11 +19,11 @@
     "rechtliches": "Rechtliches",
     "impressum": "Impressum",
     "datenschutz": "Datenschutz",
-    "github": "GitHub",
     "kontaktLabel": "Kontakt",
     "rechte": "Alle Rechte vorbehalten.",
     "hinweis": "Azmoth ersetzt keine ärztliche oder rechtliche Beratung.",
-    "madeInGermany": "Made in Germany"
+    "madeInGermany": "Made in Germany",
+    "apiReferenz": "API-Referenz"
   },
   "startseite": {
     "hero": {
@@ -165,9 +165,9 @@
     "api": {
       "eyebrow": "Für Entwickler",
       "titel": "Entwickler? Integration in 60 Sekunden.",
-      "text": "Unsere B2B-API ist dokumentiert, getestet und produktionsreif: PADnext hinein, JSON heraus, authentifiziert über einen API-Key. Der vollständige Vertrag inklusive Fehlercodes, Rate Limits und OpenAPI-Schema liegt im Repository.",
+      "text": "Unsere B2B-API ist dokumentiert, getestet und produktionsreif: PADnext hinein, JSON heraus, authentifiziert über einen API-Key. Das maschinenlesbare OpenAPI-Schema und eine interaktive Referenz sind ohne Konto abrufbar.",
       "cta": "API-Dokumentation ansehen",
-      "ctaSekundaer": "Vertrag auf GitHub",
+      "ctaSekundaer": "Interaktive Referenz",
       "snippetLabel": "Eine Rechnung synchron prüfen",
       "kopieren": "Befehl kopieren",
       "kopiert": "Kopiert"
@@ -312,8 +312,8 @@
     "titel": "API-Dokumentation",
     "untertitel": "PADnext hinein, JSON heraus, authentifiziert über einen API-Key. Diese Seite ist die Orientierung; der vollständige Vertrag liegt versioniert neben der Engine, die ihn erfüllt.",
     "vertragTitel": "Der vollständige Vertrag",
-    "vertragText": "Fehlercodes, Rate Limits, Stapelverarbeitung, Idempotenz und das maschinenlesbare OpenAPI-Schema stehen in PARTNER_API.md im Repository. Wir veröffentlichen hier bewusst keine zweite Kopie: Zwei Fassungen desselben Vertrags widersprechen sich spätestens beim dritten Release.",
-    "vertragCta": "PARTNER_API.md ansehen",
+    "vertragText": "Fehlercodes, Rate Limits, Stapelverarbeitung und Idempotenz stehen im OpenAPI-Schema, das die Engine selbst ausliefert — es beschreibt damit immer genau die Fassung, die gerade läuft. Eine interaktive Referenz liegt unter /docs auf demselben Host. Wir veröffentlichen hier bewusst keine zweite Kopie: Zwei Fassungen desselben Vertrags widersprechen sich spätestens beim dritten Release.",
+    "vertragCta": "Interaktive Referenz öffnen",
     "schritte": [
       {
         "titel": "1. Schlüssel erzeugen",
@@ -333,9 +333,10 @@
     "hinweisTitel": "Drei Dinge, die eine Integration früh wissen sollte",
     "hinweise": [
       "Eurobeträge sind Dezimal-Strings. Wer sie in ein IEEE-Double liest, verliert Cent — und Cent sind genau das, worüber eine Rechnungsprüfung streitet.",
-      "Die Regel- und Abdeckungszahlen sind kein Vertragsbestandteil. Lesen Sie sie zur Laufzeit aus rule_coverage_detail oder aus GET /api/v1/rules/coverage, statt sie in Ihrer Integration fest zu verdrahten.",
+      "Die Regel- und Abdeckungszahlen sind kein Vertragsbestandteil. Lesen Sie sie zur Laufzeit aus rule_coverage_detail auf Ihren eigenen Antworten, statt sie in Ihrer Integration fest zu verdrahten.",
       "Ein Job, der mit einem Schlüssel erzeugt wurde, ist für jeden anderen Schlüssel unsichtbar. Die Abfrage beantwortet ihn mit 404 statt 403, damit ein Schlüssel nicht zum Aufspüren fremder Vorgänge taugt."
-    ]
+    ],
+    "schemaCta": "OpenAPI-Schema (JSON)"
   },
   "impressum": {
     "titel": "Impressum",
