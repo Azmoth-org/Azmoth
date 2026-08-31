@@ -61,9 +61,9 @@ services:
       # Substituted into the Caddyfile when Caddy loads it. Unset means an empty site address and a
       # refusal to start, which is the right failure: a proxy that starts with no hostname would
       # serve the default site to everyone and get no certificate at all.
-      APP_DOMAIN: "${APP_DOMAIN_HOST:?set APP_DOMAIN_HOST in infra/docker/.env, e.g. app.azmoth.app}"
-      API_DOMAIN: "${API_DOMAIN_HOST:?set API_DOMAIN_HOST in infra/docker/.env, e.g. api.azmoth.app}"
-      MARKETING_DOMAIN: "${MARKETING_DOMAIN_HOST:?set MARKETING_DOMAIN_HOST in infra/docker/.env, e.g. azmoth.app}"
+      APP_DOMAIN: "${APP_DOMAIN_HOST:?set APP_DOMAIN_HOST in infra/docker/.env, e.g. app.azmoth.com}"
+      API_DOMAIN: "${API_DOMAIN_HOST:?set API_DOMAIN_HOST in infra/docker/.env, e.g. api.azmoth.com}"
+      MARKETING_DOMAIN: "${MARKETING_DOMAIN_HOST:?set MARKETING_DOMAIN_HOST in infra/docker/.env, e.g. azmoth.com}"
       ACME_EMAIL: "${ACME_EMAIL:?set ACME_EMAIL in infra/docker/.env — Let's Encrypt sends renewal failures here}"
     volumes:
       # Read-only: Caddy never rewrites its own config, and this is the file that decides what is
@@ -121,7 +121,7 @@ services:
       #
       # It is needed for exactly one thing: the `redirect_uri` sent to Google. Unset, that is
       # derived from the request and Google answers `redirect_uri_mismatch`. Set it to
-      # `https://app.azmoth.app` and register that exact callback in the Google console.
+      # `https://app.azmoth.com` and register that exact callback in the Google console.
       #
       # Setting it WRONG is worse than leaving it unset — a value that does not match the browser's
       # origin makes every sign-in answer `403 INVALID_ORIGIN`. The base file passes it as

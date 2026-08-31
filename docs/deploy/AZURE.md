@@ -222,27 +222,27 @@ not a warning.
 
 | Type | Name | Value |
 |---|---|---|
-| A | `app.azmoth.app` | the public IP |
-| A | `api.azmoth.app` | the public IP |
-| A | `azmoth.app` | the public IP |
-| A | `www.azmoth.app` | the public IP |
+| A | `app.azmoth.com` | the public IP |
+| A | `api.azmoth.com` | the public IP |
+| A | `azmoth.com` | the public IP |
+| A | `www.azmoth.com` | the public IP |
 
 ```bash
-dig +short app.azmoth.app        # should print your VM's IP
+dig +short app.azmoth.com        # should print your VM's IP
 ```
 
-> The repository currently uses **`azmoth.de`** — `infra/docker/.env.example` and the marketing
-> build arguments both point there. Everything here is parameterised, so pass whichever you own:
-> `./scripts/deploy.sh <ip> --domain azmoth.de`. Pick one before the first deploy: the domain is
-> baked into the statically prerendered marketing pages at build time, so changing it later means a
-> rebuild, not a restart.
+> **The domain is `azmoth.com`.** `infra/docker/.env.example`, `scripts/deploy.sh` and the marketing
+> build arguments all point there; the `.de` the repository used to carry is gone. Everything is
+> still parameterised — `./scripts/deploy.sh <ip> --domain <yours>` overrides it — but the default is
+> now a decision rather than a placeholder, because the domain is baked into the statically
+> prerendered marketing pages at build time: changing it later means a rebuild, not a restart.
 
 ---
 
 ## 4. Deploying
 
 ```bash
-./scripts/deploy.sh 20.79.12.34 --domain azmoth.app --acme-email ops@azmoth.app
+./scripts/deploy.sh 20.79.12.34 --domain azmoth.com --acme-email ops@azmoth.com
 ```
 
 It installs Docker and the Compose plugin if missing, ships the source, generates secrets on first
@@ -281,7 +281,7 @@ ever restart the stack.
 
 ---
 
-## 5. TLS, and what `api.azmoth.app` actually serves
+## 5. TLS, and what `api.azmoth.com` actually serves
 
 [`infra/docker/Caddyfile`](../../infra/docker/Caddyfile) handles TLS with no certificate management
 on your part: Caddy requests from Let's Encrypt on first start, renews unattended, and stores both
@@ -294,14 +294,14 @@ wipe it and the pilot has no HTTPS until the window rolls. `docker compose down`
 
 | Hostname | Serves |
 |---|---|
-| `app.azmoth.app` | `web:3000` — the review and audit UI, plus HSTS |
-| `www.azmoth.app` | `marketing:3000` |
-| `azmoth.app` | redirect to `www` |
-| `api.azmoth.app` | **`/api/v1/audit/*`, `/api/v1/health`, `/openapi.json`, `/docs` — and 404 for everything else** |
+| `app.azmoth.com` | `web:3000` — the review and audit UI, plus HSTS |
+| `www.azmoth.com` | `marketing:3000` |
+| `azmoth.com` | redirect to `www` |
+| `api.azmoth.com` | **`/api/v1/audit/*`, `/api/v1/health`, `/openapi.json`, `/docs` — and 404 for everything else** |
 
 ### That last row is deliberate, and it is the one design decision here worth arguing about
 
-You asked for `api.azmoth.app` to terminate TLS for the engine, and it does. But it does **not**
+You asked for `api.azmoth.com` to terminate TLS for the engine, and it does. But it does **not**
 proxy the whole engine, because the engine cannot safely be on the public internet as it stands. The
 codebase says so itself, in [`apps/engine/app/api/tenancy.py`](../../apps/engine/app/api/tenancy.py):
 
@@ -386,7 +386,7 @@ Restoring, including from a blob when the VM's disk is gone, is
 ## 7. Pre-flight checklist
 
 ```bash
-./scripts/preflight.sh 20.79.12.34 --domain azmoth.app
+./scripts/preflight.sh 20.79.12.34 --domain azmoth.com
 ```
 
 It checks from the **outside**, which is the point: `docker compose ps` proves the containers are up

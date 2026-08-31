@@ -1,4 +1,3 @@
-import { CookieBanner } from "@/components/cookie-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getProductLinks } from "@/lib/site";
@@ -23,12 +22,11 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       >
         Zum Inhalt springen
       </a>
-      <SiteHeader {...productLinks} />
+      <SiteHeader login={productLinks.login} demo={productLinks.demo} />
       <main id="inhalt" className="flex-1">
         {children}
       </main>
       <SiteFooter />
-      <CookieBanner />
     </div>
   );
 }

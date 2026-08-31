@@ -9,8 +9,8 @@
 # Hostnames come from the environment, not from this file, so one config serves the pilot domain
 # and a staging one without an edit:
 #
-#     APP_DOMAIN=app.azmoth.app  API_DOMAIN=api.azmoth.app  MARKETING_DOMAIN=azmoth.app
-#     ACME_EMAIL=ops@azmoth.app
+#     APP_DOMAIN=app.azmoth.com  API_DOMAIN=api.azmoth.com  MARKETING_DOMAIN=azmoth.com
+#     ACME_EMAIL=ops@azmoth.com
 #
 # Caddy substitutes {$VAR} when it loads the config. An unset variable becomes an empty string and
 # Caddy then refuses to start rather than serving an unnamed site, which is the failure you want.
@@ -69,7 +69,7 @@
 	}
 }
 
-# ── app.azmoth.app — the review and audit UI ──────────────────────────────────────────────────
+# ── app.azmoth.com — the review and audit UI ──────────────────────────────────────────────────
 #
 # The only tier a browser talks to, and the tier that holds the Better Auth session. `web` reaches
 # the engine itself over the compose network; nothing here proxies to `engine`.
@@ -104,7 +104,7 @@
 	}
 }
 
-# ── api.azmoth.app — the partner API, and nothing else ────────────────────────────────────────
+# ── api.azmoth.com — the partner API, and nothing else ────────────────────────────────────────
 #
 # Read the long note at the top of this file before adding a path here.
 {$API_DOMAIN} {
@@ -160,7 +160,7 @@
 	}
 }
 
-# ── azmoth.app and www.azmoth.app — the public marketing site ─────────────────────────────────
+# ── azmoth.com and www.azmoth.com — the public marketing site ─────────────────────────────────
 #
 # Holds no data, talks to nothing, has no session. It is in this file because it is the other thing
 # with a public hostname, not because it is part of the application.

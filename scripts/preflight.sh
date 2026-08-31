@@ -2,7 +2,7 @@
 #
 # The pre-flight checklist, as a program rather than a page somebody reads down.
 #
-#     ./scripts/preflight.sh 20.79.12.34 --domain azmoth.app
+#     ./scripts/preflight.sh 20.79.12.34 --domain azmoth.com
 #
 # Run it from your laptop after scripts/deploy.sh. It checks from the OUTSIDE — which is the point:
 # `docker compose ps` proves the containers are up, and proves nothing about what the internet can
@@ -16,7 +16,7 @@
 set -uo pipefail   # NOT -e: a failing check must be reported and counted, not abort the run
 
 HOST=""
-DOMAIN="${DOMAIN:-azmoth.app}"
+DOMAIN="${DOMAIN:-azmoth.com}"
 SSH_USER="${SSH_USER:-azmoth}"
 REMOTE_ROOT=/opt/azmoth
 RUN_RESTORE_TEST=true
@@ -33,7 +33,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-[ -n "$HOST" ] || { echo "usage: ./scripts/preflight.sh <host> [--domain azmoth.app]" >&2; exit 2; }
+[ -n "$HOST" ] || { echo "usage: ./scripts/preflight.sh <host> [--domain azmoth.com]" >&2; exit 2; }
 
 APP_HOST="app.$DOMAIN"
 API_HOST="api.$DOMAIN"

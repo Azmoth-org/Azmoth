@@ -54,11 +54,16 @@ export const siteConfig = {
   name: "Azmoth",
   title: "Azmoth – Deterministische GOÄ-Prüfengine",
   description:
-    "Mathematische Gewissheit für die medizinische Abrechnung. Keine Blackbox, " +
-    "keine KI-Halluzinationen. 100% nachvollziehbare GOÄ-Compliance.",
+    "Mathematisch beweisbare GOÄ-Abrechnungsprüfung. Keine Blackbox-KI. " +
+    "100 % nachvollziehbare Befunde mit gesetzlichen Grundlagen.",
   /** Short form, for the footer and the web app manifest. */
   tagline: "Deterministische GOÄ-Prüfengine",
-  email: "oussama0khadraoui@gmail.com",
+  /*
+   * The public mailbox. It is the same address on the contact page, in the footer, in
+   * the Impressum and in the AVV, because a visitor who finds three different ones
+   * concludes — correctly — that nobody is reading any of them.
+   */
+  email: "kontakt@azmoth.com",
 } as const;
 
 /** Marketing routes, so a rename is one edit rather than a grep. */
@@ -68,4 +73,26 @@ export const routes = {
   ueberUns: "/ueber-uns",
   faq: "/faq",
   kontakt: "/kontakt",
+  api: "/api-dokumentation",
+  impressum: "/impressum",
+  datenschutz: "/datenschutz",
 } as const;
+
+/**
+ * The machine-readable contract, and its interactive copy.
+ *
+ * `/api-dokumentation` on this site is the orientation page — what the API is, one
+ * runnable call, and the constraints an integrator needs before they read anything else.
+ * The contract itself is the OpenAPI schema the engine serves, which is by construction
+ * the one the running engine implements. Restating it here is how the two disagree by
+ * the third release, so the page links out.
+ *
+ * **Not GitHub.** The obvious link is `docs/api/PARTNER_API.md`, and it was the first
+ * thing here — but the repository is private, so every visitor clicking it would get a
+ * sign-in wall on the page whose whole argument is "the contract is public, go and read
+ * it". These two URLs are served to anyone by `infra/docker/Caddyfile`, which publishes
+ * `/docs` and `/openapi.json` on the API host precisely so an integrator can wire up a
+ * client without an account.
+ */
+export const apiDocsUrl = "https://api.azmoth.com/docs";
+export const apiSchemaUrl = "https://api.azmoth.com/openapi.json";

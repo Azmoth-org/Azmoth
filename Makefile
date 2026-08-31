@@ -20,7 +20,7 @@ COMPOSE_AZURE ?= infra/docker/docker-compose.azure.yml
 # or per command: `make azure-logs AZURE_HOST=20.79.12.34`.
 AZURE_HOST ?=
 AZURE_USER ?= azmoth
-DOMAIN ?= azmoth.app
+DOMAIN ?= azmoth.com
 REMOTE_ROOT ?= /opt/azmoth
 
 # One definition of "the compose command on the server", so no target can drift into running the

@@ -4,13 +4,23 @@ import { Separator } from "@workspace/ui/components/separator";
 
 import { Logo } from "@/components/logo";
 import { Link } from "@/i18n/navigation";
-import { routes, siteConfig } from "@/lib/site";
+import { apiDocsUrl, routes, siteConfig } from "@/lib/site";
 
+/**
+ * Four columns, and the fourth is the one German law cares about.
+ *
+ * Impressum and Datenschutz have to be reachable from every page in at most two clicks —
+ * "leicht erkennbar, unmittelbar erreichbar und ständig verfügbar" under § 5 DDG — and a
+ * site-wide footer is the ordinary way to satisfy that. They are their own column rather
+ * than an afterthought in the fine-print row for the same reason: a link nobody can find
+ * is not "unmittelbar erreichbar".
+ */
 const COLUMNS = [
   {
     key: "produkt",
     links: [
       { href: routes.funktionen, key: "funktionen" },
+      { href: routes.api, key: "api" },
       { href: routes.faq, key: "faq" },
     ],
   },
@@ -27,13 +37,18 @@ export function SiteFooter() {
   const t = useTranslations("footer");
   const tNav = useTranslations("navigation");
 
+  const linkClass =
+    "text-sm text-muted-foreground transition-colors hover:text-foreground";
+
   return (
-    <footer className="border-t border-border/60">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="grid gap-10 md:grid-cols-[2fr_1fr_1fr]">
+    <footer className="border-t border-azm-hairline bg-white">
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.2fr]">
           <div className="max-w-xs">
             <Logo />
-            <p className="mt-3 text-sm text-muted-foreground">{t("claim")}</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {t("claim")}
+            </p>
           </div>
 
           {COLUMNS.map((column) => (
@@ -42,10 +57,7 @@ export function SiteFooter() {
               <ul className="mt-3 flex flex-col gap-2">
                 {column.links.map((link) => (
                   <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    >
+                    <Link href={link.href} className={linkClass}>
                       {tNav(link.key)}
                     </Link>
                   </li>
@@ -53,15 +65,63 @@ export function SiteFooter() {
               </ul>
             </div>
           ))}
+
+          <div>
+            <h2 className="text-sm font-medium">{t("rechtliches")}</h2>
+            <ul className="mt-3 flex flex-col gap-2">
+              <li>
+                <Link href={routes.impressum} className={linkClass}>
+                  {t("impressum")}
+                </Link>
+              </li>
+              <li>
+                <Link href={routes.datenschutz} className={linkClass}>
+                  {t("datenschutz")}
+                </Link>
+              </li>
+              {/*
+                This row used to be a GitHub link. The repository is private, so it led
+                every visitor to a sign-in wall; the interactive API reference is the
+                thing an integrator actually wanted and is served to anyone.
+              */}
+              <li>
+                <a
+                  href={apiDocsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkClass}
+                >
+                  {t("apiReferenz")}
+                </a>
+              </li>
+              <li>
+                <a href={`mailto:${siteConfig.email}`} className={linkClass}>
+                  {siteConfig.email}
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <Separator className="my-8" />
 
-        <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>
+        <div className="flex flex-col gap-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          {/*
+            `getFullYear()` at render time. Every page here is statically prerendered, so
+            in practice this is the build year rather than the visitor's — which is the
+            correct behaviour for a copyright line and, unlike a hard-coded literal, is
+            not wrong the following January.
+          */}
+          <p className="azm-tnum">
             © {new Date().getFullYear()} {siteConfig.name}. {t("rechte")}
           </p>
-          <p>{t("hinweis")}</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <p>{t("hinweis")}</p>
+            <p className="flex items-center gap-1.5 font-medium text-azm-ink-secondary">
+              <span aria-hidden="true">🇩🇪</span>
+              {t("madeInGermany")}
+            </p>
+          </div>
         </div>
       </div>
     </footer>

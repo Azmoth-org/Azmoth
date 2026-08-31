@@ -1,27 +1,42 @@
 # Azmoth
 
-> Azmoth kodiert und prüft ärztliche Privatliquidationen nach der Gebührenordnung
-> für Ärzte (GOÄ). Aus der Behandlungsdokumentation werden GOÄ-Ziffern
-> vorgeschlagen; zu jeder Position wird offengelegt, aus welcher Regel sie folgt.
+> Azmoth prüft ärztliche Privatliquidationen deterministisch gegen die Gebührenordnung
+> für Ärzte (GOÄ). Zu jeder Position wird offengelegt, aus welcher Regel sie folgt und
+> auf welcher gesetzlichen Grundlage sie beanstandet oder bestätigt wird.
 
-Der Kern ist ein deterministisches Regelwerk, kein Sprachmodell: dieselbe Eingabe
-ergibt dasselbe Ergebnis, und jede Position ist gegenüber einer Erstattungsstelle
-begründbar. Azmoth trifft keine Abrechnungsentscheidung — jede Position wird
-vorgeschlagen und von einem Menschen freigegeben.
+Der Kern ist ein Regelwerk aus Answer Set Programming und Datalog, kein Sprachmodell:
+dieselbe Eingabe ergibt dasselbe Ergebnis, und jede Position ist gegenüber einer
+Erstattungsstelle begründbar. Azmoth trifft keine Abrechnungsentscheidung — jede
+Position wird vorgeschlagen und von einem Menschen freigegeben.
+
+## Drei Kategorien statt einer Risikosumme
+
+Jede geprüfte Position landet in genau einer von drei Kategorien: bestätigt korrekt,
+nachweislich falsch (mit gesetzlicher Grundlage), oder unbestätigt — also ohne greifende
+verifizierte Regel. Die drei Kategorien werden bewusst **nicht** zu einem einzelnen
+Risikobetrag summiert.
+
+Der Anteil des GOÄ-Katalogs, zu dem überhaupt eine durchgesetzte Regel existiert, wird
+auf der Startseite genannt und steht als `rule_coverage_detail` auf jeder API-Antwort.
+Diese Zahlen ändern sich; sie sollten zur Laufzeit gelesen und nicht zitiert werden.
 
 ## Wichtige Adressen
 
 - Startseite: /
 - Funktionen: /funktionen
+- API-Dokumentation: /api-dokumentation
 - Häufige Fragen: /faq
 - Über uns: /ueber-uns
 - Kontakt: /kontakt
+- Impressum: /impressum
+- Datenschutz: /datenschutz
 
-Die Anwendung selbst liegt auf einer eigenen Domain; Anmeldung und Registrierung
-sind von jeder Seite aus verlinkt.
+Die Anwendung selbst liegt auf einer eigenen Domain; Anmeldung, Demo und Registrierung
+sind von jeder Seite aus verlinkt. Die Demo läuft ohne Anmeldung und ohne Upload.
 
 ## Was Azmoth nicht ist
 
 - keine Praxisverwaltung (keine Terminplanung, Kartei oder Buchhaltung)
 - kein Ersatz für rechtliche oder steuerliche Beratung
 - keine automatische Abrechnung ohne ärztliche Freigabe
+- kein Sprachmodell und keine Blackbox-Bewertung

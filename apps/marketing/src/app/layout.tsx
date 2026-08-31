@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { cn } from "@workspace/ui/lib/utils";
+
+import { AnalyticsScript } from "@/components/analytics-script";
 
 import { defaultMetadata } from "@/lib/seo";
 import { getOrganizationSchema, getWebsiteSchema } from "@/lib/structured-data";
@@ -46,7 +47,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: structuredData }}
         />
         {children}
-        <SpeedInsights />
+        {/*
+          Vercel Speed Insights used to sit here and has been removed.
+          Two reasons, and the second is the one that settles it. It is dead weight —
+          this stack deploys behind Caddy on Azure, where its beacon path does not exist —
+          and on a Vercel deployment it would send every visitor's performance data to a
+          US service, while /datenschutz states that no usage data is transferred to a
+          third country. One of those two had to go, and it was not the privacy notice.
+        */}
+        <AnalyticsScript />
       </body>
     </html>
   );

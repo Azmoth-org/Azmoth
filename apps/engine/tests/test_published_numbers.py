@@ -18,9 +18,16 @@ row in `docs/errors.md`: a documentation-drift test that turns a silent falsehoo
    the figures (`app.services.rule_coverage`) is one HTTP call away for anyone who needs one.
 
 2. **A worked example may quote one, and it must be right.** `docs/api/PARTNER_API.md` shows a real
-   response so an integrator can check their own against it. Deleting the numbers there would make
-   the example useless, so instead they are pinned to what the engine computes and this test fails
-   the moment they diverge — which is what makes it safe to print them.
+   response so an integrator can check their own against it, and the marketing site's home page
+   claims a rule count and a catalogue coverage share in its own headline copy. Deleting the numbers
+   from either would make it useless — an integrator cannot check a response against nothing, and a
+   marketing page whose whole pitch is "we do not assert what we cannot prove" cannot decline to say
+   what it covers. So instead both are pinned to what the engine computes and this test fails the
+   moment they diverge, which is what makes it safe to print them at all.
+
+   The marketing site funnels every such figure through one module, `apps/marketing/src/lib/
+   engine-facts.ts`, and keeps the German copy in `messages/de.json` free of digits by interpolating
+   ICU placeholders. That is what makes the pinning possible: there is exactly one file to check.
 
 **What is deliberately exempt, and why that is not a loophole.** `docs/audit/` and `docs/migration/`
 are dated records of what was true at a moment. Rewriting them to match today would be falsifying
@@ -30,11 +37,13 @@ with this reason attached, rather than by an inline marker somebody could sprink
 
 from __future__ import annotations
 
+import json
 import re
 
 import pytest
 
-from app.config import REPO_ROOT
+from app.config import CATALOG_PATH, REPO_ROOT
+from app.rules.rule_store import load_rules
 from app.services.pipeline import Pipeline
 
 #: Files that record history and must not be edited to match the present.
@@ -54,6 +63,12 @@ SCANNED_GLOBS = (
     "apps/engine/app/**/*.py",
     "apps/web/app/**/*.tsx",
     "apps/web/components/**/*.tsx",
+    #: The marketing site: its pages, its components, and the German copy they render.
+    #: `src/lib/` is *not* scanned — `engine-facts.ts` is the one file allowed to hold
+    #: these numbers, and it is pinned to the engine by its own test below.
+    "apps/marketing/src/app/**/*.tsx",
+    "apps/marketing/src/components/**/*.tsx",
+    "apps/marketing/messages/*.json",
     "apps/engine/README.md",
     "README.md",
     "CONTRIBUTING.md",
@@ -64,6 +79,9 @@ SCANNED_GLOBS = (
 
 #: The document allowed to quote live figures, checked against the engine below.
 WORKED_EXAMPLE = REPO_ROOT / "docs" / "api" / "PARTNER_API.md"
+
+#: The marketing site's single source for every engine figure it prints, checked below.
+MARKETING_FACTS = REPO_ROOT / "apps" / "marketing" / "src" / "lib" / "engine-facts.ts"
 
 #: Vocabulary that turns a bare integer into a claim about the rule set.
 #:
@@ -190,4 +208,60 @@ def test_the_pdf_caveat_counts_rather_than_asserts():
         assert stale not in source, (
             f"the PDF caveat says {stale!r} — an unquantified claim about how much of the rule set "
             "is unverified. That sentence was false for weeks. State the counted figures instead."
+        )
+
+
+def test_the_marketing_site_quotes_the_engine_and_not_a_memory():
+    """The public home page prints a rule count and a catalogue share. Both are pinned here.
+
+    This is the same trade as the partner contract above, made for a louder audience. The site's
+    argument is that Azmoth states only what it can prove, and it makes that argument concrete by
+    naming the share of the GOÄ catalogue no enforced rule speaks to. A page that made that claim
+    from a number somebody typed in once would be refuting itself in its own headline.
+
+    So the four figures live in one TypeScript module with no prose around them, the German copy
+    interpolates them as ICU placeholders, and this test reads them back out. Change a rule set
+    without changing that module and the engine's own suite goes red.
+
+    The two derived percentages — "96 %" enforced, "16,3 %" of the catalogue — are deliberately not
+    checked, because they are not written down: `engine-facts.ts` computes them from the counts
+    below with `Intl.NumberFormat`. There is nothing there to drift.
+    """
+    if not MARKETING_FACTS.is_file():  # pragma: no cover - source checkouts always have it
+        pytest.skip("apps/marketing is not present (running from a built image)")
+
+    store = load_rules()
+    catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+
+    #: Every Ziffer named by a rule that may actually suppress a position. The marketing site
+    #: divides this by the catalog size to state its coverage, so it is computed the same way
+    #: here rather than being a second constant nobody would remember to update.
+    under_rule: set[str] = set()
+    for rule in store.exclusions:
+        under_rule.update((rule.from_ziffer, rule.to_ziffer))
+    for rule in store.zielleistung:
+        under_rule.update((rule.parent_ziffer, rule.child_ziffer))
+    for rule in store.specificity:
+        under_rule.update((rule.specific_ziffer, rule.general_ziffer))
+    for rule in store.factor_caps:
+        under_rule.add(rule.ziffer)
+    under_rule.discard("")
+
+    text = MARKETING_FACTS.read_text(encoding="utf-8")
+
+    for constant, actual in (
+        ("ENFORCED_RULE_COUNT", store.enforced_rule_count()),
+        ("CONSTRAINT_RULE_COUNT", store.constraint_rule_count()),
+        ("CATALOG_ZIFFER_COUNT", len(catalog["ziffern"])),
+        ("ZIFFERN_UNDER_RULE_COUNT", len(under_rule)),
+    ):
+        printed = re.search(rf"export const {constant} = (\d+);", text)
+        assert printed is not None, (
+            f"{constant} is no longer exported from apps/marketing/src/lib/engine-facts.ts. "
+            "The marketing copy interpolates it; removing it silently drops the figure from a "
+            "public page rather than correcting it."
+        )
+        assert int(printed.group(1)) == actual, (
+            f"engine-facts.ts publishes {constant} = {printed.group(1)}, the engine computes "
+            f"{actual}. That number is rendered on azmoth.com — update the module."
         )
