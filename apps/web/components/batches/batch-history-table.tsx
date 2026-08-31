@@ -30,6 +30,7 @@ import {
   type ListParams,
 } from "@/lib/lists/params"
 import { isBatchAuditJobList, totalOrPageLength } from "@/lib/dashboard/types"
+import { BatchPruefberichtButton } from "@/components/padnext/pruefbericht-button"
 import { BATCH_STATUS, statusPresentation } from "@/lib/status"
 import { timestamp } from "@/lib/review/format"
 
@@ -214,14 +215,27 @@ export async function BatchHistoryTable({ params }: { params: ListParams }) {
                   {timestamp(job.created_at)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Link
-                    href={`/padnext/batch?id=${encodeURIComponent(job.batch_id)}`}
-                    className={cn(
-                      buttonVariants({ variant: "outline", size: "sm" })
-                    )}
-                  >
-                    Ansehen
-                  </Link>
+                  <div className="flex items-center justify-end gap-2">
+                    {/* The Prüfbericht is the artefact a billing centre files, so it is reachable
+                        from the list rather than only from inside a batch — the history is where
+                        somebody comes back for a run they finished last week. Only a COMPLETED
+                        batch has one; the engine answers 409 for the rest, and the button says so
+                        by being disabled rather than by failing after the click. */}
+                    {job.status === "COMPLETED" ? (
+                      <BatchPruefberichtButton
+                        batchId={job.batch_id}
+                        completed
+                      />
+                    ) : null}
+                    <Link
+                      href={`/padnext/batch?id=${encodeURIComponent(job.batch_id)}`}
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "sm" })
+                      )}
+                    >
+                      Ansehen
+                    </Link>
+                  </div>
                 </TableCell>
               </TableRow>
             )

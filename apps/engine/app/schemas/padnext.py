@@ -231,6 +231,21 @@ class PadnextAuditReport(BaseModel):
     setting: Setting = "ambulant"
     setting_source: str = ""
 
+    #: `<rechnung @id>` for every invoice in the delivery, in document order.
+    #:
+    #: Parsed all along — `PadnextInvoice.invoice_id` has always held it — but until now it stopped
+    #: at the parser and never reached anyone reading a report. That was a real gap for the printed
+    #: Prüfbericht: a billing centre files one of these per invoice, and a document that cannot name
+    #: the invoice it is about can only be filed by filename, which is the first thing that changes
+    #: when it is moved into a client folder.
+    #:
+    #: It is **not** patient identity and does not weaken the guarantee above it. This is the
+    #: practice's own reference for its own invoice — the same string the practice's PVS uses to
+    #: find it — and it is the only handle that exists once name, address and date of birth have
+    #: been left unparsed. A list rather than a scalar because a delivery may carry several
+    #: `<rechnung>` elements, and picking the first would silently mislabel the rest.
+    invoice_ids: list[str] = Field(default_factory=list)
+
     positions: list[PadnextAuditedPosition] = Field(default_factory=list)
     findings: list[PadnextFinding] = Field(default_factory=list)
 

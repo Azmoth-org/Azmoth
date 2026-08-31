@@ -490,12 +490,19 @@ SCOPED_OPERATIONS = {
     ("GET", "/api/v1/padnext/batch"),
     ("GET", "/api/v1/padnext/batch/{batch_id}"),
     ("POST", "/api/v1/padnext/batch/{batch_id}/export"),
+    ("POST", "/api/v1/padnext/batch/{batch_id}/report.pdf"),
 }
 
 #: Endpoints under a scoped prefix that are deliberately unscoped, each with the reason.
 UNSCOPED_BY_DESIGN = {
     # Stores nothing: bytes in, a report out. No record for a tenant to own.
     ("POST", "/api/v1/padnext/audit"),
+    # The same audit, rendered as a PDF instead of JSON. Unscoped for the identical reason and no
+    # other: it runs `padnext_audit` and writes nothing, so there is still no record with an owner.
+    # It *reads* `X-Organization-ID` when the caller sends one, purely to print "Praxis / Konto" on
+    # the document — a label, not a filter. Nothing is looked up by it and no data is withheld
+    # without it, which is exactly why that is a header read and not the tenant dependency.
+    ("POST", "/api/v1/padnext/audit.pdf"),
 }
 
 

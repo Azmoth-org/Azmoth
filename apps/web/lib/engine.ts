@@ -451,10 +451,24 @@ export async function callEngineFormData(
  *
  * A refusal (409, 404, 422) comes back as its own JSON body with its own status, untouched, so the
  * screen renders the engine's actual reason rather than a generic "download failed".
+ *
+ * ## Two shapes of request, one shape of response
+ *
+ * Most callers send nothing (a batch export) or a small JSON body. `upload` is the third case: the
+ * Prüfbericht for a *single* delivery is produced by auditing that delivery, so its request carries
+ * the PADnext file itself and its response is a PDF. It is a distinct field rather than an
+ * overloaded `body` because the two are encoded differently and mixing them silently — a
+ * `JSON.stringify` over an `ArrayBuffer` yields `{}` — would send an empty document and get back a
+ * report about nothing.
  */
 export async function proxyEngineDownload(
   path: string,
-  init?: { method?: "GET" | "POST"; body?: unknown }
+  init?: {
+    method?: "GET" | "POST"
+    body?: unknown
+    /** Raw bytes to POST — a PADnext delivery — with the filename the engine should echo back. */
+    upload?: { bytes: ArrayBuffer; filename?: string; contentType?: string }
+  }
 ): Promise<Response> {
   const url = `${engineBaseUrl()}${path}`
   const method = init?.method ?? "POST"
@@ -472,11 +486,23 @@ export async function proxyEngineDownload(
       method,
       headers: {
         ...identity.headers,
-        ...(init?.body === undefined
-          ? {}
-          : { "Content-Type": "application/json" }),
+        ...(init?.upload
+          ? {
+              "Content-Type":
+                init.upload.contentType ?? "application/octet-stream",
+              ...(init.upload.filename
+                ? { "x-padnext-filename": init.upload.filename }
+                : {}),
+            }
+          : init?.body === undefined
+            ? {}
+            : { "Content-Type": "application/json" }),
       },
-      body: init?.body === undefined ? undefined : JSON.stringify(init.body),
+      body: init?.upload
+        ? init.upload.bytes
+        : init?.body === undefined
+          ? undefined
+          : JSON.stringify(init.body),
       cache: "no-store",
       // Above `ENGINE_TIMEOUT_MS`: a batch export renders every position of every file in the
       // batch into CSV, which for a few hundred invoices is real work.

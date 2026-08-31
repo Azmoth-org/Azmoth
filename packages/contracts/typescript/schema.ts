@@ -363,6 +363,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/padnext/audit.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Padnext Audit Pdf
+         * @description Dieselbe Prüfung wie `POST /padnext/audit`, als druckbarer Prüfbericht.
+         *
+         *     Der Bericht trägt den Erstellungszeitpunkt, die Rechnungsnummer aus der Lieferung, die
+         *     Rechtsgrundlage und die Regel-ID zu jeder Beanstandung sowie die Freigabezeile, auf der die
+         *     ärztliche Prüfung dokumentiert wird.
+         *
+         *     ---
+         *
+         *     The printable twin of `POST /padnext/audit`, and deliberately the same request: the file
+         *     itself as the body, the same headers, the same refusals with the same `error_code`s.
+         *
+         *     **It audits rather than looking a report up, and that is the honest shape here.** A single
+         *     audit stores nothing — that is stated at the top of this module and is what keeps this endpoint
+         *     outside tenancy — so there is no stored report to render and the only way to produce one is to
+         *     run the audit. The audit is deterministic and takes a few hundred milliseconds, so the PDF this
+         *     returns carries the *same* verdicts and the same `receipt_hash` as the JSON the caller already
+         *     has. The receipt hash printed on the document is what lets them confirm that.
+         *
+         *     Unlike the JSON, this response carries a wall clock: `Erstellt am`, and `/CreationDate` in the
+         *     document metadata. A report that goes into a client file has to say when it was drawn, so two
+         *     downloads of one delivery differ in exactly that stamp and in nothing else.
+         */
+        post: operations["padnext_audit_pdf_api_v1_padnext_audit_pdf_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/padnext/batch": {
         parameters: {
             query?: never;
@@ -478,6 +518,42 @@ export interface paths {
          *     that sentence has to travel with the numbers.
          */
         post: operations["padnext_batch_export_api_v1_padnext_batch__batch_id__export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/padnext/batch/{batch_id}/report.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Padnext Batch Report Pdf
+         * @description Einen abgeschlossenen Stapel als druckbaren Prüfbericht.
+         *
+         *     ---
+         *
+         *     The web tier's route to the batch Prüfbericht. The partner API has carried this since the bulk
+         *     endpoint shipped (`POST /api/v1/audit/{job_id}/pdf`); the application had only the CSV export
+         *     beside it, so the one artefact a Rechnungsprüfer actually files was reachable by API key and
+         *     not by the people using the product.
+         *
+         *     Both routes render through `app.services.pdf.render_batch_report` over the same
+         *     `BatchAuditJob`, so a batch downloaded here and the same batch downloaded with an API key are
+         *     byte-identical — including the date, which comes from the job's own completion time rather
+         *     than from the clock. Re-downloading a finished batch next week gives the same file.
+         *
+         *     `COMPLETED` only, for the reason the CSV export gives: a running batch would produce totals
+         *     that are a snapshot of an unidentifiable moment, and a caveat printed beside them does not
+         *     survive the document being pulled out of a folder three weeks later.
+         */
+        post: operations["padnext_batch_report_pdf_api_v1_padnext_batch__batch_id__report_pdf_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2385,6 +2461,8 @@ export interface components {
             enforced_rule_count: number;
             /** Findings */
             findings?: components["schemas"]["PadnextFinding"][];
+            /** Invoice Ids */
+            invoice_ids?: string[];
             /**
              * Logic Version
              * @default
@@ -3875,6 +3953,48 @@ export interface operations {
             };
         };
     };
+    padnext_audit_pdf_api_v1_padnext_audit_pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": string;
+            };
+        };
+        responses: {
+            /** @description Der Prüfbericht als PDF, `pruefbericht_<Datei>.pdf`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     padnext_batch_list_api_v1_padnext_batch_get: {
         parameters: {
             query?: {
@@ -4025,6 +4145,53 @@ export interface operations {
                 };
             };
             /** @description The batch has not completed, so there is no roll-up to export. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    padnext_batch_report_pdf_api_v1_padnext_batch__batch_id__report_pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Der Stapel-Prüfbericht als PDF, `<batch_id>_pruefbericht.pdf`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description Der Stapel ist nicht abgeschlossen; es gibt keinen Bericht. */
             409: {
                 headers: {
                     [name: string]: unknown;

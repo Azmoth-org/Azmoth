@@ -277,7 +277,17 @@ engine identity the figures were produced under — catalog version and hash, ru
 The sentence about `unconfirmed` being a coverage gap rather than a finding is printed beside the
 number, because a PDF outlives the screen it came from.
 
-Read-only and idempotent: the same job renders byte-identical output every time.
+It closes with the terms it has to: the report is a draft requiring a physician's release, not an
+invoice; the data-protection basis; a contact address; and a ruled Freigabe line for the release to
+be recorded on. Every page carries `Seite X von Y` and the report id, so a page separated from the
+rest still says what it belongs to.
+
+A4, 20 mm margins, Helvetica, no embedded fonts and no images — so it is a few kilobytes, the text
+is selectable and searchable, and it prints correctly in monochrome. Nothing in it is distinguished
+by colour alone.
+
+Read-only and idempotent: the same job renders byte-identical output every time, because the
+document dates itself by the job's completion rather than by the clock.
 
 ---
 
