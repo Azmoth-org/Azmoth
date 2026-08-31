@@ -15,6 +15,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton"
 
 import { CopyableHash } from "@/components/common/copyable-hash"
 import { BatchDropzone } from "@/components/padnext/batch-dropzone"
+import { CatalogScopeNotice } from "@/components/padnext/catalog-scope-notice"
 import { BatchFilesTable } from "@/components/padnext/batch-files-table"
 import {
   BatchProgress,
@@ -375,6 +376,13 @@ export function BatchWorkbench({
         opened a finished run to read it is one of the people most likely to want to audit the next
         stack, and removing the only way to start one would be a worse trade than a little scrolling.
       */}
+      {/*
+        The same notice the single audit carries, and it matters more here: a stack is where a
+        partner exports "everything we have" out of their PVS, and the twelve-month recommendation
+        is a decision they make before they build the ZIP rather than after the roll-up.
+      */}
+      <CatalogScopeNotice />
+
       <BatchDropzone
         onSubmit={(files) => void onSubmit(files)}
         pending={uploading}

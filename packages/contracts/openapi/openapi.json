@@ -2639,6 +2639,11 @@
             "title": "Invoice Ids",
             "type": "array"
           },
+          "latest_service_date": {
+            "default": "",
+            "title": "Latest Service Date",
+            "type": "string"
+          },
           "logic_version": {
             "default": "",
             "title": "Logic Version",
@@ -2648,6 +2653,18 @@
             "default": "",
             "title": "Nachrichtentyp",
             "type": "string"
+          },
+          "pilot_scope_checked": {
+            "default": false,
+            "title": "Pilot Scope Checked",
+            "type": "boolean"
+          },
+          "pilot_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Pilot Warnings",
+            "type": "array"
           },
           "positions": {
             "items": {

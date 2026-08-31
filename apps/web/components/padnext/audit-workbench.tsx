@@ -13,7 +13,9 @@ import { Card, CardContent } from "@workspace/ui/components/card"
 
 import { AnonymisationGate } from "@/components/padnext/anonymisation-gate"
 import { BucketSummary } from "@/components/padnext/bucket-summary"
+import { CatalogScopeNotice } from "@/components/padnext/catalog-scope-notice"
 import { FindingsPanel } from "@/components/padnext/findings-panel"
+import { PilotWarningsPanel } from "@/components/padnext/pilot-warnings-panel"
 import { PositionsTable } from "@/components/padnext/positions-table"
 import { SinglePruefberichtButton } from "@/components/padnext/pruefbericht-button"
 import { ReportProvenance } from "@/components/padnext/report-provenance"
@@ -91,6 +93,7 @@ export function AuditWorkbench() {
   return (
     <div className="space-y-6">
       <AnonymisationGate checked={confirmed} onCheckedChange={setConfirmed} />
+      <CatalogScopeNotice />
 
       <Card>
         <CardContent className="flex flex-wrap items-center gap-4 pt-6">
@@ -145,6 +148,7 @@ export function AuditWorkbench() {
               <SinglePruefberichtButton file={audited} />
             </div>
           ) : null}
+          <PilotWarningsPanel report={result.report} />
           <BucketSummary report={result.report} />
           <ReportProvenance report={result.report} />
           <PositionsTable report={result.report} />

@@ -38,6 +38,7 @@ from app.schemas.padnext import (
     PadnextAuditReport,
     PadnextFinding,
 )
+from app.padnext.pilot_scope import TEMPORAL_SCOPE_WARNING
 from app.services import pdf as pdf_module
 from app.services.pdf import (
     BOTTOM,
@@ -718,6 +719,33 @@ def test_the_report_names_its_data_protection_basis_and_a_contact(demo_document)
     assert "DSGVO" in printed
     assert "contact@azmoth.com" in printed
     assert "Azmoth" in printed
+
+
+def test_the_report_names_the_catalog_edition_it_was_priced_against(demo_document):
+    """Provenance without a consequence is theatre. The terms name the edition *and* say what
+    auditing an older invoice against it costs, because the reader of a filed Prüfbericht is
+    eighteen months downstream of the upload and was told none of this."""
+    printed = " ".join(drawn_text(demo_document).split())
+
+    assert "Geprüft gegen den GOÄ-Katalog in der Fassung von" in printed
+    assert "Für historische Rechnungen" in printed
+    assert "12 Monate" in printed
+
+
+def test_a_pilot_warning_reaches_the_printed_terms(demo_document, pipeline):
+    """The soft warning has to survive the trip into print. A caveat that exists only in JSON is a
+    caveat the practice never sees, because what they file is the PDF."""
+    from app.services.demo import demo_report
+
+    report = demo_report(pipeline)
+    report.pilot_warnings = [TEMPORAL_SCOPE_WARNING]
+    printed = " ".join(drawn_text(render_single_report(report, note="Testlauf")).split())
+
+    assert " ".join(TEMPORAL_SCOPE_WARNING.split()) in printed
+    # And the clean report does not carry it, so its presence always means something.
+    assert " ".join(TEMPORAL_SCOPE_WARNING.split()) not in " ".join(
+        drawn_text(demo_document).split()
+    )
 
 
 def test_the_report_offers_somewhere_to_record_the_required_release(demo_document):

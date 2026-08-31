@@ -505,9 +505,18 @@ function Pilot() {
               </li>
             ))}
           </ul>
-          <p className="mt-6 border-t border-azm-ink/10 pt-6 text-xs leading-relaxed text-azm-ink-secondary/80">
-            {t("hinweis")}
-          </p>
+          <div className="mt-6 space-y-3 border-t border-azm-ink/10 pt-6 text-xs leading-relaxed text-azm-ink-secondary/80">
+            <p>{t("hinweis")}</p>
+            {/*
+              The scope of the pilot, said where a partner decides what to export rather than
+              after they have exported it. Azmoth prices against the current GOÄ — the only
+              catalog edition holding real numbers — so an invoice from three years ago is
+              measured against a fee schedule that did not apply on the day of treatment. It is
+              still audited, and the report says so; asking for twelve months here is what keeps
+              that from being a surprise. `/faq` carries the same statement as a question.
+            */}
+            <p>{t("hinweisKatalog")}</p>
+          </div>
         </div>
       </div>
     </Section>

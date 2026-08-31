@@ -340,6 +340,21 @@ class Settings(BaseSettings):
     #: 99 % conforming and still worth auditing; it turns every violation into a finding.
     padnext_schema_policy: PadnextSchemaPolicy = PadnextSchemaPolicy.STRICT
 
+    #: How old a Leistungsdatum may be before the audit says out loud that it is auditing it
+    #: against the wrong catalog. **A warning, never a refusal** — see `app.padnext.pilot_scope`.
+    #:
+    #: The engine prices every delivery against `default_catalog_version`, and that edition is the
+    #: *current* GOÄ. The historical editions beside it in `data/catalogs/` are synthetic fixtures
+    #: (`data/catalogs/README.md` says so), so routing an old invoice to one of them would price it
+    #: against invented numbers — worse than pricing it against today's. Until a real historical
+    #: edition is imported, the honest thing an audit can do with a two-year-old invoice is audit
+    #: it and say which catalog it used.
+    #:
+    #: 365 days, because the pilot asks partners to export the last twelve months and this is the
+    #: line that tells us when they did not. `0` switches the check off, for a deployment that has
+    #: genuine historical editions loaded and no longer needs the caveat.
+    pilot_max_invoice_age_days: int = Field(default=365, ge=0)
+
     # -- derived paths ------------------------------------------------------------------
 
     @property

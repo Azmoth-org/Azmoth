@@ -26,6 +26,59 @@ Two things to have decided before you open a terminal in front of anyone:
 
 ---
 
+## Prerequisites — what a partner sends, and over which period
+
+Before a partner exports anything, two filters go on their export, in this order:
+
+**1. The last twelve months, by Leistungsdatum.** Ask for invoices whose treatment dates fall
+inside the last 6–12 months, and say why rather than only asking: this build prices every audit
+against **one** catalog edition, `goae_current`, because that is the only edition in
+`data/catalogs/` holding real numbers — the historical ones beside it are synthetic fixtures
+(`data/catalogs/README.md`). A 2020 invoice is therefore measured against the 2026 fee schedule.
+Most positions are unaffected; the ones that are not produce a finding indistinguishable from a
+correct one, and that is a finding a partner may take to a payer.
+
+**2. Then anonymise.** `scripts/anonymize_padnext.py`, on their machine, as above. Filtering first
+means the script runs over less data and the delivery that leaves their building is the smallest
+one that answers the question.
+
+Nothing here is enforced, and that is deliberate — **an older delivery is audited, not refused**:
+
+```bash
+# a delivery whose newest <datum> is more than PILOT_MAX_INVOICE_AGE_DAYS old
+curl -sS -X POST http://localhost:8000/api/v1/padnext/audit \
+  -H "Content-Type: application/xml" -H "X-API-Key: $KEY" \
+  --data-binary @alt.xml | jq '{status: "200", pilot_warnings, latest_service_date}'
+
+# {
+#   "status": "200",
+#   "pilot_warnings": [
+#     "Das Leistungsdatum dieser Abrechnung liegt mehr als 12 Monate zurück. Da diese Engine den
+#      aktuellen GOÄ-Katalog verwendet, können historische Regelabweichungen nicht erkannt werden."
+#   ],
+#   "latest_service_date": "2020-07-20"
+# }
+```
+
+Every verdict, bucket, euro and the receipt hash are exactly what the same delivery produces with
+recent dates — `apps/engine/tests/test_pilot_scope.py` asserts that directly. The warning is
+top-level (`pilot_warnings`, never merged into `findings` or `schema_warnings`), the web app prints
+it above the result, and the Prüfbericht prints it beside the terms.
+
+The window is `PILOT_MAX_INVOICE_AGE_DAYS`, 365 by default. Check what the stack actually booted
+with, the same way § 0 checks the schema policy:
+
+```bash
+docker compose -f infra/docker/docker-compose.yml exec engine \
+  python -c "from app.config import get_settings; print(get_settings().pilot_max_invoice_age_days)"
+```
+
+`pilot_scope_checked: false` on a report means the question was never asked — either the check is
+off (`0`) or no position carried a readable `<datum>`. An empty `pilot_warnings` is only "this
+delivery is recent" when `pilot_scope_checked` is `true`.
+
+---
+
 ## 0. Bring the stack up, and confirm what it is running
 
 ```bash
