@@ -37,6 +37,31 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={cn("antialiased font-sans", inter.variable)}
       suppressHydrationWarning
     >
+      <head>
+        {/*
+         * The scroll reveals' failure mode, closed.
+         *
+         * `components/reveal.tsx` server-renders `opacity:0` inline on everything that fades in on
+         * scroll — that is how these libraries avoid a flash of unstyled content, and it means a
+         * visitor whose JavaScript never runs receives a complete, correct document with every
+         * word of it invisible. A chunk blocked by a corporate proxy, a strict CSP, scripting
+         * turned off: a blank page that returned HTTP 200.
+         *
+         * `!important` is not defensive styling here, it is the only thing that works. What is
+         * being overridden is an inline `style` attribute, which outranks every ordinary rule
+         * regardless of specificity or source order.
+         *
+         * Inline in `<head>` rather than in `globals.css`, because a stylesheet is itself a
+         * subresource: a network condition that stopped the JavaScript may well have stopped the
+         * CSS too, and the rule that rescues the page cannot depend on another request succeeding.
+         */}
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html:
+              "<style>[data-reveal]{opacity:1!important;filter:none!important;transform:none!important}</style>",
+          }}
+        />
+      </head>
       <body className="bg-background text-foreground">
         {/*
          * A plain <script>, not next/script: this has to be in the static HTML a

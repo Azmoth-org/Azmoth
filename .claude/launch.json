@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "marketing",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "marketing", "exec", "next", "dev"],
+      "port": 3011,
+      "autoPort": true
+    },
+    {
+      "name": "marketing-prod",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "marketing", "exec", "next", "start"],
+      "port": 3021,
+      "autoPort": true
+    }
+  ]
+}

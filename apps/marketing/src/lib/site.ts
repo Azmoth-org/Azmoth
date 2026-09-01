@@ -55,7 +55,7 @@ export const siteConfig = {
   title: "Azmoth – Deterministische GOÄ-Prüfengine",
   description:
     "Mathematisch beweisbare GOÄ-Abrechnungsprüfung. Keine Blackbox-KI. " +
-    "100 % nachvollziehbare Befunde mit gesetzlichen Grundlagen.",
+    "100 % nachvollziehbare Befunde mit gesetzlichen Grundlagen.",
   /** Short form, for the footer and the web app manifest. */
   tagline: "Deterministische GOÄ-Prüfengine",
   /*

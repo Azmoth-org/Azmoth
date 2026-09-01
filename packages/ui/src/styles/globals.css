@@ -133,6 +133,55 @@
 }
 
 /*
+ * Motion tokens.
+ *
+ * A separate `@theme` rather than the `@theme inline` above, because these define keyframes: an
+ * `inline` theme emits variables that reference other variables and is the wrong block for an
+ * `@keyframes` body. Tailwind pairs `--animate-<name>` with a `@keyframes <name>` declared in the
+ * same theme layer and generates `animate-<name>` from the pair.
+ *
+ * **Easing first.** Every transition on a marketing surface should be reaching for one of these
+ * three rather than `ease-in-out`, which browsers render as a slightly mushy symmetric curve.
+ * `--ease-brand` is the standard UI decelerate — fast out of the gate, long settle — and is what a
+ * hover, a card lift and a scroll reveal all use. `--ease-brand-in-out` is for something crossing
+ * the screen (the nav shrinking, a sheet opening) where symmetry actually reads correctly. Values
+ * are the usual `expo`-ish pair rather than an invention: a bespoke curve nobody can name is how a
+ * design system ends up with fourteen of them.
+ */
+@theme {
+    --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-brand-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+    /*
+     * The Aurora backdrop's drift, for `components/aurora-background.tsx`.
+     *
+     * Sixty seconds for one cycle, and the length is the point: the layer is a 300%-wide blurred
+     * gradient behind live text, so anything fast enough to *notice* is also fast enough to pull
+     * the eye off the headline. At this rate it reads as the light changing rather than as an
+     * animation, which is the difference between the Stripe/Linear register and a screensaver.
+     *
+     * Only `background-position` moves. It composites without re-rasterising the blur, so the cost
+     * is a GPU-side offset per frame rather than a repaint of a full-viewport filtered element —
+     * which is what keeps this off the Lighthouse main-thread budget. `prefers-reduced-motion`
+     * stops it outright; see the base layer below.
+     */
+    --animate-aurora: aurora 60s linear infinite;
+
+    @keyframes aurora {
+        from {
+            background-position:
+                50% 50%,
+                50% 50%;
+        }
+        to {
+            background-position:
+                350% 50%,
+                350% 50%;
+        }
+    }
+}
+
+/*
  * The palette, from `DESIGN.md`.
  *
  * This file used to hold a second, unrelated palette — Tailwind `gray` with a blue-600 accent —
@@ -475,6 +524,61 @@
   .azm-tnum {
     font-feature-settings: "tnum";
   }
+
+  /*
+   * Glassmorphism, once — the navigation bar, the floating hero mockup chrome and the trust pills
+   * are the same material and were three hand-rolled approximations of it before this existed.
+   *
+   * Three properties do the work and the third is the one usually left out. The translucent fill
+   * and the blur are obvious; the *inset* highlight along the top edge is what makes a panel read
+   * as a pane of glass catching light rather than as a grey box with a filter on it. Without it
+   * the effect looks like a bug on a light background.
+   *
+   * `--azm-glass-tint` lets a call site retint the fill without restating the blur and the two
+   * borders, which is the actual reason this is a class and not a utility string.
+   */
+  .azm-glass {
+    --azm-glass-tint: oklch(1 0 0 / 0.72);
+    background-color: var(--azm-glass-tint);
+    -webkit-backdrop-filter: blur(12px) saturate(1.6);
+    backdrop-filter: blur(12px) saturate(1.6);
+    border: 1px solid oklch(1 0 0 / 0.6);
+    box-shadow:
+      0 1px 0 0 oklch(1 0 0 / 0.7) inset,
+      0 1px 3px rgb(0 55 112 / 0.06),
+      0 8px 24px rgb(0 55 112 / 0.06);
+  }
+
+  /*
+   * A `backdrop-filter` is not free and not universal: Firefox shipped it late and it is still the
+   * single most expensive thing a fixed-position element can ask a compositor for. Where it is
+   * unsupported the fill alone has to carry the panel, so it steps up to near-opaque — a 72 %
+   * white with no blur behind it is a smear, not a surface.
+   */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .azm-glass {
+      --azm-glass-tint: oklch(1 0 0 / 0.94);
+    }
+  }
+
+  /*
+   * The engineering-graph paper the hero mockup floats on.
+   *
+   * Two 1px linear gradients on a 44px pitch, radially masked so the ruling dissolves before it
+   * reaches any edge — an unmasked grid stops at a hard rectangle and immediately reads as a
+   * screenshot of a design tool. Kept at hairline colour so it sits *under* the mesh rather than
+   * competing with it; the two layers together are what give the hero depth without an image.
+   */
+  .azm-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-size: 44px 44px;
+    background-image:
+      linear-gradient(to right, var(--azm-hairline) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--azm-hairline) 1px, transparent 1px);
+    mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, black 20%, transparent 100%);
+  }
 }
 
 /*
@@ -627,5 +731,33 @@
     [data-print="omit"] {
       display: none !important;
     }
+  }
+}
+/*
+ * The motion opt-out, enforced rather than requested.
+ *
+ * Everything the marketing surfaces animate — scroll reveals, the aurora drift, the navigation's
+ * spring, the page-transition curtain — either checks `prefers-reduced-motion` in JavaScript or is
+ * a CSS animation. The JavaScript checks are the ones that rot: a component added next quarter
+ * forgets, and nobody notices because nobody testing it has the setting on.
+ *
+ * So this is the backstop, and it is deliberately blunt. Rather than `animation: none`, which
+ * leaves an element parked at frame zero — an aurora that never lights, a reveal that never
+ * arrives, a page permanently at `opacity: 0` — durations collapse to a single tick. Every
+ * animation still *runs*: it runs to completion within one frame, so the end state is always what
+ * the visitor sees. The distinction matters here more than usual, because on this site a stuck
+ * reveal is not a missing flourish, it is a blank page.
+ *
+ * `scroll-behavior: auto !important` is the other half. It stops the CSS smooth scroll, and it is
+ * also what the Lenis provider keys off before deciding whether to instantiate at all.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

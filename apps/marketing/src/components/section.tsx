@@ -1,5 +1,7 @@
 import { cn } from "@workspace/ui/lib/utils";
 
+import { Reveal } from "@/components/reveal";
+
 /**
  * Vertical rhythm and surface tone for the marketing pages, in one place.
  *
@@ -65,6 +67,15 @@ export function Section({
  * DESIGN.md's typographic signature and the one thing it says never to override —
  * "at 400 the brand's editorial air collapses". Sizes stair-step 56 → 36px per its
  * breakpoint table.
+ *
+ * The whole block is one `Reveal` rather than three, and the eyebrow / headline / standfirst do
+ * not stagger against each other. They are a single sentence typeset in three sizes; animating
+ * them in sequence makes a reader wait for the end of the thought, which is a cost the flourish
+ * does not cover. Staggering is for grids, where the items really are separate.
+ *
+ * Putting it here rather than at each call site is what makes the reveal a property of the design
+ * system: every section on every page gets the same 16px, the same 0.6s and the same curve,
+ * including the ones written next year.
  */
 export function SectionHeading({
   eyebrow,
@@ -82,7 +93,7 @@ export function SectionHeading({
   className?: string;
 }) {
   return (
-    <div
+    <Reveal
       className={cn(
         "flex max-w-3xl flex-col gap-4",
         align === "center" && "mx-auto text-center",
@@ -114,6 +125,6 @@ export function SectionHeading({
           {subtitle}
         </p>
       ) : null}
-    </div>
+    </Reveal>
   );
 }

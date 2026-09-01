@@ -3,14 +3,33 @@
     "ariaLabel": "Hauptnavigation",
     "menue": "Menü",
     "menueOeffnen": "Menü öffnen",
+    "menueSchliessen": "Menü schließen",
+    "startseite": "Startseite",
     "funktionen": "Funktionen",
     "dokumentation": "Dokumentation",
     "faq": "Häufige Fragen",
     "ueberUns": "Über uns",
     "kontakt": "Kontakt",
+    "impressum": "Impressum",
+    "datenschutz": "Datenschutz",
     "anmelden": "Anmelden",
     "testen": "Kostenlose Demo testen",
-    "pilot": "Pilot-Zugang anfordern"
+    "pilot": "Pilot-Zugang anfordern",
+    "ablauf": "So funktioniert es",
+    "entwickler": "Entwickler",
+    "unternehmen": "Unternehmen",
+    "apiReferenz": "API-Referenz",
+    "buckets": "Drei-Kategorien-Modell",
+    "beschreibung": {
+      "funktionen": "Kodierung, Prüfung und Nachvollziehbarkeit im Überblick.",
+      "buckets": "Warum jede Position in genau einer von drei Kategorien landet.",
+      "ablauf": "Von der PADnext-Lieferung zum begründeten Prüfbericht.",
+      "dokumentation": "Einstieg, Authentifizierung und ein lauffähiger Aufruf.",
+      "apiReferenz": "Das OpenAPI-Schema der laufenden Engine — ohne Konto.",
+      "ueberUns": "Warum ein Regelwerk und kein Sprachmodell.",
+      "faq": "Antworten zu Regelwerk, Freigabe und Datenhaltung.",
+      "kontakt": "Fragen zur Einführung? Es antwortet ein Mensch."
+    }
   },
   "footer": {
     "claim": "Deterministische GOÄ-Prüfung mit einer Begründung, die einer Rückfrage standhält. Keine Blackbox-KI, keine geschätzten Risikosummen.",
@@ -28,11 +47,46 @@
   "startseite": {
     "hero": {
       "badge": "Für Abrechnungsstellen, PVS-Hersteller und Privatliquidation nach GOÄ",
-      "titel": "Deterministische GOÄ-Prüfung. Mathematisch beweisbar. 100 % nachvollziehbar.",
+      "titel": "Deterministische GOÄ-Prüfung. Mathematisch beweisbar. 100 % nachvollziehbar.",
       "untertitel": "Azmoth ist keine Blackbox-KI. Jede akzeptierte oder blockierte Position wird mit einem verifizierbaren Beweis (Proof Atom) und exakter gesetzlicher Begründung geliefert.",
       "ctaPrimaer": "Kostenlose Demo testen",
       "ctaSekundaer": "Pilot-Zugang anfordern",
       "hinweis": "Die Demo läuft ohne Anmeldung und ohne Upload — geprüft wird eine synthetische Beispiellieferung. Der Pilotbetrieb ist derzeit auf freigeschaltete Teilnehmer beschränkt."
+    },
+    "mockup": {
+      "ariaLabel": "Beispielansicht eines Azmoth-Prüfberichts",
+      "titel": "Prüfbericht",
+      "datei": "lieferung-beispiel.padx",
+      "hinweis": "Beispieldarstellung. Zahlen und Ziffern stammen aus einer synthetischen Lieferung.",
+      "spalteZiffer": "Ziffer",
+      "spalteBefund": "Befund",
+      "zeilen": [
+        {
+          "ziffer": "3",
+          "leistung": "Eingehende Beratung",
+          "kategorie": "bestaetigt",
+          "befund": "Keine Ausschlussregel verletzt"
+        },
+        {
+          "ziffer": "5",
+          "leistung": "Symptombezogene Untersuchung",
+          "kategorie": "falsch",
+          "befund": "Nicht neben Ziffer 3 berechnungsfähig",
+          "grundlage": "§ 4 Abs. 2a GOÄ"
+        },
+        {
+          "ziffer": "410",
+          "leistung": "Sonographie, ein Organ",
+          "kategorie": "bestaetigt",
+          "befund": "Zielleistung geprüft, Ansatz zulässig"
+        },
+        {
+          "ziffer": "A 7008",
+          "leistung": "Analogansatz",
+          "kategorie": "unbestaetigt",
+          "befund": "Keine verifizierte Regel greift"
+        }
+      ]
     },
     "problem": {
       "eyebrow": "Ausgangslage",
@@ -102,7 +156,7 @@
       "punkte": [
         {
           "titel": "Deterministische Engine",
-          "text": "Eine deterministische Regel-Engine und ein mathematischer Solver — kein Sprachmodell, keine Halluzinationen. 100 % reproduzierbare Ergebnisse, abgesichert durch einen Receipt-Hash über Katalog, Regeln, Logik, Solver, Policy und Eingabe."
+          "text": "Eine deterministische Regel-Engine und ein mathematischer Solver — kein Sprachmodell, keine Halluzinationen. 100 % reproduzierbare Ergebnisse, abgesichert durch einen Receipt-Hash über Katalog, Regeln, Logik, Solver, Policy und Eingabe."
         },
         {
           "titel": "{regeln} durchgesetzte Regeln",
@@ -291,7 +345,7 @@
     "cta": "Zur Startseite"
   },
   "metadaten": {
-    "startseiteBeschreibung": "Mathematisch beweisbare GOÄ-Abrechnungsprüfung. Keine Blackbox-KI. 100 % nachvollziehbare Befunde mit gesetzlichen Grundlagen.",
+    "startseiteBeschreibung": "Mathematisch beweisbare GOÄ-Abrechnungsprüfung. Keine Blackbox-KI. 100 % nachvollziehbare Befunde mit gesetzlichen Grundlagen.",
     "funktionenTitel": "Funktionen",
     "funktionenBeschreibung": "Kodierung, Prüfung und Nachvollziehbarkeit — von der Dokumentation bis zur freigegebenen Rechnung.",
     "ueberUnsTitel": "Über uns",
@@ -306,6 +360,7 @@
     "datenschutzBeschreibung": "Wie Azmoth personenbezogene Daten auf dieser Website und im Pilotbetrieb verarbeitet — Information nach Art. 13 DSGVO."
   },
   "vertrauen": {
+    "bandTitel": "Entwickelt für höchste Compliance-Anforderungen",
     "madeInGermany": "Made in Germany",
     "dsgvo": "DSGVO-konform",
     "keinePatientendaten": "Keine Patienten-Daten im Pilot",

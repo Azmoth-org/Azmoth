@@ -11,14 +11,14 @@
  * public pages.
  *
  * `DESIGN.md` — now at the repository root, where it had been duplicated verbatim into both
- * `apps/marketing/` and `apps/web/` — now *is* `@workspace/ui`. The palette, the display tier, the pill geometry, the
- * `ss01` body rule, `.azm-mesh`, `.azm-display` and `.azm-tnum` all live in
- * `packages/ui/src/styles/globals.css`, so this site and the application pick up the same brand
- * from the same import and cannot drift apart over a few months.
+ * `apps/marketing/` and `apps/web/` — now *is* `@workspace/ui`. The palette, the display tier, the
+ * pill geometry, the `ss01` body rule, `.azm-mesh`, `.azm-glass`, `.azm-grid`, `.azm-display` and
+ * `.azm-tnum` all live in `packages/ui/src/styles/globals.css`, so this site and the application
+ * pick up the same brand from the same import and cannot drift apart over a few months.
  *
  * What remains here is what is genuinely marketing-only: the Tailwind source scan for this app's
- * tree, and the scroll offset for a single-page site with a fixed header — neither of which the
- * product app has any use for.
+ * tree, the scroll offset for a fixed header, and one hover affordance the product screens have no
+ * use for.
  */
 @import "@workspace/ui/globals.css";
 
@@ -27,14 +27,100 @@
 
 @layer base {
   html {
-    /* In-page anchors (#loesung, #pilot) must clear the fixed header. */
-    scroll-behavior: smooth;
+    /*
+     * In-page anchors (#loesung, #kategorien, #pilot) must clear the fixed header.
+     *
+     * `scroll-behavior: smooth` used to sit beside this and has been removed. Lenis now owns the
+     * document's scroll and its anchor handling, and the two do not compose: the browser's native
+     * smooth scroll and Lenis' rAF loop both animate the same scrollTop on the same frames, which
+     * lands as a visible stutter that ends at the wrong offset. Lenis' own documentation asks for
+     * the declaration to be dropped for exactly this reason.
+     *
+     * What is left behind is the correct fallback either way. With reduced motion set, or before
+     * the Lenis chunk lands, or with JavaScript off, an anchor jumps instantly to a position that
+     * clears the header — which is the right behaviour in all three cases and not a degraded one.
+     */
     scroll-padding-top: 5rem;
   }
+}
 
+@layer components {
+  /*
+   * The above-the-fold entrance — the same 16px / 4px-blur gesture as the scroll reveals, in CSS.
+   *
+   * ## Why the hero cannot use the JavaScript one
+   *
+   * `components/reveal.tsx` server-renders `opacity: 0` and lifts it when `motion` hydrates and the
+   * element crosses the viewport. Below the fold that is free: nobody is looking, and hydration has
+   * long since finished by the time they scroll there.
+   *
+   * On the hero it is the most expensive thing on the page. The `<h1>` is this document's Largest
+   * Contentful Paint by a wide margin, and LCP is recorded when the element is first *painted* —
+   * an element at `opacity: 0` has not been. So the metric stops measuring "when did the headline
+   * appear" and starts measuring "when did React finish hydrating", which is a different and much
+   * later number. Measured on the production build: First Contentful Paint at 320 ms, LCP at
+   * 1050 ms, with the entire 730 ms gap being the hero waiting for its own JavaScript.
+   *
+   * A CSS animation starts when the style is parsed. No bundle, no hydration, no observer — the
+   * headline paints in the first frames and LCP collapses back onto FCP. It also takes five client
+   * components out of the hero, which were the only reason the top of this page hydrated at all.
+   *
+   * `both` fill mode holds the from-state before the delay elapses, so a staggered child does not
+   * flash at full opacity and then start over.
+   */
+  @keyframes azm-enter {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+      filter: blur(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+  }
+
+  .azm-enter {
+    animation: azm-enter 0.6s var(--ease-brand) both;
+    /* Per-element stagger, set inline at the call site. Absent means start immediately. */
+    animation-delay: var(--azm-enter-delay, 0ms);
+  }
+
+  /*
+   * The card hover lift.
+   *
+   * The brief asked for this as `whileHover={{ y: -4 }}`, and it is four lines of CSS instead. The
+   * reason is not purity: `whileHover` requires the card to be a client component, and there are
+   * eighteen cards across this site's grids. Eighteen `"use client"` boundaries — each shipping
+   * its own props into the RSC payload and each mounting a `motion` component with a pointer
+   * listener — to move an element four pixels is a real cost against a Lighthouse budget the brief
+   * calls non-negotiable, and it buys nothing a compositor-only transform does not already do.
+   *
+   * Scroll reveals stay in JavaScript because CSS cannot observe the viewport without
+   * `animation-timeline`, which is not shipped widely enough yet to build on. Hover is the case
+   * where the platform already has the answer.
+   *
+   * `--ease-brand` is the shared decelerate curve; the shadow grows with the lift because a card
+   * that rises without its shadow following reads as flat art rather than as a raised surface.
+   */
+  .azm-lift {
+    transition:
+      transform 0.25s var(--ease-brand),
+      box-shadow 0.25s var(--ease-brand);
+  }
+
+  .azm-lift:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 8px 24px rgb(0 55 112 / 0.08),
+      0 2px 6px rgb(0 55 112 / 0.04);
+  }
+
+  /* The lift is decoration on a static card; with reduced motion the shadow alone carries it. */
   @media (prefers-reduced-motion: reduce) {
-    html {
-      scroll-behavior: auto;
+    .azm-lift:hover {
+      transform: none;
     }
   }
 }
