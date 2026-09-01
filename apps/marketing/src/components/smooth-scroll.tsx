@@ -43,7 +43,16 @@ export function SmoothScroll() {
     let cancelled = false;
 
     async function start() {
-      const { default: Lenis } = await import("lenis");
+      /*
+       * A failed chunk here is genuinely harmless — the page keeps its native scroll, which is the
+       * same state it was in a moment ago. It is caught anyway so it does not surface as an
+       * unhandled rejection: a red line in the console of a site whose pitch is "everything we do
+       * is inspectable" costs more than the four lines it takes to swallow.
+       */
+      const Lenis = await import("lenis")
+        .then((m) => m.default)
+        .catch(() => null);
+      if (!Lenis) return;
       // The effect may have torn down while the chunk was in flight — a fast route change on a
       // slow connection is the ordinary way this happens, and without the guard the instance is
       // created after its own cleanup has already run and never gets destroyed.

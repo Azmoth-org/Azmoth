@@ -73,6 +73,40 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+/**
+ * GSAP, or `null` if the chunk did not arrive.
+ *
+ * The lazy import is what keeps 23kB off the critical path, and it is also a network request that
+ * can fail — a deploy that rotates chunk hashes while a visitor has the page open, a flaky
+ * connection, an offline tab. Every caller below therefore has to have an answer for "no
+ * animation library", and they are not the same answer:
+ *
+ * - On the way **out** the click has already been `preventDefault`-ed, so a rejection here does not
+ *   degrade to an unanimated navigation, it degrades to *no navigation*. The link is simply dead
+ *   and the visitor has no way to tell why. The fallback has to complete the route change.
+ * - On the way **in** the curtain is already covering the viewport. A rejection leaves it there
+ *   permanently — an opaque indigo sheet over a page that loaded correctly.
+ *
+ * Both are worse than having no transition at all, which is what makes catching this worth the
+ * lines. A failed decoration must not take the navigation with it.
+ */
+async function loadGsap() {
+  try {
+    return (await import("gsap")).default;
+  } catch {
+    return null;
+  }
+}
+
+/** Put the curtain away and park the path off-screen, without animating. */
+function resetCurtain() {
+  const nodes = elements();
+  if (!nodes) return;
+  nodes.curve.setAttribute("d", CURVE.aboveViewport);
+  nodes.label.style.opacity = "0";
+  nodes.curtain.style.visibility = "hidden";
+}
+
 /** The three overlay nodes, or `null` if the overlay is not mounted (it lives in the layout). */
 function elements() {
   const curtain = document.getElementById(CURTAIN_ID);
@@ -101,7 +135,13 @@ export async function animatePageOut(href: string, router: AppRouterInstance) {
     return;
   }
 
-  const { default: gsap } = await import("gsap");
+  const gsap = await loadGsap();
+  if (!gsap) {
+    // The click was already `preventDefault`-ed. Without this the link is dead, not undecorated.
+    router.push(href);
+    return;
+  }
+
   outbound = true;
 
   gsap
@@ -135,7 +175,14 @@ export async function animatePageIn() {
   const nodes = elements();
   if (!nodes) return;
 
-  const { default: gsap } = await import("gsap");
+  const gsap = await loadGsap();
+  if (!gsap) {
+    // The curtain is covering the viewport right now. Leaving it is worse than never having
+    // raised it, so it comes down without animating.
+    resetCurtain();
+    return;
+  }
+
   gsap.killTweensOf([nodes.curve, nodes.label]);
 
   gsap
