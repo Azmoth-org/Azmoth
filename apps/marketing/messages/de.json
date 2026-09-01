@@ -4,7 +4,7 @@
     "menue": "Menü",
     "menueOeffnen": "Menü öffnen",
     "funktionen": "Funktionen",
-    "api": "API",
+    "dokumentation": "Dokumentation",
     "faq": "Häufige Fragen",
     "ueberUns": "Über uns",
     "kontakt": "Kontakt",
@@ -300,8 +300,6 @@
     "faqBeschreibung": "Antworten zu Regelwerk, Freigabe, Datenhaltung und Einrichtung von Azmoth.",
     "kontaktTitel": "Kontakt",
     "kontaktBeschreibung": "Fragen zur Einführung von Azmoth in Ihrer Praxis? Schreiben Sie uns.",
-    "apiTitel": "API-Dokumentation",
-    "apiBeschreibung": "B2B-REST-API für die deterministische GOÄ-Prüfung: PADnext hinein, JSON heraus. Für PVS-Hersteller und Abrechnungsstellen mit eigener Integration.",
     "impressumTitel": "Impressum",
     "impressumBeschreibung": "Anbieterkennzeichnung nach § 5 DDG und § 18 Abs. 2 MStV.",
     "datenschutzTitel": "Datenschutz",
@@ -312,36 +310,6 @@
     "dsgvo": "DSGVO-konform",
     "keinePatientendaten": "Keine Patienten-Daten im Pilot",
     "deterministisch": "Deterministisch – keine KI-Halluzinationen"
-  },
-  "apiSeite": {
-    "titel": "API-Dokumentation",
-    "untertitel": "PADnext hinein, JSON heraus, authentifiziert über einen API-Key. Diese Seite ist die Orientierung; der vollständige Vertrag liegt versioniert neben der Engine, die ihn erfüllt.",
-    "vertragTitel": "Der vollständige Vertrag",
-    "vertragText": "Fehlercodes, Rate Limits, Stapelverarbeitung und Idempotenz stehen im OpenAPI-Schema, das die Engine selbst ausliefert — es beschreibt damit immer genau die Fassung, die gerade läuft. Eine interaktive Referenz liegt unter /docs auf demselben Host. Wir veröffentlichen hier bewusst keine zweite Kopie: Zwei Fassungen desselben Vertrags widersprechen sich spätestens beim dritten Release.",
-    "vertragCta": "Interaktive Referenz öffnen",
-    "schritte": [
-      {
-        "titel": "1. Schlüssel erzeugen",
-        "text": "Ein angemeldetes Mitglied Ihrer Abrechnungsstelle erzeugt den Schlüssel in der Anwendung unter Einstellungen. Der Schlüssel wird genau einmal angezeigt — gespeichert wird nur sein SHA-256-Hash."
-      },
-      {
-        "titel": "2. Lieferung senden",
-        "text": "Eine PADnext-Datei per multipart/form-data oder als Rohtext an /api/v1/audit/single. Der Schlüssel bestimmt den Mandanten; es gibt keinen Header und kein Feld, mit dem ein Aufrufer eine fremde Organisation benennen könnte."
-      },
-      {
-        "titel": "3. Bericht auswerten",
-        "text": "Die Antwort enthält jede Position mit Verdikt, Begründung und Beweis, jeden Befund mit gesetzlicher Grundlage und Regel-ID sowie die drei Bucket-Summen. Alle Eurobeträge sind Dezimal-Strings, niemals JSON-Zahlen."
-      }
-    ],
-    "snippetLabel": "Eine Lieferung synchron prüfen",
-    "antwortLabel": "Auszug aus der Antwort",
-    "hinweisTitel": "Drei Dinge, die eine Integration früh wissen sollte",
-    "hinweise": [
-      "Eurobeträge sind Dezimal-Strings. Wer sie in ein IEEE-Double liest, verliert Cent — und Cent sind genau das, worüber eine Rechnungsprüfung streitet.",
-      "Die Regel- und Abdeckungszahlen sind kein Vertragsbestandteil. Lesen Sie sie zur Laufzeit aus rule_coverage_detail auf Ihren eigenen Antworten, statt sie in Ihrer Integration fest zu verdrahten.",
-      "Ein Job, der mit einem Schlüssel erzeugt wurde, ist für jeden anderen Schlüssel unsichtbar. Die Abfrage beantwortet ihn mit 404 statt 403, damit ein Schlüssel nicht zum Aufspüren fremder Vorgänge taugt."
-    ],
-    "schemaCta": "OpenAPI-Schema (JSON)"
   },
   "impressum": {
     "titel": "Impressum",

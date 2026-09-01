@@ -34,7 +34,7 @@ import { TrustBadges } from "@/components/trust-badges";
 import { CURL_EXAMPLE } from "@/lib/api-example";
 import { engineFacts } from "@/lib/engine-facts";
 import { buildPageMetadata } from "@/lib/seo";
-import { apiDocsUrl, getProductLinks, routes, siteConfig } from "@/lib/site";
+import { apiDocsUrl, getDocsUrl, getProductLinks, routes, siteConfig } from "@/lib/site";
 
 /*
  * Icons live beside the copy they illustrate only by index — the strings themselves are
@@ -422,7 +422,8 @@ function Audiences() {
    */
   const destinations = [
     { href: links.signup, external: true },
-    { href: routes.api, external: false },
+    // The vendor's card now leaves this origin: the API documentation is `apps/docs`.
+    { href: getDocsUrl(), external: true },
     { href: links.demo, external: true },
   ] as const;
 
@@ -540,7 +541,7 @@ function ApiTeaser() {
           </h2>
           <p className="mt-4 leading-relaxed text-white/75">{t("text")}</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href={routes.api} size="lg" variant="secondary">
+            <ButtonLink href={getDocsUrl()} external size="lg" variant="secondary">
               {t("cta")}
               <ArrowRightIcon data-icon="inline-end" />
             </ButtonLink>

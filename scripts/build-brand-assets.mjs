@@ -112,6 +112,12 @@ const sharp = loadSharp();
 const TARGETS = [
   path.join(ROOT, "apps", "marketing", "public", "brand"),
   path.join(ROOT, "apps", "web", "public", "brand"),
+  /*
+   * The documentation site renders the same lockup in its Fumadocs navbar, and the monogram is a
+   * `mask-image` at an origin-relative path — so it needs the file on its own origin, exactly as
+   * the other two do. `@workspace/ui/components/logo` says the same thing from the other side.
+   */
+  path.join(ROOT, "apps", "docs", "public", "brand"),
 ];
 
 /**

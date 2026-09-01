@@ -24,15 +24,15 @@ Diese Zahlen ändern sich; sie sollten zur Laufzeit gelesen und nicht zitiert we
 
 - Startseite: /
 - Funktionen: /funktionen
-- API-Dokumentation: /api-dokumentation
 - Häufige Fragen: /faq
 - Über uns: /ueber-uns
 - Kontakt: /kontakt
 - Impressum: /impressum
 - Datenschutz: /datenschutz
 
-Die Anwendung selbst liegt auf einer eigenen Domain; Anmeldung, Demo und Registrierung
-sind von jeder Seite aus verlinkt. Die Demo läuft ohne Anmeldung und ohne Upload.
+Die technische Dokumentation und die Partner-API liegen auf einer eigenen Domain:
+https://docs.azmoth.com. Die Anwendung selbst liegt ebenfalls auf einer eigenen Domain;
+Anmeldung, Demo und Registrierung sind von jeder Seite aus verlinkt. Die Demo läuft ohne Anmeldung und ohne Upload.
 
 ## Was Azmoth nicht ist
 

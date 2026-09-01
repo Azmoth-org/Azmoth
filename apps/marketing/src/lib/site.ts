@@ -66,33 +66,53 @@ export const siteConfig = {
   email: "contact@azmoth.com",
 } as const;
 
-/** Marketing routes, so a rename is one edit rather than a grep. */
+/**
+ * Marketing routes, so a rename is one edit rather than a grep.
+ *
+ * `api: "/api-dokumentation"` used to be here. It is gone, and deliberately not replaced by a
+ * redirect: the documentation now lives on its own origin under `apps/docs`, and a redirect
+ * would keep this site's sitemap and the crawler's index pointing at a URL that is no longer
+ * this site's to serve. The route 404s, `getDocsUrl()` below is what the header and footer link,
+ * and the new origin publishes its own sitemap.
+ */
 export const routes = {
   home: "/",
   funktionen: "/funktionen",
   ueberUns: "/ueber-uns",
   faq: "/faq",
   kontakt: "/kontakt",
-  api: "/api-dokumentation",
   impressum: "/impressum",
   datenschutz: "/datenschutz",
 } as const;
 
 /**
+ * The documentation site — a separate Next application on a separate origin, exactly as the
+ * product app is, and read from the environment for the same reason.
+ *
+ * Server-side only, and resolved at BUILD time like everything else here, because every page on
+ * this site is statically prerendered. `NEXT_PUBLIC_DOCS_URL` rather than a bare `DOCS_URL`
+ * because unlike `APP_URL` this one is also read by `apps/docs` itself, where it is genuinely
+ * public; one variable name across both deployments is worth more than keeping four bytes out
+ * of a bundle it never reaches — `SiteShell` passes it to the header as a prop.
+ */
+export function getDocsUrl(): string {
+  return process.env.NEXT_PUBLIC_DOCS_URL ?? "https://docs.azmoth.com";
+}
+
+/**
  * The machine-readable contract, and its interactive copy.
  *
- * `/api-dokumentation` on this site is the orientation page — what the API is, one
- * runnable call, and the constraints an integrator needs before they read anything else.
- * The contract itself is the OpenAPI schema the engine serves, which is by construction
- * the one the running engine implements. Restating it here is how the two disagree by
- * the third release, so the page links out.
+ * `docs.azmoth.com` is the orientation — what the API is, one runnable call, and the constraints
+ * an integrator needs before they read anything else. The contract itself is the OpenAPI schema
+ * the engine serves, which is by construction the one the running engine implements. Neither
+ * this site nor the documentation site restates it, because two copies of one contract disagree
+ * by the third release.
  *
- * **Not GitHub.** The obvious link is `docs/api/PARTNER_API.md`, and it was the first
- * thing here — but the repository is private, so every visitor clicking it would get a
- * sign-in wall on the page whose whole argument is "the contract is public, go and read
- * it". These two URLs are served to anyone by `infra/docker/Caddyfile`, which publishes
- * `/docs` and `/openapi.json` on the API host precisely so an integrator can wire up a
- * client without an account.
+ * **Not GitHub.** The obvious link is `docs/api/PARTNER_API.md`, and it was the first thing here
+ * — but the repository is private, so every visitor clicking it would get a sign-in wall on the
+ * page whose whole argument is "the contract is public, go and read it". These two URLs are
+ * served to anyone by `infra/docker/Caddyfile`, which publishes `/docs` and `/openapi.json` on
+ * the API host precisely so an integrator can wire up a client without an account.
  */
 export const apiDocsUrl = "https://api.azmoth.com/docs";
 export const apiSchemaUrl = "https://api.azmoth.com/openapi.json";

@@ -13,6 +13,12 @@ interactive copy at `/docs`. It is committed at
 [`packages/contracts/openapi/openapi.json`](../../packages/contracts/openapi/openapi.json), so a
 client can be generated without a running engine.
 
+**This file is being published as prose at `docs.azmoth.com/api/partner-api`** — the Fumadocs site
+in [`apps/docs`](../../apps/docs), which replaced the orientation page the marketing site used to
+carry. The page there is currently a stub that says so and links out; the migration is a matter of
+moving the sections below into `apps/docs/content/docs/api/`. Until that is done this file is the
+prose contract, and the OpenAPI schema is the binding one either way.
+
 ---
 
 ## 1. Authentication
