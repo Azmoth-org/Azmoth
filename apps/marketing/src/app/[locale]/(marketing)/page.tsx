@@ -754,7 +754,21 @@ function ApiTeaser() {
           </div>
         </Reveal>
 
-        <Reveal delay={0.1}>
+        {/*
+          `min-w-0`, and it is the only thing keeping this page from scrolling sideways on a phone.
+
+          `CodeBlock` puts `overflow-x-auto` on its `<pre>`, which is correct and, on its own, does
+          nothing here. A grid item's default `min-width` is `auto`, meaning "never shrink below my
+          content's intrinsic width" — and this item's content is a 300-character curl invocation
+          on one unbreakable line. The track therefore sizes to the command rather than to the
+          column, the `<pre>` is handed more width than the viewport has, and its own overflow rule
+          never fires because nothing is overflowing *it*. The document overflows instead: measured
+          at 494px of content in a 412px viewport before this was added.
+
+          The same three characters are the fix for every "why is my page scrolling horizontally"
+          bug involving a code block, a long URL or a table inside a grid or flex container.
+        */}
+        <Reveal delay={0.1} className="min-w-0">
           <CodeBlock
             code={CURL_EXAMPLE}
             label={t("snippetLabel")}
