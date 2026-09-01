@@ -5,7 +5,7 @@ import { RootProvider } from "fumadocs-ui/provider/next";
 import { cn } from "@workspace/ui/lib/utils";
 
 import { absoluteUrl, getDocsUrl, siteConfig } from "@/lib/site";
-
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css";
 
 /**
@@ -112,6 +112,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           {children}
         </RootProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
