@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { Separator } from "@workspace/ui/components/separator";
 import { Logo } from "@workspace/ui/components/logo";
 
-import { Link } from "@/i18n/navigation";
+import { TransitionLink } from "@/components/transition-link";
 import { apiDocsUrl, getDocsUrl, routes, siteConfig } from "@/lib/site";
 
 /**
@@ -62,9 +62,9 @@ export function SiteFooter() {
               <ul className="mt-3 flex flex-col gap-2">
                 {column.links.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className={linkClass}>
+                    <TransitionLink href={link.href} className={linkClass}>
                       {tNav(link.key)}
-                    </Link>
+                    </TransitionLink>
                   </li>
                 ))}
               </ul>
@@ -75,14 +75,14 @@ export function SiteFooter() {
             <h2 className="text-sm font-medium">{t("rechtliches")}</h2>
             <ul className="mt-3 flex flex-col gap-2">
               <li>
-                <Link href={routes.impressum} className={linkClass}>
+                <TransitionLink href={routes.impressum} className={linkClass}>
                   {t("impressum")}
-                </Link>
+                </TransitionLink>
               </li>
               <li>
-                <Link href={routes.datenschutz} className={linkClass}>
+                <TransitionLink href={routes.datenschutz} className={linkClass}>
                   {t("datenschutz")}
-                </Link>
+                </TransitionLink>
               </li>
               {/*
                 This row used to be a GitHub link. The repository is private, so it led

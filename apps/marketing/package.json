@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Azmoth \u2014 public marketing site. Links into the product app; holds no data of its own.",
+  "description": "Azmoth — public marketing site. Links into the product app; holds no data of its own.",
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "next build",
@@ -14,7 +14,10 @@
   },
   "dependencies": {
     "@workspace/ui": "workspace:*",
+    "gsap": "^3.15.0",
+    "lenis": "1.3.25",
     "lucide-react": "^1.33.0",
+    "motion": "^13.1.1",
     "next": "16.2.6",
     "next-intl": "^4.13.5",
     "react": "19.2.4",

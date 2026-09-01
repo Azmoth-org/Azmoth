@@ -1,6 +1,6 @@
 import { Button } from "@workspace/ui/components/button";
 
-import { Link } from "@/i18n/navigation";
+import { TransitionLink } from "@/components/transition-link";
 
 /**
  * A button that is actually a link.
@@ -19,6 +19,12 @@ import { Link } from "@/i18n/navigation";
  * `external` picks the element: the product app is a different origin, so those
  * links must be a plain `<a>` — the locale-aware `Link` would try a client-side
  * transition inside this app and land on a 404.
+ *
+ * The internal branch renders `TransitionLink` rather than the bare `Link`. That is what makes the
+ * page-transition curtain a property of *navigating this site* instead of a property of the header
+ * that happens to own it: a visitor who leaves the home page from the closing call-to-action gets
+ * the same sweep as one who used the navigation. `TransitionLink` still renders the locale-aware
+ * `Link` underneath, so prefetching and href resolution are unchanged.
  */
 export function ButtonLink({
   href,
@@ -32,7 +38,7 @@ export function ButtonLink({
   return (
     <Button
       nativeButton={false}
-      render={external ? <a href={href} /> : <Link href={href} />}
+      render={external ? <a href={href} /> : <TransitionLink href={href} />}
       {...props}
     >
       {children}
