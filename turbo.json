@@ -12,7 +12,8 @@
       ],
       "outputs": [
         ".next/**",
-        "!.next/cache/**"
+        "!.next/cache/**",
+        ".source/**"
       ]
     },
     "lint": {
@@ -59,6 +60,7 @@
     "NEXT_PUBLIC_RULE_REVIEW_ENABLED",
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_SITE_URL",
+    "NEXT_PUBLIC_DOCS_URL",
     "NEXT_PUBLIC_ANALYTICS_PROVIDER",
     "NEXT_PUBLIC_ANALYTICS_SRC",
     "NEXT_PUBLIC_ANALYTICS_SITE_ID",

@@ -14,6 +14,15 @@ code is yours to read and to change.
 `src/lib/utils.ts` holds `cn`. `src/styles/globals.css` holds the theme tokens, the light and dark
 palettes, and the print stylesheet.
 
+**`logo.tsx` is the one component here that is not shadcn.** It is the Azmoth lockup — the monogram
+beside the wordmark — and it lives here rather than in an app because three surfaces draw it:
+`apps/marketing`, `apps/docs`, and anything added next. Its wordmark is 5.6 kB of inlined path data,
+which is exactly the kind of asset that goes quietly out of step when it exists in two places. It
+does have one requirement an app must meet: the monogram is a `mask-image` at the origin-relative
+path `/brand/azmoth-mark.png`, so every app rendering it must serve that file from its own
+`public/`. `scripts/build-brand-assets.mjs` writes it into each of them, and adding an app means
+adding it to that script's `TARGETS`.
+
 ## Using a component
 
 ```tsx

@@ -1,0 +1,102 @@
+---
+title: Erste Schritte
+description: Was Azmoth prüft, wie eine Prüfung abläuft und wo der verbindliche Vertrag steht.
+icon: BookOpen
+---
+
+Azmoth prüft private Arztabrechnungen deterministisch gegen die GOÄ. Jede Aussage der Engine
+lässt sich auf eine benannte Regel und deren Rechtsgrundlage zurückführen — es gibt kein
+Sprachmodell im Prüfpfad und keinen geschätzten Risikobetrag.
+
+Diese Dokumentation richtet sich an zwei Leserinnen: an eine Abrechnungsstelle, die verstehen
+will, was ein Prüfbericht behauptet, und an eine Entwicklerin bei einem PVS-Hersteller, die
+Azmoth gegen den eigenen Export integriert.
+
+## Die drei Verdikte
+
+Eine Position verlässt die Prüfung in genau einem von drei Zuständen. Sie werden bewusst
+**nicht** zu einer einzelnen Summe addiert — die Buckets bedeuten Verschiedenes, und eine
+Zahl, die sie vermischt, beantwortet keine Frage, die in einer Rechnungsprüfung gestellt wird.
+
+<Cards>
+  <Card title="Bestätigt" description="Eine verifizierte Regel greift und die Position hält ihr stand. Der Beweis liegt der Antwort bei." />
+  <Card title="Nachweislich falsch" description="Eine verifizierte Regel greift und die Position verletzt sie. Der Befund nennt Regel-ID und gesetzliche Grundlage." />
+  <Card title="Unbestätigt" description="Keine durchgesetzte Regel deckt diese Position ab. Das ist kein Freispruch, sondern eine Aussage über die Abdeckung des Katalogs." />
+</Cards>
+
+<Callout title="Unbestätigt heißt nicht korrekt">
+  Der Anteil des GOÄ-Katalogs, zu dem überhaupt eine durchgesetzte Regel existiert, steht als
+  `rule_coverage_detail` auf jeder API-Antwort. Lesen Sie ihn zur Laufzeit; er ändert sich mit
+  jedem Regel-Release und ist kein Vertragsbestandteil.
+</Callout>
+
+## Ablauf einer Prüfung
+
+<Steps>
+  <Step>
+    ### Schlüssel erzeugen
+
+    Ein angemeldetes Mitglied Ihrer Abrechnungsstelle erzeugt den Schlüssel in der Anwendung
+    unter *Einstellungen*. Er wird genau einmal angezeigt — gespeichert wird nur sein
+    SHA-256-Hash.
+  </Step>
+
+  <Step>
+    ### Lieferung senden
+
+    Eine PADnext-Datei per `multipart/form-data` oder als Rohtext an `/api/v1/audit/single`.
+    Der Schlüssel bestimmt den Mandanten; es gibt kein Feld, mit dem ein Aufrufer eine fremde
+    Organisation benennen könnte.
+  </Step>
+
+  <Step>
+    ### Bericht auswerten
+
+    Die Antwort enthält jede Position mit Verdikt, Begründung und Beweis, jeden Befund mit
+    Regel-ID und gesetzlicher Grundlage sowie die drei Bucket-Summen.
+  </Step>
+</Steps>
+
+## Eine Lieferung prüfen
+
+```bash title="Synchrone Prüfung einer PADnext-Datei"
+curl -X POST https://api.azmoth.com/api/v1/audit/single \
+  -H "X-API-Key: $AZMOTH_API_KEY" \
+  -F "file=@lieferung.xml"
+```
+
+```json title="Auszug aus der Antwort"
+{
+  "job_id": "job_7Kd2…",
+  "totals": {
+    "confirmed": "1284.60",
+    "wrong": "212.40",
+    "unconfirmed": "96.00"
+  },
+  "rule_coverage_detail": {
+    "catalog_positions": 2847,
+    "positions_with_enforced_rule": 1032
+  }
+}
+```
+
+<Callout type="warn" title="Eurobeträge sind Dezimal-Strings">
+  Niemals JSON-Zahlen. Wer sie in ein IEEE-Double liest, verliert Cent — und Cent sind genau
+  das, worüber eine Rechnungsprüfung streitet.
+</Callout>
+
+## Weiter
+
+<Cards>
+  <Card
+    title="Partner-API"
+    description="Authentifizierung, Endpunkte, Fehlercodes und Idempotenz."
+    href="/api/partner-api"
+  />
+  <Card
+    title="Interaktive Referenz"
+    description="Das OpenAPI-Schema, ausgeliefert von der laufenden Engine."
+    href="https://api.azmoth.com/docs"
+    external
+  />
+</Cards>

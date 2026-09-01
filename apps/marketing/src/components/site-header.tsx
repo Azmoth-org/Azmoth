@@ -12,15 +12,19 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@workspace/ui/components/sheet";
+import { Logo } from "@workspace/ui/components/logo";
 
 import { ButtonLink } from "@/components/button-link";
-import { Logo } from "@/components/logo";
 import { Link } from "@/i18n/navigation";
 import { routes, siteConfig } from "@/lib/site";
 
+/**
+ * The internal pages. Documentation is not among them any more — it is its own origin, so it
+ * needs an absolute href and a plain `<a>`, and it is appended below rather than smuggled into
+ * this list as a string that looks like a path but is not one.
+ */
 const NAV_ITEMS = [
   { href: routes.funktionen, key: "funktionen" },
-  { href: routes.api, key: "api" },
   { href: routes.faq, key: "faq" },
   { href: routes.ueberUns, key: "ueberUns" },
   { href: routes.kontakt, key: "kontakt" },
@@ -29,6 +33,7 @@ const NAV_ITEMS = [
 export function SiteHeader({
   login,
   demo,
+  docs,
 }: {
   login: string;
   /*
@@ -38,6 +43,12 @@ export function SiteHeader({
    * lives where it can be explained: the hero, the pilot band, and the contact page.
    */
   demo: string;
+  /**
+   * `docs.azmoth.com`. A third origin, resolved by `SiteShell` from the environment for the
+   * same reason `login` and `demo` are: this is a client component, so a `process.env` read
+   * here would be frozen into the bundle.
+   */
+  docs: string;
 }) {
   const t = useTranslations("navigation");
   const [open, setOpen] = useState(false);
@@ -63,6 +74,19 @@ export function SiteHeader({
               </Link>
             </li>
           ))}
+          <li>
+            {/*
+              Plain <a>, not the i18n <Link>: the documentation is a separate Next application
+              on another origin, so a client-side transition would 404 inside this one. Same
+              reasoning as the two buttons on the right.
+            */}
+            <a
+              href={docs}
+              className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {t("dokumentation")}
+            </a>
+          </li>
         </ul>
 
         <div className="ml-auto hidden items-center gap-2 md:flex">
@@ -106,6 +130,13 @@ export function SiteHeader({
                   {t(item.key)}
                 </Link>
               ))}
+              <a
+                href={docs}
+                onClick={() => setOpen(false)}
+                className="rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {t("dokumentation")}
+              </a>
             </div>
             <div className="mt-4 flex flex-col gap-2 px-4">
               <ButtonLink external href={login} variant="outline">

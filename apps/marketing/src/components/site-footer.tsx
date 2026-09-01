@@ -1,10 +1,10 @@
 import { useTranslations } from "next-intl";
 
 import { Separator } from "@workspace/ui/components/separator";
+import { Logo } from "@workspace/ui/components/logo";
 
-import { Logo } from "@/components/logo";
 import { Link } from "@/i18n/navigation";
-import { apiDocsUrl, routes, siteConfig } from "@/lib/site";
+import { apiDocsUrl, getDocsUrl, routes, siteConfig } from "@/lib/site";
 
 /**
  * Four columns, and the fourth is the one German law cares about.
@@ -20,7 +20,6 @@ const COLUMNS = [
     key: "produkt",
     links: [
       { href: routes.funktionen, key: "funktionen" },
-      { href: routes.api, key: "api" },
       { href: routes.faq, key: "faq" },
     ],
   },
@@ -36,6 +35,12 @@ const COLUMNS = [
 export function SiteFooter() {
   const t = useTranslations("footer");
   const tNav = useTranslations("navigation");
+  /*
+   * A server component, so this is a direct read rather than a prop. The documentation lives on
+   * its own origin — see `getDocsUrl()` — which is why it sits beside the API reference in the
+   * outbound column rather than in the internal "Produkt" list above.
+   */
+  const docsUrl = getDocsUrl();
 
   const linkClass =
     "text-sm text-muted-foreground transition-colors hover:text-foreground";
@@ -84,6 +89,11 @@ export function SiteFooter() {
                 every visitor to a sign-in wall; the interactive API reference is the
                 thing an integrator actually wanted and is served to anyone.
               */}
+              <li>
+                <a href={docsUrl} className={linkClass}>
+                  {tNav("dokumentation")}
+                </a>
+              </li>
               <li>
                 <a
                   href={apiDocsUrl}

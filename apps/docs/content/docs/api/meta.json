@@ -1,0 +1,5 @@
+{
+  "title": "API",
+  "description": "Die kommerzielle Schnittstelle: PADnext hinein, JSON heraus.",
+  "pages": ["partner-api"]
+}

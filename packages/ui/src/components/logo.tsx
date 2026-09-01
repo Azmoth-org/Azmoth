@@ -1,9 +1,21 @@
 import { cn } from "@workspace/ui/lib/utils";
 
-import { siteConfig } from "@/lib/site";
-
 /**
  * The Azmoth lockup: the "Az" monogram beside the wordmark.
+ *
+ * ## Why it lives in `@workspace/ui` and not in an app
+ *
+ * It was `apps/marketing/src/components/logo.tsx` while the marketing site was the only surface
+ * that drew it. The documentation site draws the same lockup in its own header, and the second
+ * copy is the moment a logo starts drifting: the wordmark is 5.6 kB of inlined path data, so a
+ * duplicate is not a stale import somebody notices, it is two sets of curves that stay
+ * plausible-looking while diverging. Same reasoning as the palette, which moved here for the
+ * same reason and is documented in `src/styles/globals.css`.
+ *
+ * **The one thing an app still owns is the file.** The monogram is a `mask-image` pointing at
+ * `/brand/azmoth-mark.png`, an origin-relative path, so every application that renders this
+ * component must serve that file from its own `public/`. `scripts/build-brand-assets.mjs` writes
+ * it into each of them; adding an app means adding it to that script's `TARGETS`.
  *
  * This replaces a hand-drawn placeholder mark that said, in its own comment, that it was standing in
  * "until Phase 2 replaces it with the real Azmoth mark". Both halves now come from the real artwork
@@ -42,6 +54,7 @@ import { siteConfig } from "@/lib/site";
 export function Logo({
   className,
   showWordmark = true,
+  label = "Azmoth",
 }: {
   className?: string;
   /**
@@ -50,6 +63,11 @@ export function Logo({
    * there is no switch for the other direction.
    */
   showWordmark?: boolean;
+  /**
+   * The accessible name. It is the company either way; the prop exists so a surface that already
+   * announces the brand in its own heading can say something narrower, not so it can be renamed.
+   */
+  label?: string;
 }) {
   return (
     <span
@@ -59,7 +77,7 @@ export function Logo({
        * announces "Azmoth" once rather than reading the mark and the wordmark as two images.
        */
       role="img"
-      aria-label={siteConfig.name}
+      aria-label={label}
     >
       <span
         aria-hidden="true"

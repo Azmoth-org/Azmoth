@@ -1,0 +1,78 @@
+---
+title: Partner-API
+description: PADnext hinein, JSON heraus, authentifiziert über einen API-Key.
+icon: Plug
+---
+
+<Callout type="info" title="Diese Seite wird noch übertragen">
+  Der vollständige Vertrag liegt derzeit als `docs/api/PARTNER_API.md` im Repository und wird
+  hierher übernommen. Bis dahin gilt für alles, was unten nicht steht: das OpenAPI-Schema der
+  laufenden Engine ist die verbindliche Fassung.
+</Callout>
+
+Alles auf dieser Seite liegt unter `/api/v1/audit/*` und `/api/v1/settings/api-keys`. Die
+übrigen Endpunkte der Engine (`/solve`, `/proposals`, `/padnext/*`) gehören der Azmoth-Web­an­wen­dung,
+sind nicht Teil dieses Vertrags und können sich mit dem Frontend ändern, das sie benutzt.
+
+## Authentifizierung
+
+Jede Anfrage trägt den Schlüssel im Header:
+
+```http
+X-API-Key: azm_live_ab12cd34ef56_9f4c…
+```
+
+**Der Schlüssel bestimmt, wessen Daten die Anfrage sieht.** Es gibt keinen Header, keinen
+Query-Parameter und kein Body-Feld, mit dem eine Aufruferin eine Organisation benennen könnte —
+der Mandant ergibt sich aus der gespeicherten Schlüsselzeile. Ein Job, der mit einem Schlüssel
+erzeugt wurde, ist für jeden anderen Schlüssel unsichtbar; die Abfrage antwortet mit `404`
+statt `403`, damit ein Schlüssel nicht dazu taugt, fremde Vorgänge aufzuspüren.
+
+### Schlüsselverwaltung
+
+| Methode | Pfad | Wirkung |
+|---|---|---|
+| `POST` | `/api/v1/settings/api-keys` | Schlüssel erzeugen. Zweimal aufgerufen ergibt **zwei gültige Schlüssel** — so wird rotiert: erzeugen, ausrollen, widerrufen. |
+| `GET` | `/api/v1/settings/api-keys` | Die Schlüssel dieser Praxis, neueste zuerst, ohne Geheimnis. Widerrufene bleiben in der Liste und tragen `revoked_at`. |
+| `DELETE` | `/api/v1/settings/api-keys/{key_id}` | Widerrufen. Idempotent. Die Zeile bleibt erhalten — „dieser Schlüssel war von März bis Juli gültig" ist eine Frage, die ein Abrechnungsstreit stellt. |
+
+<Callout type="warn" title="Das Token wird genau einmal angezeigt">
+  Gespeichert wird nur sein SHA-256-Hash, niemand kann es Ihnen erneut zeigen. Legen Sie es
+  sofort in Ihren Secret Store. Ist es verloren, erzeugen Sie ein neues und widerrufen das alte.
+</Callout>
+
+## Prüfung
+
+```bash title="Eine Lieferung synchron prüfen"
+curl -X POST https://api.azmoth.com/api/v1/audit/single \
+  -H "X-API-Key: $AZMOTH_API_KEY" \
+  -F "file=@lieferung.xml"
+```
+
+## Was eine Integration früh wissen sollte
+
+- **Eurobeträge sind Dezimal-Strings**, niemals JSON-Zahlen. Wer sie in ein IEEE-Double liest,
+  verliert Cent.
+- **Regel- und Abdeckungszahlen sind kein Vertragsbestandteil.** Lesen Sie sie zur Laufzeit aus
+  `rule_coverage_detail` auf Ihren eigenen Antworten, statt sie fest zu verdrahten.
+- **Jobs sind mandantengebunden.** Siehe oben: `404` statt `403`.
+
+## Der verbindliche Vertrag
+
+Fehlercodes, Rate Limits, Stapelverarbeitung und Idempotenz stehen im OpenAPI-Schema, das die
+Engine selbst ausliefert — es beschreibt damit immer genau die Fassung, die gerade läuft.
+
+<Cards>
+  <Card
+    title="Interaktive Referenz"
+    description="Swagger UI auf dem API-Host."
+    href="https://api.azmoth.com/docs"
+    external
+  />
+  <Card
+    title="OpenAPI-Schema (JSON)"
+    description="Maschinenlesbar, für die Client-Generierung."
+    href="https://api.azmoth.com/openapi.json"
+    external
+  />
+</Cards>

@@ -1,0 +1,137 @@
+/*
+ * Azmoth documentation — the styling entry point.
+ *
+ * Two stylesheets meet here and neither is edited: `@workspace/ui/globals.css`, which *is*
+ * `DESIGN.md` (the palette, the display tier, the pill geometry, the `ss01` body rule), and
+ * Fumadocs' own preset, which lays out a documentation shell.
+ *
+ * They meet cleanly because they use disjoint token namespaces. Fumadocs reads `--color-fd-*`
+ * and nothing else; the brand is `--azm-*` plus shadcn's semantic names. So the whole of the
+ * integration is the `@theme` block below: every `--color-fd-*` token is repointed at a brand
+ * token, once, and every Fumadocs surface — sidebar, navbar, card, callout, code block, table —
+ * follows without a single component override.
+ *
+ * **Why that is the whole of it.** The alternative — restyling Fumadocs' components with
+ * `className` overrides at each call site — is how a themed docs site ends up 80% branded, with
+ * the remaining 20% appearing whenever somebody uses a component nobody thought to override.
+ * Mapping the tokens means a component that does not exist yet is already on-brand.
+ *
+ * `neutral.css` (or any other Fumadocs colour theme) is deliberately **not** imported. It would
+ * define the same `--color-fd-*` names in greyscale and we would be overriding a full palette
+ * rather than supplying one, with the two disagreeing wherever this file forgot a token.
+ */
+@import "@workspace/ui/globals.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* Tailwind scans from this file's project root, but naming the tree is explicit. */
+@source "../{app,lib,content}/**/*.{ts,tsx,mdx}";
+@source "../mdx-components.tsx";
+
+/*
+ * DESIGN.md, in Fumadocs' vocabulary.
+ *
+ * Read the right-hand column as the argument: `fd-primary` is indigo because it is what
+ * Fumadocs paints links, the active sidebar item and the focus ring with, and DESIGN.md
+ * reserves indigo for exactly that ("a CTA and link colour, not a type colour at body size").
+ * `fd-card` and `fd-popover` are white on a `canvas-soft` ground, which is the same
+ * ground/card relationship every screen in the product already has.
+ */
+@theme {
+  --color-fd-background: var(--azm-canvas-soft);
+  --color-fd-foreground: var(--azm-ink);
+  /* The sidebar and code-block ground: one step under the canvas, as in the product's rail. */
+  --color-fd-muted: var(--azm-canvas-rail);
+  --color-fd-muted-foreground: var(--azm-ink-mute);
+  --color-fd-popover: oklch(1 0 0);
+  --color-fd-popover-foreground: var(--azm-ink);
+  --color-fd-card: oklch(1 0 0);
+  --color-fd-card-foreground: var(--azm-ink);
+  --color-fd-border: var(--azm-hairline);
+  --color-fd-primary: var(--azm-indigo);
+  --color-fd-primary-foreground: oklch(1 0 0);
+  --color-fd-secondary: var(--azm-canvas-rail);
+  --color-fd-secondary-foreground: var(--azm-indigo-deep);
+  --color-fd-accent: var(--azm-canvas-rail);
+  --color-fd-accent-foreground: var(--azm-ink);
+  --color-fd-ring: var(--azm-indigo-soft);
+  /* Navy rather than black: the scrim behind the mobile sidebar is brand, not a default. */
+  --color-fd-overlay: color-mix(in oklch, var(--azm-navy) 45%, transparent);
+}
+
+/*
+ * There is no `.dark` block, and that is the decision rather than an omission.
+ *
+ * This site is light-only, like `apps/web` and `apps/marketing`: a reader who leaves a light
+ * marketing page and arrives on a dark reference page has no way to tell it is the same company.
+ * `app/layout.tsx` disables the `next-themes` provider outright, so nothing writes the `dark`
+ * class this block would have answered to.
+ *
+ * `@workspace/ui/globals.css` still carries its own `.dark` palette, because the product shell
+ * uses it. Left alone it is inert here — no element ever carries the class — which is why the
+ * import needs no surgery.
+ *
+ * **Restoring dark mode is three edits, and any one alone is broken.** A `.dark` block here
+ * repointing the same tokens at the navy shell (`--background`, `--card`, `--border` from the
+ * import, with `--fd-primary` and `--fd-info` lifted to `--azm-indigo-soft` — indigo at its
+ * documented lightness measures under 3:1 on navy and both tokens carry link text); `theme` back
+ * on in `app/layout.tsx`; and `themeSwitch` back on in `lib/layout.shared.tsx`.
+ */
+
+/*
+ * The callout and code-diff hues.
+ *
+ * The first four are already decided elsewhere in this system: a documentation warning and a
+ * "nachweislich falsch" verdict chip are the same claim in two places, and DESIGN.md forbids
+ * introducing an accent outside its documented set. They therefore point at the verdict tokens,
+ * which resolve to the light palette's emerald-700 / red-600 / amber-600 — the values those
+ * tokens carry on a light ground, which is the only ground this site has.
+ *
+ * `idea` and the four diff colours are Fumadocs' own values, restated rather than inherited.
+ * They live in the theme file this stylesheet deliberately does not import (see the header), so
+ * not restating them leaves `bg-fd-diff-remove` an unknown utility and fails the build — which
+ * is the correct failure mode for a design system that supplies a palette rather than patching
+ * one, and the reason they are here rather than discovered in production.
+ */
+@theme {
+  --color-fd-info: var(--azm-indigo);
+  --color-fd-warning: var(--azm-unconfirmed);
+  --color-fd-error: var(--azm-wrong);
+  --color-fd-success: var(--azm-confirmed);
+
+  --color-fd-idea: oklch(70.5% 0.209 60.849);
+  --color-fd-diff-remove: rgba(200, 10, 100, 0.12);
+  --color-fd-diff-remove-symbol: rgb(230, 10, 100);
+  --color-fd-diff-add: rgba(14, 180, 100, 0.1);
+  --color-fd-diff-add-symbol: rgb(10, 200, 100);
+}
+
+@layer base {
+  /*
+   * The display tier, applied to the one place a docs page has a display heading.
+   *
+   * Fumadocs sets `DocsTitle` at `text-3xl font-semibold`, and DESIGN.md's first "Don't" is
+   * "don't bump display weight above 300 — at 400 the brand's editorial air collapses". So the
+   * page title takes the brand's weight and tracking, and only the page title: `##` and below
+   * are prose headings inside a body column, where 300 at 20px reads as washed out rather than
+   * as editorial. That distinction is DESIGN.md's own — the display tier stops at
+   * `{typography.heading-lg}`.
+   */
+  h1.fd-docs-title,
+  #nd-page h1:first-of-type {
+    font-weight: 300;
+    letter-spacing: -0.026em;
+    line-height: 1.1;
+  }
+
+  /*
+   * `tnum` wherever a docs page renders a figure in a table.
+   *
+   * DESIGN.md calls this the one micro-detail that is non-negotiable, and an API reference is
+   * mostly tables of codes, limits and amounts — precisely the cells it is describing. Prose is
+   * left alone: the same rule notes that tightening a running paragraph reads as a rendering
+   * fault rather than as a detail.
+   */
+  #nd-page table {
+    font-feature-settings: "tnum";
+  }
+}
