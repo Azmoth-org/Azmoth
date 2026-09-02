@@ -1,0 +1,165 @@
+# Build the three images the Azure VM runs, and push them to GHCR tagged with the commit sha.
+#
+# This workflow is the reason the VM is a 2 GiB box costing EUR 15/month rather than a 4 GiB box
+# costing EUR 30. `scripts/deploy.sh` used to run `docker compose build` over SSH; a `next build`
+# peaks well over 1 GiB, and two of them on a 2 GiB machine is an OOM kill at exit 137 with no
+# message. Building here and pulling there moves that peak onto a runner that is free for this
+# repository's volume.
+#
+# ── The three images ──────────────────────────────────────────────────────────────────────────
+#     azmoth-engine       apps/engine/Dockerfile              FastAPI, Soufflé, Clingo
+#     azmoth-web          apps/web/Dockerfile                 the traced Next.js standalone bundle
+#     azmoth-web-builder  apps/web/Dockerfile, target=builder  ONLY to run Better Auth's migrator
+#
+# The third one is the non-obvious one. `web-auth-migrate` in the compose stack runs
+# `pnpm --filter web auth:migrate`, and the shipped runtime image carries no pnpm, no scripts and no
+# TypeScript — the whole point of the standalone trace. On a box that builds nothing there is no
+# `builder` stage to reach for locally, so it has to be published. It is by far the largest of the
+# three and it exists to run one script; that is an acceptable trade only because GHCR does not
+# currently charge for container storage or bandwidth. If that changes, the alternative is to bake
+# `auth:migrate` into the runtime image rather than to publish a second copy of the build.
+#
+# ── Tagging ───────────────────────────────────────────────────────────────────────────────────
+# The full commit sha, and `latest` on the default branch. deploy.sh defaults the tag to the commit
+# you have checked out, so `docker compose ps`, /opt/azmoth/RELEASE and the GHCR tag all say the
+# same thing — which is what makes `--tag <older-sha>` a legible rollback rather than a guess.
+#
+# Deliberately NOT `latest`-only: a mutable tag makes "what is running" unanswerable and a rollback
+# impossible. `latest` is published for convenience and nothing in the deployment reads it.
+#
+# ── This does not gate on CI ──────────────────────────────────────────────────────────────────
+# It runs in parallel with ci.yml rather than after it, because an image existing in a registry is
+# not a claim that it is good — deploying it is, and that is a human running deploy.sh. Making this
+# wait would mean a red unrelated job blocks the ability to build a rollback target.
+
+name: release-images
+
+on:
+  push:
+    branches: [main]
+    # A tag push builds too, so a release can be pinned by name as well as by sha.
+    tags: ["v*"]
+  # Manual, for a branch you want to deploy to the VM without merging — which is how a fix is
+  # verified on the pilot box before it lands.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag or sha to build (defaults to the branch this is run from)"
+        required: false
+        type: string
+
+# A new push to the same ref cancels the previous run. Three image builds is the most expensive
+# thing in this repository's CI.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  # The only write this workflow needs. GITHUB_TOKEN with `packages: write` is used to push, so no
+  # personal access token is stored as a secret here — the VM's read-only PAT is the only long-lived
+  # registry credential in the system, and it cannot push.
+  packages: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      # Do not cancel the engine build because the web build failed. Each image is independently
+      # useful, and a partial set is diagnosable where a cancelled set is not.
+      fail-fast: false
+      matrix:
+        include:
+          - name: azmoth-engine
+            dockerfile: apps/engine/Dockerfile
+            target: ""
+          - name: azmoth-web
+            dockerfile: apps/web/Dockerfile
+            target: ""
+          - name: azmoth-web-builder
+            dockerfile: apps/web/Dockerfile
+            target: builder
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Lowercased because GHCR namespaces are lowercase-only while a GitHub org name may be
+      # capitalised — `Azmoth-org` pushes to `ghcr.io/azmoth-org`. deploy.sh applies the same
+      # lowercasing when it derives the namespace from the git remote, and the two must agree.
+      - name: Resolve the image reference
+        id: ref
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=ghcr.io/$owner/${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+          echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          # The repo root, because each image needs files from outside its own app directory: the
+          # engine needs logic/ and data/, the web app needs the pnpm lockfile and the packages/*
+          # it consumes as source.
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: true
+          # linux/amd64 only, and this is a constraint rather than an omission:
+          # apps/engine/Dockerfile installs `x86_64-ubuntu-2204-souffle-2.5-Linux.deb`, so there is
+          # no arm64 engine image to build. Publishing an arm64 web image alone would let somebody
+          # provision a cheaper Arm VM (B2pls_v2 is EUR 24/mo against B2ls_v2's 30) and discover the
+          # engine cannot run on it after DNS had been pointed at the box.
+          platforms: linux/amd64
+          tags: |
+            ${{ steps.ref.outputs.image }}:${{ github.sha }}
+            ${{ steps.ref.outputs.image }}:latest
+          # GitHub's own layer cache. `mode=max` caches intermediate stages too, which is what makes
+          # the second build of `azmoth-web-builder` nearly free — it is the same stages as
+          # `azmoth-web` up to the point where they diverge.
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          provenance: false
+
+      - name: Summary
+        run: |
+          {
+            echo "### ${{ matrix.name }}"
+            echo
+            echo '```'
+            echo "${{ steps.ref.outputs.image }}:${{ github.sha }}"
+            echo '```'
+            echo
+            echo "Deploy it:"
+            echo '```bash'
+            echo "./scripts/deploy.sh <vm-ip> --tag ${{ github.sha }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # A single job to wait on, so `gh run watch` and a branch protection rule have one name rather
+  # than three, and so deploy.sh's "has the workflow finished" question has one answer.
+  images-ready:
+    name: images-ready
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: always()
+    steps:
+      - name: All three images pushed
+        run: |
+          if [ "${{ needs.build.result }}" != "success" ]; then
+            echo "At least one image failed to build — this commit is NOT deployable." >&2
+            echo "scripts/deploy.sh checks the manifests and will refuse it." >&2
+            exit 1
+          fi
+          echo "engine, web and web-builder are all in the registry at ${{ github.sha }}"

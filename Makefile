@@ -35,9 +35,9 @@ require-host = @test -n "$(AZURE_HOST)" || { \
 
 .DEFAULT_GOAL := help
 .PHONY: help backup-db restore-db list-backups verify-db up down logs \
-        azure-provision deploy preflight \
+        azure-provision deploy rollback preflight \
         azure-ps azure-logs azure-logs-caddy azure-restart azure-shell azure-psql \
-        azure-backup azure-verify-db azure-restore-test azure-cost
+        azure-backup azure-verify-db azure-migrate azure-check-db azure-cost
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -78,7 +78,23 @@ azure-provision: ## Create the Azure VM, static IP, NSG and backup storage (idem
 
 deploy: ## Deploy HEAD to the Azure VM. Usage: make deploy AZURE_HOST=20.79.12.34
 	$(require-host)
+	@# Make exports its environment to the recipe's shell, so the secrets deploy.sh reads from the
+	@# environment pass straight through. On the FIRST deploy both Neon strings are required:
+	@#
+	@#   DATABASE_URL='...ep-xxx...' DATABASE_URL_POOLED='...ep-xxx-pooler...' make deploy
+	@#
+	@# On every deploy after that they are already in /opt/azmoth/shared/.env and this is enough.
+	@# Nothing is built on the box — the images come from GHCR at HEAD's sha, so HEAD must be pushed
+	@# and its release-images workflow must have finished. deploy.sh checks before it touches the VM.
 	./scripts/deploy.sh $(AZURE_HOST) --user $(AZURE_USER) --domain $(DOMAIN)
+
+rollback: ## Roll back to an earlier image. Usage: make rollback TAG=6a3c14c AZURE_HOST=...
+	$(require-host)
+	@test -n "$(TAG)" || { echo "usage: make rollback TAG=<sha> AZURE_HOST=..."; \
+		echo "  candidates:"; git log --format='    %h  %s' -10; exit 2; }
+	@# A pull and a restart, not a rebuild — and it does NOT undo a migration. See
+	@# docs/deploy/RUNBOOK.md section 6 before rolling back across one.
+	./scripts/deploy.sh $(AZURE_HOST) --user $(AZURE_USER) --domain $(DOMAIN) --tag $(TAG)
 
 preflight: ## Run the pre-flight checklist against the deployment
 	$(require-host)
@@ -98,9 +114,11 @@ azure-logs-caddy: ## Follow Caddy's logs — where a TLS or certificate problem 
 	$(require-host)
 	@ssh -t $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) logs -f --tail 100 caddy'
 
-azure-restart: ## Restart one service without rebuilding. Usage: make azure-restart SERVICE=web
+azure-restart: ## Restart one service without repulling. Usage: make azure-restart SERVICE=web
 	$(require-host)
-	@test -n "$(SERVICE)" || { echo "usage: make azure-restart SERVICE=web|engine|caddy|marketing"; exit 2; }
+	@# Three services, and that is the whole list: postgres and marketing are profiled out of the
+	@# azure override (Neon's and Vercel's respectively).
+	@test -n "$(SERVICE)" || { echo "usage: make azure-restart SERVICE=web|engine|caddy"; exit 2; }
 	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) restart $(SERVICE)'
 	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) ps $(SERVICE)'
 
@@ -108,30 +126,56 @@ azure-shell: ## An interactive shell on the VM, in the release directory
 	$(require-host)
 	@ssh -t $(AZURE_USER)@$(AZURE_HOST) 'cd $(REMOTE_ROOT)/repo && exec $$SHELL -l'
 
-azure-psql: ## A psql session against the production database (no port is published; this is exec)
+azure-psql: ## A psql session against Neon, in a container on the VM (nothing is installed on it)
 	$(require-host)
-	@ssh -t $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) exec postgres psql -U azmoth -d azmoth'
+	@# The database is Neon's, so this is no longer `exec postgres psql` — there is no postgres
+	@# container. It runs psql in a throwaway pinned image and reads the connection string out of
+	@# the deployment's own env file, so there is one copy of that credential on the box.
+	@#
+	@# --network=host is not needed (an outbound TLS connection works on the default bridge) and
+	@# the URL reaches psql through the environment, so it never appears in `ps` on the VM.
+	@#
+	@# Note this is the DIRECT endpoint. An interactive session uses SET and session state, neither
+	@# of which the pooler supports.
+	@ssh -t $(AZURE_USER)@$(AZURE_HOST) 'set -a; . $(REMOTE_ROOT)/shared/.env; set +a; \
+	  sudo docker run --rm -it -e PGURL="$$(echo $$DATABASE_URL | sed "s/+asyncpg//")" \
+	    postgres:17-alpine sh -c "psql \"\$$PGURL\""'
 
-azure-verify-db: ## Check the deployed engine is on Postgres and the schema is migrated
+azure-verify-db: ## Check the deployed engine reached Neon, on the direct endpoint, at schema head
 	$(require-host)
 	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) exec -T engine python -c "\
+import urllib.parse; \
 from app.config import get_settings; s = get_settings(); \
+host = urllib.parse.urlsplit(s.database_url.replace(\"+asyncpg\", \"\")).hostname or \"\"; \
 print(\"DATABASE_URL backend :\", s.database_backend); \
 print(\"durable              :\", s.database_is_durable); \
 print(\"APP_ENV              :\", s.app_env); \
-assert s.database_is_durable, \"NOT Postgres — approvals would not be durable\""'
-	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) exec -T engine alembic current'
+print(\"db host              :\", host); \
+print(\"endpoint             :\", \"POOLED — WRONG\" if \"-pooler.\" in host else \"direct\"); \
+assert s.database_is_durable, \"NOT Postgres — approvals would not be durable\"; \
+assert \"-pooler.\" not in host, \"the engine is on the POOLED endpoint; it must use the direct one\""'
+	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) exec -T engine sh -c "\
+echo -n \"current : \"; alembic current; echo -n \"head    : \"; alembic heads"'
+
+azure-migrate: ## Run alembic upgrade head against Neon's direct endpoint, without a full deploy
+	$(require-host)
+	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) run --rm engine-migrate'
 
 # ── Azure: backups ────────────────────────────────────────────────────────────────────────────
 
-azure-backup: ## Dump, verify, encrypt and push to Blob Storage — now, not on a schedule
+azure-backup: ## Dump Neon over the network, verify, encrypt and push to Blob — now, not on a schedule
 	$(require-host)
 	@ssh $(AZURE_USER)@$(AZURE_HOST) 'sudo $(REMOTE_ROOT)/repo/infra/scripts/backup-to-azure.sh'
 
-azure-restore-test: ## Restore the newest dump into a scratch database and compare row counts
+azure-check-db: ## The database section of the pre-flight: reachable, right endpoints, at head
 	$(require-host)
+	@# Was `azure-restore-test`, which drove a scratch database inside the postgres container. There
+	@# is no postgres container, and creating a throwaway database inside the Neon project on every
+	@# invocation would burn the Free plan's compute allowance to prove something Neon's own instant
+	@# restore already covers. A real restore drill needs the age private key and is therefore a
+	@# human's job — docs/OPERATIONS.md § 7.7.
 	./scripts/preflight.sh $(AZURE_HOST) --user $(AZURE_USER) --domain $(DOMAIN) 2>/dev/null \
-		| sed -n '/6. Backups/,/7. Do these/p'
+		| sed -n '/6. The Neon database/,/7. Do these/p'
 
 azure-cost: ## What the pilot has spent so far, and on what
 	@az consumption usage list --output table 2>/dev/null \

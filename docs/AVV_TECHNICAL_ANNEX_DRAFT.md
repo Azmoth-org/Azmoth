@@ -155,17 +155,75 @@ Löschung auf Weisung des Verantwortlichen erfolgt derzeit **manuell** durch den
 
 ### 5.1 Ort
 
-Die Verarbeitung erfolgt ausschließlich auf Systemen innerhalb der Europäischen Union. Eine
-Übermittlung in ein Drittland findet nicht statt.
+Die Verarbeitung erfolgt ausschließlich auf Systemen innerhalb der Europäischen Union, und zwar an
+den folgenden, namentlich benannten Orten:
+
+| Verarbeitungsschritt | Ort |
+| --- | --- |
+| Betrieb der Anwendung (Prüfung, PDF-Erzeugung, Weboberfläche) | Microsoft Azure, Region `germanywestcentral` (Frankfurt am Main) |
+| Datenbank (PostgreSQL, als verwalteter Dienst über Neon) | AWS, Region `eu-central-1` (AWS Europe, Frankfurt) |
+| Verschlüsselte Datenbanksicherungen | Azure Blob Storage, Region `germanywestcentral` (Frankfurt am Main) |
+
+Sämtliche genannten Orte liegen in Frankfurt am Main und damit innerhalb der Europäischen Union.
+Die Daten im Ruhezustand und die Verarbeitung selbst verlassen die Europäische Union nicht. Die
+öffentliche Marketing-Website ist nicht Gegenstand der Verarbeitung nach diesem Vertrag; die Gründe
+sind in [§ 5.2](#52-unterauftragsverarbeiter) ausgeführt.
+
+**Die Aussage, eine Übermittlung in ein Drittland finde nicht statt, kann gleichwohl nicht mehr
+ohne Einschränkung getroffen werden.** Der Auftragnehmer benennt die Gründe ausdrücklich, anstatt
+sie zu übergehen:
+
+- Die Muttergesellschaft der Neon, LLC ist seit Mai 2025 die **Databricks, Inc. (Vereinigte
+  Staaten)**.
+- Die Unterauftragsverarbeiterliste von Neon verweist auf die Liste von Databricks
+  (`databricks.com/legal/databricks-subprocessors`), deren Einträge überwiegend in den Vereinigten
+  Staaten ansässig sind; Neon führt darüber hinaus **Grafana Labs (Vereinigte Staaten)** für
+  Infrastrukturdienste auf.
+- Die Datenschutzerklärung von Neon stützt Übermittlungen auf das **Data Privacy Framework**;
+  Standardvertragsklauseln sind dort nicht genannt.
+- Die **Vercel Inc.** ist ebenfalls ein Unternehmen mit Sitz in den Vereinigten Staaten.
+
+Zutreffend ist daher: die Daten im Ruhezustand und die Verarbeitung finden in Frankfurt statt, ein
+administrativer oder unterstützender Zugriff durch die genannten US-Muttergesellschaften und deren
+Unterauftragsverarbeiter ist jedoch **nicht auszuschließen** und richtet sich nach dem jeweils
+vereinbarten Übermittlungsmechanismus. Die Bewertung dieses Sachverhalts ist eine Rechtsfrage und
+keine Feststellung, die der Auftragnehmer treffen kann; sie ist als offener Punkt in
+[§ 9](#9-offene-punkte) benannt.
 
 ### 5.2 Unterauftragsverarbeiter
 
-**Derzeit keine.** Die Prüfung erfolgt vollständig innerhalb der Anwendung des Auftragnehmers. Es
-werden insbesondere **nicht** eingesetzt:
+Es werden die folgenden Unterauftragsverarbeiter eingesetzt:
+
+| Unterauftragsverarbeiter | Leistung | Ort / Region | Zugängliche Datenkategorien |
+| --- | --- | --- | --- |
+| **Microsoft Ireland Operations Ltd. / Microsoft Corporation** | Microsoft Azure: die virtuelle Maschine, auf der die Anwendung läuft, sowie Azure Blob Storage mit den verschlüsselten Sicherungen | `germanywestcentral` (Frankfurt am Main) | Auf Infrastrukturebene alles, was die Anwendung verarbeitet |
+| **Neon, LLC** (Tochtergesellschaft der Databricks, Inc.) | Verwaltete PostgreSQL-Datenbank | `aws-eu-central-1` (AWS Europe, Frankfurt) | Die vollständige Datenbank: Prüfergebnisse, Freigaben, das Protokoll, Benutzerkonten und Sitzungen |
+| **Amazon Web Services** | Infrastruktur, auf der Neon betrieben wird; Unterauftragsverarbeiter von Neon | `eu-central-1` (Frankfurt am Main) | Dieselben Daten wie Neon, auf Infrastrukturebene |
+| **Vercel Inc.** | Hosting der öffentlichen Marketing-Website (`azmoth.com`) | Vereinigte Staaten (Unternehmenssitz) | **Keine Rechnungs- und keine Patientendaten.** Zugänglich sind ausschließlich Zugriffsdaten eines Webservers zu Besuchern einer öffentlichen Informationsseite |
+
+Zu zwei Einträgen dieser Tabelle ist eine Erläuterung erforderlich, weil sie sich sonst falsch liest:
+
+- **Amazon Web Services steht nicht aus einer Auswahlentscheidung in dieser Kette.** Neon bietet
+  seit dem 7. April 2026 keine Azure-Region mehr an; auf keinem Tarif können dort neue Projekte
+  angelegt werden. Eine gemeinsame Unterbringung von Datenbank und virtueller Maschine bei einem
+  einzigen Anbieter ist damit nicht mehr möglich. Der Auftragnehmer hält dies ausdrücklich als
+  **Zwang und nicht als Wahl** fest.
+- **Die Vercel Inc. erreicht keine personenbezogenen Daten aus der Verarbeitung.** Die
+  Marketing-Website ist statisch vorgerendert, hält keine Datenbank, kennt keine Sitzung und
+  kommuniziert nicht mit der Anwendung. Ihr Risikoprofil unterscheidet sich damit vollständig von
+  dem der übrigen drei Unterauftragsverarbeiter; dies wird hier ausgesprochen, damit ein Leser es
+  nicht selbst erschließen muss.
+
+**Die vorstehende Tabelle ist keine abschließende Darstellung der gesamten Kette.** Die
+Unterauftragsverarbeiterliste von Neon wird von Databricks unter
+`databricks.com/legal/databricks-subprocessors` geführt und umfasst unter anderem Grafana Labs
+(Vereinigte Staaten). Der Verantwortliche ist auf diese vorgelagerte Liste zu verweisen; eine
+Momentaufnahme in dieser Anlage wäre nach kurzer Zeit überholt.
+
+Es werden weiterhin insbesondere **nicht** eingesetzt:
 
 - Dienste zur Textanalyse, Übersetzung oder Verarbeitung durch Sprachmodelle,
-- externe Protokollierungs- oder Analysedienste,
-- externe Speicher- oder Objektspeicherdienste.
+- externe Protokollierungs- oder Analysedienste.
 
 Der Auftragnehmer hat technisch die Möglichkeit vorgesehen, einen Dienst zur Fehlerüberwachung
 anzubinden (`app.core.observability.set_error_hook`). Ein solcher Dienst ist **nicht aktiviert**.
@@ -240,11 +298,24 @@ benennen und vom Verantwortlichen zu genehmigen.
 
 ### 6.6 Verfügbarkeit und Wiederherstellbarkeit
 
-- Die Datenbank (PostgreSQL) wird auf einem persistenten, verschlüsselten Datenträger betrieben.
-- Sicherung und Wiederherstellung erfolgen über dokumentierte Skripte
-  (`make backup-db` / `make restore-db`, siehe `docs/OPERATIONS.md`).
+- Die Datenbank (PostgreSQL) wird als **verwalteter Dienst** betrieben (Neon, Region
+  `aws-eu-central-1`) mit Verschlüsselung im Ruhezustand und anbieterseitiger Wiederherstellung auf
+  einen Zeitpunkt (Point-in-Time Restore). Das Zeitfenster dieser Wiederherstellung beträgt im
+  Free-Tarif **sechs Stunden** (begrenzt auf 1 GB) und im Launch-Tarif bis zu **sieben Tage**. Der
+  Auftragnehmer hält ausdrücklich fest: **ein Zeitfenster von sechs Stunden ist ein Rollback und
+  keine Sicherung.**
+- Zusätzlich wird **täglich ein verschlüsselter Datenbankabzug** in Azure Blob Storage geschrieben,
+  also in das Konto eines anderen Anbieters als desjenigen, der die Datenbank betreibt. Die
+  Verschlüsselung erfolgt mit `age` gegen einen öffentlichen Schlüssel, dessen privater Teil auf
+  **keinem Produktivsystem vorhanden** ist. **Ein kompromittiertes Produktivsystem kann daher
+  Sicherungen schreiben und keine einzige lesen.**
+- Der Abzug wird **bei seiner Erzeugung überprüft** (`pg_restore --list` liest das
+  Inhaltsverzeichnis des Archivs), und der Upload wird **zurückgelesen und seine Länge
+  verglichen**. Ein Upload, der Erfolg gemeldet und nichts gespeichert hat, wird damit erkannt.
 - Ein durch einen Neustart unterbrochener Stapelauftrag wird automatisch fortgesetzt; bereits
   erzeugte Ergebnisse werden nicht erneut berechnet.
+- Die dokumentierten Skripte sind `infra/scripts/backup-to-azure.sh` sowie
+  `docs/OPERATIONS.md § 7.6` (Sicherung) und `docs/OPERATIONS.md § 7.7` (Wiederherstellung).
 
 ### 6.7 Organisatorische Maßnahmen
 
@@ -291,7 +362,9 @@ ist unvollständig.
    Netzwerks. Eine Person mit administrativem Datenbankzugang kann gespeicherte Prüfergebnisse
    einsehen. Zu regeln: Kreis der Berechtigten und Verpflichtung auf Vertraulichkeit.
 4. **Kein durchgeführter Penetrationstest, keine Zertifizierung** nach ISO 27001 oder SOC 2.
-5. **Sicherungen liegen in der Verantwortung der Betriebsumgebung.** Zu regeln:
+5. **Es ist keine Testwiederherstellung nachgewiesen.** Der Sicherungsvorgang nach
+   [§ 6.6](#66-verfügbarkeit-und-wiederherstellbarkeit) prüft die Lesbarkeit des Archivs und den
+   Upload, nicht aber die vollständige Rückführung in eine Datenbank. Zu regeln:
    Wiederherstellungszeit und Nachweis erfolgreicher Testwiederherstellungen.
 6. **Verarbeitung von Echtdaten ist technisch gesperrt.** Die Aufhebung dieser Sperre ist als
    ausdrücklicher, dokumentierter Schritt zu vereinbaren.
@@ -300,9 +373,36 @@ ist unvollständig.
 8. **Verbrauchsdaten werden gepuffert geschrieben.** Bei einem Prozessabbruch können einzelne
    Einträge verlorengehen. Für Abrechnungszwecke ist zu vereinbaren, dass im Zweifel zugunsten des
    Verantwortlichen gezählt wird.
+9. **Ein Auftragsverarbeitungsvertrag mit Databricks/Neon liegt noch nicht unterzeichnet vor.** Der
+   im Selbstbedienungsverfahren verfügbare Text unter `neon.com/dpa` ist ein durch Anklicken
+   angenommenes produktbezogenes Beiblatt (*product schedule*) und kein gegengezeichneter Vertrag.
+   Ein unterschriftsreifer Auftragsverarbeitungsvertrag ist bei der Rechtsabteilung von Databricks
+   anzufordern. Zu regeln: Beschaffung und Unterzeichnung **vor** der ersten Zeichnung durch eine
+   Praxis.
+10. **Drittlandbezug durch US-Muttergesellschaften.** Betroffen sind Neon (Databricks, Inc.,
+    Vereinigte Staaten) und die Vercel Inc. (Vereinigte Staaten). Die Daten im Ruhezustand liegen in
+    Frankfurt; der administrative Zugriff und der Übermittlungsmechanismus — Data Privacy Framework
+    und die Frage, ob zusätzlich Standardvertragsklauseln erforderlich sind — bedürfen der
+    rechtlichen Bewertung. Siehe [§ 5.1](#51-ort).
+11. **Die Aufbewahrungsfrist der verschlüsselten Sicherungen ist nicht geregelt.** Derzeit löscht
+    kein Verfahren die abgelegten Blobs. Zu regeln: eine Lebenszyklusregel (*lifecycle policy*) und
+    eine Aufbewahrungsdauer. **Dieser Punkt greift in [§ 4](#4-speicherdauer-und-löschung) ein: eine
+    Löschung auf Weisung, die gegen die laufende Datenbank ausgeführt wird, erreicht einen bereits
+    geschriebenen Datenbankabzug nicht.** Die Aufbewahrungsdauer der Sicherungen ist damit die
+    tatsächliche Obergrenze dafür, wie lange Daten eine Löschungsaufforderung überdauern.
+12. **Der Verlust des privaten `age`-Schlüssels macht sämtliche Sicherungen unbrauchbar.** Das ist
+    der bewusst eingegangene Preis für die in [§ 6.6](#66-verfügbarkeit-und-wiederherstellbarkeit)
+    beschriebene Eigenschaft, dass ein Produktivsystem Sicherungen schreiben und nicht lesen kann.
+    Zu regeln: die Verwahrung des Schlüssels als organisatorische Maßnahme.
+13. **Der Free-Tarif von Neon ist für den Produktivbetrieb nicht geeignet.** Ist das monatliche
+    Rechenzeitguthaben aufgebraucht, werden bestehende Verbindungen getrennt und neue bis zum
+    Beginn des nächsten Abrechnungszeitraums abgelehnt — **das ist ein Verfügbarkeitsausfall und
+    keine Verschlechterung der Leistung.** Zudem wird die Rechenleistung nach fünf Minuten ohne
+    Aktivität ausgesetzt, was in diesem Tarif nicht abgeschaltet werden kann. Für Zusagen zur
+    Verfügbarkeit relevant.
 
 ---
 
 *Erstellt auf Grundlage des Quellstands zum Zeitpunkt der Erstellung dieses Dokuments. Bei jeder
-Änderung an Speicherung, Protokollierung oder Aufbewahrung ist diese Anlage im selben Pull Request
-anzupassen.*
+Änderung an Speicherung, Protokollierung oder Aufbewahrung, am Ort der Verarbeitung oder am Kreis
+der Unterauftragsverarbeiter ist diese Anlage im selben Pull Request anzupassen.*

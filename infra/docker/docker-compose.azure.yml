@@ -1,7 +1,7 @@
 # The public-deployment layer. **This is an OVERRIDE — it does not run on its own.**
 #
 #     docker compose -f infra/docker/docker-compose.yml \
-#                    -f infra/docker/docker-compose.azure.yml up -d --build
+#                    -f infra/docker/docker-compose.azure.yml up -d
 #
 # `scripts/deploy.sh` and the `azure-*` Makefile targets always pass both flags. Running this file
 # alone fails with "service ... has neither an image nor a build context specified", which is the
@@ -9,11 +9,13 @@
 #
 # It is an override anyway, and the difference from the dev file is the audience. The dev file is
 # opened in an editor and started with a right-click, so it has to be complete on its own. This one
-# is only ever run by a script on a server. Copying the production file's 350 lines to add a proxy
+# is only ever run by a script on a server. Copying the production file's 390 lines to add a proxy
 # would create a second definition of `engine` and `web` that goes stale the first time the real one
 # changes — and the thing that would go stale silently is the deployment.
 #
-# It does exactly two things.
+# Note the absent `--build`. Nothing is built on this box; see § 3.
+#
+# It does five things.
 #
 # ── 1. It puts Caddy in front ─────────────────────────────────────────────────────────────────
 # One process listening publicly, terminating TLS, renewing its own certificates. See
@@ -31,9 +33,36 @@
 # rule is edited in a portal by someone who does not know what 8000 is, and a published port is
 # added by someone editing compose. Neither alone would have caught the other's mistake.
 #
-# Nothing is lost by unpublishing. Caddy reaches every service over the compose network by name, and
-# an operator reaches Postgres with `docker compose exec postgres psql` — which is what
-# infra/scripts/backup-db.sh already does, so backups never needed the published port either.
+# ── 3. It runs pre-built images from GHCR instead of building ─────────────────────────────────
+# `build: !reset null` deletes the base file's build section outright, so this stack can only ever
+# `pull`. That is deliberate rather than incidental: the images are built by
+# .github/workflows/release-images.yml on a GitHub runner and pushed to ghcr.io, and this VM has
+# 2 GiB of RAM. A `next build` here would be OOM-killed or, worse, would swap for forty minutes and
+# succeed — which looks like a slow deploy rather than a wrong machine size.
+#
+# Leaving `build:` in place and merely relying on nobody passing `--build` would not do. `compose up`
+# builds on its own when the named image is absent locally, so a failed `docker pull` would silently
+# turn into an on-box build. `!reset` makes that impossible: with no build section, a missing image
+# is an error that names the tag.
+#
+# `IMAGE_TAG` is the git commit deploy.sh is shipping, so `docker compose ps` and
+# `/opt/azmoth/RELEASE` agree on what is running, and a rollback is this file with an older tag
+# rather than a rebuild from an older commit.
+#
+# ── 4. It takes the database off this box entirely ────────────────────────────────────────────
+# Postgres is Neon's now — external, managed, in aws-eu-central-1 (Frankfurt). The base file's
+# `postgres` service is profiled out rather than deleted, because Compose has no way for an override
+# to remove a service and the base file is still the right standalone stack for a laptop. A service
+# whose only profile is one nobody enables is absent from `docker compose config` and from `up`, and
+# its `postgres-data` volume is never created. `docker compose config --services` on this pair is
+# the check that it worked.
+#
+# Every `depends_on: postgres` in the base file is cleared with `!override {}`, because a dependency
+# on a service that is not in the project is a hard error at `up` time.
+#
+# ── 5. It splits migrations off from the runtime ──────────────────────────────────────────────
+# See the `engine-migrate` service below. This is the half of the Neon move that is least obvious
+# and most load-bearing.
 #
 # `!override` and `!reset` are Compose merge tags and need **Docker Compose v2.24 or newer**: for
 # `ports`, Compose's default is to CONCATENATE the base list with this one, so without the tag
@@ -61,16 +90,21 @@ services:
       # Substituted into the Caddyfile when Caddy loads it. Unset means an empty site address and a
       # refusal to start, which is the right failure: a proxy that starts with no hostname would
       # serve the default site to everyone and get no certificate at all.
+      #
+      # TWO hostnames. There is deliberately no MARKETING_DOMAIN any more: azmoth.com and
+      # www.azmoth.com are served by Vercel, and this box must not request certificates for them.
+      # A leftover `MARKETING_DOMAIN_HOST=azmoth.com` in an existing /opt/azmoth/shared/.env is
+      # harmless — nothing reads it — but the A records for those names must stay on Vercel.
       APP_DOMAIN: "${APP_DOMAIN_HOST:?set APP_DOMAIN_HOST in infra/docker/.env, e.g. app.azmoth.com}"
       API_DOMAIN: "${API_DOMAIN_HOST:?set API_DOMAIN_HOST in infra/docker/.env, e.g. api.azmoth.com}"
-      MARKETING_DOMAIN: "${MARKETING_DOMAIN_HOST:?set MARKETING_DOMAIN_HOST in infra/docker/.env, e.g. azmoth.com}"
       ACME_EMAIL: "${ACME_EMAIL:?set ACME_EMAIL in infra/docker/.env — Let's Encrypt sends renewal failures here}"
     volumes:
       # Read-only: Caddy never rewrites its own config, and this is the file that decides what is
       # published. A container that could edit it could publish the rest of the engine.
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      # **The certificates and the ACME account key.** Named, and the most important volume on the
-      # box after the database: losing it means re-issuing every certificate on the next start, and
+      # **The certificates and the ACME account key.** Named, and now the most important volume on
+      # the box by a distance — the database is no longer here, so this is the only state that is
+      # expensive to lose. Losing it means re-issuing every certificate on the next start, and
       # Let's Encrypt's rate limit is 5 duplicate certificates per week. Two or three redeploys
       # that each wipe this and the pilot has no HTTPS until the window rolls.
       - caddy-data:/data
@@ -93,6 +127,54 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # ── Migrations: a one-shot, on the DIRECT Neon endpoint ─────────────────────────────────────
+  #
+  # This service exists because Neon has two endpoints and they are not interchangeable, and
+  # because the engine image migrates itself on start.
+  #
+  # `apps/engine/scripts/docker-entrypoint.sh` runs `alembic upgrade head` before exec'ing whatever
+  # command it was given, using whatever `DATABASE_URL` its container happens to hold. That is
+  # exactly right when there is one database URL. With two it is a bug waiting to happen: the
+  # runtime container would migrate over its own endpoint, and Neon is explicit that
+  # "using a pooled connection string for migrations can be prone to errors".
+  #
+  # So migrations move here and are turned off in `engine` (RUN_MIGRATIONS=false below). Same image,
+  # same alembic history, different endpoint and a different lifecycle. `command: ["true"]` gives the
+  # entrypoint something trivial to exec once it has finished migrating — the migration is the whole
+  # job, so the container's purpose is to run it and exit 0.
+  #
+  # Idempotent, like `web-auth-migrate`: on every deploy after the first, `alembic upgrade head`
+  # finds itself at head and does nothing. That is why it belongs in the startup path rather than in
+  # a runbook step people skip.
+  engine-migrate:
+    build: !reset null
+    image: "${ENGINE_IMAGE:?set ENGINE_IMAGE, e.g. ghcr.io/azmoth-org/azmoth-engine}:${IMAGE_TAG:?set IMAGE_TAG to the commit being deployed}"
+    command: ["true"]
+    depends_on: !override {}
+    ports: !reset []
+    environment:
+      # THE DIRECT URL. Not pooled, and this is the line the whole service exists for.
+      #
+      # Alembic emits DDL, and DDL is precisely what a transaction-mode pooler mishandles: Neon's
+      # PgBouncer does not support session-level advisory locks (which is how a migration tool keeps
+      # two runners from colliding), SQL-level PREPARE/DEALLOCATE, or CREATE INDEX CONCURRENTLY.
+      # Neon's own SQLAlchemy-migrations guide says to use a direct connection here, in those words.
+      DATABASE_URL: "${DATABASE_URL:?set DATABASE_URL to the DIRECT (non-pooled) Neon connection string}"
+      RUN_MIGRATIONS: "true"
+      # The engine refuses to start under APP_ENV=production on a non-Postgres URL. That check is in
+      # app startup rather than in alembic, so it does not gate this container — but APP_ENV is set
+      # anyway so that a misconfigured URL fails the same way here as it would there.
+      APP_ENV: "${APP_ENV:-production}"
+      DATABASE_AUTO_CREATE: "false"
+      # Neon's compute suspends after five minutes of inactivity on the Free plan and cannot be
+      # stopped from doing so. The first connection of a deploy is therefore a cold start, and
+      # migrate.py's wait loop is what absorbs it. 60s is generous for a resume that takes a second
+      # or two, and the cost of it being too short is a failed deploy that looks like a broken
+      # migration.
+      MIGRATION_WAIT_SECONDS: "${MIGRATION_WAIT_SECONDS:-60}"
+    # A migration that fails must fail the deploy, not be retried forever by a restart policy.
+    restart: "no"
+
   # ── Everything below: unpublished ───────────────────────────────────────────────────────────
 
   engine:
@@ -100,18 +182,78 @@ services:
     # is the half of it that the NSG cannot enforce, because a published Docker port bypasses the
     # host firewall. Caddy reaches the engine at `engine:8000` on the compose network.
     ports: !reset []
-
-  postgres:
-    # Nothing on the host needs 5432. `infra/scripts/backup-db.sh` runs `pg_dump` through
-    # `docker compose exec`, not over TCP, so backups are unaffected. For an interactive session:
-    #   docker compose -f ... exec postgres psql -U azmoth -d azmoth
-    ports: !reset []
+    build: !reset null
+    image: "${ENGINE_IMAGE:?set ENGINE_IMAGE, e.g. ghcr.io/azmoth-org/azmoth-engine}:${IMAGE_TAG:?set IMAGE_TAG to the commit being deployed}"
+    # The base file waits on a healthy `postgres`, which is not in this project. Wait on the
+    # migration instead — the engine's first query must not race the schema it needs.
+    depends_on: !override
+      engine-migrate:
+        condition: service_completed_successfully
+    environment:
+      # ── Why the engine gets the DIRECT URL and not the pooled one ─────────────────────────
+      # This is the one place where the obvious answer is wrong, so it is worth the paragraph.
+      #
+      # Neon's pooler is PgBouncer in transaction mode. SQLAlchemy's asyncpg dialect calls
+      # `asyncpg.connection.prepare()` for EVERY statement, and asyncpg names those prepared
+      # statements `__asyncpg_stmt_N__` from a per-connection counter. Through a transaction-mode
+      # pooler that is the classic source of intermittent
+      # `DuplicatePreparedStatementError: prepared statement "__asyncpg_stmt_3__" already exists`.
+      #
+      # `?prepared_statement_cache_size=0` is the widely-repeated fix and it does NOT work. It only
+      # clears SQLAlchemy's reuse cache; both code paths still call `prepare(..., name=...)` with a
+      # default name function that returns None, so asyncpg still mints `__asyncpg_stmt_N__`.
+      # `?statement_cache_size=0` is worse — SQLAlchemy passes it through as a string and asyncpg
+      # raises TypeError on startup.
+      #
+      # The configuration SQLAlchemy actually prescribes is `prepared_statement_name_func` plus
+      # `NullPool`, and both are Python arguments to `create_async_engine` — they live in
+      # apps/engine/app/db/session.py and cannot be expressed in a URL. Neon's PgBouncer 1.22+ may
+      # well remap the names and make all of this moot, but Neon documents nothing about asyncpg,
+      # and "probably fine" is not a property to give an append-only audit log.
+      #
+      # The engine does not need a pooler in any case. It is ONE long-lived container with
+      # pool_size=5 and max_overflow=10, so it holds at most fifteen connections against a Neon
+      # compute that allows far more. The pooler exists for connection-per-request workloads —
+      # which is `web`, below, and which is why the pooled URL goes there.
+      DATABASE_URL: "${DATABASE_URL:?set DATABASE_URL to the DIRECT (non-pooled) Neon connection string}"
+      # Migrations already ran, in `engine-migrate`, on this same URL. Running them again here would
+      # be harmless (alembic is idempotent) but it would put a second migrator in the startup path
+      # of a service that restarts on its own — and `restart: unless-stopped` plus a failing
+      # migration is a crash loop against a metered database.
+      RUN_MIGRATIONS: "false"
+      # Belt and braces with `depends_on` above: that guarantees ordering on a single `up`, this
+      # guarantees the engine survives a Neon cold start on an unattended restart.
+      MIGRATION_WAIT_SECONDS: "${MIGRATION_WAIT_SECONDS:-60}"
 
   web:
     # Caddy proxies to `web:3000`. Publishing 3000 as well would make the app reachable over plain
     # HTTP on the IP — bypassing TLS, and bypassing the `Secure` session cookie with it.
     ports: !reset []
+    build: !reset null
+    image: "${WEB_IMAGE:?set WEB_IMAGE, e.g. ghcr.io/azmoth-org/azmoth-web}:${IMAGE_TAG:?set IMAGE_TAG to the commit being deployed}"
+    depends_on: !override
+      engine:
+        condition: service_healthy
+      web-auth-migrate:
+        condition: service_completed_successfully
     environment:
+      # ── The POOLED URL, and the only service that gets it ─────────────────────────────────
+      # Better Auth talks to Postgres through node-postgres (`pg`), which issues plain unnamed
+      # queries and does not use protocol-level prepared statements. It is therefore safe behind a
+      # transaction-mode pooler in a way the engine's asyncpg is not — see the long note above.
+      #
+      # And it benefits: every Next.js route handler is a short burst of queries with idle gaps
+      # between them, which is exactly the connection-per-request shape Neon's pooler is for. On the
+      # direct endpoint a busy moment could open one connection per concurrent request.
+      #
+      # `+asyncpg` is SQLAlchemy's and means nothing to `pg`; apps/web/lib/auth-db.ts strips it, so
+      # the same string works whether or not the suffix is present.
+      #
+      # Falls back to the direct URL if DATABASE_URL_POOLED is unset, deliberately: a deployment
+      # that works slightly less well is better than one that will not start, and Better Auth on the
+      # direct endpoint is correct, just chattier.
+      AUTH_DATABASE_URL: "${DATABASE_URL_POOLED:-${DATABASE_URL:?set DATABASE_URL or DATABASE_URL_POOLED}}"
+
       # ── Read this before setting BETTER_AUTH_URL ──────────────────────────────────────────
       # Leave it EMPTY unless you use Google sign-in.
       #
@@ -142,14 +284,78 @@ services:
       # /opt/azmoth/shared/.env, and scripts/preflight.sh fails if this ends up empty here.
       SIGNUP_ALLOWLIST: "${SIGNUP_ALLOWLIST:-}"
 
+  # Better Auth's own migrator — `user`, `session`, `account`, `verification`, and `organization`,
+  # `member`, `invitation` from the organization plugin. See the base file for why this database has
+  # two migrators with disjoint table sets.
+  #
+  # ── Why this needs its own image ──────────────────────────────────────────────────────────────
+  # The base file builds this from `target: builder` of apps/web/Dockerfile, because the shipped
+  # `web` image carries only the traced server bundle: no pnpm, no scripts, no TypeScript. On a box
+  # that builds nothing there is no `builder` stage to reach for — a pulled runtime image has one
+  # layer set and it is the runtime one.
+  #
+  # So the workflow publishes the builder stage as its own tag and this service pulls it. It is the
+  # largest of the three images by a wide margin and it exists to run one script, which would be a
+  # poor trade against a registry that charged for storage. GHCR does not, currently, for container
+  # images — and if that changes, the alternative is to bake `auth:migrate` into the runtime image.
+  web-auth-migrate:
+    build: !reset null
+    image: "${WEB_BUILDER_IMAGE:?set WEB_BUILDER_IMAGE, e.g. ghcr.io/azmoth-org/azmoth-web-builder}:${IMAGE_TAG:?set IMAGE_TAG to the commit being deployed}"
+    depends_on: !override {}
+    environment:
+      # THE DIRECT URL, for the same reason `engine-migrate` gets it: this is a migration. It
+      # creates tables, and Neon says to do that on a direct connection. Better Auth's migrator is
+      # also the one place in the web tier that would use session-level state.
+      AUTH_DATABASE_URL: "${DATABASE_URL:?set DATABASE_URL to the DIRECT (non-pooled) Neon connection string}"
+    # A migration that fails must fail the stack, not be retried forever by a restart policy.
+    restart: "no"
+
+  # ── Profiled out of existence ───────────────────────────────────────────────────────────────
+  #
+  # Compose gives an override no way to DELETE a service, so these three are assigned a profile
+  # that nothing enables. The effect is the same and it is verifiable:
+  #
+  #     docker compose -f infra/docker/docker-compose.yml \
+  #                    -f infra/docker/docker-compose.azure.yml config --services
+  #
+  # prints caddy, engine, engine-migrate, web and web-auth-migrate — and none of the three below.
+  # Their volumes are not created either, which is what makes `azmoth-postgres-data` never exist on
+  # this box rather than exist and sit empty.
+  #
+  # They are NOT removed from the base file, because the base file is still the right standalone
+  # stack for a laptop: postgres, marketing and adminer all belong there.
+
+  postgres:
+    # Neon's now. External, managed, aws-eu-central-1 (Frankfurt) — see docs/deploy/AZURE.md § 4
+    # for why that region and what it costs the AVV's sub-processor list.
+    #
+    # Nothing on this box speaks to a local Postgres, so an operator's `psql` is now a client on
+    # their laptop pointed at the Neon URL, not a `docker compose exec`. `make azure-psql` does
+    # exactly that.
+    profiles: !override ["disabled-on-azure"]
+
   marketing:
-    ports: !reset []
+    # Vercel's now, at azmoth.com and www.azmoth.com, statically prerendered from apps/marketing.
+    # It was always the odd one out here — no database, no session, no engine — and moving it off
+    # this box is what removed the second `next build` from the deploy.
+    #
+    # Its APP_URL/MARKETING_SITE_URL build arguments move to the Vercel project's environment.
+    profiles: !override ["disabled-on-azure"]
+
+  adminer:
+    # Behind the `debug` profile in the base file, which meant one `--profile debug` on the wrong
+    # box away from an unauthenticated front door to every table. The database is not here any more,
+    # so it has nothing to connect to either — and Neon has its own SQL editor behind a real login.
+    #
+    # `!override` REPLACES the profile list rather than appending to it, so `--profile debug` no
+    # longer reaches this service.
+    profiles: !override ["disabled-on-azure"]
 
 volumes:
   caddy-data:
-    # Named and explicit, like postgres-data, and for a stronger version of the same reason: this
-    # is not merely data that would be inconvenient to lose, it is data Let's Encrypt rate-limits
-    # the replacement of. `docker compose down` keeps it; only `down -v` removes it.
+    # Named and explicit, and now the only volume on the box holding anything irreplaceable: this is
+    # not merely data that would be inconvenient to lose, it is data Let's Encrypt rate-limits the
+    # replacement of. `docker compose down` keeps it; only `down -v` removes it.
     name: azmoth-caddy-data
   caddy-config:
     name: azmoth-caddy-config

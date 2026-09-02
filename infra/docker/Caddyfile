@@ -1,7 +1,7 @@
 # The only process on the box that listens on a public port.
 #
 # Caddy terminates TLS, gets its own certificates from Let's Encrypt over HTTP-01, renews them
-# unattended, and reverse-proxies to three containers that publish nothing to the host. Every
+# unattended, and reverse-proxies to two containers that publish nothing to the host. Every
 # hostname below must already resolve to this VM's public IP before the first start, because
 # HTTP-01 works by Let's Encrypt fetching a token over port 80 — a DNS record added afterwards
 # means the first issuance failed and Caddy is in a retry backoff.
@@ -9,11 +9,21 @@
 # Hostnames come from the environment, not from this file, so one config serves the pilot domain
 # and a staging one without an edit:
 #
-#     APP_DOMAIN=app.azmoth.com  API_DOMAIN=api.azmoth.com  MARKETING_DOMAIN=azmoth.com
-#     ACME_EMAIL=ops@azmoth.com
+#     APP_DOMAIN=app.azmoth.com  API_DOMAIN=api.azmoth.com  ACME_EMAIL=ops@azmoth.com
 #
 # Caddy substitutes {$VAR} when it loads the config. An unset variable becomes an empty string and
 # Caddy then refuses to start rather than serving an unnamed site, which is the failure you want.
+#
+# ── TWO hostnames, and azmoth.com is deliberately NOT one of them ─────────────────────────────
+# `azmoth.com` and `www.azmoth.com` are served by **Vercel** and have nothing to do with this box.
+# They used to be here, proxying a `marketing` container; that container is gone from this
+# deployment (see infra/docker/docker-compose.azure.yml).
+#
+# Do not add them back, and in particular **do not point their A records at this VM**. Caddy would
+# request a certificate for a name Vercel is already serving, Let's Encrypt would issue it, and the
+# public site would start answering from whichever of the two DNS resolution reached — which is a
+# marketing outage diagnosed as a TLS problem. The apex→www redirect that used to live here is now
+# Vercel's to make, because Vercel is the only thing that can see both names.
 #
 # ── Why api.* is an allowlist rather than a reverse proxy ─────────────────────────────────────
 # The engine authenticates nobody. `app/api/identity.py` and `app/api/tenancy.py` both say so at
@@ -160,20 +170,5 @@
 	}
 }
 
-# ── azmoth.com and www.azmoth.com — the public marketing site ─────────────────────────────────
-#
-# Holds no data, talks to nothing, has no session. It is in this file because it is the other thing
-# with a public hostname, not because it is part of the application.
-#
-# The apex redirects to www so there is one canonical origin — `MARKETING_SITE_URL` builds the
-# sitemap and every og:url from a single value, and two origins serving identical pages is what
-# splits them.
-{$MARKETING_DOMAIN} {
-	redir https://www.{$MARKETING_DOMAIN}{uri} permanent
-}
-
-www.{$MARKETING_DOMAIN} {
-	import hardening
-	encode zstd gzip
-	reverse_proxy marketing:3000
-}
+# There is no third site block, and that absence is the point — see the note at the top of this
+# file about azmoth.com being Vercel's.
