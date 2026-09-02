@@ -275,15 +275,38 @@ echo "    commit  $(git rev-parse --short HEAD)"
 # same thing. That equivalence is the whole reason a rollback is `--tag <older-sha>`.
 
 if [ -z "$GHCR_REGISTRY" ]; then
-  # Derive `ghcr.io/<owner>` from the origin remote, handling both SSH and HTTPS forms and an
-  # optional .git suffix. Lowercased because GHCR namespaces are case-sensitive and lowercase-only
-  # while a GitHub org name may be capitalised — `Azmoth-org` pushes to `azmoth-org`.
-  origin_url="$(git remote get-url origin 2>/dev/null || true)"
-  owner="$(printf '%s' "$origin_url" \
-    | sed -e 's#^git@[^:]*:##' -e 's#^https\?://[^/]*/##' -e 's#\.git$##' \
-    | cut -d/ -f1 | tr '[:upper:]' '[:lower:]')"
-  [ -n "$owner" ] || die "could not derive the GHCR namespace from the 'origin' remote.
-   Pass it:  --registry ghcr.io/your-org"
+  # ── Ask GitHub who owns this repository, not the git remote ─────────────────────────────────
+  # The remote URL is the obvious source and it is the wrong one. GitHub keeps redirecting the old
+  # URL after a repository is renamed or transferred, so `git remote get-url origin` can go on
+  # saying `github.com/old-org/old-name` indefinitely while pushes land somewhere else entirely —
+  # which is exactly the state this repository is in.
+  #
+  # That matters here and nowhere else in this script, because release-images.yml publishes to
+  # `ghcr.io/${{ github.repository_owner }}` — the CURRENT owner. Deriving the namespace from a
+  # stale remote would have this script look for images under a namespace nothing pushes to, and
+  # report "at least one image is not in the registry" for a commit whose workflow went green.
+  #
+  # `gh` follows the redirect. The remote is the fallback for a machine without it.
+  owner="$(gh repo view --json owner --jq .owner.login 2>/dev/null || true)"
+
+  if [ -z "$owner" ]; then
+    origin_url="$(git remote get-url origin 2>/dev/null || true)"
+    owner="$(printf '%s' "$origin_url" \
+      | sed -e 's#^git@[^:]*:##' -e 's#^https\?://[^/]*/##' -e 's#\.git$##' \
+      | cut -d/ -f1)"
+    [ -n "$owner" ] && warn "using the git remote's owner ('$owner') — gh is unavailable, so a
+   renamed or transferred repository would give the wrong registry namespace. If the manifest
+   check below says the images are missing for a commit whose workflow went green, that is why:
+   pass --registry ghcr.io/<current-owner>."
+  fi
+
+  # Lowercased because GHCR namespaces are lowercase-only while a GitHub org name may be
+  # capitalised — `Azmoth-org` publishes to `ghcr.io/azmoth-org`. release-images.yml applies the
+  # same lowercasing, and the two must agree.
+  owner="$(printf '%s' "$owner" | tr '[:upper:]' '[:lower:]')"
+
+  [ -n "$owner" ] || die "could not work out which GitHub account owns this repository.
+   Pass the namespace explicitly:  --registry ghcr.io/your-org"
   GHCR_REGISTRY="ghcr.io/$owner"
 fi
 
