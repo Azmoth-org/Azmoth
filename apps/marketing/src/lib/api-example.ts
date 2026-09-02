@@ -16,8 +16,21 @@
  * genuinely needed in the copy, it comes from `engine-facts.ts`.
  */
 
-/** The engine's host, as an integrator would set it. */
-const HOST = "https://api.azmoth.com";
+/**
+ * The engine's host, as a shell variable rather than a literal.
+ *
+ * It read `https://api.azmoth.com` and that host has **no DNS record** — see `lib/site.ts`, where
+ * two links to it were removed for the same reason. A literal is worse here than in a link,
+ * because this block has a copy button next to it: the reader most likely to use it is an
+ * integrator evaluating whether the API is real, and what they would get back is a name-resolution
+ * failure. That is the exact impression this section exists to prevent.
+ *
+ * A placeholder is also simply more correct for a snippet that already parameterises the key. An
+ * integrator is issued a base URL along with their credentials; the command shows the *shape* of
+ * the call, which is what it was ever able to show. When the host is live, either inline it again
+ * or keep the variable — but do not print a hostname that does not answer.
+ */
+const HOST = "$AZMOTH_API";
 
 export const CURL_EXAMPLE = `curl -X POST ${HOST}/api/v1/audit/single \\
      -H "X-API-Key: $AZMOTH_KEY" \\

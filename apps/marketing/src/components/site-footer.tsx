@@ -4,7 +4,7 @@ import { Separator } from "@workspace/ui/components/separator";
 import { Logo } from "@workspace/ui/components/logo";
 
 import { TransitionLink } from "@/components/transition-link";
-import { apiDocsUrl, getDocsUrl, routes, siteConfig } from "@/lib/site";
+import { getDocsUrl, routes, siteConfig } from "@/lib/site";
 
 /**
  * Four columns, and the fourth is the one German law cares about.
@@ -85,23 +85,25 @@ export function SiteFooter() {
                 </TransitionLink>
               </li>
               {/*
-                This row used to be a GitHub link. The repository is private, so it led
-                every visitor to a sign-in wall; the interactive API reference is the
-                thing an integrator actually wanted and is served to anyone.
+                This row used to be a GitHub link, and briefly two rows: the documentation and an
+                "API-Referenz" pointing at `api.azmoth.com/docs`. That host has no DNS record, so
+                the second row ended in a connection error — see `lib/site.ts`. One live link is
+                worth more than two of which one is broken.
+
+                `target="_blank"` because the documentation is a separate application on its own
+                origin: a reader who opens it is comparing it against this page, not leaving for
+                it. `rel="noopener noreferrer"` is not optional with a named target — `noopener`
+                denies the new document a handle on this one via `window.opener`, and `noreferrer`
+                keeps this site's URL out of its request headers.
               */}
               <li>
-                <a href={docsUrl} className={linkClass}>
-                  {tNav("dokumentation")}
-                </a>
-              </li>
-              <li>
                 <a
-                  href={apiDocsUrl}
+                  href={docsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={linkClass}
                 >
-                  {t("apiReferenz")}
+                  {tNav("dokumentation")}
                 </a>
               </li>
               <li>

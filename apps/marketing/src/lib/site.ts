@@ -99,20 +99,21 @@ export function getDocsUrl(): string {
   return process.env.NEXT_PUBLIC_DOCS_URL ?? "https://docs.azmoth.com";
 }
 
-/**
- * The machine-readable contract, and its interactive copy.
+/*
+ * `apiDocsUrl` and `apiSchemaUrl` used to be here — `https://api.azmoth.com/docs` and
+ * `/openapi.json`, linked from the header, the footer and the developer section.
  *
- * `docs.azmoth.com` is the orientation — what the API is, one runnable call, and the constraints
- * an integrator needs before they read anything else. The contract itself is the OpenAPI schema
- * the engine serves, which is by construction the one the running engine implements. Neither
- * this site nor the documentation site restates it, because two copies of one contract disagree
- * by the third release.
+ * They are gone because **`api.azmoth.com` has no DNS record.** Not a 404 on a live host: the
+ * name does not resolve, so every one of those links ended in a browser-level connection error.
+ * The reasoning that put them here was sound — `infra/docker/Caddyfile` does publish `/docs` and
+ * `/openapi.json`, and pointing at a public schema beats pointing at a private repository — but
+ * it described a deployment that does not exist yet.
  *
- * **Not GitHub.** The obvious link is `docs/api/PARTNER_API.md`, and it was the first thing here
- * — but the repository is private, so every visitor clicking it would get a sign-in wall on the
- * page whose whole argument is "the contract is public, go and read it". These two URLs are
- * served to anyone by `infra/docker/Caddyfile`, which publishes `/docs` and `/openapi.json` on
- * the API host precisely so an integrator can wire up a client without an account.
+ * Linking a host that does not resolve is worse than linking nothing at all, and on this site it
+ * is worse than usual: the section it sat in argues that the contract is public and checkable, so
+ * the one link a technical evaluator is most likely to click was also the one that proved the
+ * opposite. `docs.azmoth.com` is live and says what the API is; that is what the developer track
+ * points at now.
+ *
+ * Put them back when the host answers, not before.
  */
-export const apiDocsUrl = "https://api.azmoth.com/docs";
-export const apiSchemaUrl = "https://api.azmoth.com/openapi.json";

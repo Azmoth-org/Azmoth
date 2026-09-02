@@ -66,6 +66,23 @@ export function SmoothScroll() {
          * makes settling time proportional to distance. 0.1 is close to the stock feel; higher
          * reads as no smoothing at all, lower as syrup.
          */
+        /*
+         * **`autoRaf` is not optional here, and its default is a trap.**
+         *
+         * Lenis takes over the wheel — it calls `preventDefault` and advances an interpolated
+         * scroll position itself, one step per animation frame. `autoRaf` is what registers that
+         * frame loop. It defaults to `false`, on the reasonable assumption that an app with GSAP
+         * or a scroll library of its own already has a ticker to drive `lenis.raf(time)` from.
+         *
+         * This one does not. Without either, Lenis still intercepts every wheel event and still
+         * suppresses the browser's own scrolling, but nothing ever moves the page: the site is
+         * frozen, with no error in the console, and it looks exactly like a hang. Dropping this
+         * line while reorganising the config is what shipped that.
+         *
+         * It is also invisible to programmatic testing — `window.scrollTo` still works, because
+         * that path does not go through the wheel handler. Only a real wheel event shows it.
+         */
+        autoRaf: true,
         lerp: 0.1,
         smoothWheel: true,
         /*

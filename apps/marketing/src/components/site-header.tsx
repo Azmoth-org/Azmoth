@@ -54,19 +54,30 @@ export function SiteHeader({
   login,
   demo,
   docs,
-  apiDocs,
 }: {
   login: string;
   demo: string;
   /** `docs.azmoth.com` — the orientation material, its own Next application. */
   docs: string;
-  /** `api.azmoth.com/docs` — the interactive schema the running engine serves. */
-  apiDocs: string;
 }) {
   const t = useTranslations("navigation");
   const [open, setOpen] = useState(false);
 
   const close = () => setOpen(false);
+
+  /**
+   * Every link to the documentation carries these, so none of them can carry half.
+   *
+   * It opens in a new tab because it is a reference rather than a destination — a reader comparing
+   * the API against the claim on this page should not lose the page. `noopener` denies the new
+   * document a `window.opener` handle back into this one; `noreferrer` keeps this site's URL out
+   * of its request headers. `target` without `rel` is the reverse-tabnabbing footgun.
+   */
+  const docsLinkProps = {
+    href: docs,
+    target: "_blank",
+    rel: "noopener noreferrer",
+  } as const;
 
   /*
    * The mobile list is flat and complete where the desktop one is grouped. A phone has no hover,
@@ -131,32 +142,38 @@ export function SiteHeader({
     },
     {
       name: t("entwickler"),
-      link: docs,
-      /* No `render`: the default plain `<a href>` is exactly right for another origin. */
+      /*
+        The trigger points at this page's own developer section, not straight off-site.
+        It used to be `docs`, with a dropdown holding the documentation and an "API-Referenz"
+        pointing at `api.azmoth.com` — a host with no DNS record. Removing the dead entry left a
+        one-item dropdown whose only row went where its own trigger already went, which is a menu
+        that exists to be redundant. Anchoring the trigger on `#api` gives the group something to
+        be: the argument on this page, and the documentation that follows it.
+      */
+      link: "/#api",
+      render: ({ className, children }) => (
+        <Link href="/#api" className={className}>
+          {children}
+        </Link>
+      ),
       dropdown: (
         <div className="flex w-72 flex-col">
+          <NavDropdownItem
+            title={t("integration")}
+            description={t("beschreibung.integration")}
+            icon={<TerminalIcon className="size-4" aria-hidden="true" />}
+            render={(children, className) => (
+              <Link href="/#api" className={className}>
+                {children}
+              </Link>
+            )}
+          />
           <NavDropdownItem
             title={t("dokumentation")}
             description={t("beschreibung.dokumentation")}
             icon={<BookOpenIcon className="size-4" aria-hidden="true" />}
             render={(children, className) => (
-              <a href={docs} className={className}>
-                {children}
-              </a>
-            )}
-          />
-          <NavDropdownItem
-            title={t("apiReferenz")}
-            description={t("beschreibung.apiReferenz")}
-            icon={<TerminalIcon className="size-4" aria-hidden="true" />}
-            render={(children, className) => (
-              // `noreferrer` alongside `noopener`: another origin has no need for this one's referrer.
-              <a
-                href={apiDocs}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={className}
-              >
+              <a {...docsLinkProps} className={className}>
                 {children}
               </a>
             )}
@@ -242,7 +259,7 @@ export function SiteHeader({
               </TransitionLink>
             ))}
             <a
-              href={docs}
+              {...docsLinkProps}
               onClick={close}
               className="rounded-lg px-3 py-2.5 text-sm text-azm-ink-secondary transition-colors hover:bg-azm-ink/5 hover:text-azm-ink"
             >

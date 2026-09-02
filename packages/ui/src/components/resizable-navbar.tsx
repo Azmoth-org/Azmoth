@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -233,40 +233,71 @@ export function NavItems({
   const [hovered, setHovered] = useState<number | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
+  /**
+   * A pending "focus left the group" close, so an arriving open can cancel it.
+   *
+   * Closing on focus-out has to be deferred — at the moment `focusout` fires, focus has left the
+   * old element and not yet reached the new one, so there is nothing truthful to test. Deferring
+   * it introduces the opposite problem: when the visitor tabs from one dropdown trigger straight
+   * to the next, the deferred close lands *after* the new item's open and silently undoes it.
+   *
+   * The symptom was precise and looked like nonsense — the menu opened on every *other* trigger.
+   * Tab to "Funktionen" and it opened; tab to "Entwickler" and nothing; tab to "Unternehmen" and it
+   * opened again. Each close was cancelling the open that had already happened, leaving the next
+   * one unopposed.
+   *
+   * A timer the open can cancel is the standard shape for this, and the ordering it encodes is the
+   * real intent: an item claiming focus always beats a queued departure, because the departure was
+   * only ever provisional.
+   */
+  const closeTimer = useRef<number | undefined>(undefined);
+
+  const openDropdown = (index: number, item: NavItem) => {
+    if (closeTimer.current !== undefined) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = undefined;
+    }
+    setHovered(index);
+    setOpenMenu(item.dropdown ? item.name : null);
+  };
+
+  const closeAll = () => {
+    if (closeTimer.current !== undefined) window.clearTimeout(closeTimer.current);
+    closeTimer.current = undefined;
+    setHovered(null);
+    setOpenMenu(null);
+  };
+
+  /* A stray timer outliving the component would call setState after unmount. */
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
   return (
     <nav
-      onMouseLeave={() => {
-        setHovered(null);
-        setOpenMenu(null);
-      }}
+      onMouseLeave={closeAll}
       /*
-       * Close on focus leaving the group — but decide that a tick later, against
-       * `document.activeElement`, rather than immediately against the event's `relatedTarget`.
+       * Focus leaving the group closes it — decided a tick later, against `document.activeElement`
+       * rather than against the event's `relatedTarget`.
        *
-       * The obvious version reads `relatedTarget` and closes when it is outside the nav. It is
-       * wrong twice. `relatedTarget` is null whenever focus moves programmatically or to a
-       * non-focusable target, which reads as "focus left" and closes a menu the visitor is still
-       * in; and the close and the neighbouring item's open land in the same React batch, where
-       * their order is not the DOM's. Tabbing from one dropdown trigger to the next therefore
-       * closed the menu instead of sliding it across — reliably in one engine, intermittently in
-       * another, which is the worst kind of both.
+       * `relatedTarget` is null whenever focus moves programmatically or to a non-focusable
+       * target, which reads as "focus left" and would close a menu the visitor is still inside.
+       * Asking who actually holds focus once the browser has finished moving it answers the
+       * question being asked rather than a proxy for it.
        *
-       * Asking who actually holds focus after the browser has finished moving it has neither
-       * problem, and answers the question being asked rather than a proxy for it.
+       * The deferral is why `closeTimer` exists: see it above for the alternating-menu bug that
+       * comes from letting this land after a neighbouring item has already opened.
        */
       onBlur={(event) => {
         const group = event.currentTarget;
-        window.setTimeout(() => {
-          if (!group.contains(document.activeElement)) setOpenMenu(null);
+        if (closeTimer.current !== undefined) window.clearTimeout(closeTimer.current);
+        closeTimer.current = window.setTimeout(() => {
+          closeTimer.current = undefined;
+          if (!group.contains(document.activeElement)) closeAll();
         }, 0);
       }}
       className={cn("flex flex-1 items-center justify-center gap-1", className)}
     >
       {items.map((item, index) => {
-        const open = () => {
-          setHovered(index);
-          setOpenMenu(item.dropdown ? item.name : null);
-        };
+        const open = () => openDropdown(index, item);
 
         const label = (
           <>

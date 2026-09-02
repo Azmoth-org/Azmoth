@@ -2,7 +2,7 @@ import { PageTransitionOverlay } from "@/components/page-transition-overlay";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { SmoothScroll } from "@/components/smooth-scroll";
-import { apiDocsUrl, getDocsUrl, getProductLinks } from "@/lib/site";
+import { getDocsUrl, getProductLinks } from "@/lib/site";
 
 /**
  * The chrome around every marketing page.
@@ -34,7 +34,6 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         login={productLinks.login}
         demo={productLinks.demo}
         docs={docsUrl}
-        apiDocs={apiDocsUrl}
       />
 
       {/*
