@@ -38,7 +38,7 @@ import { TrustBadges } from "@/components/trust-badges";
 import { CURL_EXAMPLE } from "@/lib/api-example";
 import { engineFacts } from "@/lib/engine-facts";
 import { buildPageMetadata } from "@/lib/seo";
-import { apiDocsUrl, getDocsUrl, getProductLinks, routes, siteConfig } from "@/lib/site";
+import { getDocsUrl, getProductLinks, routes, siteConfig } from "@/lib/site";
 
 /*
  * Icons live beside the copy they illustrate only by index — the strings themselves are
@@ -604,10 +604,14 @@ function Audiences() {
    * qualification.
    */
   const destinations = [
-    { href: links.signup, external: true },
-    // The vendor's card now leaves this origin: the API documentation is `apps/docs`.
-    { href: getDocsUrl(), external: true },
-    { href: links.demo, external: true },
+    { href: links.signup, external: true, newTab: false },
+    /*
+      The vendor's card leaves this origin: the documentation is `apps/docs`. It is the one of the
+      three that opens in a new tab, because it is the only one that is *reading* rather than
+      *doing* — the other two hand the visitor to the product and are done with this page.
+    */
+    { href: getDocsUrl(), external: true, newTab: true },
+    { href: links.demo, external: true, newTab: false },
   ] as const;
 
   return (
@@ -634,6 +638,7 @@ function Audiences() {
                   <p className="flex-1">{card.text}</p>
                   <ButtonLink
                     external={destination.external}
+                    newTab={destination.newTab}
                     href={destination.href}
                     variant="outline"
                     size="sm"
@@ -734,23 +739,26 @@ function ApiTeaser() {
             {t("titel")}
           </h2>
           <p className="mt-4 leading-relaxed text-white/75">{t("text")}</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href={getDocsUrl()} external size="lg" variant="secondary">
+          {/*
+            One call to action, not two.
+
+            The second was "Interaktive Referenz" pointing at `api.azmoth.com/docs`, and that host
+            does not resolve — see `lib/site.ts`. On the section whose argument is that the
+            contract is public and checkable, the link a technical evaluator is most likely to
+            click was the one that failed to connect. A single working link makes the point; a
+            broken one beside it unmakes it.
+          */}
+          <div className="mt-8">
+            <ButtonLink
+              href={getDocsUrl()}
+              external
+              newTab
+              size="lg"
+              variant="secondary"
+            >
               {t("cta")}
               <ArrowRightIcon data-icon="inline-end" />
             </ButtonLink>
-            {/*
-              `rel="noreferrer"` alongside `noopener`: the destination is a different
-              origin, and there is no reason to hand it this site's referrer.
-            */}
-            <a
-              href={apiDocsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-10 items-center justify-center rounded-full border border-white/25 px-4 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-white/10"
-            >
-              {t("ctaSekundaer")}
-            </a>
           </div>
         </Reveal>
 

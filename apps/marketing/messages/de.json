@@ -18,18 +18,18 @@
     "ablauf": "So funktioniert es",
     "entwickler": "Entwickler",
     "unternehmen": "Unternehmen",
-    "apiReferenz": "API-Referenz",
     "buckets": "Drei-Kategorien-Modell",
     "beschreibung": {
       "funktionen": "Kodierung, Prüfung und Nachvollziehbarkeit im Überblick.",
       "buckets": "Warum jede Position in genau einer von drei Kategorien landet.",
       "ablauf": "Von der PADnext-Lieferung zum begründeten Prüfbericht.",
       "dokumentation": "Einstieg, Authentifizierung und ein lauffähiger Aufruf.",
-      "apiReferenz": "Das OpenAPI-Schema der laufenden Engine — ohne Konto.",
       "ueberUns": "Warum ein Regelwerk und kein Sprachmodell.",
       "faq": "Antworten zu Regelwerk, Freigabe und Datenhaltung.",
-      "kontakt": "Fragen zur Einführung? Es antwortet ein Mensch."
-    }
+      "kontakt": "Fragen zur Einführung? Es antwortet ein Mensch.",
+      "integration": "REST-API, OpenAPI-Schema und Sandbox — der Weg in Ihre PVS-Software."
+    },
+    "integration": "Integration & API"
   },
   "footer": {
     "claim": "Deterministische GOÄ-Prüfung mit einer Begründung, die einer Rückfrage standhält. Keine Blackbox-KI, keine geschätzten Risikosummen.",
@@ -41,8 +41,7 @@
     "kontaktLabel": "Kontakt",
     "rechte": "Alle Rechte vorbehalten.",
     "hinweis": "Azmoth ersetzt keine ärztliche oder rechtliche Beratung.",
-    "madeInGermany": "Made in Germany",
-    "apiReferenz": "API-Referenz"
+    "madeInGermany": "Made in Germany"
   },
   "startseite": {
     "hero": {

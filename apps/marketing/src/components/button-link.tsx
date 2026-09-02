@@ -29,16 +29,38 @@ import { TransitionLink } from "@/components/transition-link";
 export function ButtonLink({
   href,
   external = false,
+  newTab = false,
   children,
   ...props
 }: Omit<React.ComponentProps<typeof Button>, "render"> & {
   href: string;
   external?: boolean;
+  /**
+   * Open in a new tab, with the security attributes that have to travel with it.
+   *
+   * A separate flag from `external` rather than implied by it, because the two outbound
+   * destinations want opposite behaviour. The product app is a *handoff* — somebody clicking
+   * "Anmelden" is done with the brochure, and stranding them with two tabs is clutter. The
+   * documentation is a *reference* — they are reading it against this page, and taking the page
+   * away from them loses their place in the argument.
+   *
+   * `rel` is not optional here. `noopener` denies the new document a `window.opener` handle back
+   * into this one, and `noreferrer` keeps this site's URL out of its request headers. Setting
+   * `target` without them is the reverse-tabnabbing footgun, and the point of centralising this
+   * on the component is that a call site cannot remember only half of it.
+   */
+  newTab?: boolean;
 }) {
+  const anchor = newTab ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" />
+  ) : (
+    <a href={href} />
+  );
+
   return (
     <Button
       nativeButton={false}
-      render={external ? <a href={href} /> : <TransitionLink href={href} />}
+      render={external ? anchor : <TransitionLink href={href} />}
       {...props}
     >
       {children}
