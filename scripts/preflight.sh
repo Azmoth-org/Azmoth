@@ -19,15 +19,18 @@ HOST=""
 DOMAIN="${DOMAIN:-azmoth.com}"
 SSH_USER="${SSH_USER:-azmoth}"
 REMOTE_ROOT=/opt/azmoth
-RUN_RESTORE_TEST=true
+RUN_DB_TEST=true
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --domain)            DOMAIN="$2"; shift 2 ;;
     --user)              SSH_USER="$2"; shift 2 ;;
-    --skip-restore-test) RUN_RESTORE_TEST=false; shift ;;
+    # `--skip-restore-test` is kept as an alias. It named a check that no longer exists — the
+    # local-Postgres restore test — and anyone with it in a shell history or a CI job should get the
+    # new behaviour rather than "unknown option".
+    --skip-db-test|--skip-restore-test) RUN_DB_TEST=false; shift ;;
     -h|--help)
-      echo "usage: ./scripts/preflight.sh <host> [--domain d] [--user u] [--skip-restore-test]"
+      echo "usage: ./scripts/preflight.sh <host> [--domain d] [--user u] [--skip-db-test]"
       exit 0 ;;
     *) HOST="$1"; shift ;;
   esac
@@ -78,14 +81,23 @@ done
 
 # The requirement, stated directly. 8000 is the engine, which authenticates nobody — see
 # apps/engine/app/api/tenancy.py. An open 8000 means anyone can POST a proposal as any practice.
+#
+# 5432, 3001 and 8080 are still checked even though nothing on this box could open them any more —
+# the database is Neon's, the marketing site is Vercel's, and adminer is profiled out of the azure
+# override. A check for a port that cannot be open is nearly free and catches the case this list
+# exists for: somebody adding a service back.
 for p in 8000 5432 3000 3001 8080; do
-  label=$(case $p in 8000) echo "engine";; 5432) echo "postgres";; 3000) echo "web";;
-                     3001) echo "marketing";; 8080) echo "adminer";; esac)
+  label=$(case $p in 8000) echo "engine";; 5432) echo "postgres — external, nothing local";;
+                     3000) echo "web";; 3001) echo "marketing — on Vercel, not here";;
+                     8080) echo "adminer — profiled out";; esac)
   if port_open "$HOST" "$p"; then
     bad "[SEC] port $p ($label) is OPEN and must not be"
     if [ "$p" = 8000 ]; then
       note "This is the whole reason the engine sits behind the web tier. Anyone reaching it can"
       note "forge X-Organization-ID and read or write any practice's records."
+    fi
+    if [ "$p" = 5432 ]; then
+      note "There is no Postgres on this box. Something else is listening on 5432 — find out what."
     fi
     note "Fix: confirm the deploy used docker-compose.azure.yml (it unpublishes these), then"
     note "     ssh $SSH_TARGET '$COMPOSE_CMD ps' — nothing but caddy may list a published port."
@@ -133,13 +145,51 @@ check_cert() {
   fi
 }
 
-for n in "$APP_HOST" "$API_HOST" "$DOMAIN" "www.$DOMAIN"; do check_cert "$n"; done
+# TWO names, not four. `azmoth.com` and `www.azmoth.com` are Vercel's — see the check in § 2b,
+# which asserts the opposite of what this loop asserts about them.
+for n in "$APP_HOST" "$API_HOST"; do check_cert "$n"; done
 
 code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "http://$APP_HOST/" 2>/dev/null || echo 000)"
 if [ "$code" = "308" ] || [ "$code" = "301" ] || [ "$code" = "302" ]; then
   ok "http://$APP_HOST redirects to HTTPS ($code)"
 else
   bad "http://$APP_HOST answered $code, expected a redirect to HTTPS"
+fi
+
+# ── 2b. The marketing site is somewhere else, and stays there [SEC] ───────────────────────────
+#
+# This replaces the old `https://www.$DOMAIN/ → 200 (marketing)` check, which had quietly become a
+# FALSE GREEN: with the site on Vercel it passes whatever this VM is doing, so it reported the
+# deployment healthy on the strength of a service the deployment has nothing to do with.
+#
+# Inverted, the same two requests are worth something. What can actually go wrong now is somebody
+# pointing the apex or www A record at this VM — following, say, an old runbook. That takes the
+# public site down AND makes Caddy request a certificate for a name Vercel already holds.
+
+section "2b. azmoth.com is still served by Vercel, not by this VM [SEC]"
+
+for n in "$DOMAIN" "www.$DOMAIN"; do
+  resolved="$(dig +short "$n" A 2>/dev/null | tail -1)"
+  if [ -z "$resolved" ]; then
+    skipped "$n does not resolve to an A record (a CNAME to Vercel is normal — check by hand)"
+  elif [ "$resolved" = "$HOST" ]; then
+    bad "[SEC] $n resolves to THIS VM ($HOST). It must point at Vercel."
+    note "This box has no marketing container and its Caddyfile has no site block for that name,"
+    note "so the public site is down. Move the record back to Vercel. Do not 'fix' it by adding a"
+    note "site block here — see the header of infra/docker/Caddyfile."
+  else
+    ok "$n → $resolved (not this VM)"
+  fi
+done
+
+# And it should still be up, wherever it is. A 200 here is not a statement about the VM, which is
+# why it is in its own section and not in § 4.
+code="$(status_of "https://www.$DOMAIN/")"
+if [ "$code" = "200" ]; then
+  ok "https://www.$DOMAIN/ → 200 (served by Vercel)"
+else
+  bad "https://www.$DOMAIN/ → $code — the public site is not answering"
+  note "This is a Vercel problem, not a VM problem. Check the Vercel dashboard, not the VM."
 fi
 
 # ── 3. The api. allowlist ─────────────────────────────────────────────────────────────────────
@@ -214,10 +264,6 @@ else
   bad "[SEC] a cookie was set WITHOUT Secure — it would be sent over plain HTTP"
 fi
 
-code="$(status_of "https://www.$DOMAIN/")"
-[ "$code" = "200" ] && ok "https://www.$DOMAIN/ → 200 (marketing)" \
-                    || bad "https://www.$DOMAIN/ → $code, expected 200"
-
 # ── 5. On the box ─────────────────────────────────────────────────────────────────────────────
 
 section "5. On the box"
@@ -227,7 +273,11 @@ if ! ssh "${SSH_OPTS[@]}" "$SSH_TARGET" true 2>/dev/null; then
 else
   containers="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$COMPOSE_CMD ps --format json" 2>/dev/null)"
 
-  for svc in caddy web engine postgres marketing; do
+  # THREE long-running services, and that is the whole list. `postgres` and `marketing` used to be
+  # here; both are profiled out of docker-compose.azure.yml because the database is Neon's and the
+  # public site is Vercel's. `engine-migrate` and `web-auth-migrate` are one-shots that exit 0 and
+  # have no health status — they are checked by § 6 instead, by their effect on the schema.
+  for svc in caddy web engine; do
     state="$(echo "$containers" | jq -r "select(.Service==\"$svc\") | .State" 2>/dev/null | head -1)"
     health="$(echo "$containers" | jq -r "select(.Service==\"$svc\") | .Health" 2>/dev/null | head -1)"
     if [ "$state" = "running" ] && { [ "$health" = "healthy" ] || [ -z "$health" ]; }; then
@@ -238,12 +288,14 @@ else
     fi
   done
 
-  # The same check `make verify-db` runs: the engine must be on Postgres, not on the SQLite default.
-  if ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$COMPOSE_CMD exec -T engine python -c \
-     'from app.config import get_settings; assert get_settings().database_is_durable'" 2>/dev/null; then
-    ok "the engine is on a durable Postgres database"
+  # Nothing local should be listed at all beyond those three plus the exited one-shots. A `postgres`
+  # container here means the deploy resolved the base file without the azure override.
+  if echo "$containers" | jq -r '.Service' 2>/dev/null | grep -qx 'postgres'; then
+    bad "[SEC] a 'postgres' container is running on this box"
+    note "The azure override profiles it out, so the deploy did not use both -f flags. That means"
+    note "the engine's port 8000 is probably published too — check § 1 above first."
   else
-    bad "the engine is NOT on Postgres — approvals would not survive a redeploy"
+    ok "no local postgres container (the database is Neon's)"
   fi
 
   # [SEC] Who may create an account, read out of the RUNNING container rather than out of the .env
@@ -274,16 +326,26 @@ else
     note "Or redeploy: ./scripts/deploy.sh $HOST --signup-allowlist \"you@$DOMAIN\""
   fi
 
-  migration="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$COMPOSE_CMD exec -T engine alembic current" 2>/dev/null | tail -1)"
-  [ -n "$migration" ] && ok "alembic current: $migration" || bad "alembic current returned nothing"
-
-  # Swap. Without it a later rebuild on this 4 GiB box is OOM-killed at exit 137 with no message.
+  # Swap. Nothing is built on this box any more, so this is runtime headroom rather than a build
+  # crutch — a Soufflé solve that spikes on a 2 GiB machine must page rather than have the OOM
+  # killer take the web container out from under somebody's approval.
   swap="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "free -m | awk '/Swap:/ {print \$2}'" 2>/dev/null)"
   if [ "${swap:-0}" -ge 2000 ]; then
-    ok "${swap} MiB of swap present (the build needs it)"
+    ok "${swap} MiB of swap present (headroom for a solver spike on 2 GiB)"
   else
-    bad "only ${swap:-0} MiB of swap — the next 'next build' will likely be OOM-killed"
+    bad "only ${swap:-0} MiB of swap — an OOM kill would take out a running container"
     note "Re-run infra/azure/provision.sh, which configures a 4 GiB swapfile."
+  fi
+
+  # Memory in use. Meaningful now in a way it was not on a 4 GiB build box: if this is already near
+  # the limit at rest, the next solve is the one that pages.
+  memfree="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "free -m | awk '/Mem:/ {print \$7}'" 2>/dev/null)"
+  if [ "${memfree:-0}" -ge 300 ]; then
+    ok "${memfree} MiB memory available at rest"
+  else
+    bad "only ${memfree:-0} MiB available — this VM is too small for the running stack"
+    note "Take the next rung of the VM_SIZE ladder in infra/azure/provision.sh's header:"
+    note "  VM_SIZE=Standard_B2als_v2 ./infra/azure/provision.sh   (4 GiB, ~3.1 months of credit)"
   fi
 
   disk="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "df -h / | awk 'NR==2 {print \$5}'" 2>/dev/null | tr -d '%')"
@@ -295,71 +357,147 @@ else
   fi
 fi
 
-# ── 6. Backup and restore ─────────────────────────────────────────────────────────────────────
+# ── 6. Neon: reachable, on the right endpoints, and migrated ──────────────────────────────────
+#
+# This replaces the local-Postgres restore test, which cannot run here: it built a scratch database
+# with `docker compose exec postgres psql`, and there is no postgres container. It also could not be
+# ported — creating a throwaway database inside the Neon project on every preflight would burn the
+# Free plan's compute allowance and, on a metered plan, cost money to prove something Neon's own
+# instant-restore already covers.
+#
+# What matters instead is that the three things the split-endpoint design depends on are actually
+# true in the RUNNING containers:
+#
+#   1. the engine reaches Neon at all, and on Postgres rather than the SQLite default
+#   2. the engine is on the DIRECT endpoint and `web` is on the POOLED one — not the reverse, and
+#      not both on one, because the failure that swap produces is intermittent and load-dependent
+#   3. `alembic current` equals `alembic heads` — the schema is at the newest revision the deployed
+#      image carries, not merely at *some* revision
+#
+# (3) is the one the old check could not make. `alembic current` printing a revision proved a
+# migration had run at some point; it did not prove the container was not running an older image
+# against a newer database, or a newer image against a database the migration step failed to
+# advance. A missing column at runtime looks like an application bug for about an hour.
+#
+# Verifying an actual RESTORE is now § 7's manual step and OPERATIONS.md § 7.7, because it needs the
+# age private key, which is deliberately not on this VM or in CI.
 
-section "6. Backups actually restore"
+section "6. The Neon database [SEC for the endpoint split]"
 
-if [ "$RUN_RESTORE_TEST" != "true" ]; then
-  skipped "restore test (--skip-restore-test)"
+if [ "$RUN_DB_TEST" != "true" ]; then
+  skipped "database checks (--skip-db-test)"
 elif ! ssh "${SSH_OPTS[@]}" "$SSH_TARGET" true 2>/dev/null; then
-  skipped "restore test — no SSH"
+  skipped "database checks — no SSH"
 else
-  # Take a real backup. The script verifies its own dump with `pg_restore --list` and fails if the
-  # archive is unreadable, so a pass here means a file that can actually be opened.
-  if ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
-     "cd $REMOTE_ROOT/repo && sudo COMPOSE_PROJECT_NAME=azmoth BACKUP_DIR=$REMOTE_ROOT/backups \
-      COMPOSE_FILE=infra/docker/docker-compose.yml ./infra/scripts/backup-db.sh" >/dev/null 2>&1; then
-    ok "make backup-db produced a verified dump"
+  # One round trip, reported as parseable lines. `python -c` inside the engine container rather than
+  # psql on the host: this reads the settings the PROCESS resolved, which is the only version of
+  # "which database is it on" that matters. A value edited into .env after the last `up -d` is not
+  # in the process's environment.
+  db_out="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$COMPOSE_CMD exec -T engine python -c \"
+import asyncio, urllib.parse
+from app.config import get_settings
+s = get_settings()
+print('BACKEND', s.database_backend)
+print('DURABLE', s.database_is_durable)
+print('APPENV', s.app_env.value if hasattr(s.app_env, 'value') else s.app_env)
+host = urllib.parse.urlsplit(s.database_url.replace('+asyncpg', '')).hostname or ''
+print('HOST', host)
+print('POOLED', '-pooler.' in host)
+from sqlalchemy import text
+from app.db.session import build_engine
+async def probe():
+    eng = build_engine(s)
+    try:
+        async with eng.connect() as c:
+            print('SELECT1', (await c.execute(text('select 1'))).scalar_one())
+            print('SERVERVER', (await c.execute(text('show server_version'))).scalar_one())
+    finally:
+        await eng.dispose()
+asyncio.run(probe())
+\"" 2>&1)"
+
+  if echo "$db_out" | grep -q '^SELECT1 1$'; then
+    ok "the engine can query Neon (select 1 round-tripped)"
+    note "server_version $(echo "$db_out" | awk '/^SERVERVER/ {print $2}')"
   else
-    bad "the backup script failed"
-    note "ssh $SSH_TARGET 'cd $REMOTE_ROOT/repo && sudo BACKUP_DIR=$REMOTE_ROOT/backups ./infra/scripts/backup-db.sh'"
+    bad "the engine could NOT query the database"
+    note "This is the check that fails when Neon's compute is suspended and the resume timed out,"
+    note "when the connection string is wrong, or when the Free plan's compute allowance is spent"
+    note "(which drops existing connections and refuses new ones until the next billing period)."
+    echo "$db_out" | tail -12 | sed 's/^/        /'
   fi
 
-  # Restore it into a scratch database and compare row counts. This is the check that distinguishes
-  # "a file exists" from "a backup". It never touches the live database — the restore target is a
-  # database created and dropped inside this block.
-  echo "      restoring the newest dump into a scratch database..."
-  # The heredoc is deliberately UNquoted: $REMOTE_ROOT is a local variable and has to be expanded
-  # here, on the client. Everything meant to run on the server is escaped as \$ — check that before
-  # editing this block, because an unescaped $ silently becomes an empty string on the far side.
-  # shellcheck disable=SC2087
-  restore_out="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "bash -s" <<RESTORE 2>&1
-set -uo pipefail
-cd $REMOTE_ROOT/repo
-C="sudo COMPOSE_PROJECT_NAME=azmoth docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.azure.yml exec -T postgres"
-DUMP=\$(ls -t $REMOTE_ROOT/backups/*.dump 2>/dev/null | head -1)
-[ -n "\$DUMP" ] || { echo "NO_DUMP"; exit 1; }
-
-\$C psql -U azmoth -d postgres -q \
-  -c "DROP DATABASE IF EXISTS azmoth_restore_test;" \
-  -c "CREATE DATABASE azmoth_restore_test;" >/dev/null 2>&1
-\$C pg_restore -U azmoth -d azmoth_restore_test --no-owner --exit-on-error < "\$DUMP" >/dev/null 2>&1 \
-  || { echo "RESTORE_FAILED"; \$C psql -U azmoth -d postgres -q -c "DROP DATABASE IF EXISTS azmoth_restore_test;" >/dev/null 2>&1; exit 1; }
-
-mismatch=0
-for t in proposals audit_events batch_jobs api_keys; do
-  live=\$(\$C psql -U azmoth -d azmoth              -tAc "SELECT count(*) FROM \$t" 2>/dev/null | tr -d '[:space:]')
-  rest=\$(\$C psql -U azmoth -d azmoth_restore_test -tAc "SELECT count(*) FROM \$t" 2>/dev/null | tr -d '[:space:]')
-  echo "ROW \$t \${live:-?} \${rest:-?}"
-  [ "\$live" = "\$rest" ] || mismatch=1
-done
-\$C psql -U azmoth -d postgres -q -c "DROP DATABASE azmoth_restore_test;" >/dev/null 2>&1
-[ \$mismatch -eq 0 ] && echo "MATCH" || echo "MISMATCH"
-RESTORE
-)"
-
-  if echo "$restore_out" | grep -q "NO_DUMP"; then
-    bad "no dump to restore"
-  elif echo "$restore_out" | grep -q "RESTORE_FAILED"; then
-    bad "pg_restore FAILED — this backup would not have saved you"
-  elif echo "$restore_out" | grep -q "^MATCH$"; then
-    echo "$restore_out" | awk '/^ROW/ {printf "      %-14s live=%-6s restored=%-6s\n", $2, $3, $4}'
-    ok "restored into a scratch database; every row count matched"
+  if echo "$db_out" | grep -q '^DURABLE True$'; then
+    ok "the engine is on a durable Postgres database ($(echo "$db_out" | awk '/^BACKEND/ {print $2}'))"
   else
-    echo "$restore_out" | awk '/^ROW/ {printf "      %-14s live=%-6s restored=%-6s\n", $2, $3, $4}'
-    bad "row counts did not match after restore"
+    bad "the engine is NOT on Postgres — approvals would not be durable"
+  fi
+
+  # [SEC] The endpoint split. See the long note in docker-compose.azure.yml on the engine service:
+  # SQLAlchemy+asyncpg cannot be made safe behind a transaction-mode pooler without a Python change,
+  # so the engine on `-pooler` is a latent intermittent DuplicatePreparedStatementError, not a
+  # working configuration that happens to be slower.
+  if echo "$db_out" | grep -q '^POOLED False$'; then
+    ok "[SEC] the engine is on Neon's DIRECT endpoint ($(echo "$db_out" | awk '/^HOST/ {print $2}'))"
+  elif echo "$db_out" | grep -q '^POOLED True$'; then
+    bad "[SEC] the engine is on Neon's POOLED endpoint — swap DATABASE_URL and DATABASE_URL_POOLED"
+    note "asyncpg mints named prepared statements that a transaction-mode pooler mishandles. The"
+    note "symptom is intermittent DuplicatePreparedStatementError under concurrency, not a clean"
+    note "failure now. DATABASE_URL must be the direct string; the pooled one is DATABASE_URL_POOLED."
+  else
+    bad "could not determine which Neon endpoint the engine is using"
+  fi
+
+  # The other half of the split: Better Auth SHOULD be pooled. A warning rather than a failure —
+  # node-postgres on the direct endpoint is correct, just chattier.
+  auth_url="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$COMPOSE_CMD exec -T web printenv AUTH_DATABASE_URL" 2>/dev/null | tr -d '\r')"
+  case "$auth_url" in
+    *-pooler.*) ok "the web tier is on Neon's POOLED endpoint (correct for Better Auth)" ;;
+    "")         bad "AUTH_DATABASE_URL is unset in the running web container — sign-in cannot work" ;;
+    *)          skipped "the web tier is on the direct endpoint, not the pooler"
+                note "Correct but chattier: every route handler opens its own connection. Set"
+                note "DATABASE_URL_POOLED in $REMOTE_ROOT/shared/.env and 'up -d web'." ;;
+  esac
+
+  # The migration-version check the old restore test could not make.
+  mig_out="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$COMPOSE_CMD exec -T engine sh -c 'alembic current 2>/dev/null; echo ---; alembic heads 2>/dev/null'" 2>/dev/null)"
+  # `alembic current` prints "<rev> (head)" when it is at head, and just "<rev>" when it is behind.
+  # Comparing the bare revision ids against `heads` is what catches "behind", so the suffix and any
+  # branch labels are stripped from both sides before the comparison.
+  cur_rev="$(echo "$mig_out"  | sed -n '1,/^---$/p' | grep -oE '^[0-9a-z_]+' | sort -u | tr '\n' ' ' | xargs || true)"
+  head_rev="$(echo "$mig_out" | sed -n '/^---$/,$p'  | grep -oE '^[0-9a-z_]+' | sort -u | tr '\n' ' ' | xargs || true)"
+
+  if [ -z "$cur_rev" ]; then
+    bad "alembic current returned nothing — the schema may never have been migrated"
+    note "ssh $SSH_TARGET '$COMPOSE_CMD run --rm engine-migrate'"
+  elif [ "$cur_rev" = "$head_rev" ]; then
+    ok "schema is at head ($cur_rev)"
+  else
+    bad "schema is at '$cur_rev' but this image's head is '$head_rev'"
+    note "The engine is querying a database the migration step did not advance. A missing column"
+    note "at runtime looks like an application bug for about an hour. Re-run the migration:"
+    note "  ssh $SSH_TARGET '$COMPOSE_CMD run --rm engine-migrate'"
+  fi
+
+  # A backup that has actually been taken, rather than a script that exists. Nothing here takes one
+  # — that would dump clinical data on every preflight — so this asks the cheaper question.
+  newest="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "ls -t $REMOTE_ROOT/backups/*.dump* 2>/dev/null | head -1" 2>/dev/null)"
+  if [ -n "$newest" ]; then
+    age_days="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "echo \$(( ( \$(date +%s) - \$(stat -c %Y '$newest') ) / 86400 ))" 2>/dev/null)"
+    if [ "${age_days:-999}" -le 2 ]; then
+      ok "newest local dump is ${age_days}d old ($(basename "$newest"))"
+    else
+      bad "newest local dump is ${age_days} days old — the cron job is not running"
+      note "ssh $SSH_TARGET 'crontab -l'  and see docs/OPERATIONS.md § 7.6"
+    fi
+  else
+    bad "no dump has ever been taken on this box"
+    note "Neon's Free-plan history window is SIX HOURS. That is a rollback, not a backup."
+    note "Install the cron job — nothing does it for you. docs/OPERATIONS.md § 7.6:"
+    note "  15 3 * * * $REMOTE_ROOT/repo/infra/scripts/backup-to-azure.sh >> /var/log/azmoth-backup.log 2>&1"
   fi
 fi
+
 
 # ── 7. Things a script cannot check ───────────────────────────────────────────────────────────
 
@@ -379,11 +517,29 @@ cat <<MANUAL
             curl -sS -X POST https://$API_HOST/api/v1/audit/single \\
               -H "X-API-Key: azm_live_..." -H 'Content-Type: application/xml' \\
               --data-binary @delivery.xml | jq .
-      □ Copy /opt/azmoth/shared/.env somewhere off this VM (a password manager)
+      □ Copy /opt/azmoth/shared/.env somewhere off this VM (a password manager).
+        It now holds BOTH Neon connection strings — without them the encrypted
+        dumps in Blob Storage are files nobody can restore anywhere.
+      □ Store the 'age' private key. Losing it loses every backup.
       □ Schedule the backup — nothing does it for you:
             ssh $SSH_TARGET 'crontab -l'
-      □ Name Microsoft Azure (region germanywestcentral) as a processor in
-        docs/AVV_TECHNICAL_ANNEX_DRAFT.md §5.2, which currently says there are none
+      □ RESTORE DRILL, once, by hand. This is the check § 6 cannot make: it
+        needs the age private key, which is deliberately not on the VM or in CI.
+        docs/OPERATIONS.md § 7.7 is the procedure — download a blob, decrypt it
+        locally, 'pg_restore --list' it, and restore into a scratch Neon branch
+        rather than over the live database.
+      □ In the Neon console: confirm the project region is aws-eu-central-1
+        (Frankfurt) and NOT a US region. It cannot be changed after creation.
+      □ In the Neon console: set a spend limit, or watch the Free plan's compute
+        allowance. Exhausting it DROPS live connections and refuses new ones
+        until the next billing period — the pilot goes down, not degrades.
+      □ Name every sub-processor in docs/AVV_TECHNICAL_ANNEX_DRAFT.md § 5.2,
+        which used to say there are none. There are now four:
+        Microsoft Azure (germanywestcentral), Neon/Databricks and AWS
+        (aws-eu-central-1), and Vercel (azmoth.com).
+      □ Request an executable AVV/DPA from Databricks for the Neon project.
+        The self-serve neon.com/dpa is a click-accept schedule, not a signed
+        contract, and a practice's lawyer will ask for the latter.
 MANUAL
 
 # ── Result ────────────────────────────────────────────────────────────────────────────────────

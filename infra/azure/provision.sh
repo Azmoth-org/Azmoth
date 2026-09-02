@@ -14,63 +14,99 @@
 # Caddy gets its certificates over HTTP-01 and that requires the names to already resolve here.
 #
 # ── What this costs, and why these sizes ──────────────────────────────────────────────────────
-# Roughly EUR 36/month at pay-as-you-go in germanywestcentral, so ~2.7 months on 100 EUR:
+# About EUR 20/month at pay-as-you-go in germanywestcentral, so ~4.9 months on a 100 EUR credit:
 #
-#     Standard_B2s   2 vCPU, 4 GiB      ~EUR 30/mo
-#     64 GiB StandardSSD (E6)           ~EUR  5/mo
-#     Standard static IPv4              ~EUR  4/mo    (Azure bills IPv4 addresses)
-#     Egress                             ~EUR  0/mo    (first 100 GB/month is free)
+#     Standard_B1ms  1 vCPU, 2 GiB      ~EUR 15.04/mo
+#     32 GiB StandardSSD (E4)           ~EUR  2.06/mo
+#     Standard static IPv4              ~EUR  3.14/mo  (Azure bills IPv4 addresses)
+#     Blob Storage, Cool, a few GB      ~EUR  0.05/mo
+#     Egress                            ~EUR  0.00/mo  (first 100 GB/month is free)
 #
-# Those are estimates from list prices and they move. Check yours before committing:
-#     az vm list-skus --location "$LOCATION" --size Standard_B2 --output table
+# Those figures came from the Azure Retail Prices API in EUR for this region and they move. Check
+# yours before committing:
+#     az vm list-skus --location "$LOCATION" --size Standard_B1 --output table
 #     https://azure.microsoft.com/pricing/calculator/
 #
-# **B2s is chosen for the BUILD, not the run.** `scripts/deploy.sh` builds on the box, and that
-# build is two `next build`s (web and marketing) plus a node-gyp compile of better-sqlite3 in the
-# deps stage. Next peaks well over 1 GiB per build. On a 2 GiB B1ms the build is OOM-killed — the
-# symptom is a compose build that dies with exit 137 and no explanation. At rest the running stack
-# fits in about 1.5 GiB, so B1ms would happily *run* what it cannot *build*; if the credit has to
-# stretch further than the calendar, the move is to build images elsewhere and pull them, not to
-# shrink this VM and hope.
+# **2 GiB is enough because this box no longer BUILDS anything.** Images are built by
+# .github/workflows/release-images.yml on a GitHub runner and pulled from ghcr.io; see the header of
+# infra/docker/docker-compose.azure.yml. That is what took the VM from B2s (4 GiB, EUR 30, 2.9
+# months all-in) to B1ms, and it is the only reason a 100 EUR credit reaches four months.
 #
-# B2ms (8 GiB) is about twice the price for memory the build does not need, and would cut the
-# runway to ~1.6 months. Standard_B2ls_v2 (2 vCPU, 4 GiB) is the same memory ~20% cheaper where it
-# is available — set VM_SIZE to try it, and fall back to B2s if the region says no.
+# It is enough to RUN on, with room to spare rather than to burn. Postgres left the box (it is
+# Neon's now) and so did the marketing site (Vercel's), which leaves caddy + engine + web at
+# roughly 500-800 MiB resting, plus ~250 MiB for dockerd and the OS. The 4 GiB swapfile below is
+# now insurance for a Soufflé solve that spikes, not a crutch for a build.
+#
+# 1 GiB was costed and rejected: Standard_B2ats_v2 is EUR 6.79/mo and would stretch the credit to
+# eight months, but the resting stack does not fit in it, so the engine would page during exactly
+# the solves the product exists to run.
+#
+# ── The size may not allocate, and there is a ladder for that ─────────────────────────────────
+# B-series **v1** — B1s, B1ms, B2s, B1ls — retires 15 November 2028, and since 31 July 2026 has
+# been under a growth restriction: new deployments, quota increases and any operation needing a
+# fresh allocation "can fail", and availability "has already been restricted or removed in many
+# regions, particularly for new deployments and newly created subscriptions". Whether
+# germanywestcentral is affected is not documented either way.
+#
+# So if `az vm create` refuses this size, do not fight it — take the next rung and accept the
+# shorter runway. Bsv2/Basv2 are the designated replacements and are not retiring:
+#
+#     VM_SIZE=Standard_B1ms      1 vCPU / 2 GiB   EUR 15.04   ~4.9 months   (default)
+#     VM_SIZE=Standard_B2als_v2  2 vCPU / 4 GiB   EUR 27.08   ~3.1 months   AMD, not retiring
+#     VM_SIZE=Standard_B2s       2 vCPU / 4 GiB   EUR 30.08   ~2.9 months   v1, retiring
+#
+# **Not Arm, however tempting the price is.** Standard_B2pls_v2 is 2 vCPU / 4 GiB for EUR 24.09 —
+# cheaper than any x86 4 GiB SKU — and cannot run this stack: apps/engine/Dockerfile installs
+# `x86_64-ubuntu-2204-souffle-2.5-Linux.deb`, and the engine is nothing without Soufflé. Moving to
+# Arm is a new Soufflé build and a multi-arch image, not a VM_SIZE change.
 #
 # ── Region ────────────────────────────────────────────────────────────────────────────────────
 # germanywestcentral, and this is a compliance constraint rather than a latency preference.
 # docs/AVV_TECHNICAL_ANNEX_DRAFT.md section 5.1 states that processing happens exclusively on
 # systems inside the EU. Frankfurt satisfies that. Do not move this to eastus to save a euro.
 #
+# The database is in Frankfurt too, but not here and not Microsoft's: Neon has no Azure region any
+# more (azure-gwc stopped accepting new projects on 7 April 2026), so the Neon project lives in
+# aws-eu-central-1 — AWS Europe, Frankfurt. Same city, same union, different provider.
+#
 # NOTE: deploying at all makes section 5.2 of that annex ("Unterauftragsverarbeiter: derzeit
-# keine") untrue — Microsoft becomes a processor the moment this VM exists. That document has to
-# name Microsoft Azure, with this region, before a practice signs it.
+# keine") untrue, now in four ways — Microsoft Azure (this VM), Neon/Databricks and AWS (the
+# database), and Vercel (the public site). That document has to name all of them before a practice
+# signs it. See docs/deploy/AZURE.md § 4.
 
 set -euo pipefail
 
 # ── Settings ──────────────────────────────────────────────────────────────────────────────────
-# Override any of these from the environment:  VM_SIZE=Standard_B2ls_v2 ./infra/azure/provision.sh
+# Override any of these from the environment:  VM_SIZE=Standard_B2als_v2 ./infra/azure/provision.sh
 
 RG="${RG:-azmoth-pilot}"
 LOCATION="${LOCATION:-germanywestcentral}"
 VM_NAME="${VM_NAME:-azmoth-vm}"
-VM_SIZE="${VM_SIZE:-Standard_B2s}"
+VM_SIZE="${VM_SIZE:-Standard_B1ms}"
 ADMIN_USER="${ADMIN_USER:-azmoth}"
 
 # Ubuntu 22.04 LTS, gen2, pinned by full URN rather than by the `Ubuntu2204` alias. An alias is
 # resolved by whatever version of the CLI you happen to have; this is the same image every time.
 IMAGE="${IMAGE:-Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest}"
 
-# 64 GiB StandardSSD. Docker is the reason for the size, not Postgres: the build cache, two Node
-# images and the engine's Soufflé toolchain add up to well over 20 GiB before a single row is
-# written. StandardSSD rather than Premium because a pilot's write rate does not need provisioned
-# IOPS, and rather than Standard HDD because Postgres on spinning-rust latency is miserable.
+# 32 GiB StandardSSD, down from 64 because there is no build cache on this box any more. What has
+# to fit is: Ubuntu, Docker, and three pulled images (engine ~300 MB, web ~350 MB, the web `builder`
+# image ~1 GB, caddy ~50 MB) — under 2 GiB of images, plus the `azmoth-engine-uploads` volume
+# holding bulk deliveries that have been accepted and not yet audited. 32 GiB is roughly ten times
+# what is needed, which is the right margin for a disk whose size cannot be reduced later.
 #
-# There is no separate data disk, deliberately. It was considered for backups and rejected: a disk
-# attached to this VM is destroyed with this VM, and docs/OPERATIONS.md already requires dumps to be
-# kept off the same host as the database. They go to Blob Storage instead — see the storage account
-# below and infra/scripts/backup-to-blob.sh.
-OS_DISK_SIZE_GB="${OS_DISK_SIZE_GB:-64}"
+# StandardSSD rather than Premium because a pilot's write rate does not need provisioned IOPS, and
+# rather than Standard HDD because container start latency on spinning rust is miserable — and it
+# is barely cheaper (E4 32 GiB is EUR 2.06/mo against S6 64 GiB at EUR 2.58).
+#
+# Note that disks bill on the PROVISIONED size tier, not on bytes used, and keep billing while the
+# VM is deallocated. Going from E6 (64 GiB) to E4 (32 GiB) is therefore a real EUR 2.06/month, or
+# about five days of runway.
+#
+# There is no separate data disk, deliberately, and now there is even less reason for one: the
+# database is Neon's. Encrypted dumps go to Blob Storage — see the storage account below and
+# infra/scripts/backup-to-azure.sh.
+OS_DISK_SIZE_GB="${OS_DISK_SIZE_GB:-32}"
 OS_DISK_SKU="${OS_DISK_SKU:-StandardSSD_LRS}"
 
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519.pub}"
@@ -82,6 +118,11 @@ SUBNET_NAME="${SUBNET_NAME:-${VM_NAME}-subnet}"
 
 # Where backups land. Storage account names are globally unique, 3-24 chars, lowercase alphanumeric
 # only — hence the suffix.
+#
+# **Kept, deliberately, even though Neon has its own point-in-time restore.** The reasoning is in
+# step 7 below and in docs/deploy/AZURE.md § 6; the short version is that Neon's Free-plan history
+# window is six hours, which is a rollback and not a backup, and that this container is the only
+# copy of the data that survives losing the Neon account.
 STORAGE_ACCOUNT="${STORAGE_ACCOUNT:-azmothbackup$(whoami | tr -cd 'a-z0-9' | cut -c1-6)}"
 BACKUP_CONTAINER="${BACKUP_CONTAINER:-db-backups}"
 
@@ -123,6 +164,33 @@ fi
 say "Subscription"
 az account show --query '{name:name, id:id}' --output table
 
+# ── Is the requested size actually allocatable here? ──────────────────────────────────────────
+# Asked before anything is created, because the answer changed under this script's feet. B-series
+# v1 has been growth-restricted since 31 July 2026 (see the header), and the failure without this
+# check lands at step 5 — after the IP, NSG and VNet exist — as a SkuNotAvailable that reads like a
+# transient capacity problem rather than a retirement.
+#
+# A warning rather than a refusal: `restrictions` reports zone-level exclusions too, which do not
+# stop a size being used in the region, and a false stop here would be worse than a false warning.
+say "Checking $VM_SIZE is available in $LOCATION"
+SIZE_RESTRICTIONS="$(az vm list-skus --location "$LOCATION" --size "$VM_SIZE" \
+  --query "[?name=='$VM_SIZE'].restrictions[].reasonCode" --output tsv 2>/dev/null || true)"
+
+if ! az vm list-skus --location "$LOCATION" --size "$VM_SIZE" \
+     --query "[?name=='$VM_SIZE'].name" --output tsv 2>/dev/null | grep -qx "$VM_SIZE"; then
+  echo "    !! $VM_SIZE is not offered in $LOCATION at all." >&2
+  echo "       Take the next rung of the ladder in this script's header:" >&2
+  echo "         VM_SIZE=Standard_B2als_v2 ./infra/azure/provision.sh    # 4 GiB, AMD, ~3.1 months" >&2
+  exit 1
+elif [ -n "$SIZE_RESTRICTIONS" ]; then
+  echo "    !! $VM_SIZE is offered but RESTRICTED for this subscription:"
+  echo "       $(echo "$SIZE_RESTRICTIONS" | sort -u | tr '\n' ' ')"
+  echo "       B-series v1 has been growth-restricted since July 2026 and retires 2028-11-15."
+  echo "       If 'az vm create' fails below, re-run with VM_SIZE=Standard_B2als_v2."
+else
+  echo "    available, no restrictions reported"
+fi
+
 cat <<SUMMARY
 
   resource group   $RG
@@ -133,6 +201,10 @@ cat <<SUMMARY
   ssh key          $SSH_KEY
   ssh allowed from $MY_IP/32           (and nowhere else)
   storage account  $STORAGE_ACCOUNT/$BACKUP_CONTAINER
+
+  NOT created by this script, and both are required before deploying:
+    - the Neon project (aws-eu-central-1) and its two connection strings
+    - the Vercel project for azmoth.com  — already live; leave its DNS alone
 
 SUMMARY
 
@@ -177,9 +249,14 @@ echo "    address: $PUBLIC_IP"
 
 # ── 3. Network Security Group ─────────────────────────────────────────────────────────────────
 # Three inbound rules and no more. Azure's own DenyAllInBound sits at priority 65500 and catches
-# everything not named here, so 8000 and 5432 need no explicit deny — they are closed because
-# nothing opens them. A "deny 8000" rule is worse than no rule: it implies the absence of one means
-# open, which is the opposite of how an NSG works.
+# everything not named here, so 8000 needs no explicit deny — it is closed because nothing opens it.
+# A "deny 8000" rule is worse than no rule: it implies the absence of one means open, which is the
+# opposite of how an NSG works.
+#
+# Note what is NOT needed here any more: an OUTBOUND rule for the database. Azure allows outbound
+# by default, and the engine now reaches Frankfurt over TLS on 5432 rather than a container on
+# localhost. If you ever tighten egress, that is the flow to remember — a locked-down outbound rule
+# set is a stack that comes up healthy and cannot read a single proposal.
 #
 # This is the outer wall. infra/docker/docker-compose.azure.yml is the inner one — it unpublishes
 # those ports from Docker as well, because a published Docker port writes its own iptables rules
@@ -270,17 +347,21 @@ else
 fi
 
 # ── 6. Swap ───────────────────────────────────────────────────────────────────────────────────
-# 4 GiB of swap on a 4 GiB machine. This is what makes `next build` survive its peak on B2s: the
-# build is briefly memory-hungry and mostly idle on those pages afterwards, which is precisely the
-# shape swap is good at. Without it the build is OOM-killed at exit 137 with no message.
+# 4 GiB of swap on a 2 GiB machine, and the reason has changed even though the number has not.
+#
+# It used to be what made `next build` survive its peak. Nothing is built here now, so this is
+# purely runtime insurance: three containers resting at 500-800 MiB on a 2 GiB box leaves real
+# headroom, but a Soufflé solve forks a process whose peak nobody has characterised, and the
+# failure mode without swap is the OOM killer choosing a victim — which on this box means the
+# `web` container disappearing while somebody was mid-approval.
 #
 # `--file /swapfile` on the OS disk rather than the ephemeral resource disk at /mnt: /mnt is wiped
 # when the VM is deallocated, and a swap entry in fstab pointing at a file that no longer exists
 # fails the boot.
 #
-# It is not a substitute for RAM at RUNTIME — a Postgres that swaps is a Postgres that has stopped
-# being a database. Watch `free -m` after the first build; steady-state should show swap barely
-# touched.
+# Swap is not a substitute for RAM. If `free -m` shows swap in steady use rather than touched at
+# peaks, the machine is too small — take the next rung of the VM_SIZE ladder in the header rather
+# than adding more swap.
 
 say "6/7 swap"
 az vm run-command invoke \
@@ -294,8 +375,12 @@ az vm run-command invoke \
     mkswap /swapfile
     swapon /swapfile
     grep -q "^/swapfile" /etc/fstab || echo "/swapfile none swap sw 0 0" >> /etc/fstab
-    # 10 rather than the default 60: prefer to keep Postgres pages resident and use swap for the
-    # build spike, not for steady-state paging.
+    # 10 rather than the default 60: prefer to keep the engine and web pages resident and use
+    # swap for a solver spike, not for steady-state paging.
+    #
+    # NOTE for editors: this whole block is inside a single-quoted --scripts argument, so an
+    # apostrophe anywhere in it — including in a comment like this one — terminates the quoting and
+    # truncates the script that reaches the VM. Avoid possessives and contractions in here.
     sysctl -w vm.swappiness=10
     grep -q "^vm.swappiness" /etc/sysctl.conf || echo "vm.swappiness=10" >> /etc/sysctl.conf
     echo "swap configured"
@@ -305,7 +390,32 @@ az vm run-command invoke \
 # ── 7. Blob Storage for backups ───────────────────────────────────────────────────────────────
 # Small, cheap, and in the same region for the same AVV reason as the VM. A dump is a complete copy
 # of every approval and audit event, so the container is private and the account refuses plain HTTP
-# and TLS below 1.2. infra/scripts/backup-to-blob.sh encrypts before upload on top of that.
+# and TLS below 1.2. infra/scripts/backup-to-azure.sh encrypts before upload on top of that.
+#
+# ── Why this survives the move to Neon ────────────────────────────────────────────────────────
+# Neon has native point-in-time restore, so the obvious move was to delete this account and the
+# managed identity with it. It was costed at about EUR 0.05/month for a pilot's worth of dumps, and
+# kept, for three reasons that are worth naming because "the managed database has backups" is the
+# argument that usually wins:
+#
+#   1. **Neon's Free-plan history window is six hours, capped at 1 GB.** That is a rollback, not a
+#      backup. Launch extends it to seven days for usage-based cents — worth doing — but seven days
+#      is still not an archive for records a practice is legally obliged to be able to produce.
+#
+#   2. **It is the only copy that survives losing the Neon account.** Every Neon mechanism —
+#      instant restore, snapshots, branches — lives inside the Neon project. A billing lapse, a
+#      deleted project, a compromised Neon login, or Neon's own note that Free-plan projects
+#      inactive for 90 days "are subject to deletion" all take the database and its backups
+#      together. docs/OPERATIONS.md § 2 has always required dumps to be kept off the same host as
+#      the database; a managed provider is a host.
+#
+#   3. **It also holds the things that are not in the database.** An encrypted copy of
+#      /opt/azmoth/shared/.env — which now contains the Neon connection strings, without which the
+#      dumps are just files — and nothing else on this box is backed up at all.
+#
+# What DID change is what gets dumped. There is no local Postgres to `docker compose exec` into, so
+# infra/scripts/backup-to-azure.sh now runs `pg_dump` over the network against Neon's DIRECT
+# endpoint, in a throwaway `postgres:17-alpine` container. See that script's header.
 
 say "7/7 storage account for backups: $STORAGE_ACCOUNT"
 if have storage account show --resource-group "$RG" --name "$STORAGE_ACCOUNT"; then
@@ -404,18 +514,30 @@ cat <<DONE
 ────────────────────────────────────────────────────────────────────────────────
   Public IP:  $PUBLIC_IP
   SSH:        ssh $ADMIN_USER@$PUBLIC_IP
+  VM size:    $VM_SIZE   (see the header for the fallback ladder and the runway)
 
   NEXT — point DNS at that address and WAIT for it to resolve. Caddy gets its
   certificates over HTTP-01, which means Let's Encrypt fetches a token from
   these names over port 80. A name that does not resolve yet is a failed
   issuance and a retry backoff, not a warning.
 
+  TWO records. That is the whole list:
+
       A   app.azmoth.com    $PUBLIC_IP
       A   api.azmoth.com    $PUBLIC_IP
-      A   azmoth.com        $PUBLIC_IP
-      A   www.azmoth.com    $PUBLIC_IP
+
+  ** DO NOT point azmoth.com or www.azmoth.com here. **
+  They are served by Vercel and are live. This box has no marketing container
+  and its Caddyfile has no site block for those names, so moving their A
+  records would take the public site down and Caddy would then request a
+  certificate for a name Vercel already holds. Leave them on Vercel.
 
   Check with:  dig +short app.azmoth.com
+               dig +short azmoth.com          # must NOT be $PUBLIC_IP
+
+  BEFORE DEPLOYING you also need a Neon project and both of its connection
+  strings — the direct one and the pooled one. docs/deploy/RUNBOOK.md § 3 is
+  the five-minute version; deploy.sh refuses to start without them.
 
   THEN:        ./scripts/deploy.sh $PUBLIC_IP
 ────────────────────────────────────────────────────────────────────────────────
