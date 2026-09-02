@@ -7,6 +7,7 @@ import { AnalyticsScript } from "@/components/analytics-script";
 
 import { defaultMetadata } from "@/lib/seo";
 import { getOrganizationSchema, getWebsiteSchema } from "@/lib/structured-data";
+import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css";
 
@@ -81,6 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           third country. One of those two had to go, and it was not the privacy notice.
         */}
         <AnalyticsScript />
+        <Analytics />
         <SpeedInsights />
 
       </body>
