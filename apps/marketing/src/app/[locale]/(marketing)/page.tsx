@@ -162,7 +162,7 @@ export default async function HomePage({
 function HeroBackdrop() {
   return (
     <>
-      <AuroraBackground />
+      {/* <AuroraBackground /> */}
       <div aria-hidden="true" className="azm-grid" />
       <GradientMesh />
     </>
@@ -512,7 +512,7 @@ function Buckets() {
         <RevealItem as="div">
           <div className="relative h-full overflow-hidden rounded-xl bg-azm-navy p-8 text-white">
             {/* The aurora, unmasked and dim, as the dark panel's own atmosphere. */}
-            <AuroraBackground showRadialGradient={false} className="opacity-40" />
+            {/* <AuroraBackground showRadialGradient={false} className="opacity-40" /> */}
             <div className="relative">
               <h3 className="text-lg font-medium">{t("kernaussageTitel")}</h3>
               <p className="mt-3 leading-relaxed text-white/75">{t("kernaussage")}</p>
@@ -729,7 +729,7 @@ function ApiTeaser() {
   const t = useTranslations("startseite.api");
 
   return (
-    <Section tone="navy" id="api" backdrop={<AuroraBackground showRadialGradient={false} />}>
+    <Section tone="navy" id="api" >
       <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <Reveal>
           <p className="text-[0.6875rem] font-medium tracking-[0.12em] text-white/50 uppercase">

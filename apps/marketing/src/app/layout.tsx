@@ -7,8 +7,6 @@ import { AnalyticsScript } from "@/components/analytics-script";
 
 import { defaultMetadata } from "@/lib/seo";
 import { getOrganizationSchema, getWebsiteSchema } from "@/lib/structured-data";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css";
 
 /**
@@ -74,17 +72,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         {children}
         {/*
-          Vercel Speed Insights used to sit here and has been removed.
-          Two reasons, and the second is the one that settles it. It is dead weight —
-          this stack deploys behind Caddy on Azure, where its beacon path does not exist —
-          and on a Vercel deployment it would send every visitor's performance data to a
-          US service, while /datenschutz states that no usage data is transferred to a
-          third country. One of those two had to go, and it was not the privacy notice.
+          `@vercel/analytics` and `@vercel/speed-insights` were mounted here and have been removed
+          again. They were added in two commits immediately before the audit that prompted this
+          pass, directly beneath a comment explaining why they had been taken out the last time.
+
+          That comment gave two reasons and one of them was wrong: this site does deploy to Vercel,
+          so the beacons resolve. The other one stands and is the one that decides it. Both scripts
+          send visitor data to a US service, and `/datenschutz` — three clicks away, on a site whose
+          entire argument is that it is the DSGVO-safe option — states that no usage data is
+          transferred to a third country. A page cannot make that claim and also ship the beacon.
+
+          Reach measurement is `AnalyticsScript` below: Plausible or Umami, cookieless, off unless
+          `NEXT_PUBLIC_ANALYTICS_PROVIDER` is set. See `lib/analytics.ts`.
         */}
         <AnalyticsScript />
-        <Analytics />
-        <SpeedInsights />
-
       </body>
     </html>
   );

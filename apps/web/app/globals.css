@@ -1,0 +1,28 @@
+/*
+ * Azmoth web — the styling entry point.
+ *
+ * This app used to import `@workspace/ui/globals.css` straight from `layout.tsx` and declare
+ * no sources of its own, which worked only because the shared stylesheet carried a
+ * `@source "../**"` covering all of `packages/ui/src` on every consumer's behalf. That glob
+ * has moved out to the consumers, so this file exists to state what this app needs.
+ *
+ * The move was a marketing-site performance fix and is explained where it landed: a brochure
+ * that mounts nine shadcn components was having all sixty scanned, which put 169 kB of unused
+ * `@layer utilities` in front of its largest contentful paint. See the `@source` block in
+ * `packages/ui/src/styles/globals.css`.
+ *
+ * Nothing about this app's CSS changes. It takes the whole package, which is what it did
+ * before and the right answer for a product surface that composes the design system freely.
+ */
+@import "@workspace/ui/globals.css";
+
+/*
+ * Directories named individually rather than `../**`. This file sits in `app/`, so `../` is
+ * the app root — which also holds `node_modules` and `.next`, and neither belongs in a
+ * Tailwind scan.
+ */
+@source "../{app,components,hooks,lib}/**/*.{ts,tsx}";
+@source "../middleware.ts";
+
+/* The shared design system, in full. */
+@source "../../../packages/ui/src/**/*.{ts,tsx}";

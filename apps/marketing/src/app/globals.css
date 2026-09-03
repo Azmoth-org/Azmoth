@@ -25,6 +25,28 @@
 /* Tailwind scans from this file's project root, but naming the tree is explicit. */
 @source "../**/*.{ts,tsx}";
 
+/*
+ * The slice of `@workspace/ui` this site renders — and the reason it is a list rather than
+ * a glob.
+ *
+ * `packages/ui` holds sixty-odd shadcn components because `apps/web` is a product and uses
+ * them. This is a brochure and mounts nine. Scanning the whole package (which the shared
+ * stylesheet used to do on every consumer's behalf) generated utilities for the sidebar,
+ * the chart, the calendar, the carousel, the command palette and everything else this site
+ * has no route that renders. Measured on the production build: 195 kB of CSS, of which
+ * 169 kB was `@layer utilities`, all of it render-blocking in front of the hero's `<h1>` —
+ * this page's largest contentful paint, whose 3.5 s render delay was that stylesheet's
+ * critical path and nothing else. Naming the nine brings it to 64 kB.
+ *
+ * **Adding a `@workspace/ui` import to this app means adding it here too.** The failure is
+ * silent and reads as a styling bug rather than a build error: the component renders with
+ * its class names intact and no rules behind them. `navbar-menu` is in the list without
+ * appearing in any import in this app — `resizable-navbar` pulls it in and re-exports it,
+ * which is exactly the transitive case that is easy to miss.
+ */
+@source "../../../../packages/ui/src/lib/**/*.ts";
+@source "../../../../packages/ui/src/components/{accordion,aurora-background,badge,button,card,logo,navbar-menu,resizable-navbar,separator}.tsx";
+
 @layer base {
   html {
     /*
@@ -68,16 +90,31 @@
    * `both` fill mode holds the from-state before the delay elapses, so a staggered child does not
    * flash at full opacity and then start over.
    */
+  /*
+   * `opacity` and `transform`, and deliberately not `filter`.
+   *
+   * This keyframe used to open on `blur(4px)` and resolve to `none`, matching the scroll reveals.
+   * `components/reveal.tsx` keeps its blur and is right to — it fires once, below the fold, on
+   * elements nobody is looking at yet. This one fires above the fold, on five elements, during the
+   * window the largest contentful paint is measured in.
+   *
+   * A `filter` animation is not compositable. Every frame of it invalidates the element and re-runs
+   * paint, and one of the five is `HeroMockup` — forty-odd nodes of text, borders and rings under a
+   * `rotateX`. Lighthouse listed all five among its eight non-composited animations, and the frames
+   * they cost land in exactly the 0.6 s the visitor is waiting for the headline.
+   *
+   * Dropping the blur leaves a fade-and-rise on the compositor, which is the same gesture with the
+   * expensive third of it removed. At 4px over 0.6s behind a mesh, the difference is not one a
+   * reader can point at; the three seconds of blocked main thread is.
+   */
   @keyframes azm-enter {
     from {
       opacity: 0;
       transform: translateY(16px);
-      filter: blur(4px);
     }
     to {
       opacity: 1;
       transform: none;
-      filter: none;
     }
   }
 

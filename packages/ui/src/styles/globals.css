@@ -3,9 +3,35 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
-@source "../../../apps/**/*.{ts,tsx}";
-@source "../../../components/**/*.{ts,tsx}";
-@source "../**/*.{ts,tsx}";
+
+/*
+ * No `@source` here. Each consumer declares what it renders, and that is a performance
+ * decision rather than a stylistic one.
+ *
+ * Three globs used to live on this line and two of them were dead. `@source` resolves
+ * against the file that contains it, so `../../../apps/**` and `../../../components/**`
+ * pointed at `packages/apps` and `packages/components` — neither exists. They are the
+ * shape this file had before it moved into `packages/ui/`, and they had been silently
+ * matching nothing ever since.
+ *
+ * The third, `../**` — every `.tsx` under `packages/ui/src` — was alive and was the
+ * expensive one. It generates utilities for all sixty-odd components in this package for
+ * *any* app that imports this stylesheet, including the ones that render nine of them.
+ * On the marketing site that was 169 kB of a 195 kB stylesheet, render-blocking, in front
+ * of the largest contentful paint. Measured: 195 kB → 64 kB by scoping the scan.
+ *
+ * A shared stylesheet cannot know which components its consumer mounts, so it should not
+ * guess. Every app that imports this file therefore declares its own `@source` lines —
+ * its own tree, plus the slice of this package it actually uses:
+ *
+ *   - `apps/web`      — most of the library; scans all of `packages/ui/src`.
+ *   - `apps/docs`     — same, plus its MDX content.
+ *   - `apps/marketing` — nine components, named individually.
+ *
+ * The failure mode when a consumer forgets is a component that renders unstyled rather
+ * than one that errors, so a new import into a narrowly-scoped app means a new `@source`
+ * line beside it. `apps/marketing/src/app/globals.css` carries that warning at its list.
+ */
 
 @theme inline {
     --font-heading: var(--font-sans);
@@ -155,28 +181,56 @@
     /*
      * The Aurora backdrop's drift, for `components/aurora-background.tsx`.
      *
-     * Sixty seconds for one cycle, and the length is the point: the layer is a 300%-wide blurred
+     * Sixty seconds for one cycle, and the length is the point: the layer is a wide blurred
      * gradient behind live text, so anything fast enough to *notice* is also fast enough to pull
      * the eye off the headline. At this rate it reads as the light changing rather than as an
      * animation, which is the difference between the Stripe/Linear register and a screensaver.
      *
-     * Only `background-position` moves. It composites without re-rasterising the blur, so the cost
-     * is a GPU-side offset per frame rather than a repaint of a full-viewport filtered element —
-     * which is what keeps this off the Lighthouse main-thread budget. `prefers-reduced-motion`
-     * stops it outright; see the base layer below.
+     * ## This used to animate `background-position`, and that was the single most expensive thing
+     * on the marketing site
+     *
+     * The note that stood here said that `background-position` "composites without re-rasterising
+     * the blur, so the cost is a GPU-side offset per frame". That is not true, and nothing in the
+     * platform makes it true. The compositor can offset an existing layer for `transform` and
+     * `opacity` and for nothing else; `background-position` is a paint-time property, so moving it
+     * invalidates the element and the browser re-runs the whole pipeline for that frame — repaint
+     * the two repeating gradients, re-run `filter: blur(60px)` over the result, re-apply the mask.
+     *
+     * On a full-viewport element, at 60 fps, forever, on three elements of the home page. Lighthouse
+     * attributed 10.5 s of a 12.4 s main thread to "Other" — which is style, layout, paint and
+     * composite, not script — and listed the three backdrops among its eight non-composited
+     * animations. Script evaluation over the same trace was 1.0 s. The bottleneck was never the
+     * JavaScript.
+     *
+     * ## What moves now
+     *
+     * `transform`, which is the one thing that does what the old comment claimed. The gradient is
+     * painted once, blurred once, and thereafter only slid by the compositor.
+     *
+     * ## `alternate`, and why the layer is not larger than it is
+     *
+     * A one-way loop has to travel a whole gradient tile to come back to a frame identical to its
+     * first, and the layer has to stay over the viewport for all of that travel — which works out at
+     * three viewports of blurred texture. That is cheap per frame and expensive once: `blur(60px)`
+     * over three screens of pixels is a real rasterisation, and it lands during load, which is the
+     * one moment this pass is trying to protect.
+     *
+     * Reversing instead removes the constraint. The drift runs out and back, so any travel distance
+     * is seamless and the layer only has to cover the viewport across that distance — two viewports
+     * rather than three, for a third less texture. At 60s per leg over three tenths of a screen the
+     * turn is far too slow to read as a bounce; `ease-in-out` rounds it off regardless.
+     *
+     * `prefers-reduced-motion` stops it outright; see the base layer below.
      */
-    --animate-aurora: aurora 60s linear infinite;
+    --animate-aurora: aurora 60s ease-in-out infinite alternate;
 
     @keyframes aurora {
         from {
-            background-position:
-                50% 50%,
-                50% 50%;
+            transform: translate3d(0, 0, 0);
         }
         to {
-            background-position:
-                350% 50%,
-                350% 50%;
+            /* 15% of a layer two viewports wide — three tenths of a screen. See the component. */
+            transform: translate3d(-15%, 0, 0);
         }
     }
 }

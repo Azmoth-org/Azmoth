@@ -28,6 +28,15 @@
 @source "../mdx-components.tsx";
 
 /*
+ * The shared package's own tree. This used to be declared inside `@workspace/ui/globals.css`
+ * on every consumer's behalf; it now sits with each consumer, because the marketing site
+ * renders nine of these components and was paying to have all sixty scanned. See the note
+ * at the `@source` block there. This app takes the whole package, which is the right answer
+ * for a surface that composes the design system freely.
+ */
+@source "../../../packages/ui/src/**/*.{ts,tsx}";
+
+/*
  * DESIGN.md, in Fumadocs' vocabulary.
  *
  * Read the right-hand column as the argument: `fd-primary` is indigo because it is what
