@@ -55,7 +55,20 @@ export function AuroraBackground({
   return (
     <div
       aria-hidden="true"
-      className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)}
+      className={cn(
+        "pointer-events-none absolute inset-0 overflow-hidden",
+        /*
+          The mask moves here, off the drifting layer and onto this static one.
+
+          It is the same ellipse as before and it fades the same way; what changes is that it is now
+          applied to a box that never moves, so the compositor resolves it once against a layer that
+          slides underneath it. Left on the animated child it would be re-evaluated against new
+          content on every frame, which is most of what this rewrite exists to stop.
+        */
+        showRadialGradient &&
+          "[mask-image:radial-gradient(ellipse_70%_60%_at_60%_0%,black_10%,transparent_75%)]",
+        className
+      )}
       style={
         {
           /*
@@ -63,11 +76,20 @@ export function AuroraBackground({
            * of brand colour, and a repeating white band that breaks it into ribbons. Sliding both
            * at once across different background sizes is what produces the organic interference
            * pattern — a single gradient at any speed only ever reads as a wipe.
+           *
+           * The stop percentages are three times the ones this shipped with, and that is bookkeeping
+           * rather than a change of appearance.
+           *
+           * Band width on screen is the gradient's repeat period multiplied by the tile it is painted
+           * into. The old layer used `background-size: 300%` — a tile three viewports wide — with
+           * stops every 20%, so a colour cycle came out at about six tenths of a screen. The new
+           * layer tiles at one viewport (`50%` of a layer two viewports wide), so the same six tenths
+           * needs stops every 60%. Same wash, a third of the texture behind it.
            */
           "--aurora":
-            "repeating-linear-gradient(100deg, var(--azm-indigo) 10%, var(--azm-indigo-subdued) 15%, var(--azm-indigo-soft) 20%, var(--azm-magenta) 25%, var(--azm-ruby) 30%)",
+            "repeating-linear-gradient(100deg, var(--azm-indigo) 30%, var(--azm-indigo-subdued) 45%, var(--azm-indigo-soft) 60%, var(--azm-magenta) 75%, var(--azm-ruby) 90%)",
           "--band":
-            "repeating-linear-gradient(100deg, oklch(1 0 0) 0%, oklch(1 0 0) 7%, transparent 10%, transparent 12%, oklch(1 0 0) 16%)",
+            "repeating-linear-gradient(100deg, oklch(1 0 0) 0%, oklch(1 0 0) 21%, transparent 30%, transparent 36%, oklch(1 0 0) 48%)",
         } as React.CSSProperties
       }
     >
@@ -81,10 +103,24 @@ export function AuroraBackground({
             ratio starts moving. At 15 % it reads as the light in the mesh shifting, which is the
             entire brief for this layer.
           */
-          "animate-aurora absolute -inset-24 opacity-15 blur-[60px] will-change-[background-position] motion-reduce:animate-none",
-          "[background-image:var(--band),var(--aurora)] [background-size:300%_200%] [background-position:50%_50%,50%_50%]",
-          showRadialGradient &&
-            "[mask-image:radial-gradient(ellipse_70%_60%_at_60%_0%,black_10%,transparent_75%)]"
+          "animate-aurora absolute top-[-6rem] left-[-50%] h-[calc(100%+12rem)] w-[200%] opacity-15 blur-[60px] will-change-transform motion-reduce:animate-none",
+          /*
+            The geometry, which is what makes a transform-driven drift work at all.
+
+            In units of this container the layer is two wide and starts half a container to the left,
+            so it spans −0.5 → 1.5. The keyframe slides it left by 15% of its own width — three
+            tenths of a container — ending at −0.8 → 1.2. The visible box is 0 → 1, so it is covered
+            at both ends with two tenths of bleed to spare, which is what keeps `blur(60px)`'s soft
+            falloff outside the frame instead of vignetting the edges.
+
+            The keyframe runs `alternate`, so the drift reverses rather than restarting. That is what
+            lets the travel be short and the layer be two containers instead of three: a one-way loop
+            would have to move a whole gradient tile to land on a frame matching its first.
+
+            `will-change: transform`, not `background-position`. The old value named a property the
+            compositor cannot promote, so it bought a layer and then dirtied it on every frame.
+          */
+          "[background-image:var(--band),var(--aurora)] [background-size:50%_100%] [background-repeat:repeat]"
         )}
       />
     </div>
