@@ -269,7 +269,7 @@ else
   aws_ ec2 import-key-pair \
     --key-name "$KEY_NAME" \
     --public-key-material "fileb://$SSH_KEY" \
-    --output none
+    > /dev/null
   echo "    imported from $SSH_KEY"
 fi
 
@@ -316,7 +316,7 @@ open_port() {
   if aws_ ec2 authorize-security-group-ingress \
        --group-id "$SG_ID" \
        --ip-permissions "IpProtocol=tcp,FromPort=$port,ToPort=$port,IpRanges=[{CidrIp=0.0.0.0/0,Description=\"$description\"}]" \
-       --output none 2>/dev/null; then
+       > /dev/null 2>/dev/null; then
     echo "    $port opened to the world ($description)"
   else
     echo "    $port already open to the world"
@@ -347,14 +347,14 @@ for cidr in $existing_ssh_cidrs; do
   aws_ ec2 revoke-security-group-ingress \
     --group-id "$SG_ID" \
     --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=$cidr}]" \
-    --output none 2>/dev/null \
+    > /dev/null 2>/dev/null \
     && echo "      revoked $cidr"
 done
 
 if aws_ ec2 authorize-security-group-ingress \
      --group-id "$SG_ID" \
      --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=$MY_IP/32,Description=\"SSH from the operator address only\"}]" \
-     --output none 2>/dev/null; then
+     > /dev/null 2>/dev/null; then
   echo "      authorised $MY_IP/32"
 else
   echo "      $MY_IP/32 was already authorised"
@@ -408,7 +408,7 @@ else
   aws_ s3api create-bucket \
     --bucket "$STORAGE_BUCKET" \
     --create-bucket-configuration "LocationConstraint=$REGION" \
-    --output none \
+    > /dev/null \
     || die "could not create the bucket '$STORAGE_BUCKET'.
    S3 bucket names are globally unique across every AWS account, so 'BucketAlreadyExists' means
    somebody else has it — pick another:
@@ -425,7 +425,7 @@ aws_ s3api put-public-access-block \
   --bucket "$STORAGE_BUCKET" \
   --public-access-block-configuration \
     "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true" \
-  --output none
+  > /dev/null
 echo "    public access: blocked (all four settings)"
 
 # Versioning, which is doing a specific job here rather than being a default best practice: the
@@ -436,7 +436,7 @@ echo "    public access: blocked (all four settings)"
 aws_ s3api put-bucket-versioning \
   --bucket "$STORAGE_BUCKET" \
   --versioning-configuration Status=Enabled \
-  --output none
+  > /dev/null
 echo "    versioning: enabled"
 
 # Server-side encryption at rest with S3-managed keys. On by default for new buckets since January
@@ -451,7 +451,7 @@ aws_ s3api put-bucket-encryption \
   --bucket "$STORAGE_BUCKET" \
   --server-side-encryption-configuration \
     '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"},"BucketKeyEnabled":true}]}' \
-  --output none
+  > /dev/null
 echo "    encryption at rest: SSE-S3 (AES256)"
 
 # TLS-only, as a bucket policy. `aws:SecureTransport` is false for plain HTTP, and this denies
@@ -478,7 +478,7 @@ cat > "$tls_policy" <<POLICY
 }
 POLICY
 
-aws_ s3api put-bucket-policy --bucket "$STORAGE_BUCKET" --policy "file://$tls_policy" --output none
+aws_ s3api put-bucket-policy --bucket "$STORAGE_BUCKET" --policy "file://$tls_policy" > /dev/null
 echo "    bucket policy: plain HTTP denied"
 
 # ── 4. The instance's identity, so no AWS key is ever written to the box ──────────────────────
@@ -547,7 +547,7 @@ else
     --role-name "$IAM_ROLE_NAME" \
     --assume-role-policy-document "file://$trust_policy" \
     --description "Azmoth: lets the pilot VM write encrypted database dumps to $STORAGE_BUCKET" \
-    --output none
+    > /dev/null
   echo "    role created"
 fi
 
@@ -558,13 +558,13 @@ aws iam put-role-policy \
   --role-name "$IAM_ROLE_NAME" \
   --policy-name "s3-backup-write" \
   --policy-document "file://$inline_policy" \
-  --output none
+  > /dev/null
 echo "    policy: s3:PutObject, s3:GetObject on $STORAGE_BUCKET/* — and nothing else"
 
 if aws iam get-instance-profile --instance-profile-name "$IAM_PROFILE_NAME" >/dev/null 2>&1; then
   echo "    instance profile exists"
 else
-  aws iam create-instance-profile --instance-profile-name "$IAM_PROFILE_NAME" --output none
+  aws iam create-instance-profile --instance-profile-name "$IAM_PROFILE_NAME" > /dev/null
   echo "    instance profile created"
 fi
 
@@ -579,7 +579,7 @@ elif [ "$profile_role" = "None" ] || [ -z "$profile_role" ]; then
   aws iam add-role-to-instance-profile \
     --instance-profile-name "$IAM_PROFILE_NAME" \
     --role-name "$IAM_ROLE_NAME" \
-    --output none
+    > /dev/null
   echo "    role added to the profile"
 else
   die "the instance profile '$IAM_PROFILE_NAME' already holds a different role: $profile_role
@@ -735,7 +735,7 @@ else
     --allocation-id "$ALLOCATION_ID" \
     --instance-id "$INSTANCE_ID" \
     --allow-reassociation \
-    --output none
+    > /dev/null
   echo "    associated with $INSTANCE_ID"
 fi
 
