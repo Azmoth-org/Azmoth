@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 #
-# Deploy Azmoth to the Azure VM, from your laptop, in one command.
+# Deploy Azmoth to the VM, from your laptop, in one command.
 #
 #     ./scripts/deploy.sh 20.79.x.x
 #     ./scripts/deploy.sh azmoth-vm.example.com --domain azmoth.com
 #
-# Provision first with infra/azure/provision.sh, and point DNS at the address it prints BEFORE
-# running this — Caddy gets certificates over HTTP-01, which only works once the names resolve.
+# Provision first — infra/aws/provision.sh or infra/azure/provision.sh — and point DNS at the
+# address it prints BEFORE running this: Caddy gets certificates over HTTP-01, which only works once
+# the names resolve.
+#
+# ── This script does not care which cloud the box is in ───────────────────────────────────────
+# It needs an Ubuntu host it can ssh to as a sudoer, and nothing else. That is why the move from
+# Azure to AWS was a new provisioning script and a new backup script rather than a new deployment:
+# everything below is SSH, `git archive` and Docker Compose.
+#
+# The ONE thing it does ask the box about is which cloud it is on, and only to install the matching
+# CLI for the backup job — `aws` or `az`. That is in the bootstrap step, and it asks the instance
+# metadata service rather than taking a flag, because the box is the thing that knows.
 #
 # ── What it does ──────────────────────────────────────────────────────────────────────────────
 #   1. Checks the VM is reachable and installs Docker + the Compose plugin if they are missing.
@@ -133,7 +143,7 @@ usage() {
   cat <<USAGE
 usage: ./scripts/deploy.sh <host> [options]
 
-  <host>                 IP address or hostname of the Azure VM
+  <host>                 IP address or hostname of the VM (AWS or Azure)
 
   --user <name>          SSH user                      (default: $SSH_USER)
   --domain <domain>      apex domain                   (default: $DOMAIN)
@@ -334,16 +344,24 @@ fi
 #
 # The list is what the DEPLOYMENT needs, which is now a shorter list than it was: backup-db.sh and
 # restore-db.sh drive `docker compose exec postgres` and are local-stack tools, so they are no
-# longer required at HEAD for a deploy to work. backup-to-azure.sh replaces them on the VM.
+# longer required at HEAD for a deploy to work. The backup-to-<cloud>.sh scripts replace them.
 missing=""
 for f in \
   infra/docker/docker-compose.yml \
   infra/docker/docker-compose.azure.yml \
-  infra/docker/Caddyfile \
-  infra/scripts/backup-to-azure.sh
+  infra/docker/Caddyfile
 do
   git cat-file -e "HEAD:$f" 2>/dev/null || missing="$missing $f"
 done
+
+# The backup job, in whichever provider's flavour. ONE of the two has to be committed, not both:
+# requiring both would tie every deployment to a provider it does not use, and requiring neither
+# would let a box be deployed with no way to take a backup at all. Which one the VM actually needs
+# is decided on the VM — see the cloud detection in the bootstrap step below.
+if ! git cat-file -e HEAD:infra/scripts/backup-to-s3.sh 2>/dev/null \
+   && ! git cat-file -e HEAD:infra/scripts/backup-to-azure.sh 2>/dev/null; then
+  missing="$missing infra/scripts/backup-to-s3.sh"
+fi
 
 if [ -n "$missing" ]; then
   echo >&2
@@ -352,16 +370,20 @@ if [ -n "$missing" ]; then
    git archive ships what is committed, not what is in your working tree.
 
        git add$missing
-       git commit -m 'infra: the Azure deployment'"
+       git commit -m 'infra: the deployment files'"
 fi
 echo "    deployment files present at HEAD"
 
 say "Checking the VM is reachable"
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" true 2>/dev/null \
   || die "cannot ssh to $SSH_TARGET.
-   - is the NSG's SSH rule still pointing at your current IP? Your ISP may have changed it.
-     Re-run: MY_IP=\$(curl -s https://api.ipify.org) ./infra/azure/provision.sh
-   - is your key loaded?  ssh-add -l"
+   - is the firewall's SSH rule still pointing at your current IP? Your ISP may have changed it.
+     Re-running the provisioning script is how that rule is meant to be corrected:
+       MY_IP=\$(curl -s https://api.ipify.org) ./infra/aws/provision.sh      # AWS security group
+       MY_IP=\$(curl -s https://api.ipify.org) ./infra/azure/provision.sh    # Azure NSG
+   - is your key loaded?  ssh-add -l
+   - is the user right? --user defaults to '$SSH_USER'; a stock Ubuntu AMI logs in as 'ubuntu'
+     until infra/aws/provision.sh has created '$SSH_USER'."
 echo "    ok"
 
 # DNS is checked, not enforced: split-horizon resolvers and a CDN in front are both legitimate
@@ -591,7 +613,8 @@ if ! id -nG "$USER" | tr ' ' '\n' | grep -qx docker; then
   echo "    added $USER to the docker group (effective at your next login)"
 fi
 
-# ufw as a third layer, behind the NSG and behind not publishing the ports at all.
+# ufw as a third layer, behind the cloud firewall (an AWS security group or an Azure NSG) and
+# behind not publishing the ports at all.
 #
 # Note what it does NOT do: Docker's published ports bypass ufw entirely by writing their own
 # DOCKER-USER chain rules, so ufw would not have closed 8000 if compose still published it. That is
@@ -612,26 +635,82 @@ if ! dpkg -s unattended-upgrades >/dev/null 2>&1; then
   echo "    unattended security upgrades enabled"
 fi
 
-# `age` and the Azure CLI, for infra/scripts/backup-to-azure.sh. Installed here rather than left as
-# a manual step in the runbook, because the backup job is the thing most likely to be set up "later"
-# and a missing binary is one more reason for later never to arrive. Both are no-ops on a re-deploy.
+# `age` and the cloud CLI, for the backup job. Installed here rather than left as a manual step in
+# the runbook, because the backup job is the thing most likely to be set up "later" and a missing
+# binary is one more reason for later never to arrive. Both are no-ops on a re-deploy.
 #
 # Note what is NOT installed: postgresql-client. The backup job runs pg_dump in a pinned
 # `postgres:17-alpine` container instead, because pg_dump must be at least as new as Neon's server
 # and Ubuntu 22.04 ships 14 — adding the PGDG apt repository to buy that is a lot of moving parts
-# for one command. See infra/scripts/backup-to-azure.sh.
+# for one command. See infra/scripts/backup-to-s3.sh.
 if ! command -v age >/dev/null 2>&1; then
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq age \
     && echo "    installed age (encrypts backups to a public key)" \
     || echo "    !! could not install age — backups will refuse to run until it is present"
 fi
 
-if ! command -v az >/dev/null 2>&1; then
-  echo "    installing the Azure CLI (for the backup job's managed-identity login)..."
-  curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash >/dev/null 2>&1 \
-    && echo "    installed $(az version --query '\"azure-cli\"' -o tsv 2>/dev/null || echo 'azure-cli')" \
-    || echo "    !! could not install the Azure CLI — backups will refuse to run until it is present"
+# ── Which cloud is this box in? ────────────────────────────────────────────────────────────────
+# Asked of the instance metadata service, which is the only thing on the box that knows, rather
+# than taken as a flag from the laptop — a flag would be one more thing to get wrong on the deploy
+# that matters, and it would be wrong silently: the symptom is a backup job that refuses to run,
+# discovered weeks later.
+#
+# AWS is probed FIRST and with the IMDSv2 handshake, because infra/aws/provision.sh sets
+# HttpTokens=required and the old unauthenticated GET returns 401 there. Azure's endpoint is at the
+# same 169.254.169.254 address but wants a `Metadata: true` header and a different path, so the two
+# probes cannot be confused for each other.
+#
+# Short timeouts throughout: on a box that is in neither cloud, that address is not routed and the
+# connection hangs until it is cut off. Three seconds twice is the cost of asking.
+CLOUD=unknown
+imds_token="$(curl -fsS -X PUT --max-time 3 \
+  -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' \
+  http://169.254.169.254/latest/api/token 2>/dev/null || true)"
+
+if [ -n "$imds_token" ]; then
+  CLOUD=aws
+elif curl -fsS --max-time 3 -H 'Metadata: true' \
+     'http://169.254.169.254/metadata/instance?api-version=2021-02-01' >/dev/null 2>&1; then
+  CLOUD=azure
 fi
+echo "    cloud: $CLOUD (from the instance metadata service)"
+
+case "$CLOUD" in
+  aws)
+    # For infra/scripts/backup-to-s3.sh. The snap is the AWS CLI v2 and is the version AWS
+    # documents; Ubuntu's own `awscli` package is v1 and is left as the fallback rather than the
+    # first choice, because v1 and v2 differ in enough places to be worth not guessing about.
+    if ! command -v aws >/dev/null 2>&1; then
+      echo "    installing the AWS CLI (for the backup job's instance-profile credentials)..."
+      if sudo snap install aws-cli --classic >/dev/null 2>&1; then
+        echo "    installed $(aws --version 2>&1 | head -1)"
+      elif sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq awscli >/dev/null 2>&1; then
+        echo "    !! installed Ubuntu's awscli (v1) — the snap was unavailable. It works for"
+        echo "       's3 cp' and 'sts get-caller-identity', which is all the backup job uses."
+      else
+        echo "    !! could not install the AWS CLI — backups will refuse to run until it is present"
+      fi
+    else
+      echo "    aws CLI already installed"
+    fi ;;
+  azure)
+    # For infra/scripts/backup-to-azure.sh, unchanged.
+    if ! command -v az >/dev/null 2>&1; then
+      echo "    installing the Azure CLI (for the backup job's managed-identity login)..."
+      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash >/dev/null 2>&1 \
+        && echo "    installed $(az version --query '\"azure-cli\"' -o tsv 2>/dev/null || echo 'azure-cli')" \
+        || echo "    !! could not install the Azure CLI — backups will refuse to run until it is present"
+    else
+      echo "    az CLI already installed"
+    fi ;;
+  *)
+    # Not fatal. Everything else in this deployment works on any Ubuntu box with Docker, and a bare
+    # VPS is a legitimate place to run it — but there is no instance profile and no managed identity
+    # to back up with, so that has to be arranged by hand rather than assumed to have happened.
+    echo "    !! not an AWS or Azure instance, so no cloud CLI was installed."
+    echo "       The stack will deploy and run. The backup job will not: it needs 'aws' or 'az'"
+    echo "       and a credential. See docs/deploy/AWS.md § 6." ;;
+esac
 
 sudo mkdir -p "$REMOTE_ROOT/shared" "$REMOTE_ROOT/repo" "$REMOTE_ROOT/backups"
 sudo chown -R "$USER:$USER" "$REMOTE_ROOT"
@@ -794,7 +873,7 @@ candidate="$(cat <<ENVFILE
 # deliberate edit here, not a side effect of deploying.
 #
 # Back this file up somewhere other than this VM. It is now the ONLY copy of the credentials that
-# can read the database — losing it makes the encrypted dumps in Blob Storage unrestorable.
+# can read the database — losing it makes the encrypted dumps in the backup bucket unrestorable.
 
 # -- hostnames Caddy serves ------------------------------------------------------------------
 # TWO. azmoth.com and www.azmoth.com are Vercel's; this box must not serve or request
@@ -810,7 +889,7 @@ ACME_EMAIL=$ACME_EMAIL
 #   - 'alembic upgrade head'            (engine-migrate)   Neon: use direct for migrations
 #   - Better Auth's table creation      (web-auth-migrate)  same reason — it is DDL
 #   - the engine at runtime             (engine)            asyncpg is not pooler-safe
-#   - pg_dump                           (backup-to-azure.sh) a dump needs one snapshot
+#   - pg_dump                           (backup-to-s3.sh)   a dump needs one snapshot
 #
 # DATABASE_URL_POOLED is the POOLED endpoint — the host with '-pooler' in it. Used by:
 #   - Better Auth at runtime            (web)               node-postgres, connection-per-request
@@ -822,7 +901,7 @@ ACME_EMAIL=$ACME_EMAIL
 # A Neon connection string ends in a query string — typically
 # '?sslmode=require&channel_binding=require' — and an unquoted '&' in a file that gets sourced by a
 # shell is a background operator. This file IS sourced by a shell, in three places:
-# infra/scripts/backup-to-azure.sh, the registry-login step of scripts/deploy.sh, and the
+# the backup job (infra/scripts/backup-to-s3.sh), the registry-login step of scripts/deploy.sh, and the
 # 'make azure-psql' target. Unquoted, the '&' is a parse error that abandons the rest of the file —
 # so the symptom is not "the database URL is truncated", it is "every variable after this line is
 # empty", which presents as the backup job claiming STORAGE_ACCOUNT is unset.
@@ -876,14 +955,26 @@ CACHE_ENABLED=true
 # See infra/docker/.env.example for the full reasoning.
 PADNEXT_SCHEMA_POLICY=warn
 
-# -- backups (infra/scripts/backup-to-azure.sh) ----------------------------------------------
+# -- backups ---------------------------------------------------------------------------------
 # Fill these in after provisioning; the backup job refuses to run without them, deliberately.
-#   STORAGE_ACCOUNT   the account infra/azure/provision.sh created
+# Uncomment the pair for the cloud this box is actually in — the deploy step above prints which
+# one that is, and it installed the matching CLI.
+#
 #   AGE_RECIPIENT     the PUBLIC half of a keypair generated on your LAPTOP. The private half
 #                     must never be on this VM — that is what makes a compromised host unable to
 #                     read back a single backup.  age-keygen -o azmoth-backup.key
+#                     Needed on either cloud.
+#
+# AWS — infra/scripts/backup-to-s3.sh, uploads with the EC2 instance profile:
+#   STORAGE_BUCKET    the bucket infra/aws/provision.sh created, from its final banner
+# STORAGE_BUCKET=
+# BACKUP_PREFIX=db-backups
+#
+# Azure — infra/scripts/backup-to-azure.sh, uploads with the VM's managed identity:
+#   STORAGE_ACCOUNT   the account infra/azure/provision.sh created
 # STORAGE_ACCOUNT=
 # BACKUP_CONTAINER=db-backups
+#
 # AGE_RECIPIENT=
 ENVFILE
 )"

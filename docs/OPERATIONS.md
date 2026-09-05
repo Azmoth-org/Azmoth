@@ -8,7 +8,7 @@ command, and every command has been run.
 deliberately not duplicated here — two ways to run one check is how one of them goes stale.
 
 **Sections 1–6 are about the stack, wherever it runs — the commands assume a shell on the machine
-running it.** [Section 7](#7-the-azure-deployment) is the pilot deployment: one Azure VM, the same
+running it.** [Section 7](#7-the-deployed-vm) is the pilot deployment: one VM, the same
 Docker Compose stack behind Caddy, and an `azure-*` Makefile target for each command below that you
 would otherwise run over SSH by hand. If you are holding a laptop rather than a server, you probably
 want section 7.
@@ -29,7 +29,7 @@ production is refused for the same reason: the schema must arrive through `alemb
 that a rollback exists and the migration history describes the database.
 
 The **local** compose files already point the engine and the web tier at the `postgres` service. On
-the Azure VM there is no `postgres` service at all: the database is **Neon** — external, managed, in
+the deployed VM there is no `postgres` service at all: the database is **Neon** — external, managed, in
 `aws-eu-central-1` (AWS Europe, Frankfurt) — and both tiers reach it over TLS. SQLite appears in
 exactly one place — the test suite, which forces in-memory SQLite in `tests/conftest.py` before any
 application import, so a developer's `.env` cannot point a test run at a real database.
@@ -74,7 +74,7 @@ BACKUP_DIR=/mnt/backups make backup-db
 `make backup-db`, `make restore-db`, [`infra/scripts/backup-db.sh`](../infra/scripts/backup-db.sh)
 and [`infra/scripts/restore-db.sh`](../infra/scripts/restore-db.sh) all dump and restore through
 `docker compose exec postgres`, so they need a `postgres` container to exec into. A laptop running
-[`docker-compose.yml`](../infra/docker/docker-compose.yml) has one; the Azure VM does not. Nothing
+[`docker-compose.yml`](../infra/docker/docker-compose.yml) has one; the deployed VM does not. Nothing
 about them has gone stale — they are the right tools wherever the database and the compose file are
 on the same machine.
 
@@ -90,14 +90,24 @@ server — which is what makes the verification possible.
 the deployment holds; a `git add -A` that swept one into a commit would put a practice's records in
 a repository permanently.
 
-### On the Azure VM the dump goes over the network
+### On the deployed VM the dump goes over the network
 
-There is no `postgres` container there, so `backup-db.sh` has nothing to exec into and the Azure
-path is a different script:
-[`infra/scripts/backup-to-azure.sh`](../infra/scripts/backup-to-azure.sh). It runs `pg_dump` against
-Neon's **direct** endpoint over TLS, from inside a throwaway, pinned `postgres:17-alpine` container.
+There is no `postgres` container there, so `backup-db.sh` has nothing to exec into and the deployed
+path is a different script — one per cloud, differing only in where the encrypted file goes and what
+credential gets it there:
+
+| Cloud | Script | Destination | Credential |
+|---|---|---|---|
+| AWS | [`infra/scripts/backup-to-s3.sh`](../infra/scripts/backup-to-s3.sh) | S3 bucket, `eu-central-1` | EC2 instance profile |
+| Azure | [`infra/scripts/backup-to-azure.sh`](../infra/scripts/backup-to-azure.sh) | Blob container, `germanywestcentral` | VM managed identity |
+
+Both run `pg_dump` against Neon's **direct** endpoint over TLS, from inside a throwaway, pinned
+`postgres:17-alpine` container.
 
 ```bash
+# AWS
+ssh "azmoth@$AZURE_HOST" 'sudo /opt/azmoth/repo/infra/scripts/backup-to-s3.sh'
+# Azure
 make azure-backup                    # dump Neon, verify, encrypt, push to Blob — now
 ```
 
@@ -114,10 +124,10 @@ is a dump that restores into a state which never existed. The script refuses out
 
 Everything else is inherited from `backup-db.sh` rather than dropped with it: it verifies the
 archive with `pg_restore --list` and fails if no table data is listed, it age-encrypts the verified
-dump to a **public** key whose private half is never on the VM, and it uploads with the VM's managed
-identity rather than a stored account key. [§ 7.6](#76-backups-off-the-vm) is the cron line that runs
-it, and installing that is still something you have to do — a script in a repository is not a
-schedule.
+dump to a **public** key whose private half is never on the VM, and it uploads with an identity the
+cloud hands the box at run time rather than a stored key on disk.
+[§ 7.6](#76-backups-off-the-vm) is the cron line that runs it, and installing that is still something
+you have to do — a script in a repository is not a schedule.
 
 ### Why dump at all, when Neon has point-in-time restore
 
@@ -132,8 +142,15 @@ The shape is the problem. Instant restore, snapshots and branches all survive a 
 **None of them survives a deleted project, a lapsed card, a compromised Neon login, or Neon's own
 policy that Free-plan projects idle for 90 days or more are subject to deletion.** The principle
 this document has always stated has not changed — keep the dumps off the same host as the database —
-and a managed provider is a host. The encrypted blobs are the only copy that survives losing the
+and a managed provider is a host. The encrypted dumps are the only copy that survives losing the
 Neon account.
+
+**One caveat since the VM moved to AWS.** Neon runs on AWS, so the backup bucket is now with the same
+*provider* as the database rather than a different one. It is still a different account, a different
+service and a different credential, which is what the principle above is asking for — but it is not
+the provider diversity it used to be. A practice that wants that needs a third copy somewhere else
+entirely. It is named as an open point in
+[`docs/AVV_TECHNICAL_ANNEX_DRAFT.md`](AVV_TECHNICAL_ANNEX_DRAFT.md) § 9 rather than glossed over.
 
 And test a restore on a schedule rather than on an incident. [§ 7.7](#77-restoring) is the
 procedure; it needs the `age` private key, so it is a human's job rather than a cron line.
@@ -159,7 +176,7 @@ It is destructive and behaves accordingly:
 ### Testing a restore without touching production — local stack only
 
 Restore into a scratch database instead. **This recipe drives `docker compose exec postgres`, so it
-runs against the local stack and nowhere else** — there is no `postgres` container on the Azure VM.
+runs against the local stack and nowhere else** — there is no `postgres` container on the deployed VM.
 This is the check to run on a schedule:
 
 ```bash
@@ -295,9 +312,10 @@ A restart requeues those automatically; the archive is what makes that possible.
 
 ---
 
-## 7. The Azure deployment
+## 7. The deployed VM
 
-One VM in `germanywestcentral` — `Standard_B1ms`, 1 vCPU, 2 GiB of RAM, a 32 GiB disk — running the
+One VM — on AWS a `t3.small` in `eu-central-1` (2 vCPU, 2 GiB, a 32 GiB gp3 volume); on Azure a
+`Standard_B1ms` in `germanywestcentral` (1 vCPU, 2 GiB, a 32 GiB disk) — running the
 same `docker-compose.yml` as everywhere else with
 [`docker-compose.azure.yml`](../infra/docker/docker-compose.azure.yml) layered on top. That override
 does five things, and its header lists them:
@@ -316,20 +334,24 @@ newer**. On anything older, `ports` would be *concatenated* rather than replaced
 8000 would stay published on a public IP, so [`scripts/deploy.sh`](../scripts/deploy.sh) asserts the
 version before it runs anything.
 
-Provisioning and the first deploy are in
-[`docs/deploy/AZURE.md`](deploy/AZURE.md). This section is what you do afterwards.
+Provisioning and the first deploy are in [`docs/deploy/AWS.md`](deploy/AWS.md) (or
+[`AZURE.md`](deploy/AZURE.md) for the Azure deployment). This section is what you do afterwards, and
+almost none of it is provider-specific: it is SSH and `docker compose`.
 
-Set the host once and every `azure-*` target below works:
+Set the host once and every `azure-*` target below works. The variable and the target prefix kept
+their names through the move to AWS — they mean "the deployment VM", and renaming them would touch
+every target in the [`Makefile`](../Makefile) and every shell profile that exports one, for no
+behaviour. Read `AZURE_HOST` as `VM_HOST`.
 
 ```bash
-export AZURE_HOST=20.79.12.34
+export AZURE_HOST=3.120.45.67
 ```
 
 ### 7.1 The shape of it
 
 ```
         internet
-           │  :80  :443            ← the only ports the NSG allows, and the only ones Docker publishes
+           │  :80  :443            ← the only ports the cloud firewall allows, and the only ones Docker publishes
            ▼
     ┌──────────────┐
     │    caddy     │  TLS, Let's Encrypt, renewals
@@ -560,26 +582,38 @@ is behind a real login, which is precisely what Adminer never was.
 
 ### 7.6 Backups off the VM
 
-[`infra/scripts/backup-to-azure.sh`](../infra/scripts/backup-to-azure.sh) no longer wraps
-`backup-db.sh` — that script dumps through `docker compose exec postgres` and there is no such
+The backup job — [`backup-to-s3.sh`](../infra/scripts/backup-to-s3.sh) on AWS,
+[`backup-to-azure.sh`](../infra/scripts/backup-to-azure.sh) on Azure — no longer wraps
+`backup-db.sh`: that script dumps through `docker compose exec postgres` and there is no such
 container here. It runs `pg_dump` **over the network** against Neon's direct endpoint, from inside a
 throwaway, pinned `postgres:17-alpine` container, then verifies the archive, encrypts it, and pushes
-it to Blob Storage in the same region. [§ 2](#2-backups) has the reasoning for the container and for
-the direct endpoint.
+it to object storage in the same region. [§ 2](#2-backups) has the reasoning for the container and
+for the direct endpoint.
 
 ```bash
+# AWS
+ssh "azmoth@$AZURE_HOST" 'sudo /opt/azmoth/repo/infra/scripts/backup-to-s3.sh'
+# Azure
 make azure-backup                      # run one now
 ```
 
 Four properties worth knowing before you rely on it:
 
-- **The VM holds no *storage* credential.** Authentication is the VM's managed identity, granted
-  `Storage Blob Data Contributor` on that one container by `infra/azure/provision.sh`, and
-  `az login --identity` takes a short-lived token from the instance metadata endpoint. There is no
-  storage key on disk to steal from beside the dumps it would decrypt.
+- **The VM holds no *storage* credential.** On AWS it is the EC2 instance profile
+  `infra/aws/provision.sh` attached — an IAM role granting `s3:PutObject` and `s3:GetObject` on that
+  one bucket — and the CLI takes short-lived, automatically rotated credentials from the instance
+  metadata service. On Azure it is the VM's managed identity with `Storage Blob Data Contributor` on
+  that one container. Either way there is no key on disk to steal from beside the dumps it would
+  decrypt.
+
+  Two AWS-specific consequences, both deliberate and both surprising the first time:
+  `aws s3 ls s3://<bucket>` **from the VM answers AccessDenied** (no `s3:ListBucket` — you list from
+  your laptop), and the VM cannot delete an object it wrote (no `s3:DeleteObject`). The metadata
+  service is also IMDSv2-only with a hop limit of 1, so **a container cannot reach it at all** —
+  which is why `pg_dump` runs in a container and `aws s3 cp` runs on the host.
 - **The VM can encrypt and cannot decrypt.** `age` with a public key; the private key lives in your
   password manager and never touches the VM. Losing it loses every backup — that is the trade.
-- **It reads the blob back and compares its length** before reporting success, the same way it reads
+- **It reads the uploaded object back and compares its length** before reporting success, the same way it reads
   its own archive's table of contents with `pg_restore --list`. An upload that returned 200 and
   stored nothing is precisely the failure a backup process must not have.
 - **The Neon connection string, however, IS a long-lived credential, and it does live on the box** —
@@ -589,7 +623,7 @@ Four properties worth knowing before you rely on it:
   is **not** `ALTER ROLE`; Neon gives you no such thing to run. It is *"Reset password"* on the role
   in the Neon console, then editing both `DATABASE_URL` and `DATABASE_URL_POOLED` and re-running
   `scripts/deploy.sh`. Back that file up somewhere other than this VM: it is now the only copy of
-  the credentials that can read the database, and without them the encrypted dumps in Blob Storage
+  the credentials that can read the database, and without them the encrypted dumps in object storage
   cannot be restored anywhere.
 
 Set it up once (on the VM), then schedule it:
@@ -598,33 +632,46 @@ Set it up once (on the VM), then schedule it:
 # on your laptop, once
 age-keygen -o azmoth-backup.key        # → put the private key in a password manager
 ssh $AZURE_HOST
-  echo 'AGE_RECIPIENT=age1ql3z...'        | sudo tee -a /opt/azmoth/shared/.env
-  echo 'STORAGE_ACCOUNT=azmothbackupxxxx' | sudo tee -a /opt/azmoth/shared/.env
+  echo 'AGE_RECIPIENT=age1ql3z...'          | sudo tee -a /opt/azmoth/shared/.env
+  # AWS:
+  echo 'STORAGE_BUCKET=azmoth-backups-xxxx' | sudo tee -a /opt/azmoth/shared/.env
+  # Azure:
+  echo 'STORAGE_ACCOUNT=azmothbackupxxxx'   | sudo tee -a /opt/azmoth/shared/.env
   sudo crontab -e
 ```
 
 ```cron
 # 03:15 UTC daily. Output is mailed by cron if MAILTO is set; otherwise read the log.
-15 3 * * * /opt/azmoth/repo/infra/scripts/backup-to-azure.sh >> /var/log/azmoth-backup.log 2>&1
+# Substitute backup-to-azure.sh on an Azure box.
+15 3 * * * /opt/azmoth/repo/infra/scripts/backup-to-s3.sh >> /var/log/azmoth-backup.log 2>&1
 ```
 
-`sudo apt-get install -y age` used to be a line in that block, and installing the Azure CLI by hand
+`sudo apt-get install -y age` used to be a line in that block, and installing the cloud CLI by hand
 used to be a step before it. Both are now done by `scripts/deploy.sh`'s bootstrap, idempotently, on
-every deploy — because the backup job is the thing most likely to be set up "later", and a missing
-binary is one more reason for later never to arrive. `postgresql-client` is deliberately *not*
-installed; that is what the pinned `postgres:17-alpine` image is for.
+every deploy — it asks the instance metadata service which cloud the box is in and installs `aws` or
+`az` accordingly — because the backup job is the thing most likely to be set up "later", and a
+missing binary is one more reason for later never to arrive. `postgresql-client` is deliberately
+*not* installed; that is what the pinned `postgres:17-alpine` image is for.
 
-Nothing prunes the blobs, deliberately: a compromised VM must not be able to delete the backups it
-just wrote. Expire them with a lifecycle policy on the storage account instead, which the VM's role
-does not permit it to change.
+Nothing prunes the uploaded objects, deliberately: a compromised VM must not be able to delete the
+backups it just wrote. On AWS that is enforced rather than merely intended — the instance profile has
+no `s3:DeleteObject`. Expire them with a lifecycle rule instead, which the VM's role does not permit
+it to change.
 
-**Mind Cool tier's 30-day minimum storage duration when you write that policy.** A blob removed
-before it is 30 days old is billed as though it had lived for 30, so a rule that expires dumps at
-seven days does not save three quarters of the storage line — it saves nothing. The same
-early-delete charge applies to a full overwrite, which is why the script uploads under a timestamped
-name with `--overwrite false` rather than rewriting one blob daily.
+**[AWS] Mind that the bucket is versioned when you write that rule.** A rule that expires *current*
+versions leaves the noncurrent ones behind unless it also carries a `NoncurrentVersionExpiration`. A
+rule that appears to delete old backups and does not is worse than no rule, because it is believed.
+
+**[Azure] Mind Cool tier's 30-day minimum storage duration.** A blob removed before it is 30 days old
+is billed as though it had lived for 30, so a rule that expires dumps at seven days saves nothing.
+The same early-delete charge applies to a full overwrite, which is why the script uploads under a
+timestamped name rather than rewriting one blob daily.
 
 ```bash
+# AWS — from your LAPTOP; the VM has no s3:ListBucket
+aws s3 ls s3://azmoth-backups-xxxx/db-backups/ --recursive --region eu-central-1 | tail
+
+# Azure
 az storage blob list --account-name azmothbackupxxxx --container-name db-backups \
   --auth-mode login --output table | tail
 ```
@@ -633,8 +680,12 @@ az storage blob list --account-name azmothbackupxxxx --container-name db-backups
 
 There is no local Postgres to restore into any more, so the shape of this changed. The whole
 procedure now runs from your laptop, because that is where the `age` private key is: download the
-blob, decrypt it locally, check it, and only then send it at Neon — and at a **branch** of Neon
+object, decrypt it locally, check it, and only then send it at Neon — and at a **branch** of Neon
 first, not at the live database.
+
+On AWS it *has* to run from your laptop for a second reason: the VM's instance profile has no
+`s3:ListBucket`, so the box cannot even find the file. That is the policy working, not an obstacle to
+route around.
 
 `make azure-check-db` is not a restore drill and does not pretend to be. It is the database section
 of the pre-flight — reachable, right endpoints, schema at head. It replaced `make azure-restore-test`,
@@ -646,12 +697,20 @@ one.
 
 ```bash
 # 1. find it
+#    AWS:
+aws s3 ls s3://azmoth-backups-xxxx/db-backups/2026/09/ --region eu-central-1
+#    Azure:
 az storage blob list --account-name azmothbackupxxxx --container-name db-backups \
   --auth-mode login --query "[].{name:name, size:properties.contentLength}" --output table
 
 # 2. download and decrypt LOCALLY — the private key is in your password manager and nowhere else
+#    AWS:
+aws s3 cp s3://azmoth-backups-xxxx/db-backups/2026/09/azmoth-20260902T031500Z.dump.age \
+  ./restore.dump.age --region eu-central-1
+#    Azure:
 az storage blob download --account-name azmothbackupxxxx --container-name db-backups \
   --name 2026/09/azmoth-20260902T031500Z.dump.age --file ./restore.dump.age --auth-mode login
+
 age -d -i azmoth-backup.key ./restore.dump.age > ./restore.dump
 
 # 3. check it BEFORE sending it anywhere
@@ -711,6 +770,58 @@ recognise. If it says the schema is behind: `make azure-migrate`.
 
 ### 7.8 Cost and the credit
 
+#### [AWS]
+
+```bash
+aws ce get-cost-and-usage --time-period Start=$(date -u +%Y-%m-01),End=$(date -u -d '+1 month' +%Y-%m-01) \
+  --granularity MONTHLY --metrics UnblendedCost --group-by Type=DIMENSION,Key=SERVICE
+aws ec2 describe-instances --region eu-central-1 --filters Name=tag:Name,Values=azmoth-vm \
+  --query 'Reservations[].Instances[].{id:InstanceId,type:InstanceType,state:State.Name}' --output table
+```
+
+About **EUR 22.25/month** on-demand in `eu-central-1`:
+
+| Item | EUR/month |
+|---|---|
+| EC2 `t3.small` — 2 vCPU / 2 GiB, 730 h | 16.00 |
+| Root volume, 32 GiB gp3 | 2.80 |
+| Elastic IP, associated | 3.35 |
+| S3 Standard, a few GB of dumps | ~0.10 |
+| Egress | 0.00 — the first 100 GB/month is free |
+| Neon, Free plan | 0.00 |
+| GHCR — container storage and bandwidth | 0.00 — currently free on every plan |
+| GitHub Actions, public repository | 0.00 |
+| Vercel, Hobby | 0.00 |
+| **total** | **~22.25** |
+
+Three quarters of that is the instance, and it is a `t3.small` rather than a `t3.medium` only because
+nothing is built on it — see the header of
+[`infra/aws/provision.sh`](../infra/aws/provision.sh) for the ladder.
+
+Stopping the instance stops the EC2 charge and **not** the other two: the EBS volume and the Elastic
+IP go on billing about **EUR 6.15/month** between them. The Elastic IP is why the DNS records and the
+certificates survive the gap.
+
+```bash
+aws ec2 stop-instances  --instance-ids <id> --region eu-central-1   # stops compute billing
+aws ec2 start-instances --instance-ids <id> --region eu-central-1
+```
+
+Two AWS-specific traps, neither of which existed on Azure:
+
+- **An Elastic IP that is allocated and associated with nothing bills at the same rate as one in
+  use.** A torn-down pilot that forgot `aws ec2 release-address` goes on costing EUR 3.35/month
+  indefinitely. It is the last line of the teardown in
+  [AWS.md § 8](deploy/AWS.md#teardown).
+- **`t3` defaults to `unlimited` CPU credits, which bills a surcharge instead of throttling.**
+  `infra/aws/provision.sh` sets `CpuCredits=standard` so that it throttles instead. If solves feel
+  slow, check `CPUCreditBalance` before reaching for the setting — the answer is `t3.medium`.
+
+**There is no spending cap on an AWS account.** A fixed Azure credit stopped when it ran out; AWS
+keeps billing. The budget alert below is not optional here.
+
+#### [Azure]
+
 ```bash
 make azure-cost
 az vm list --resource-group azmoth-pilot --show-details --output table
@@ -756,7 +867,7 @@ az consumption budget create --budget-name azmoth-pilot --amount 100 \
   --start-date $(date -u +%Y-%m-01) --end-date $(date -u -d '+1 year' +%Y-%m-01)
 ```
 
-**Watch the Neon Free plan's allowances as well as the Azure credit, because they do not degrade —
+**Watch the Neon Free plan's allowances as well as the cloud bill, because they do not degrade —
 they stop.** The Free plan gives 100 CU-hours per project per month, 0.5 GB of storage and 5 GB of
 network transfer, and they are hard caps with no overage billing. When the compute allowance is
 spent, Neon suspends the compute: **existing connections are dropped and new ones cannot open** until
@@ -776,7 +887,7 @@ are visible in the Neon console before they happen, and neither is visible in `a
 | The first request after a quiet spell takes seconds | Neon's scale-to-zero. The compute suspends after five minutes idle and the next connection pays for the resume. It **cannot be disabled on the Free plan** (Launch can); it is not a fault, and it is why `MIGRATION_WAIT_SECONDS` defaults to 60. |
 | Every connection refused at once, and nothing changed on the VM | Neon's Free-plan compute allowance is exhausted. Existing connections are dropped and new ones refused until the next billing period. Check the Neon console — nothing on this box will tell you, because from here it looks like the database is down. |
 | The public site is down, the application is fine | That is **Vercel**, not this VM — check the Vercel dashboard. Then check nobody pointed `azmoth.com`'s A record here: there is no `marketing` container on this box, so Caddy would answer those names with its default site and burn a Let's Encrypt duplicate certificate trying. `scripts/preflight.sh` § 2b and `scripts/deploy.sh` both refuse on that. |
-| A container killed with exit 137 | OOM on a 2 GiB box. `free -m` — the 4 GiB swapfile should be there; re-run `infra/azure/provision.sh` if it is not. Nothing is built here any more, so this is a runtime spike (usually a Soufflé solve), not a build. |
+| A container killed with exit 137 | OOM on a 2 GiB box. `free -m` — the 4 GiB swapfile should be there; re-run the provisioning script for this box (`infra/aws/provision.sh` or `infra/azure/provision.sh`) if it is not. Nothing is built here any more, so this is a runtime spike (usually a Soufflé solve), not a build. |
 | Containers restarting, no obvious cause | `df -h /`. A full disk looks like everything failing at once. |
 | `502` from Caddy | The backend is not healthy yet. `make azure-ps`, then that service's logs. |
 | Port 8000 answers from outside | Stop. The deploy did not use `docker-compose.azure.yml`. Anyone can write to the audit log as any practice until it is closed. |

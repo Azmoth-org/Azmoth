@@ -46,6 +46,12 @@ SSH_OPTS=(-o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new)
 COMPOSE_CMD="cd $REMOTE_ROOT/repo && sudo COMPOSE_PROJECT_NAME=azmoth docker compose \
 -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.azure.yml"
 
+# Which cloud the box is in, and therefore which backup script belongs on it. Learned over SSH in
+# § 5 and used by § 6 and § 7 to print a command that is actually runnable. Everything else in this
+# checklist is provider-agnostic, because everything else is HTTP, TLS, DNS and Docker.
+CLOUD="unknown"
+BACKUP_SCRIPT="infra/scripts/backup-to-s3.sh"
+
 pass=0; fail=0; skip=0
 
 ok()    { printf '  \033[1;32m✓\033[0m %s\n' "$*"; pass=$((pass+1)); }
@@ -75,7 +81,10 @@ for p in 80 443; do
   else
     bad "port $p is CLOSED — it must be open"
     [ "$p" = 80 ] && note "80 is not optional: Let's Encrypt's HTTP-01 challenge arrives on it."
-    note "Check the NSG rule: az network nsg rule list -g azmoth-pilot --nsg-name azmoth-vm-nsg -o table"
+    note "Check the cloud firewall rule for this box:"
+    note "  aws ec2 describe-security-groups --group-names azmoth-vm-sg --region eu-central-1 \\"
+    note "    --query 'SecurityGroups[0].IpPermissions'                       # AWS"
+    note "  az network nsg rule list -g azmoth-pilot --nsg-name azmoth-vm-nsg -o table   # Azure"
   fi
 done
 
@@ -271,6 +280,28 @@ section "5. On the box"
 if ! ssh "${SSH_OPTS[@]}" "$SSH_TARGET" true 2>/dev/null; then
   bad "cannot ssh to $SSH_TARGET — skipping every remaining check"
 else
+  # Asked of the instance metadata service for the same reason scripts/deploy.sh asks: the box is
+  # the only thing that knows, and the answer decides which backup script and which credential
+  # mechanism the rest of this checklist should be naming. AWS is probed with the IMDSv2 handshake
+  # because infra/aws/provision.sh sets HttpTokens=required.
+  CLOUD="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" '
+    if curl -fsS -X PUT --max-time 3 -H "X-aws-ec2-metadata-token-ttl-seconds: 60" \
+         http://169.254.169.254/latest/api/token >/dev/null 2>&1; then echo aws
+    elif curl -fsS --max-time 3 -H "Metadata: true" \
+         "http://169.254.169.254/metadata/instance?api-version=2021-02-01" >/dev/null 2>&1; then echo azure
+    else echo unknown; fi' 2>/dev/null | tr -d '\r')"
+  CLOUD="${CLOUD:-unknown}"
+
+  case "$CLOUD" in
+    aws)   BACKUP_SCRIPT="infra/scripts/backup-to-s3.sh"
+           ok "this box is on AWS — the backup job is $BACKUP_SCRIPT" ;;
+    azure) BACKUP_SCRIPT="infra/scripts/backup-to-azure.sh"
+           ok "this box is on Azure — the backup job is $BACKUP_SCRIPT" ;;
+    *)     skipped "could not tell which cloud this box is in (metadata service unreachable)"
+           note "Not a problem for the stack, which does not care. It does mean the backup job"
+           note "has no instance profile or managed identity to use — see docs/deploy/AWS.md § 6." ;;
+  esac
+
   containers="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$COMPOSE_CMD ps --format json" 2>/dev/null)"
 
   # THREE long-running services, and that is the whole list. `postgres` and `marketing` used to be
@@ -334,7 +365,8 @@ else
     ok "${swap} MiB of swap present (headroom for a solver spike on 2 GiB)"
   else
     bad "only ${swap:-0} MiB of swap — an OOM kill would take out a running container"
-    note "Re-run infra/azure/provision.sh, which configures a 4 GiB swapfile."
+    note "Re-run the provisioning script for this box — infra/aws/provision.sh or"
+    note "infra/azure/provision.sh. Both configure a 4 GiB swapfile, and both are idempotent."
   fi
 
   # Memory in use. Meaningful now in a way it was not on a 4 GiB build box: if this is already near
@@ -344,8 +376,10 @@ else
     ok "${memfree} MiB memory available at rest"
   else
     bad "only ${memfree:-0} MiB available — this VM is too small for the running stack"
-    note "Take the next rung of the VM_SIZE ladder in infra/azure/provision.sh's header:"
-    note "  VM_SIZE=Standard_B2als_v2 ./infra/azure/provision.sh   (4 GiB, ~3.1 months of credit)"
+    note "Take the next rung of the size ladder in the provisioning script's header. Both need the"
+    note "instance replaced, so read the header before running either:"
+    note "  INSTANCE_TYPE=t3.medium ./infra/aws/provision.sh          (4 GiB)"
+    note "  VM_SIZE=Standard_B2als_v2 ./infra/azure/provision.sh      (4 GiB)"
   fi
 
   disk="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "df -h / | awk 'NR==2 {print \$5}'" 2>/dev/null | tr -d '%')"
@@ -494,7 +528,7 @@ asyncio.run(probe())
     bad "no dump has ever been taken on this box"
     note "Neon's Free-plan history window is SIX HOURS. That is a rollback, not a backup."
     note "Install the cron job — nothing does it for you. docs/OPERATIONS.md § 7.6:"
-    note "  15 3 * * * $REMOTE_ROOT/repo/infra/scripts/backup-to-azure.sh >> /var/log/azmoth-backup.log 2>&1"
+    note "  15 3 * * * $REMOTE_ROOT/repo/$BACKUP_SCRIPT >> /var/log/azmoth-backup.log 2>&1"
   fi
 fi
 
@@ -519,24 +553,32 @@ cat <<MANUAL
               --data-binary @delivery.xml | jq .
       □ Copy /opt/azmoth/shared/.env somewhere off this VM (a password manager).
         It now holds BOTH Neon connection strings — without them the encrypted
-        dumps in Blob Storage are files nobody can restore anywhere.
+        dumps in the backup bucket are files nobody can restore anywhere.
       □ Store the 'age' private key. Losing it loses every backup.
       □ Schedule the backup — nothing does it for you:
             ssh $SSH_TARGET 'crontab -l'
+        and confirm it runs $BACKUP_SCRIPT, which is
+        the one that matches this box.
       □ RESTORE DRILL, once, by hand. This is the check § 6 cannot make: it
         needs the age private key, which is deliberately not on the VM or in CI.
-        docs/OPERATIONS.md § 7.7 is the procedure — download a blob, decrypt it
-        locally, 'pg_restore --list' it, and restore into a scratch Neon branch
-        rather than over the live database.
+        docs/OPERATIONS.md § 7.7 is the procedure — download the object, decrypt
+        it locally, 'pg_restore --list' it, and restore into a scratch Neon
+        branch rather than over the live database.
       □ In the Neon console: confirm the project region is aws-eu-central-1
         (Frankfurt) and NOT a US region. It cannot be changed after creation.
       □ In the Neon console: set a spend limit, or watch the Free plan's compute
         allowance. Exhausting it DROPS live connections and refuses new ones
         until the next billing period — the pilot goes down, not degrades.
       □ Name every sub-processor in docs/AVV_TECHNICAL_ANNEX_DRAFT.md § 5.2,
-        which used to say there are none. There are now four:
-        Microsoft Azure (germanywestcentral), Neon/Databricks and AWS
-        (aws-eu-central-1), and Vercel (azmoth.com).
+        which used to say there are none. They are now:
+$(case "$CLOUD" in
+  aws)   echo "        AWS (eu-central-1 — this VM, the S3 backups, and the infrastructure"
+         echo "        Neon itself runs on), Neon/Databricks, and Vercel (azmoth.com)." ;;
+  azure) echo "        Microsoft Azure (germanywestcentral), Neon/Databricks and AWS"
+         echo "        (aws-eu-central-1), and Vercel (azmoth.com)." ;;
+  *)     echo "        whoever hosts this VM, Neon/Databricks and AWS (aws-eu-central-1),"
+         echo "        and Vercel (azmoth.com). The first one is yours to name." ;;
+esac)
       □ Request an executable AVV/DPA from Databricks for the Neon project.
         The self-serve neon.com/dpa is a click-accept schedule, not a signed
         contract, and a practice's lawyer will ask for the latter.
