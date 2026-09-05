@@ -160,14 +160,25 @@ den folgenden, namentlich benannten Orten:
 
 | Verarbeitungsschritt | Ort |
 | --- | --- |
-| Betrieb der Anwendung (Prüfung, PDF-Erzeugung, Weboberfläche) | Microsoft Azure, Region `germanywestcentral` (Frankfurt am Main) |
+| Betrieb der Anwendung (Prüfung, PDF-Erzeugung, Weboberfläche) | AWS, Region `eu-central-1` (Frankfurt am Main) |
 | Datenbank (PostgreSQL, als verwalteter Dienst über Neon) | AWS, Region `eu-central-1` (AWS Europe, Frankfurt) |
-| Verschlüsselte Datenbanksicherungen | Azure Blob Storage, Region `germanywestcentral` (Frankfurt am Main) |
+| Verschlüsselte Datenbanksicherungen | Amazon S3, Region `eu-central-1` (Frankfurt am Main) |
 
 Sämtliche genannten Orte liegen in Frankfurt am Main und damit innerhalb der Europäischen Union.
 Die Daten im Ruhezustand und die Verarbeitung selbst verlassen die Europäische Union nicht. Die
 öffentliche Marketing-Website ist nicht Gegenstand der Verarbeitung nach diesem Vertrag; die Gründe
 sind in [§ 5.2](#52-unterauftragsverarbeiter) ausgeführt.
+
+> **Änderung gegenüber dem vorherigen Stand dieser Anlage.** Die virtuelle Maschine wurde von
+> Microsoft Azure (`germanywestcentral`) zu AWS (`eu-central-1`) verlegt; die verschlüsselten
+> Sicherungen entsprechend von Azure Blob Storage zu Amazon S3. Beide Orte sind unverändert
+> Frankfurt am Main. Der Anlass war kein fachlicher: das zuvor genutzte Azure-Abonnement konnte
+> keine Rechenkapazität in einer Region der Europäischen Union mehr bereitstellen, und die Zusage in
+> diesem Abschnitt hat Vorrang vor der Wahl des Anbieters. Die Microsoft Corporation und die
+> Microsoft Ireland Operations Ltd. sind damit **keine Unterauftragsverarbeiter mehr**; die Zahl der
+> Unterauftragsverarbeiter verringert sich von vier auf drei. Die Anwendung selbst, die verarbeiteten
+> Datenfelder und sämtliche Maßnahmen nach [§ 6](#6-technische-und-organisatorische-maßnahmen-art-32-dsgvo)
+> sind unverändert.
 
 **Die Aussage, eine Übermittlung in ein Drittland finde nicht statt, kann gleichwohl nicht mehr
 ohne Einschränkung getroffen werden.** Der Auftragnehmer benennt die Gründe ausdrücklich, anstatt
@@ -182,6 +193,12 @@ sie zu übergehen:
 - Die Datenschutzerklärung von Neon stützt Übermittlungen auf das **Data Privacy Framework**;
   Standardvertragsklauseln sind dort nicht genannt.
 - Die **Vercel Inc.** ist ebenfalls ein Unternehmen mit Sitz in den Vereinigten Staaten.
+- Vertragspartner für die AWS-Dienste ist für Kunden im Europäischen Wirtschaftsraum die **Amazon
+  Web Services EMEA SARL (Luxemburg)**; deren oberste Muttergesellschaft ist die **Amazon.com, Inc.
+  (Vereinigte Staaten)**. AWS stellt für die Auftragsverarbeitung den *AWS Data Processing Addendum*
+  bereit, der Standardvertragsklauseln einbezieht — dies ist gegenüber dem alleinigen Verweis auf das
+  Data Privacy Framework der stärkere Mechanismus, und es ist der einzige Punkt, in dem der Wechsel
+  des Anbieters die datenschutzrechtliche Lage nicht nur unverändert lässt, sondern verbessert.
 
 Zutreffend ist daher: die Daten im Ruhezustand und die Verarbeitung finden in Frankfurt statt, ein
 administrativer oder unterstützender Zugriff durch die genannten US-Muttergesellschaften und deren
@@ -196,23 +213,35 @@ Es werden die folgenden Unterauftragsverarbeiter eingesetzt:
 
 | Unterauftragsverarbeiter | Leistung | Ort / Region | Zugängliche Datenkategorien |
 | --- | --- | --- | --- |
-| **Microsoft Ireland Operations Ltd. / Microsoft Corporation** | Microsoft Azure: die virtuelle Maschine, auf der die Anwendung läuft, sowie Azure Blob Storage mit den verschlüsselten Sicherungen | `germanywestcentral` (Frankfurt am Main) | Auf Infrastrukturebene alles, was die Anwendung verarbeitet |
+| **Amazon Web Services EMEA SARL** (Muttergesellschaft: Amazon.com, Inc.) | Drei Leistungen: (1) die virtuelle Maschine (EC2), auf der die Anwendung läuft, (2) der Objektspeicher (S3) mit den verschlüsselten Sicherungen, (3) die Infrastruktur, auf der Neon betrieben wird — insoweit als Unterauftragsverarbeiter von Neon | `eu-central-1` (Frankfurt am Main) | Auf Infrastrukturebene alles, was die Anwendung verarbeitet |
 | **Neon, LLC** (Tochtergesellschaft der Databricks, Inc.) | Verwaltete PostgreSQL-Datenbank | `aws-eu-central-1` (AWS Europe, Frankfurt) | Die vollständige Datenbank: Prüfergebnisse, Freigaben, das Protokoll, Benutzerkonten und Sitzungen |
-| **Amazon Web Services** | Infrastruktur, auf der Neon betrieben wird; Unterauftragsverarbeiter von Neon | `eu-central-1` (Frankfurt am Main) | Dieselben Daten wie Neon, auf Infrastrukturebene |
 | **Vercel Inc.** | Hosting der öffentlichen Marketing-Website (`azmoth.com`) | Vereinigte Staaten (Unternehmenssitz) | **Keine Rechnungs- und keine Patientendaten.** Zugänglich sind ausschließlich Zugriffsdaten eines Webservers zu Besuchern einer öffentlichen Informationsseite |
 
 Zu zwei Einträgen dieser Tabelle ist eine Erläuterung erforderlich, weil sie sich sonst falsch liest:
 
-- **Amazon Web Services steht nicht aus einer Auswahlentscheidung in dieser Kette.** Neon bietet
-  seit dem 7. April 2026 keine Azure-Region mehr an; auf keinem Tarif können dort neue Projekte
-  angelegt werden. Eine gemeinsame Unterbringung von Datenbank und virtueller Maschine bei einem
-  einzigen Anbieter ist damit nicht mehr möglich. Der Auftragnehmer hält dies ausdrücklich als
-  **Zwang und nicht als Wahl** fest.
+- **Die Amazon Web Services stehen in dieser Kette aus zwei verschiedenen Gründen, und nur einer
+  davon ist eine Auswahlentscheidung.** Für die Datenbank ist es keine: Neon bietet seit dem
+  7. April 2026 keine Azure-Region mehr an, auf keinem Tarif können dort neue Projekte angelegt
+  werden, und die Datenbank liegt deshalb seit jeher auf AWS-Infrastruktur. Für die virtuelle
+  Maschine und den Objektspeicher ist es eine: der Auftragnehmer hat AWS ausgewählt, nachdem das
+  zuvor genutzte Azure-Abonnement keine Rechenkapazität in der Europäischen Union mehr bereitstellen
+  konnte (siehe den Hinweis in [§ 5.1](#51-ort)). Der Auftragnehmer hält beides ausdrücklich fest,
+  weil die Folge eine ist, die ein Leser sonst selbst erschließen müsste: **Anwendung, Datenbank und
+  Sicherungen liegen nunmehr bei einem einzigen Infrastrukturanbieter.** Eine Trennung der Anbieter
+  war zuvor gegeben und ist entfallen. Sie ist als offener Punkt in [§ 9](#9-offene-punkte) benannt.
 - **Die Vercel Inc. erreicht keine personenbezogenen Daten aus der Verarbeitung.** Die
   Marketing-Website ist statisch vorgerendert, hält keine Datenbank, kennt keine Sitzung und
   kommuniziert nicht mit der Anwendung. Ihr Risikoprofil unterscheidet sich damit vollständig von
-  dem der übrigen drei Unterauftragsverarbeiter; dies wird hier ausgesprochen, damit ein Leser es
+  dem der übrigen zwei Unterauftragsverarbeiter; dies wird hier ausgesprochen, damit ein Leser es
   nicht selbst erschließen muss.
+
+Die Trennung, die innerhalb der AWS-Umgebung gleichwohl besteht, ist keine Trennung der Anbieter,
+aber auch nicht nichts, und wird deshalb benannt: Datenbank und Sicherungen liegen in
+**verschiedenen AWS-Konten** — die Datenbank in dem von Neon betriebenen, die Sicherungen in dem des
+Auftragnehmers — und werden über **verschiedene Zugangsdaten** erreicht. Die Sicherungen sind
+zusätzlich vor dem Verlassen der virtuellen Maschine clientseitig verschlüsselt; der zugehörige
+private Schlüssel liegt zu keinem Zeitpunkt bei AWS (siehe [§ 6.6](#66-verfügbarkeit-und-wiederherstellbarkeit)).
+Ein Ausfall oder eine Kündigung auf Seiten von AWS trifft jedoch beides zugleich.
 
 **Die vorstehende Tabelle ist keine abschließende Darstellung der gesamten Kette.** Die
 Unterauftragsverarbeiterliste von Neon wird von Databricks unter
@@ -304,18 +333,28 @@ benennen und vom Verantwortlichen zu genehmigen.
   Free-Tarif **sechs Stunden** (begrenzt auf 1 GB) und im Launch-Tarif bis zu **sieben Tage**. Der
   Auftragnehmer hält ausdrücklich fest: **ein Zeitfenster von sechs Stunden ist ein Rollback und
   keine Sicherung.**
-- Zusätzlich wird **täglich ein verschlüsselter Datenbankabzug** in Azure Blob Storage geschrieben,
-  also in das Konto eines anderen Anbieters als desjenigen, der die Datenbank betreibt. Die
-  Verschlüsselung erfolgt mit `age` gegen einen öffentlichen Schlüssel, dessen privater Teil auf
-  **keinem Produktivsystem vorhanden** ist. **Ein kompromittiertes Produktivsystem kann daher
+- Zusätzlich wird **täglich ein verschlüsselter Datenbankabzug** in Amazon S3 geschrieben, und zwar
+  in ein **anderes AWS-Konto** als dasjenige, in dem Neon die Datenbank betreibt, erreichbar über
+  **andere Zugangsdaten**. Der Auftragnehmer hält ausdrücklich fest, dass dies gegenüber dem
+  vorherigen Stand eine Abschwächung ist: die Sicherung lag zuvor bei einem anderen *Anbieter*,
+  nunmehr lediglich in einem anderen *Konto desselben Anbieters* (siehe
+  [§ 5.2](#52-unterauftragsverarbeiter) und [§ 9](#9-offene-punkte)). Die Verschlüsselung erfolgt mit
+  `age` gegen einen öffentlichen Schlüssel, dessen privater Teil auf **keinem Produktivsystem und bei
+  keinem Unterauftragsverarbeiter vorhanden** ist. **Ein kompromittiertes Produktivsystem kann daher
   Sicherungen schreiben und keine einzige lesen.**
+- Die Berechtigung des Produktivsystems auf den Objektspeicher ist auf **zwei Operationen**
+  beschränkt (Schreiben und Lesen einzelner Objekte in genau diesem einen Speicherbereich). Ein
+  Löschen von Sicherungen ist dem Produktivsystem **technisch nicht möglich**; zusätzlich ist die
+  Versionierung des Speicherbereichs aktiviert, so dass auch ein Überschreiben die vorherige Fassung
+  erhält.
 - Der Abzug wird **bei seiner Erzeugung überprüft** (`pg_restore --list` liest das
   Inhaltsverzeichnis des Archivs), und der Upload wird **zurückgelesen und seine Länge
   verglichen**. Ein Upload, der Erfolg gemeldet und nichts gespeichert hat, wird damit erkannt.
 - Ein durch einen Neustart unterbrochener Stapelauftrag wird automatisch fortgesetzt; bereits
   erzeugte Ergebnisse werden nicht erneut berechnet.
-- Die dokumentierten Skripte sind `infra/scripts/backup-to-azure.sh` sowie
-  `docs/OPERATIONS.md § 7.6` (Sicherung) und `docs/OPERATIONS.md § 7.7` (Wiederherstellung).
+- Die dokumentierten Skripte sind `infra/scripts/backup-to-s3.sh` (bei einem Betrieb auf Azure:
+  `infra/scripts/backup-to-azure.sh`) sowie `docs/OPERATIONS.md § 7.6` (Sicherung) und
+  `docs/OPERATIONS.md § 7.7` (Wiederherstellung).
 
 ### 6.7 Organisatorische Maßnahmen
 
@@ -380,13 +419,17 @@ ist unvollständig.
    anzufordern. Zu regeln: Beschaffung und Unterzeichnung **vor** der ersten Zeichnung durch eine
    Praxis.
 10. **Drittlandbezug durch US-Muttergesellschaften.** Betroffen sind Neon (Databricks, Inc.,
-    Vereinigte Staaten) und die Vercel Inc. (Vereinigte Staaten). Die Daten im Ruhezustand liegen in
-    Frankfurt; der administrative Zugriff und der Übermittlungsmechanismus — Data Privacy Framework
-    und die Frage, ob zusätzlich Standardvertragsklauseln erforderlich sind — bedürfen der
-    rechtlichen Bewertung. Siehe [§ 5.1](#51-ort).
+    Vereinigte Staaten), die Vercel Inc. (Vereinigte Staaten) und — über die Amazon Web Services
+    EMEA SARL (Luxemburg) — die Amazon.com, Inc. (Vereinigte Staaten). Die Daten im Ruhezustand
+    liegen in Frankfurt; der administrative Zugriff und der jeweilige Übermittlungsmechanismus —
+    Data Privacy Framework, Standardvertragsklauseln nach dem *AWS Data Processing Addendum*, und
+    die Frage, ob diese im Einzelfall genügen — bedürfen der rechtlichen Bewertung. Siehe
+    [§ 5.1](#51-ort).
 11. **Die Aufbewahrungsfrist der verschlüsselten Sicherungen ist nicht geregelt.** Derzeit löscht
-    kein Verfahren die abgelegten Blobs. Zu regeln: eine Lebenszyklusregel (*lifecycle policy*) und
-    eine Aufbewahrungsdauer. **Dieser Punkt greift in [§ 4](#4-speicherdauer-und-löschung) ein: eine
+    kein Verfahren die abgelegten Objekte. Zu regeln: eine Lebenszyklusregel (*lifecycle policy*)
+    und eine Aufbewahrungsdauer. Zu beachten ist dabei, dass der Speicherbereich versioniert ist:
+    eine Regel, die nur die jeweils aktuelle Fassung eines Objekts verfallen lässt, löscht die
+    vorherigen Fassungen **nicht** und erweckt lediglich den Anschein einer Löschung. **Dieser Punkt greift in [§ 4](#4-speicherdauer-und-löschung) ein: eine
     Löschung auf Weisung, die gegen die laufende Datenbank ausgeführt wird, erreicht einen bereits
     geschriebenen Datenbankabzug nicht.** Die Aufbewahrungsdauer der Sicherungen ist damit die
     tatsächliche Obergrenze dafür, wie lange Daten eine Löschungsaufforderung überdauern.
@@ -400,6 +443,15 @@ ist unvollständig.
     keine Verschlechterung der Leistung.** Zudem wird die Rechenleistung nach fünf Minuten ohne
     Aktivität ausgesetzt, was in diesem Tarif nicht abgeschaltet werden kann. Für Zusagen zur
     Verfügbarkeit relevant.
+14. **Anwendung, Datenbank und Sicherungen liegen bei einem einzigen Infrastrukturanbieter.** Seit
+    der Verlegung der virtuellen Maschine zu AWS (siehe den Hinweis in [§ 5.1](#51-ort)) verteilt
+    sich die Verarbeitung nicht mehr auf zwei Anbieter. Die Trennung besteht fort auf der Ebene der
+    Konten, der Dienste und der Zugangsdaten, und die Sicherungen sind zusätzlich mit einem
+    Schlüssel verschlüsselt, der bei keinem Unterauftragsverarbeiter liegt — ein Ausfall, eine
+    Kündigung oder eine Sperrung auf Seiten von AWS trifft jedoch alle drei Bestandteile
+    gleichzeitig. Der Auftragnehmer benennt dies als Sachverhalt und nicht als hinnehmbares
+    Restrisiko; die Bewertung obliegt dem Verantwortlichen. Zu regeln: ob eine Zweitsicherung bei
+    einem dritten Anbieter verlangt wird, und in welchem Abstand.
 
 ---
 

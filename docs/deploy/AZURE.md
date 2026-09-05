@@ -990,7 +990,7 @@ than tasks.
 ## 8. Day two
 
 Everything operational — logs, restarts, `psql`, restores, cost, and a table of failure modes — is
-[`docs/OPERATIONS.md` § 7](../OPERATIONS.md#7-the-azure-deployment).
+[`docs/OPERATIONS.md` § 7](../OPERATIONS.md#7-the-deployed-vm).
 
 The one command worth knowing before you need it:
 
