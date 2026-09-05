@@ -60,11 +60,17 @@
  * are separate functions rather than a flag on the ones above, because a boolean that disables
  * authentication is a boolean somebody eventually passes from a variable.
  *
- * The engine does not verify the header, and `apps/engine/app/api/identity.py` says so at length.
- * What makes it trustworthy is the deployment shape — the engine is not published to the browser,
- * and this proxy is its only caller — together with the fact that nothing reaches the engine from
- * here without a session that was checked against the database first. A Bearer token the engine
- * verifies itself is the next step, and `requireIdentity` is where it goes.
+ * The engine does not verify `X-User-ID` or `X-Organization-ID`, and `apps/engine/app/api/
+ * identity.py` says so at length. What makes them trustworthy is the deployment shape — the
+ * engine is not published to the browser, and this proxy is its only caller — together with the
+ * fact that nothing reaches the engine from here without a session that was checked against the
+ * database first.
+ *
+ * `requireIdentity` also mints a Bearer token via Better Auth's `jwt()` plugin and attaches it as
+ * `Authorization` on every call. One engine endpoint verifies it —
+ * `apps/engine/app/api/session_auth.py`, gating `POST /api/v1/rules/{rule_id}/review` — and every
+ * other endpoint ignores the header entirely. It travels on every request rather than only that
+ * one so that adding it stays a one-line change here instead of a per-route special case.
  */
 
 import { headers } from "next/headers"
@@ -98,8 +104,18 @@ type Identity =
  * The message is German and says what to do about it, because it is rendered: a session can expire
  * while a reviewer has `/review` open, and the next action they take lands here.
  */
+/**
+ * `Authorization` header name. Must match `AUTHORIZATION_HEADER` in
+ * `apps/engine/app/api/session_auth.py`, which is the only engine endpoint that reads it —
+ * `POST /api/v1/rules/{rule_id}/review`. Every other proxied call carries it too and every other
+ * engine endpoint ignores it, for the reason given on the `jwt()` plugin registration in
+ * `lib/auth.ts`: one seam, not a per-route special case.
+ */
+const SESSION_TOKEN_HEADER = "Authorization"
+
 async function requireIdentity(): Promise<Identity> {
-  const session = await getAuth().api.getSession({ headers: await headers() })
+  const requestHeaders = await headers()
+  const session = await getAuth().api.getSession({ headers: requestHeaders })
   if (!session) {
     return {
       ok: false,
@@ -128,11 +144,31 @@ async function requireIdentity(): Promise<Identity> {
     }
   }
 
+  // A short-lived, signed credential the engine can verify itself — see the `jwt()` plugin note
+  // in `lib/auth.ts`. This calls back into Better Auth's own session middleware, so it cannot
+  // fail for a session that just answered `getSession` above except for an infrastructure fault;
+  // that is refused here rather than proxied through as an anonymous, unverifiable request.
+  let sessionToken: string
+  try {
+    const minted = await getAuth().api.getToken({ headers: requestHeaders })
+    sessionToken = minted.token
+  } catch {
+    return {
+      ok: false,
+      failure: {
+        error: "session_token_unavailable",
+        message: "Die Sitzung konnte nicht bestätigt werden. Bitte laden Sie die Seite neu.",
+        status: 401,
+      },
+    }
+  }
+
   return {
     ok: true,
     headers: {
       [USER_ID_HEADER]: session.user.id,
       [ORGANIZATION_ID_HEADER]: organizationId,
+      [SESSION_TOKEN_HEADER]: `Bearer ${sessionToken}`,
     },
   }
 }

@@ -41,6 +41,11 @@ aiosqlite==0.22.1
 # runtime dependency of the image, not a dev tool.
 alembic==1.19.1
 
+# Verifies the Better Auth session JWT on POST /api/v1/rules/{rule_id}/review — see
+# app/api/session_auth.py. The `crypto` extra pulls in `cryptography`, needed for the EdDSA
+# (Ed25519) keys Better Auth's `jwt()` plugin mints by default.
+PyJWT[crypto]==2.10.1
+
 # -- development / test ------------------------------------------------------------------------
 pytest==9.1.1
 pytest-asyncio==1.4.0

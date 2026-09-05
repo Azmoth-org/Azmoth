@@ -11,9 +11,14 @@ mistaken for authentication. What makes it worth recording is the deployment sha
 header itself: `ENGINE_BASE_URL` is server-only in the web app (it is deliberately not
 `NEXT_PUBLIC_`), the engine is not published to the browser in
 `infra/docker/docker-compose.yml`, and every call therefore arrives from one trusted proxy that
-sets the header from a session cookie it verified. An engine reachable from the open internet would
-need a real token — a Better Auth JWT the engine verifies — and this module is the seam where that
-goes. Until then the honest statement is: this is who the proxy said it was.
+sets the header from a session cookie it verified. The honest statement for this header, still, is:
+this is who the proxy said it was.
+
+That seam — a Better Auth JWT the engine verifies itself — now exists for the one endpoint where
+trusting the network boundary alone was worth narrowing: `app.api.session_auth`, applied to `POST
+/api/v1/rules/{rule_id}/review`, which changes what every subsequent audit enforces platform-wide.
+It has not been widened to the rest of this surface; `X-User-ID` here is still asserted, not
+proven.
 
 **Only the id travels, never the email or the name.** The audit log is a compliance record on a
 service that handles clinical data, and an opaque user id is enough to answer "who did this" by

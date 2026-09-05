@@ -106,6 +106,15 @@ services:
       # behind a proxy that is up before the database is.
       MIGRATION_WAIT_SECONDS: "${MIGRATION_WAIT_SECONDS:-60}"
 
+      # -- session verification: POST /api/v1/rules/{rule_id}/review only --------------------
+      # That endpoint changes platform-wide rule enforcement, so it verifies a Better Auth
+      # session JWT itself rather than trusting X-User-ID alone — see
+      # app/api/session_auth.py. `web` is this file's own service name below, on the same
+      # compose network `web` reaches `engine` over via ENGINE_BASE_URL.
+      AUTH_JWKS_URL: "${AUTH_JWKS_URL:-http://web:3000/api/auth/jwks}"
+      AUTH_JWT_ISSUER: "${AUTH_JWT_ISSUER:-azmoth-web}"
+      AUTH_JWT_AUDIENCE: "${AUTH_JWT_AUDIENCE:-azmoth-engine}"
+
       # Refusing production data is the default and should stay that way. See
       # docs/compliance/PRIVATE_DATA_WARNING.md before changing it.
       PADNEXT_ALLOW_REAL_DATA: "false"

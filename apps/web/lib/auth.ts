@@ -61,7 +61,7 @@
 import { betterAuth } from "better-auth"
 import { APIError } from "better-auth/api"
 import { nextCookies } from "better-auth/next-js"
-import { organization } from "better-auth/plugins"
+import { jwt, organization } from "better-auth/plugins"
 
 import {
   SIGNUP_REFUSED_CODE,
@@ -355,6 +355,35 @@ function buildAuth() {
        * The boundary is between tenants, not within one.
        */
       organization(),
+
+      /**
+       * Lets `lib/engine.ts` hand the engine a real, verifiable credential instead of the
+       * asserted `X-User-ID` header it has always sent — see the long note in
+       * `apps/engine/app/api/identity.py` about why that header is not authentication and what
+       * the eventual fix was always going to be.
+       *
+       * Used for exactly one call today: `POST /api/v1/rules/{rule_id}/review`, which changes
+       * platform-wide rule enforcement and is the one endpoint the engine now verifies itself
+       * (`apps/engine/app/api/session_auth.py`). `getToken()` is called on every proxied request
+       * regardless — see `requireIdentity()` below — because a per-route special case is a
+       * special case somebody forgets; the engine simply ignores the header on endpoints that
+       * do not declare the dependency.
+       *
+       * `issuer`/`audience` are fixed strings naming this exact pair of services, not derived
+       * from `baseURL` (the plugin's default): `BETTER_AUTH_URL` is frequently unset in this
+       * application — see the note on it above — and an empty-string issuer both sides
+       * separately fell back to would be an implicit agreement neither side actually states.
+       * `expirationTime` is minutes, not the session's own week: this token is minted fresh for
+       * one proxied call and verified once, so there is no reason for a copy of it to be valid
+       * any longer than the request it rides on.
+       */
+      jwt({
+        jwt: {
+          issuer: "azmoth-web",
+          audience: "azmoth-engine",
+          expirationTime: "2m",
+        },
+      }),
 
       /**
        * Lets a server action or a route handler set the session cookie on its own response.

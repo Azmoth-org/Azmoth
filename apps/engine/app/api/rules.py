@@ -24,6 +24,12 @@ before it answers, so the coverage in the response is the coverage the very next
 That is per-process under multiple workers — stated in the service module rather than hidden, and
 the failure mode is a rule enforced slightly later on one worker, never a wrong answer.
 
+**`POST …/review` verifies its caller; the two reads above it do not.** Every other endpoint in
+this router — and most of the engine's web-tier surface — trusts the Next.js proxy's `X-User-ID`
+without checking it, which `app.api.identity` explains at length. This one write changes what every
+subsequent audit enforces, for every practice, immediately, which is enough to be worth verifying
+directly rather than trusting the network boundary alone — see `app.api.session_auth`.
+
 These path functions are `async def` because they do database I/O. The one CPU-bound step — the
 re-merge, which re-admits the whole rule table and rebuilds the three engines — goes to the
 threadpool via
@@ -39,6 +45,7 @@ from fastapi import APIRouter, HTTPException, Query
 from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import pipeline, rule_reviews
+from app.api.session_auth import VerifiedSession
 from app.rules.rule_store import RuleReviewStatus
 from app.schemas import RuleCoverage
 from app.schemas.rules import (
@@ -146,7 +153,11 @@ async def review_queue(
 
 
 @router.post("/{rule_id}/review", response_model=RuleReviewResult)
-async def review_rule(rule_id: str, request: RuleReviewRequest) -> RuleReviewResult:
+async def review_rule(
+    rule_id: str,
+    request: RuleReviewRequest,
+    verified_user_id: VerifiedSession,
+) -> RuleReviewResult:
     """Record a verdict on one rule and merge it into the running engine.
 
     `VERIFIED` makes the rule enforce exactly like a hand-curated one, which moves euros out of
@@ -154,9 +165,16 @@ async def review_rule(rule_id: str, request: RuleReviewRequest) -> RuleReviewRes
     rule and refused it: it never enforces again, not even under `UNVERIFIED_RULE_POLICY=block`,
     which does enforce merely-unverified rules. `PENDING` decides nothing and is a bookmark.
 
+    Unlike the rest of this router, this endpoint verifies its caller — see
+    `app.api.session_auth` — because a verdict here changes platform-wide rule enforcement for
+    every practice, immediately. `verified_user_id` is the Better Auth user id the token names; the
+    dependency is what actually gates the request, so an unused-looking parameter is doing real
+    work.
+
     `reviewed_by` is required for a decision, for the same reason `approved_by` is on an approval:
-    this changes what every future audit concludes about somebody's invoice. It is recorded, not
-    authenticated.
+    this changes what every future audit concludes about somebody's invoice. It is recorded
+    verbatim from the request body, which lets the reviewer's display name (not just their Better
+    Auth id) end up in `rule_reviews.reviewed_by`.
 
     The response carries the recomputed coverage, so a dashboard can update its progress bar from
     the same response rather than issuing a second request that could see a different world.

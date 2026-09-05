@@ -81,6 +81,8 @@ class ErrorCode(StrEnum):
     ORGANIZATION_REQUIRED = "ORGANIZATION_REQUIRED"
     API_KEY_REQUIRED = "API_KEY_REQUIRED"
     API_KEY_INVALID = "API_KEY_INVALID"
+    SESSION_TOKEN_REQUIRED = "SESSION_TOKEN_REQUIRED"
+    SESSION_TOKEN_INVALID = "SESSION_TOKEN_INVALID"
 
     # -- the client is doing it too often ------------------------------------------------------
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
@@ -351,6 +353,33 @@ class ApiKeyInvalid(EngineError):
     http_status = 401
 
 
+class SessionTokenRequired(EngineError):
+    """No `Authorization: Bearer …` on a request to an endpoint that now verifies one. `401`.
+
+    Raised by `app.api.session_auth.require_verified_session` for the one endpoint that verifies a
+    Better Auth session itself rather than trusting the proxy's `X-User-ID` alone —
+    `POST /api/v1/rules/{rule_id}/review`, which changes what every subsequent audit enforces
+    platform-wide. See that module for why this is deliberately narrow rather than applied to every
+    endpoint the web tier calls.
+    """
+
+    error_code = ErrorCode.SESSION_TOKEN_REQUIRED
+    http_status = 401
+
+
+class SessionTokenInvalid(EngineError):
+    """The bearer token failed to verify. `401`.
+
+    One code for every way that can happen — malformed, expired, wrong issuer or audience, signed
+    by a key this engine does not recognise — for the same reason `ApiKeyInvalid` collapses its own
+    four cases: telling them apart would hand a caller an oracle about which part of a forged token
+    to fix next.
+    """
+
+    error_code = ErrorCode.SESSION_TOKEN_INVALID
+    http_status = 401
+
+
 class RateLimitExceeded(EngineError):
     """The key has spent its budget for this window. `429`, with a `Retry-After`.
 
@@ -505,6 +534,8 @@ __all__ = [
     "ErrorResponse",
     "RateLimitExceeded",
     "RulesEngineUnavailable",
+    "SessionTokenInvalid",
+    "SessionTokenRequired",
     "SolverTimeoutError",
     "TransientDatabaseError",
     "UnknownZifferError",
