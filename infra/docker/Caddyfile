@@ -137,12 +137,35 @@
 	# The commercial surface. Every endpoint under it takes `RequestApiKey`: the token in
 	# `X-API-Key` is verified against the `api_keys` table on each request and the tenant comes out
 	# of the stored row, so this is safe to publish in a way the rest of the engine is not.
+	#
+	# **No `health_uri` here, unlike the app site's proxy above, and the asymmetry is deliberate.**
+	# Caddy's active health checks take an upstream out of rotation when the probe fails, so pointing
+	# one at `/health` would mean that a Neon blip — which that endpoint reports as a 503 — stops
+	# Caddy from forwarding *audit* requests at all, and a partner's integration receives a bare 502
+	# from the proxy instead of the engine's own structured error. The web site can afford the
+	# opposite trade because a Next.js container that is up but not yet serving is a real and common
+	# state during a deploy; an engine that is running is worth forwarding to even when its database
+	# is briefly unhappy, because it is the engine that knows how to say so.
 	handle /api/v1/audit* {
 		reverse_proxy engine:8000
 	}
 
-	# Liveness, for an uptime monitor. Read-only, no tenant, no data — it reports whether Soufflé
-	# loaded and the catalog is present.
+	# Liveness, for an uptime monitor. Read-only, no tenant, no data.
+	#
+	# Two of them, answering two different questions, and both are published because the answer to
+	# "is it up" and the answer to "why is it strange" are wanted by different callers at different
+	# rates. `/health` is the cheap one — it returns 200 when the process answers and its database
+	# answers a `SELECT 1`, and 503 when the database does not, so an external monitor can poll it
+	# every few seconds and branch on the status line alone. `/api/v1/health` is the diagnostic: it
+	# runs a probe program through Soufflé and through Clingo and reports the catalog version and the
+	# live rule counts, which costs a subprocess spawn and is not something to poll hard.
+	#
+	# Neither exposes anything tenant-specific — see apps/engine/app/api/liveness.py, which explains
+	# why `/health` names the database it could not reach (with the password rendered as `***`) and
+	# why that is safe to publish.
+	handle /health {
+		reverse_proxy engine:8000
+	}
 	handle /api/v1/health {
 		reverse_proxy engine:8000
 	}

@@ -94,6 +94,12 @@ from app.services.bulk_archive import (
 )
 from app.services.export import attachment_headers
 from app.services.pdf import render_batch_report
+from app.services.upload_validation import (
+    ARCHIVE_EXTENSIONS,
+    PADNEXT_EXTENSIONS,
+    validate_filename,
+    validate_upload,
+)
 from app.services.uploads import discard_bulk_upload, store_bulk_upload
 
 log = logging.getLogger(__name__)
@@ -143,6 +149,16 @@ async def _read_body(request: Request) -> tuple[bytes, str]:
             )
         content = await upload.read()
         await upload.close()
+        # The name, before the bytes are classified. Only on the multipart branch: a raw body has
+        # no filename to check, and `x-padnext-filename` below is an optional label a caller may
+        # omit entirely — making it mandatory here would break every `curl -T` integration for a
+        # header that decides nothing.
+        #
+        # Size is deliberately NOT checked here. `_read_body` serves the single-delivery endpoint,
+        # which enforces its own 5 MiB `max_single_xml_bytes` a few lines later with a message
+        # naming that limit and pointing at `/audit/bulk`; a second, more generic size refusal in
+        # front of it would be the same rejection with worse advice.
+        validate_filename(upload.filename, allowed_extensions=PADNEXT_EXTENSIONS)
         return content, upload.filename or ""
 
     return await request.body(), request.headers.get("x-padnext-filename", "")
@@ -427,6 +443,22 @@ async def audit_bulk(
     settings = get_settings()
     content = await file.read()
     await file.close()
+
+    # The name first, then the bytes. `max_bytes` is this endpoint's own `max_bulk_zip_bytes`
+    # (50 MB) rather than the validator's 10 MiB default, and that is the one place in the engine
+    # where the hardening brief's per-file ceiling is deliberately not applied: this part is an
+    # *archive of many deliveries*, the 50 MB figure is published in `docs/api/PARTNER_API.md` and
+    # in this endpoint's own docstring, and lowering it would break the bulk contract a partner has
+    # already integrated against. What actually bounds the damage here is not the compressed size
+    # but `max_bulk_archive_members` and `max_bulk_uncompressed_bytes`, which `inspect_archive`
+    # enforces entry by entry below — a 50 MB ZIP of zeroes is refused there, and no per-file byte
+    # limit would have caught it.
+    validate_upload(
+        file.filename,
+        content,
+        allowed_extensions=ARCHIVE_EXTENSIONS,
+        max_bytes=settings.max_bulk_zip_bytes,
+    )
 
     _refuse_wrong_format(content, allowed={InputFormat.ZIP})
 

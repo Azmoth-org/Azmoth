@@ -36,6 +36,7 @@ from app.api import (
     catalog,
     demo,
     health,
+    liveness,
     padnext,
     proposals,
     rules,
@@ -312,3 +313,16 @@ for router in (
     demo,
 ):
     app.include_router(router.router, prefix=API_PREFIX, responses=ERROR_RESPONSES)
+
+# `/health`, at the root, deliberately outside `API_PREFIX`.
+#
+# Unprefixed because the callers are infrastructure, not clients: a Docker `healthcheck:`, Caddy's
+# active health checks and an external uptime monitor all want one short well-known path, and
+# `/health` is the one every such tool defaults to. Versioning it would be versioning a fact about
+# a process rather than a contract about data — there is no v2 of "is it up".
+#
+# It is NOT registered with `ERROR_RESPONSES`. Every other router declares that envelope so the
+# generated TypeScript knows the error shape; this endpoint's whole contract is that it answers a
+# `LivenessResponse` on both of its status codes, and advertising a second body shape for the `503`
+# would be documenting something it does not do. See `app.api.liveness`.
+app.include_router(liveness.router)

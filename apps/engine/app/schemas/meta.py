@@ -32,6 +32,66 @@ class SolverHealth(BaseModel):
     detail: str = ""
 
 
+class DatabaseHealth(BaseModel):
+    """Whether the engine just reached its database, and how long the round trip took.
+
+    Produced by `GET /health` (`app.api.liveness`), which runs a literal `SELECT 1`. The point of
+    executing a statement rather than asking the pool whether it holds a connection is that a pool
+    reports a socket it has not used since before the failover: `pool_pre_ping` replaces such a
+    connection on checkout, so a probe that goes through a session is the only one that can tell
+    the difference between "we have a connection object" and "Neon answered us just now".
+
+    `status` is two-valued because there is only one action to take from it. A solver has three
+    states worth distinguishing (`SolverHealth` says why); a database is either answering or it is
+    not, and "installed but broken" is not a case an operator handles differently from "down".
+
+    `latency_ms` is the whole probe — checkout, statement, commit — measured with `perf_counter`.
+    On Neon it is dominated by the network hop and, on a suspended branch, by the cold start, so a
+    first probe after an idle period is legitimately slow without anything being wrong.
+
+    `detail` is empty when `status` is `ok` and carries one line of reason otherwise. It is the
+    exception text with the password already removed — `Database.url` renders it hidden — because
+    this response is read by an uptime monitor that may well log it somewhere less private.
+    """
+
+    status: Literal["ok", "failed"]
+    latency_ms: float = 0.0
+    #: The `DATABASE_URL` with its password rendered as `***`. Present on a failure so an operator
+    #: reading a monitor's alert can see *which* database did not answer without opening a shell —
+    #: a wrong `DATABASE_URL` and an unreachable one produce the same exception text otherwise.
+    url: str = ""
+    detail: str = ""
+
+
+class LivenessResponse(BaseModel):
+    """What `GET /health` returns: the two facts an uptime monitor needs and nothing else.
+
+    **Deliberately not `HealthResponse`.** That one is the operator's diagnostic — it probes both
+    solvers by running a program through each, which means spawning a Soufflé subprocess, and it
+    reports the catalog version, the rule counts and the cache size. All of that is the right answer
+    to "why is the engine behaving strangely" and the wrong answer to "is the engine up", which is
+    asked every thirty seconds forever and should not cost a process spawn.
+
+    So the two endpoints stay separate rather than one growing a `?verbose=` flag: `/api/v1/health`
+    keeps its shape and its two committed readers (the compose healthcheck and the dashboard's
+    System Health card — see `HealthResponse`), and this one is free to be cheap.
+
+    **The status code carries the verdict, not just the body.** A failed database probe answers
+    `503`, because the readers that matter — Caddy's active health checks, a Docker healthcheck, an
+    external uptime monitor — branch on the status line and would otherwise need to parse JSON to
+    notice. The body says which of the two checks failed.
+    """
+
+    status: Literal["ok", "degraded"]
+
+    #: Always `"engine"`. A constant, so that a monitor pointed at the wrong port — the web tier's
+    #: `/api/health` answers `{"status":"ok","service":"web"}` on the same path shape — reports a
+    #: mismatch instead of a false green.
+    service: str = "engine"
+
+    database: DatabaseHealth
+
+
 class HealthResponse(BaseModel):
     """Liveness, versions, and whether the two solvers actually work.
 

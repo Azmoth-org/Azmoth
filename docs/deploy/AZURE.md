@@ -633,9 +633,11 @@ locally, so a failed `docker pull` would silently become an on-box build. With n
 missing image is an error that names the tag.
 
 The VM needs a registry credential to pull private images: a GitHub **classic** personal access
-token whose only scope is `read:packages`. It cannot push an image, cannot read the repository
-source and cannot act on the account — it is the least a `docker pull` can be given. `deploy.sh`
-prompts for it without echoing and stores it in `/opt/azmoth/shared/.env` at mode 600, because an
+token scoped to `repo` and `read:packages`. `read:packages` alone 403s on pull here — these are
+org-owned private packages tied to a private repository, and GHCR also checks repo-level access,
+not just the package scope. `repo` cannot push an image or act on the account; it grants read
+access to the repository, which is the permission GHCR is actually checking. `deploy.sh` prompts
+for it without echoing and stores it in `/opt/azmoth/shared/.env` at mode 600, because an
 unattended restart has to be able to pull without a human. A fine-grained token is not used because
 those have never covered organisation-owned packages reliably.
 

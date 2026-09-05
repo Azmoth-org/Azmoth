@@ -74,6 +74,7 @@ from app.services.batch_audit import (
 )
 from app.services.export import attachment_headers, batch_export_filename
 from app.services.pdf import render_batch_report, render_single_report
+from app.services.upload_validation import PADNEXT_EXTENSIONS, validate_upload
 
 log = logging.getLogger(__name__)
 
@@ -405,28 +406,25 @@ async def padnext_batch(
         await upload.close()
         name = upload.filename or "unnamed"
 
-        if not content:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "empty_file",
-                    "message": f"{name!r} is empty. An empty part is a client bug, not a delivery.",
-                    "filename": name,
-                },
-            )
-        if len(content) > MAX_BATCH_FILE_BYTES:
-            raise HTTPException(
-                status_code=413,
-                detail={
-                    "error": "file_too_large",
-                    "message": (
-                        f"{name!r} is {len(content)} bytes; a single delivery may be at most "
-                        f"{MAX_BATCH_FILE_BYTES}."
-                    ),
-                    "filename": name,
-                    "max_bytes": MAX_BATCH_FILE_BYTES,
-                },
-            )
+        # Name, emptiness and size in one place, shared with `/audit/single` and `/audit/bulk` so
+        # the three upload paths cannot come to disagree about what a filename may be. It raises
+        # the same `HTTPException` shape this handler used to raise inline — `EMPTY_FILE` (400) and
+        # `REQUEST_TOO_LARGE` (413) — plus the two name refusals that did not exist before,
+        # `INVALID_FILENAME` and `UNSUPPORTED_FILE_EXTENSION`. See `app.services.upload_validation`.
+        #
+        # `upload.filename` rather than `name`: the `or "unnamed"` fallback above is for log lines
+        # and must not be what gets validated, or a part with no filename at all would be accepted
+        # under a name the caller never sent.
+        #
+        # `MAX_BATCH_FILE_BYTES` is 8 MiB — below the module's 10 MiB default, and kept rather than
+        # raised to it. A batch member is one invoice, and loosening a limit during a hardening pass
+        # would be the wrong direction.
+        validate_upload(
+            upload.filename,
+            content,
+            allowed_extensions=PADNEXT_EXTENSIONS,
+            max_bytes=MAX_BATCH_FILE_BYTES,
+        )
         total += len(content)
         if total > MAX_BATCH_TOTAL_BYTES:
             raise HTTPException(

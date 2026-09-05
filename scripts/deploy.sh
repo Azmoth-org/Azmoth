@@ -116,13 +116,15 @@ SKIP_PULL=false
 GHCR_REGISTRY="${GHCR_REGISTRY:-}"
 IMAGE_TAG="${IMAGE_TAG:-}"
 
-# A GitHub personal access token with `read:packages` and NOTHING ELSE, for pulling private images.
+# A GitHub personal access token for pulling private images, scoped to `repo` + `read:packages`.
 # Read from the environment rather than a flag so it does not land in a shell history. If it is
 # unset and the box has none, the script prompts for it without echoing.
 #
-# Scope matters: `read:packages` cannot push an image, cannot read the repository source, and cannot
-# act on the account. It is the least a `docker pull` can be given. A classic token is used rather
-# than a fine-grained one because fine-grained tokens have never covered organisation-owned
+# `read:packages` alone is NOT enough here and will 403 on pull: these are org-owned private
+# packages tied to a private repository, and GHCR checks repo-level access for those in addition to
+# the package scope. `repo` cannot push an image and cannot act on the account — it can read the
+# repository, which is exactly the permission GHCR is actually checking. A classic token is used
+# rather than a fine-grained one because fine-grained tokens have never covered organisation-owned
 # packages reliably.
 GHCR_TOKEN="${GHCR_TOKEN:-}"
 GHCR_USER="${GHCR_USER:-}"
@@ -164,7 +166,7 @@ usage: ./scripts/deploy.sh <host> [options]
   -h, --help             this
 
 environment (never passed as flags, because they are secrets):
-  GHCR_TOKEN             a GitHub PAT with read:packages. Prompted for if absent.
+  GHCR_TOKEN             a GitHub PAT with repo + read:packages. Prompted for if absent.
   DATABASE_URL           Neon's DIRECT connection string.   Required on the FIRST deploy only.
   DATABASE_URL_POOLED    Neon's POOLED connection string.   Required on the FIRST deploy only.
 
@@ -457,12 +459,14 @@ if [ -z "$GHCR_TOKEN" ] && [ "$box_has_token" = false ]; then
   say "GitHub registry token"
   cat >&2 <<'TOKENHELP'
     The VM needs a token to pull the private images. Create a CLASSIC personal access
-    token with the single scope `read:packages` and nothing else:
+    token with the scopes `repo` and `read:packages`:
 
-        https://github.com/settings/tokens/new?scopes=read:packages&description=azmoth-vm-pull
+        https://github.com/settings/tokens/new?scopes=repo,read:packages&description=azmoth-vm-pull
 
-    read:packages cannot push an image, cannot read the repository source, and cannot
-    act on the account. It is the least a `docker pull` can be given.
+    read:packages alone 403s on pull for this org: these packages are private and tied
+    to a private repository, so GHCR also checks repo-level access, not just the package
+    scope. `repo` cannot push an image or act on the account — it grants read access to
+    the repository, which is the permission GHCR is actually checking here.
 
 TOKENHELP
   read -r -s -p "    Paste it (not echoed): " GHCR_TOKEN
@@ -505,7 +509,7 @@ if [ -n "$GHCR_TOKEN" ] && command -v jq >/dev/null 2>&1; then
       rc=$?
       if [ "$rc" = 2 ]; then
         warn "could not authenticate to ghcr.io as '$GHCR_USER' — skipping the manifest check."
-        warn "Confirm the token has read:packages. The pull on the VM will tell you for certain."
+        warn "Confirm the token has repo + read:packages. The pull on the VM will tell you for certain."
         images_ok=true
         break
       fi
@@ -848,6 +852,25 @@ if [ -n "$DATABASE_URL" ] && [ -n "$DATABASE_URL_POOLED" ]; then
   fi
 fi
 
+# ── Strip DATABASE_URL's query string; DATABASE_URL_POOLED keeps its own ───────────────────────
+#
+# Neon's Connect dialog hands out both strings with libpq-flavoured query params —
+# '?sslmode=require&channel_binding=require'. That is fine for `psql` and for `pg` (the web tier's
+# driver), but SQLAlchemy's asyncpg dialect passes unrecognised query keys straight through to
+# asyncpg.connect() as Python keyword arguments, and asyncpg has no 'sslmode' or 'channel_binding'
+# parameter. The engine and engine-migrate — the only consumers of DATABASE_URL — fail before
+# opening a connection: "connect() got an unexpected keyword argument 'sslmode'".
+#
+# So DATABASE_URL is normalized here, once, by dropping everything from the first '?' onward.
+# DATABASE_URL_POOLED is untouched: node-postgres (Better Auth, at runtime) has no such problem
+# and Neon's pooled endpoint needs TLS asserted the same as the direct one.
+#
+# The one place that loses SSL because of this strip is `web-auth-migrate`, which runs Better
+# Auth's own migrator — Node, over `pg`, but on the DIRECT url for the DDL reasons in the long
+# comment on that service. Its compose definition in infra/docker/docker-compose.azure.yml re-adds
+# '?sslmode=require' to DATABASE_URL for that one service, so it does not need it here.
+DATABASE_URL_FOR_ENV="${DATABASE_URL%%\?*}"
+
 # ── Build the candidate .env locally, and send it over STDIN ───────────────────────────────────
 #
 # Over stdin, deliberately, rather than as `ssh host "VAR='$SECRET' bash -s"`. That form puts the
@@ -897,21 +920,26 @@ ACME_EMAIL=$ACME_EMAIL
 # Rotate by resetting the role's password in the Neon console, editing BOTH lines here, then
 # re-running scripts/deploy.sh. Neon has no ALTER ROLE for you to run.
 #
+# DATABASE_URL below has its query string stripped — see the DATABASE_URL_FOR_ENV note above this
+# heredoc for why asyncpg needs that. DATABASE_URL_POOLED keeps whatever Neon gave it.
+#
 # ** THE QUOTES ARE LOAD-BEARING. DO NOT REMOVE THEM. **
-# A Neon connection string ends in a query string — typically
+# DATABASE_URL_POOLED still ends in a query string — typically
 # '?sslmode=require&channel_binding=require' — and an unquoted '&' in a file that gets sourced by a
 # shell is a background operator. This file IS sourced by a shell, in three places:
 # the backup job (infra/scripts/backup-to-s3.sh), the registry-login step of scripts/deploy.sh, and the
 # 'make azure-psql' target. Unquoted, the '&' is a parse error that abandons the rest of the file —
 # so the symptom is not "the database URL is truncated", it is "every variable after this line is
-# empty", which presents as the backup job claiming STORAGE_ACCOUNT is unset.
+# empty", which presents as the backup job claiming STORAGE_ACCOUNT is unset. DATABASE_URL no
+# longer carries a query string, but it stays quoted for the same reason and for consistency.
 # Docker Compose strips the surrounding quotes, so nothing downstream sees them.
-DATABASE_URL="$DATABASE_URL"
+DATABASE_URL="$DATABASE_URL_FOR_ENV"
 DATABASE_URL_POOLED="$DATABASE_URL_POOLED"
 
 # -- pulling the images ----------------------------------------------------------------------
-# A GitHub classic PAT with the single scope read:packages. It cannot push an image, read the
-# repository source, or act on the account. Rotate it at
+# A GitHub classic PAT scoped to repo + read:packages. read:packages alone 403s here: these are
+# org-owned private packages tied to a private repo, and GHCR also checks repo-level access. repo
+# cannot push an image or act on the account. Rotate it at
 # https://github.com/settings/tokens whenever you like — nothing here depends on its value
 # surviving, only on it being valid at 'docker compose pull' time.
 GHCR_USER="$GHCR_USER"
@@ -1145,7 +1173,7 @@ esac
 #
 # The credential is written to root's ~/.docker/config.json by this login, base64-encoded. That is
 # a second copy of the token on the box and it is unavoidable if unattended restarts are to pull —
-# which is why the scope is read:packages and nothing else.
+# which is why the scope is kept to repo + read:packages and nothing beyond that.
 if [ "$SKIP_PULL" != "true" ]; then
   set -a
   # shellcheck disable=SC1091  # a deployment location, not a file in this repo
@@ -1173,7 +1201,7 @@ if [ "$SKIP_PULL" != "true" ]; then
     echo "   Most likely: the images for $IMAGE_TAG are not in the registry, or the token has" >&2
     echo "   expired. Check:" >&2
     echo "     gh run list --workflow=release-images.yml --limit 5" >&2
-    echo "     https://github.com/settings/tokens        (read:packages, not expired)" >&2
+    echo "     https://github.com/settings/tokens        (repo + read:packages, not expired)" >&2
     exit 1
   fi
   echo "    pulled"

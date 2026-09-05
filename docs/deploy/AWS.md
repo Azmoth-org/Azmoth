@@ -578,17 +578,38 @@ age-keygen -o azmoth-backup.key
 Keep `azmoth-backup.key` in a password manager and **nowhere else**. Losing it loses every backup.
 That is the trade, and it is stated here rather than discovered.
 
+Then, on the VM, run the activation script. It asks for the public key, writes it and the bucket
+name into `/opt/azmoth/shared/.env`, and installs the 02:00 cron entry:
+
 ```bash
-# on the VM
+ssh azmoth@$HOST
+/opt/azmoth/repo/scripts/setup-backups.sh
+```
+
+It is safe to re-run — it replaces its own cron entry rather than appending a second one, and
+rewrites the env file atomically instead of appending a duplicate key. Run it as the deployment
+user, **not** with `sudo`: the job has to belong to the user that owns `/opt/azmoth` and is in the
+`docker` group, or it writes root-owned dumps into `/opt/azmoth/backups` that nothing can clean up.
+
+Doing it by hand is still fine, and is what the script does:
+
+```bash
+# on the VM — the manual equivalent
 sudo tee -a /opt/azmoth/shared/.env <<'ENV'
 STORAGE_BUCKET=azmoth-backups-xxxxxx
 AGE_RECIPIENT=age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
 ENV
 
-# 03:15 UTC daily
+# 02:00 local daily. Note PATH: cron's default does not include /snap/bin, which is where
+# `snap install aws-cli` puts the binary this job cannot run without.
 crontab -e
-# 15 3 * * * /opt/azmoth/repo/infra/scripts/backup-to-s3.sh >> /var/log/azmoth-backup.log 2>&1
+# PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+# 0 2 * * * /opt/azmoth/repo/infra/scripts/backup-to-s3.sh >> /var/log/azmoth-backup.log 2>&1
 ```
+
+**Take the first backup by hand and watch it succeed.** The script prints the command and does not
+run it, deliberately: bucket permissions are the thing that is wrong on the first attempt, and 2am
+tomorrow is the wrong time to find that out.
 
 The script **refuses to run** without both `STORAGE_BUCKET` and `AGE_RECIPIENT`. Deliberately: a
 backup job that quietly does nothing is worse than one that fails, and a dump that goes up
@@ -739,6 +760,7 @@ The bucket is left out of that list on purpose. Deleting it deletes the backups.
 |---|---|
 | `infra/aws/provision.sh` | **new** |
 | `infra/scripts/backup-to-s3.sh` | **new** |
+| `scripts/setup-backups.sh` | **new** — one-time activation: prompts for the age key, writes the env file, installs the cron entry |
 | `infra/azure/provision.sh`, `backup-to-azure.sh` | unchanged, still work |
 | `scripts/deploy.sh` | detects the cloud and installs `aws` or `az`; hints and comments updated. No behavioural change on Azure. |
 | `scripts/preflight.sh` | names the right backup script and firewall command. No check added or removed. |

@@ -59,6 +59,24 @@ class ErrorCode(StrEnum):
     ECHTDATEN_UNDECLARED = "ECHTDATEN_UNDECLARED"
     UNSUPPORTED_INPUT_FORMAT = "UNSUPPORTED_INPUT_FORMAT"
 
+    #: The uploaded file's *name* was refused, before its bytes were looked at.
+    #:
+    #: Distinct from `UNSUPPORTED_INPUT_FORMAT`, which is decided by the leading bytes, and the
+    #: distinction is the client's next action: `UNSUPPORTED_INPUT_FORMAT` means the export step
+    #: produced the wrong thing, this means the right thing arrived under a name this endpoint will
+    #: not accept. Collapsing them would send an integrator to re-examine a perfectly good exporter.
+    UNSUPPORTED_FILE_EXTENSION = "UNSUPPORTED_FILE_EXTENSION"
+
+    #: The filename itself is unusable — absent, over-long, or carrying a path component or NUL.
+    #: Separate from the extension refusal because it is almost never a format mistake: a name with
+    #: a separator in it is a caller sending a path where a bare name belongs.
+    INVALID_FILENAME = "INVALID_FILENAME"
+
+    #: A multipart part arrived with a filename and no bytes. Its own code rather than
+    #: `EMPTY_REQUEST_BODY`, which describes a whole request: in a batch upload the distinction is
+    #: which *file* was empty, and `details.filename` carries it.
+    EMPTY_FILE = "EMPTY_FILE"
+
     # -- the client may not do this ------------------------------------------------------------
     ORGANIZATION_REQUIRED = "ORGANIZATION_REQUIRED"
     API_KEY_REQUIRED = "API_KEY_REQUIRED"

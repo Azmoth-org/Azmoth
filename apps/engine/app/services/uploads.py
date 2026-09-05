@@ -51,6 +51,25 @@ log = logging.getLogger(__name__)
 #: a filename — the uploaded `filename` is display metadata and is stored in the database.
 BULK_ARCHIVE_NAME = "upload.zip"
 
+#: Mode every stored upload is given: owner read/write, and **no execute bit for anybody**.
+#:
+#: `Path.write_bytes` creates a file at `0o666 & ~umask`, which on a default umask is `0o644` —
+#: already not executable, and already not something this process would execute. The explicit chmod
+#: is here because both of those are defaults rather than guarantees: a umask of `0o000` in a
+#: container's entrypoint makes the same call produce a world-writable file, and "we happen not to
+#: exec it" is a property of today's code rather than of the bytes on disk.
+#:
+#: Dropping group and other entirely, not just the execute bit, because there is no second party
+#: that has any business reading a PADnext delivery out of the volume — it is billing data about
+#: identifiable treatment, and the engine is the only process mounting it.
+#:
+#: This is one of three independent reasons an upload cannot run here, and it is the weakest of the
+#: three. The other two: nothing in this codebase passes an upload path to a subprocess, an
+#: interpreter or an import — the bytes go to `zipfile` and `lxml` and nowhere else — and the
+#: archives live under `UPLOAD_DIR`, a named Docker volume (`azmoth-engine-uploads`) that no web
+#: server is configured to serve. See `infra/docker/docker-compose.yml`.
+UPLOAD_FILE_MODE = 0o600
+
 #: What a path segment may contain. Better Auth ids are 32 characters of `[A-Za-z0-9]`, so this
 #: passes every real value through unchanged and keeps the directory tree readable to an operator.
 SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -77,6 +96,20 @@ def _segment(value: str) -> str:
         "organisation id is not usable as a directory name; storing under its hash %s", digest
     )
     return digest
+
+
+def _make_inert(path: Path) -> None:
+    """Strip every execute bit and every non-owner permission from a stored upload. Never raises.
+
+    Never, because the write already succeeded: a `chmod` that fails on an exotic filesystem must
+    not turn a stored archive into a `503` for a job whose bytes are safely on disk. It is logged
+    at WARNING, which is the right level for "a defence-in-depth measure did not apply" — the file
+    is still not executed by anything, for the two reasons `UPLOAD_FILE_MODE` names.
+    """
+    try:
+        path.chmod(UPLOAD_FILE_MODE)
+    except OSError as exc:
+        log.warning("could not set mode 0%o on %s: %s", UPLOAD_FILE_MODE, path, exc)
 
 
 def bulk_job_dir(batch_id: str, *, organization_id: str, settings: Settings | None = None) -> Path:
@@ -132,7 +165,14 @@ def store_bulk_upload(
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / BULK_ARCHIVE_NAME
     path.write_bytes(content)
-    log.info("bulk upload for %s stored at %s (%d bytes)", batch_id, path, len(content))
+    _make_inert(path)
+    log.info(
+        "bulk upload for %s stored at %s (%d bytes, mode 0%o)",
+        batch_id,
+        path,
+        len(content),
+        UPLOAD_FILE_MODE,
+    )
     return path
 
 
@@ -180,6 +220,7 @@ def discard_bulk_upload(path: str | Path, *, settings: Settings | None = None) -
 
 __all__ = [
     "BULK_ARCHIVE_NAME",
+    "UPLOAD_FILE_MODE",
     "SAFE_SEGMENT",
     "bulk_job_dir",
     "discard_bulk_upload",

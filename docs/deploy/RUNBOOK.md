@@ -226,13 +226,15 @@ Copy the public key — you will paste it into the VM's env file in [§ 5.4](#54
 ### 1.5 A GitHub token for pulling images
 
 The VM pulls private images from GHCR, so it needs a token. Create a **classic** personal access
-token whose only scope is `read:packages`:
+token scoped to `repo` and `read:packages`:
 
-<https://github.com/settings/tokens/new?scopes=read:packages&description=azmoth-vm-pull>
+<https://github.com/settings/tokens/new?scopes=repo,read:packages&description=azmoth-vm-pull>
 
-`read:packages` cannot push an image, cannot read the repository source, and cannot act on the
-account. It is the least a `docker pull` can be given. `deploy.sh` prompts for it if you do not put
-it in the environment; either way it ends up only in `/opt/azmoth/shared/.env` at mode 600.
+`read:packages` alone is not enough and will 403 on pull: these are org-owned private packages
+tied to a private repository, and GHCR also checks repo-level access, not just the package scope.
+`repo` cannot push an image or act on the account — it grants read access to the repository, which
+is the permission GHCR is actually checking here. `deploy.sh` prompts for the token if you do not
+put it in the environment; either way it ends up only in `/opt/azmoth/shared/.env` at mode 600.
 
 ### 1.6 Push the commit you intend to deploy
 
@@ -885,7 +887,22 @@ not a backup.
 storage setting and `AGE_RECIPIENT` — deliberately, because a backup job that quietly does nothing
 is worse than one that fails.
 
-**[AWS]**
+**[AWS] — the short way.** `scripts/setup-backups.sh` does everything in this section except take
+the first backup: it prompts for the age public key (and refuses the private one, and a truncated
+paste), writes it and the bucket name into `/opt/azmoth/shared/.env` atomically, and installs the
+02:00 cron entry with a `PATH` that includes `/snap/bin`. Re-running it replaces its own cron entry
+rather than adding a second, so it is safe to run when you are not sure whether backups are already
+on.
+
+```bash
+ssh "azmoth@$AZURE_HOST"
+/opt/azmoth/repo/scripts/setup-backups.sh          # as the deployment user, NOT with sudo
+```
+
+Then skip to "Take a backup now" below. The rest of this section is the manual equivalent, kept
+because Azure has no such script and because it is worth being able to see what is being changed.
+
+**[AWS] — by hand**
 
 ```bash
 ssh "azmoth@$AZURE_HOST" bash -s <<EOF
@@ -949,12 +966,18 @@ make azure-backup
 On Azure, step 4 reads `authenticating with the VM's managed identity` instead, and step 5 prints a
 container path. Everything else is the same script.
 
-Then schedule it — substituting `backup-to-azure.sh` on Azure:
+Then schedule it — substituting `backup-to-azure.sh` on Azure. On AWS,
+`scripts/setup-backups.sh` has already done this; run it only if you took the manual path above.
+
+`PATH` is set in the crontab, and it is not decoration: cron's default is `/usr/bin:/bin`, which
+does not include `/snap/bin` — where `snap install aws-cli --classic` puts the binary the job cannot
+run without. A backup that works when you run it by hand and fails from cron is nearly always this.
 
 ```bash
 ssh "azmoth@$AZURE_HOST" \
   '(crontab -l 2>/dev/null | grep -v backup-to-; \
-    echo "15 3 * * * /opt/azmoth/repo/infra/scripts/backup-to-s3.sh >> /var/log/azmoth-backup.log 2>&1") \
+    echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"; \
+    echo "0 2 * * * /opt/azmoth/repo/infra/scripts/backup-to-s3.sh >> /var/log/azmoth-backup.log 2>&1") \
    | crontab -'
 ssh "azmoth@$AZURE_HOST" 'crontab -l'
 ```

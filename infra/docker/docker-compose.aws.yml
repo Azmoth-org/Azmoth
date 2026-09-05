@@ -306,7 +306,13 @@ services:
       # THE DIRECT URL, for the same reason `engine-migrate` gets it: this is a migration. It
       # creates tables, and Neon says to do that on a direct connection. Better Auth's migrator is
       # also the one place in the web tier that would use session-level state.
-      AUTH_DATABASE_URL: "${DATABASE_URL:?set DATABASE_URL to the DIRECT (non-pooled) Neon connection string}"
+      #
+      # `?sslmode=require` is appended back on deliberately. scripts/deploy.sh strips Neon's query
+      # string off DATABASE_URL before writing it to the shared .env — asyncpg (engine, engine-migrate)
+      # rejects `sslmode`/`channel_binding` as unknown connect() keyword arguments — but this
+      # migrator is Node, over `pg` via Better Auth, which does not infer SSL from a bare Neon
+      # hostname and fails with "connection is insecure (try using `sslmode=require`)" without it.
+      AUTH_DATABASE_URL: "${DATABASE_URL}?sslmode=require"
     # A migration that fails must fail the stack, not be retried forever by a restart policy.
     restart: "no"
 

@@ -388,4 +388,23 @@ volumes:
     # Same reasoning, one step earlier in the life of a record: this holds bulk uploads that have
     # been accepted with a `202` and may not have been audited yet. Losing it turns a promise the
     # API already made into a job nothing will ever run.
+    #
+    # ── Nothing in here is ever executed, and that rests on four things, not on a mount flag ──
+    #
+    #   1. Nothing in the engine passes an upload path to a subprocess, an interpreter or an
+    #      import. The bytes go to `zipfile` and `lxml` and nowhere else.
+    #   2. Filenames from a client never become paths. The archive is stored under a constant name
+    #      (`upload.zip`) in a directory built from an organisation id and a generated batch id,
+    #      both re-checked against `^[A-Za-z0-9_-]{1,64}$` — see app/services/uploads.py.
+    #   3. Uploads are written mode 0600: no execute bit for anyone, and no read bit for group or
+    #      other. Set explicitly rather than left to the umask (`UPLOAD_FILE_MODE`).
+    #   4. No web server is configured to serve this path. It is mounted into the engine container
+    #      alone; Caddy has no file_server directive anywhere in infra/docker/Caddyfile.
+    #
+    # A `noexec` mount option would be a fifth, and it is deliberately absent: Compose cannot pass
+    # mount flags to a named volume without redefining it as a `type: none,o: bind` volume over a
+    # host path, which trades a docker-managed volume — one that survives `down`, is backed up as a
+    # unit and needs no host directory to exist — for a bind mount, to defend a path that four
+    # independent properties already keep inert. If this ever holds something a person can name,
+    # revisit that trade.
     name: azmoth-engine-uploads
