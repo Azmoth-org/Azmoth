@@ -37,13 +37,17 @@ pointed at — see that module for the command. CI runs SQLite; the dialect-spec
 from __future__ import annotations
 
 import atexit
+import base64
 import json
 import os
 import shutil
 import tempfile
+import time
 from decimal import Decimal
 
+import jwt as _pyjwt
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 # Set before any `app.*` import below, because `Settings` reads the environment once and
 # `get_settings()` caches it. Assignment rather than `setdefault`: an inherited DATABASE_URL must be
@@ -79,7 +83,7 @@ os.environ["APP_ENV"] = "development"
 # `tests/test_padnext_schema.py`, which sets this variable itself and clears the settings cache.
 os.environ["PADNEXT_SCHEMA_POLICY"] = "strict"
 
-from app.api import deps
+from app.api import deps, session_auth
 from app.api.tenancy import ORGANIZATION_ID_HEADER
 from app.bridge.entity_to_ziffer import BridgeResult
 from app.catalog import load_catalog
@@ -111,6 +115,77 @@ PADNEXT_DIR = CASES_DIR / "padnext"
 #: id for the whole fixture, because a test that wants two practices wants `tests/test_tenancy.py`,
 #: where the second one is the point rather than a detail.
 TEST_ORGANIZATION_ID = "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J"
+
+
+# ==============================================================================================
+# the session token `POST /rules/{rule_id}/review` verifies
+# ==============================================================================================
+#
+# `app.api.session_auth` verifies a Better Auth JWT against a JWKS fetched over HTTP from the web
+# tier. The suite has no Node process to fetch a real one from, so it stands in its own signing key
+# — a real Ed25519 keypair, so the signature check `session_auth` performs is genuine — and
+# monkeypatches only the network fetch, at import time, the same way `DATABASE_URL` above is forced
+# before any `app.*` import rather than restored per test: every test in this process shares one
+# engine, and the JWKS it would fetch never changes mid-suite.
+
+_TEST_SIGNING_KEY = Ed25519PrivateKey.generate()
+_TEST_KEY_ID = "test-key-1"
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+_TEST_JWK = {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "kid": _TEST_KEY_ID,
+    "alg": "EdDSA",
+    "use": "sig",
+    "x": _b64url(_TEST_SIGNING_KEY.public_key().public_bytes_raw()),
+}
+
+
+async def _fake_fetch_jwks(jwks_url: str) -> dict:
+    """Stands in for the real `GET {AUTH_JWKS_URL}` — no web tier, no network, in this suite."""
+    return {_TEST_KEY_ID: _TEST_JWK}
+
+
+session_auth._fetch_jwks = _fake_fetch_jwks
+
+
+def mint_session_token(
+    *,
+    sub: str = "test-reviewer-user-id",
+    issuer: str = "azmoth-web",
+    audience: str = "azmoth-engine",
+    kid: str = _TEST_KEY_ID,
+    signing_key: Ed25519PrivateKey = _TEST_SIGNING_KEY,
+    expires_in_seconds: int = 3600,
+) -> str:
+    """A JWT shaped exactly like the one Better Auth's `jwt()` plugin mints and
+    `apps/web/lib/engine.ts` forwards — EdDSA, `kid` in the header, `sub`/`iss`/`aud`/`iat`/`exp` in
+    the payload — signed with the suite's own test key rather than a real Better Auth instance.
+
+    An hour of validity by default: this is what the `client` fixture puts on every request, and a
+    token that could expire mid-suite would turn a slow CI run into a flake with nothing about the
+    test itself to blame. `tests/test_rules_review_auth.py` passes a short `expires_in_seconds`
+    where expiry is the thing being tested.
+    """
+    now = int(time.time())
+    payload = {
+        "sub": sub,
+        "iss": issuer,
+        "aud": audience,
+        "iat": now,
+        "exp": now + expires_in_seconds,
+    }
+    return _pyjwt.encode(payload, signing_key, algorithm="EdDSA", headers={"kid": kid})
+
+
+#: What the `client` fixture sends on every request, standing in for `apps/web/lib/engine.ts`
+#: minting one per proxied call. Valid for the whole test session — see `mint_session_token`.
+TEST_SESSION_AUTHORIZATION_HEADER = f"Bearer {mint_session_token()}"
 
 
 def _engines_required() -> bool:
@@ -227,6 +302,11 @@ def client():
     suite would be a `403`: the header is required, and this fixture stands in for the web tier,
     which sets it from the session's active practice. See `TEST_ORGANIZATION_ID`.
 
+    Also carries `Authorization: Bearer …` — a genuine, signed session token
+    (`TEST_SESSION_AUTHORIZATION_HEADER`) — for the same reason: without it, every call to
+    `POST /rules/{rule_id}/review` in the suite would be a `401`. `tests/test_rules_review_auth.py`
+    is what tests the boundary itself, with clients that omit or corrupt this header on purpose.
+
     Resetting is what keeps the proposal-store tests independent of each other. It used to be about
     a process-wide dictionary; it is now about the connection pool. `TestClient.__enter__` runs the
     lifespan, which builds a `Database` and creates the schema, and `__exit__` disposes it — and
@@ -241,7 +321,13 @@ def client():
     from app.main import app
 
     deps.reset()
-    with TestClient(app, headers={ORGANIZATION_ID_HEADER: TEST_ORGANIZATION_ID}) as test_client:
+    with TestClient(
+        app,
+        headers={
+            ORGANIZATION_ID_HEADER: TEST_ORGANIZATION_ID,
+            "Authorization": TEST_SESSION_AUTHORIZATION_HEADER,
+        },
+    ) as test_client:
         if not deps.pipeline().souffle.available():
             _require_or_skip(deps.pipeline().settings)
         yield test_client

@@ -241,6 +241,33 @@ class Settings(BaseSettings):
     #: `app.services.batch_audit.BatchAuditService.reap_interrupted_batches`.
     reap_interrupted_batches: bool = True
 
+    # -- session verification (web tier only) --------------------------------------------
+    #
+    # `POST /api/v1/rules/{rule_id}/review` changes what every subsequent audit enforces
+    # platform-wide, which is why it verifies the caller rather than trusting `X-User-ID` alone
+    # like the rest of the web tier's endpoints — see `app.api.session_auth` and
+    # `app.api.identity` for the boundary this closes.
+
+    #: Where Better Auth's `jwt()` plugin publishes its public signing keys. A public endpoint —
+    #: fetching it needs no credential — so this names *where*, not a secret. `web:3000` is the
+    #: compose service name on the network `app.api.tenancy` already describes as the engine's
+    #: only reachable neighbour; a deployment that renames the service overrides this.
+    auth_jwks_url: str = "http://web:3000/api/auth/jwks"
+
+    #: Must match the `issuer` in the `jwt()` plugin config in `apps/web/lib/auth.ts`. Fixed
+    #: constants rather than derived from `BETTER_AUTH_URL`, which is often unset — see that
+    #: file's docstring on why deriving an origin from a per-request value is the wrong default
+    #: for a value both tiers have to agree on ahead of time.
+    auth_jwt_issuer: str = "azmoth-web"
+
+    #: Must match the `audience` there.
+    auth_jwt_audience: str = "azmoth-engine"
+
+    #: How long a fetched JWKS is trusted before being refetched. Minutes, not seconds: the key
+    #: rotates rarely if ever, and refetching on every review would be one more request in the
+    #: loop of an endpoint a reviewer uses interactively.
+    auth_jwks_cache_seconds: int = Field(default=300, ge=1)
+
     # -- the partner API ----------------------------------------------------------------
     #
     # Everything below serves `/api/v1/audit/*` — the surface a PVS vendor or a billing centre
