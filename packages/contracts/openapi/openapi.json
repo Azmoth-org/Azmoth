@@ -1590,6 +1590,39 @@
         "title": "Consultation",
         "type": "object"
       },
+      "DatabaseHealth": {
+        "description": "Whether the engine just reached its database, and how long the round trip took.\n\nProduced by `GET /health` (`app.api.liveness`), which runs a literal `SELECT 1`. The point of\nexecuting a statement rather than asking the pool whether it holds a connection is that a pool\nreports a socket it has not used since before the failover: `pool_pre_ping` replaces such a\nconnection on checkout, so a probe that goes through a session is the only one that can tell\nthe difference between \"we have a connection object\" and \"Neon answered us just now\".\n\n`status` is two-valued because there is only one action to take from it. A solver has three\nstates worth distinguishing (`SolverHealth` says why); a database is either answering or it is\nnot, and \"installed but broken\" is not a case an operator handles differently from \"down\".\n\n`latency_ms` is the whole probe — checkout, statement, commit — measured with `perf_counter`.\nOn Neon it is dominated by the network hop and, on a suspended branch, by the cold start, so a\nfirst probe after an idle period is legitimately slow without anything being wrong.\n\n`detail` is empty when `status` is `ok` and carries one line of reason otherwise. It is the\nexception text with the password already removed — `Database.url` renders it hidden — because\nthis response is read by an uptime monitor that may well log it somewhere less private.",
+        "properties": {
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "latency_ms": {
+            "default": 0.0,
+            "title": "Latency Ms",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "url": {
+            "default": "",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "DatabaseHealth",
+        "type": "object"
+      },
       "DecisionRecord": {
         "additionalProperties": false,
         "description": "Who decided what, and when. The half of the document a dispute actually turns on.",
@@ -2520,6 +2553,33 @@
           "label"
         ],
         "title": "LabelledOption",
+        "type": "object"
+      },
+      "LivenessResponse": {
+        "description": "What `GET /health` returns: the two facts an uptime monitor needs and nothing else.\n\n**Deliberately not `HealthResponse`.** That one is the operator's diagnostic — it probes both\nsolvers by running a program through each, which means spawning a Soufflé subprocess, and it\nreports the catalog version, the rule counts and the cache size. All of that is the right answer\nto \"why is the engine behaving strangely\" and the wrong answer to \"is the engine up\", which is\nasked every thirty seconds forever and should not cost a process spawn.\n\nSo the two endpoints stay separate rather than one growing a `?verbose=` flag: `/api/v1/health`\nkeeps its shape and its two committed readers (the compose healthcheck and the dashboard's\nSystem Health card — see `HealthResponse`), and this one is free to be cheap.\n\n**The status code carries the verdict, not just the body.** A failed database probe answers\n`503`, because the readers that matter — Caddy's active health checks, a Docker healthcheck, an\nexternal uptime monitor — branch on the status line and would otherwise need to parse JSON to\nnotice. The body says which of the two checks failed.",
+        "properties": {
+          "database": {
+            "$ref": "#/components/schemas/DatabaseHealth"
+          },
+          "service": {
+            "default": "engine",
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "database"
+        ],
+        "title": "LivenessResponse",
         "type": "object"
       },
       "MissingDocumentation": {
@@ -6274,7 +6334,7 @@
     },
     "/api/v1/rules/{rule_id}/review": {
       "post": {
-        "description": "Record a verdict on one rule and merge it into the running engine.\n\n`VERIFIED` makes the rule enforce exactly like a hand-curated one, which moves euros out of\n`unconfirmed` in every subsequent audit. `REJECTED` means a human read the machine-extracted\nrule and refused it: it never enforces again, not even under `UNVERIFIED_RULE_POLICY=block`,\nwhich does enforce merely-unverified rules. `PENDING` decides nothing and is a bookmark.\n\n`reviewed_by` is required for a decision, for the same reason `approved_by` is on an approval:\nthis changes what every future audit concludes about somebody's invoice. It is recorded, not\nauthenticated.\n\nThe response carries the recomputed coverage, so a dashboard can update its progress bar from\nthe same response rather than issuing a second request that could see a different world.",
+        "description": "Record a verdict on one rule and merge it into the running engine.\n\n`VERIFIED` makes the rule enforce exactly like a hand-curated one, which moves euros out of\n`unconfirmed` in every subsequent audit. `REJECTED` means a human read the machine-extracted\nrule and refused it: it never enforces again, not even under `UNVERIFIED_RULE_POLICY=block`,\nwhich does enforce merely-unverified rules. `PENDING` decides nothing and is a bookmark.\n\nUnlike the rest of this router, this endpoint verifies its caller — see\n`app.api.session_auth` — because a verdict here changes platform-wide rule enforcement for\nevery practice, immediately. `verified_user_id` is the Better Auth user id the token names; the\ndependency is what actually gates the request, so an unused-looking parameter is doing real\nwork.\n\n`reviewed_by` is required for a decision, for the same reason `approved_by` is on an approval:\nthis changes what every future audit concludes about somebody's invoice. It is recorded\nverbatim from the request body, which lets the reviewer's display name (not just their Better\nAuth id) end up in `rule_reviews.reviewed_by`.\n\nThe response carries the recomputed coverage, so a dashboard can update its progress bar from\nthe same response rather than issuing a second request that could see a different world.",
         "operationId": "review_rule_api_v1_rules__rule_id__review_post",
         "parameters": [
           {
@@ -6657,6 +6717,31 @@
         "summary": "Vocabulary",
         "tags": [
           "catalog"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "`200` when the engine can serve and reach Postgres, `503` when it cannot reach Postgres.\n\nAn `async def` with no threadpool hop: the only work is one awaited round trip, so there is\nnothing blocking to keep off the event loop. That is the opposite of `/api/v1/health`, which is\na plain `def` precisely *because* its Soufflé probe blocks — see the docstring there.\n\nSetting `response.status_code` rather than raising: an `HTTPException` would be rendered by\n`app.api.errors` into the standard error envelope, and this endpoint's contract is that it\nalways returns a `LivenessResponse`. A monitor that has to parse one of two shapes depending on\nthe outcome is a monitor that will parse the wrong one on the day it matters.",
+        "operationId": "liveness_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessResponse"
+                }
+              }
+            },
+            "description": "The process answered and the database answered."
+          },
+          "503": {
+            "description": "The process answered; the database did not. See `database.detail`."
+          }
+        },
+        "summary": "Liveness: is this process answering, and does its database answer",
+        "tags": [
+          "health"
         ]
       }
     }
