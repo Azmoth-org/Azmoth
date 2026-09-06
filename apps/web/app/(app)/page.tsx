@@ -12,7 +12,12 @@ import {
   CardTitle,
 } from "@workspace/ui/components/card"
 
-import { CardSkeleton } from "@/components/dashboard/card-states"
+import {
+  CardSkeleton,
+  METRIC_LABELS,
+  MetricsRowSkeleton,
+} from "@/components/dashboard/card-states"
+import { MetricsRow } from "@/components/dashboard/metrics-row"
 import {
   RECENT_BATCHES_TITLE,
   RecentBatchesCard,
@@ -67,20 +72,44 @@ export const dynamic = "force-dynamic"
 export default function DashboardPage() {
   return (
     <>
-      <header className="space-y-1">
+      {/*
+        The lead was nine lines of prose describing the architecture — regel engine, solver,
+        independent validation, proof tree, receipt hash, no model — above the fold, on the screen a
+        reader opens to find out whether anything is waiting for them. Every clause of it was true
+        and none of it was what they came for; in practice it was scrolled past, which is the worst
+        outcome for a paragraph whose last sentence is the product's central claim.
+
+        Two sentences now, and both load-bearing claims survive: the receipt hash (what makes a
+        figure attributable) and *kein Modell im Entscheidungspfad* (what makes this different from
+        everything else in the category). The enumeration of the three stages is gone from here
+        because it is not a fact a reader needs on arrival, and because the Systemstatus card below
+        already reports those components by name, live, with their versions — which is a better
+        rendering of "what this is made of" than a sentence that cannot know whether they started.
+      */}
+      <header className="space-y-1.5">
         <h1 className="text-display-md">Übersicht</h1>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          Die Kodierung ist deterministisch und symbolisch: eine
-          deterministische Regel-Engine entscheidet, was sicher
-          berechnungsfähig ist, ein mathematischer Solver löst die
-          verbleibenden Wahlmöglichkeiten, eine unabhängige Validierung rechnet
-          nach. Jede Position trägt einen Beweisbaum, jedes Ergebnis
-          einen Receipt-Hash über Katalog, Regeltabellen, Logikprogramme,
-          Solver-Versionen und Eingabe. Es läuft kein Modell in diesem System.
+        <p className="max-w-prose text-sm text-muted-foreground">
+          Deterministische, symbolische Kodierung — kein Modell im
+          Entscheidungspfad. Jede Position trägt einen Beweisbaum, jedes
+          Ergebnis einen Receipt-Hash über Katalog, Regeln, Logik, Solver und
+          Eingabe.
         </p>
       </header>
 
       <SyntheticDataBanner />
+
+      {/*
+        The figures first, then the detail. This is the only block on the screen that can be read
+        without reading — four counts, each a link to the filtered list it is the answer to — and it
+        is above the Systemstatus card because "is a draft waiting for me" is the question somebody
+        opens this application with, and "which version of Soufflé answered a probe" is not.
+
+        Its own `Suspense` boundary, like every other block here: five engine reads, and a slow one
+        holds up four tiles rather than the page.
+      */}
+      <Suspense fallback={<MetricsRowSkeleton labels={METRIC_LABELS} />}>
+        <MetricsRow />
+      </Suspense>
 
       <Suspense fallback={<CardSkeleton title="Systemstatus" rows={2} />}>
         <SystemHealthCard />
@@ -115,9 +144,9 @@ export default function DashboardPage() {
           >
             /demo
           </Link>{" "}
-          zeigt dieselbe Prüfung an einer synthetischen Beispiellieferung —
-          ohne Anmeldung, ohne Upload und ohne Zugang zu Ihren Daten. Der Link
-          ist öffentlich und eignet sich, um die Prüfung jemandem zu zeigen, der
+          zeigt dieselbe Prüfung an einer synthetischen Beispiellieferung — ohne
+          Anmeldung, ohne Upload und ohne Zugang zu Ihren Daten. Der Link ist
+          öffentlich und eignet sich, um die Prüfung jemandem zu zeigen, der
           hier kein Konto hat.
         </p>
       </section>
