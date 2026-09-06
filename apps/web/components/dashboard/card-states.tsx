@@ -103,3 +103,50 @@ export function ErrorState({
     </div>
   )
 }
+
+/**
+ * The metric row's shape while its five counts are in flight.
+ *
+ * Four tiles, and **no number-shaped placeholder** — the same rule the card skeleton above follows,
+ * and it matters more here. `CardSkeleton` stands in for rows of text nobody could mistake for a
+ * value; a grey block where a 32px numeral is about to appear is one a reader's eye resolves as a
+ * figure that has not finished painting. So the bar that stands in for the figure is deliberately
+ * the wrong shape for one: short and wide, at the height of the numeral's cap rather than its box.
+ *
+ * The labels are real, because the row already knows what it is going to be a row of, and a reader
+ * who sees "Offene Prüfungen" with a pending value learns something the four grey rectangles alone
+ * would not tell them.
+ *
+ * The grid is repeated rather than shared with `MetricsRow`. Two literals is the smaller cost: a
+ * shared wrapper would have to be a component that takes children and a label, and the failure mode
+ * of getting it wrong here is a layout shift when the real row lands — which is exactly what a
+ * skeleton exists to prevent, so it is worth the duplication being visible.
+ */
+export function MetricsRowSkeleton({ labels }: { labels: readonly string[] }) {
+  return (
+    <div aria-hidden className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {labels.map((label) => (
+        <Card key={label} size="sm" className="h-full gap-3">
+          <div className="flex items-start justify-between gap-3 px-(--card-spacing)">
+            <span className="text-sm font-medium text-muted-foreground">
+              {label}
+            </span>
+            <Skeleton className="size-8 shrink-0 rounded-full" />
+          </div>
+          <div className="px-(--card-spacing)">
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="mt-2.5 h-3 w-28" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+/** The four labels, so the skeleton and the row cannot drift about what the tiles are called. */
+export const METRIC_LABELS = [
+  "Offene Prüfungen",
+  "Freigegeben",
+  "Stapel in Arbeit",
+  "Fehlgeschlagen",
+] as const
