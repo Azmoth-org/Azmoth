@@ -23,9 +23,9 @@ enforces it, so it can be checked rather than believed.
 |---|---|---|
 | The uploaded `.zip` of a bulk job | Local disk under `UPLOAD_DIR` | Until the job reaches `COMPLETED` or `FAILED` — then deleted |
 | A single-file audit's XML | **Nowhere.** Held in memory for the request | Not stored at all |
-| The audit result (JSON per delivery, plus the roll-up) | Postgres, `batch_jobs` / `batch_files` | Indefinitely, until you ask us to delete it |
+| The audit result (JSON per delivery, plus the roll-up) | Postgres, `batch_jobs` / `batch_files` | `DATA_RETENTION_DAYS` — 90 by default, 30 in the pilot |
 | API keys | Postgres, `api_keys` — **SHA-256 hash only** | Until revoked; the row is kept, the secret never existed here |
-| Unhandled errors | Postgres, `error_log` — type, message, route, request id, tenant | Diagnostic; safe to purge on a schedule |
+| Unhandled errors | Postgres, `error_log` — type, message, route, request id, tenant | `DATA_RETENTION_DAYS`, on the same nightly run |
 | Request logs | The container's stdout | Whatever your log retention is |
 
 **`POST /api/v1/audit/single` writes nothing.** The delivery is parsed in memory, audited, and the
@@ -71,10 +71,24 @@ is an operator decision with a data-protection consequence and should be turned 
 **An interrupted job keeps its archive**, deliberately: that is what lets it resume after a restart
 instead of being lost. Such an archive is deleted when the resumed job finishes.
 
-**Results are kept until you ask.** We do not currently expire them, because an audit is a record a
-practice may need to produce months later. Deletion on request is a manual operation today
-(`DELETE FROM batch_jobs WHERE organization_id = …` cascades to the per-file rows); a
-self-service endpoint is planned and is not built.
+**Results expire on a schedule.** `DATA_RETENTION_DAYS` (90 by default, 30 for the pilot) is the
+age past which a proposal, a batch job and its per-file rows, and an `error_log` entry are deleted —
+along with any uploaded archive still on disk. `apps/engine/scripts/purge_old_data.py` does it in one
+transaction, and an operator runs it nightly from cron; the engine has no scheduler of its own. It is
+a floor rather than a ceiling: a practice subject to a longer statutory retention raises the number.
+
+`RETENTION_ENABLED=false` suspends the deletions for a legal hold, without stopping the job.
+
+**Deletion on request is still manual**, and is a separate thing from the schedule above
+(`DELETE FROM batch_jobs WHERE organization_id = …` cascades to the per-file rows). A self-service
+endpoint is planned and is not built.
+
+**The audit log is never purged, and that is deliberate.** Art. 5 Abs. 1 lit. e obliges us to delete;
+Art. 5 Abs. 2 obliges us to be able to demonstrate that we did. When a proposal is deleted, the log
+of what was decided about it stays, and a `DATA_PURGED` entry is added naming the proposal, the time
+and the retention setting that removed it. So the record that survives a purge is the record of the
+purge — what was billed and by whom, not the clinical detail. Nothing in the API or the codebase can
+delete an audit row.
 
 **Logs and `error_log` hold no invoice content.** No request bodies, no uploaded filenames, no
 header values beyond the request id, and no traceback locals. `error_log` stores the exception type,
@@ -127,7 +141,6 @@ An honest policy names its gaps rather than leaving a reader to find them.
 
 - **No Auftragsverarbeitungsvertrag yet.** Required before any production data, from anyone.
 - **No self-service deletion endpoint.** Deletion on request is manual.
-- **No automatic retention expiry** on audit results.
 - **No encryption of individual columns.** Protection is at the volume and network level; a
   database administrator can read stored reports.
 - **No formal penetration test**, and no SOC 2 or ISO 27001 certification.

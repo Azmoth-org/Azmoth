@@ -116,14 +116,39 @@ Append-only. One row per thing that happened to one proposal.
 | column | type | notes |
 | --- | --- | --- |
 | `id` | `uuid` PK | |
-| `proposal_id` | `uuid`, indexed, FK → `proposals.id` `ON DELETE CASCADE` | |
-| `event_type` | `varchar(16)`, indexed | `CREATED` \| `VIEWED` \| `APPROVED` \| `REJECTED` \| `EXPORTED` |
+| `proposal_id` | `uuid`, **nullable**, indexed, FK → `proposals.id` `ON DELETE SET NULL` | `NULL` means the proposal was purged |
+| `target_id` | `varchar(64)` | the `prop_<hex>` handle, denormalised. The one column a purge cannot empty |
+| `event_type` | `varchar(16)`, indexed | `CREATED` \| `VIEWED` \| `APPROVED` \| `REJECTED` \| `EXPORTED` \| `DATA_PURGED` |
 | `actor` | `varchar(256)` | who did it. Never empty. |
 | `timestamp` | `timestamptz`, indexed | |
 | `metadata_json` | `jsonb` | context: the rejection reason, the approval note, the status it came from. |
 
-Plus a composite `(proposal_id, timestamp)` — the audit view for one proposal, in order, is the only
-read this table has to be fast at.
+Plus a composite `(proposal_id, timestamp)` — the audit view for one proposal, in order — and
+`(target_id, timestamp)`, which is the same view for a proposal that has been purged and whose
+`proposal_id` is now `NULL`. The second is the index the compliance question uses.
+
+### Why the foreign key is `SET NULL`, and why `target_id` is a copy
+
+`0001` created this key as `ON DELETE CASCADE`, with a reason that was correct at the time: an audit
+row pointing at a proposal that no longer exists is a record nobody can interpret. It rested on an
+assumption stated in the same file — *"no code path here deletes a proposal"*.
+
+`apps/engine/scripts/purge_old_data.py` is now that code path, and under the old constraint every
+retention purge would have deleted the log of what was approved along with the proposal. That is
+exactly backwards: DSGVO Art. 5 Abs. 1 lit. e obliges the operator to delete, and Art. 5 Abs. 2
+obliges them separately to be able to *demonstrate* that they did. A purge that erases its own record
+satisfies the first and makes the second impossible.
+
+So `0011` answered the interpretability objection differently instead of accepting the cascade.
+`target_id` carries the proposal's public handle as a **value**, written at insert time. Every other
+way of naming the proposal is a foreign key, and a foreign key is by definition emptied when its
+target goes; a copy is not. After a purge the row still reads "APPROVED, `prop_a1b2c3d4`, by
+`user_x`, at `T`" — self-contained, and interpretable precisely because the handle is not a join.
+The handle rather than the surrogate `id` because the handle is what appears in a receipt, in an
+export and in the API a Rechnungsprüfer was shown.
+
+The log of a purged proposal therefore reads `CREATED → APPROVED → DATA_PURGED`, with the last row
+naming the retention setting that removed it. See [`../DATA_HANDLING_POLICY.md`](../DATA_HANDLING_POLICY.md).
 
 ### Append-only is enforced, not documented
 
@@ -141,6 +166,17 @@ REVOKE UPDATE, DELETE ON audit_events FROM <application_role>;
 It is left out deliberately. Alembic runs as the schema owner, and a grant against a role this
 repository cannot know the name of would either fail or, worse, apply to the wrong role. It belongs
 with the deployment's role definitions.
+
+That `REVOKE` does not conflict with `ON DELETE SET NULL`: a referential action is performed by the
+system rather than by the deleting role, and is not checked against that role's column privileges.
+The application still cannot issue an `UPDATE` of its own, which is what the `REVOKE` is for.
+
+The one statement in this repository that writes to a column of `audit_events` is in the purge, which
+nulls `proposal_id` for the proposals it is deleting — explicitly, because SQLite enforces foreign
+keys only under `PRAGMA foreign_keys=ON` and the two dialects have to behave the same. It is an
+exception to append-only in the narrowest sense available: it releases a pointer to a row that no
+longer exists, and touches nothing the row actually records. `target_id` is why the row is still
+readable afterwards.
 
 ### `actor`, and what it does not mean
 

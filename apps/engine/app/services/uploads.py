@@ -176,13 +176,24 @@ def store_bulk_upload(
     return path
 
 
-def discard_bulk_upload(path: str | Path, *, settings: Settings | None = None) -> bool:
+def discard_bulk_upload(
+    path: str | Path, *, settings: Settings | None = None, force: bool = False
+) -> bool:
     """Delete a finished job's archive and the directory it sat in. Never raises.
 
     Returns whether the archive is now gone — so `True` for a successful delete *and* for one that
     was already missing, and `False` both when `RETAIN_BULK_UPLOADS` kept it deliberately and when
     the delete failed. The two `False` cases are not distinguished because no caller acts on the
     difference: both mean "a file is still on disk", one of them on purpose.
+
+    `force` ignores `RETAIN_BULK_UPLOADS`, and only the retention purge passes it. The two settings
+    answer different questions and the purge is where that becomes visible: `RETAIN_BULK_UPLOADS`
+    says "keep the bytes past the end of the job so I can debug this integration", which is a
+    statement about the next few days. `DATA_RETENTION_DAYS` says "these bytes may not exist after
+    N days", which is a statement about a legal obligation. An operator who turned the debug flag on
+    in March and forgot must not thereby have opted the deployment out of its retention policy — so
+    the obligation wins, and the flag goes back to meaning what it says it means. See
+    `scripts/purge_old_data.py`.
 
     Never, because this is called from the terminal transition of a background task: an upload that
     could not be deleted must not turn a `COMPLETED` job into a `FAILED` one — the report is
@@ -195,7 +206,7 @@ def discard_bulk_upload(path: str | Path, *, settings: Settings | None = None) -
     whatever a corrupted or hand-edited row happens to name.
     """
     settings = settings or get_settings()
-    if not settings.retain_bulk_uploads:
+    if force or not settings.retain_bulk_uploads:
         target = Path(path)
         root = settings.bulk_upload_dir
         try:

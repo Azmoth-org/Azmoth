@@ -587,10 +587,22 @@ def test_the_indexed_columns_are_the_ones_that_are_queried():
 
 
 def test_the_event_type_vocabulary_is_closed():
+    """The set is closed, and growing it is a decision rather than an accident.
+
+    `DATA_PURGED` is the sixth member and the only one written by something other than a request:
+    `scripts/purge_old_data.py` records that a proposal was deleted under the retention policy. It
+    is in the vocabulary rather than in a second table because "what happened to this proposal" has
+    one answer, and its deletion is the last thing that happened to it.
+
+    A seventh member should have to make this test fail before it exists.
+    """
     assert {str(t) for t in AuditEventType} == {
         "CREATED",
         "VIEWED",
         "APPROVED",
         "REJECTED",
         "EXPORTED",
+        "DATA_PURGED",
     }
+    # Every member has to fit the column, and `DATA_PURGED` is the longest one there has been.
+    assert max(len(str(t)) for t in AuditEventType) <= 16

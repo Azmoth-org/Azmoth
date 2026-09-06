@@ -720,9 +720,14 @@ class ProposalStore:
         `session.add` rather than `record.events.append`: the relationship is `selectin`-loaded, and
         appending would trigger a load of every prior event on a row whose log only grows. Attaching
         the event to the parent object is what makes the FK resolve without a flush order problem.
+
+        `target_id` is set from the same record and is deliberately not derived from `proposal` at
+        read time: it has to be a value rather than a join, because it is the only thing on the row
+        that survives the proposal being purged. See `app.db.models.AuditEvent.target_id`.
         """
         event = AuditEvent(
             proposal=record,
+            target_id=record.proposal_id,
             event_type=str(event_type),
             actor=actor or SYSTEM_ACTOR,
             timestamp=timestamp or utcnow(),
