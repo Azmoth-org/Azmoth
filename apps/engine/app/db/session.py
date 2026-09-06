@@ -131,7 +131,7 @@ class Database:
 
 
 class SchemaNotMigrated(RuntimeError):
-    """`DATABASE_AUTO_CREATE` was asked for in production, where only Alembic may create a schema."""
+    """`DATABASE_AUTO_CREATE` was asked for on a database whose schema is Alembic's to create."""
 
 
 class DatabaseNotDurable(RuntimeError):
@@ -161,12 +161,34 @@ def assert_production_database(settings: Settings) -> None:
 
 
 async def init_models(database: Database) -> None:
-    """Make sure the tables exist, by the route the environment is allowed to use.
+    """Make sure the tables exist, by the route this database is allowed to use.
 
-    Development and test: create them directly, so `pytest` and `uvicorn app.main:app` need no
-    migration step. Production: do nothing, because `alembic upgrade head` ran before this process
-    started (the Dockerfile's `CMD` chains them) — and if `DATABASE_AUTO_CREATE` is set anyway,
+    A local SQLite file: create them directly, so `pytest` and `uvicorn app.main:app` need no
+    migration step. Postgres: do nothing, because `alembic upgrade head` ran before this process
+    started (the container's entrypoint runs it) — and if `DATABASE_AUTO_CREATE` is set anyway,
     fail loudly rather than fabricate a schema Alembic has no record of.
+
+    ## Why the second guard is on the database and not on `APP_ENV`
+
+    It used to be on `APP_ENV` alone, and that let through the case that actually happened. A
+    developer pointed a laptop at the deployed Neon `DATABASE_URL` with `APP_ENV` at its default of
+    `development` and `DATABASE_AUTO_CREATE` at its default of true. `create_all` is `CREATE TABLE
+    IF NOT EXISTS` across the whole of `app/db/models.py`, so it skipped every table the deployed
+    schema already had, created the two that migration `0010` had not yet added, and left
+    `alembic_version` untouched — because `create_all` has never heard of it. The next deploy ran
+    `alembic upgrade head` into `DuplicateTableError: relation "organization_billing" already
+    exists`, and the recovery took a stamp and a hand-written repair.
+
+    `APP_ENV` describes the *process*; the damage is done to the *database*, and a shared Postgres
+    is Alembic's in every environment — which is why all three compose files set
+    `DATABASE_AUTO_CREATE=false` and why the migration history exists at all. So the check is on the
+    URL. SQLite stays unrestricted: a laptop's `test.db` is nobody else's, and having to migrate it
+    is the friction this default exists to remove.
+
+    Not on `Database.create_all` itself, deliberately: `tests/test_db_persistence.py` builds a
+    *scratch* Postgres to prove the two schema paths agree, and that is the one legitimate reason to
+    create a Postgres schema without Alembic. This guard is on the startup path, which is where the
+    mistake is made.
     """
     assert_production_database(database.settings)
 
@@ -179,6 +201,18 @@ async def init_models(database: Database) -> None:
             "DATABASE_AUTO_CREATE is true with APP_ENV=production. In production the schema must "
             "come from `alembic upgrade head`, so that a rollback exists and the migration history "
             "describes the database. Set DATABASE_AUTO_CREATE=false."
+        )
+
+    if database.settings.database_is_durable:
+        raise SchemaNotMigrated(
+            f"DATABASE_AUTO_CREATE is true with a Postgres DATABASE_URL ({database.url}). A "
+            "Postgres schema belongs to Alembic in every environment: `create_all` would create "
+            "whichever tables happen to be missing without recording anything in `alembic_version`, "
+            "and the next `alembic upgrade head` would then fail on a table that already exists. "
+            "Set DATABASE_AUTO_CREATE=false and run `python scripts/migrate.py` — or point "
+            "DATABASE_URL at a local SQLite file if what you wanted was a scratch database. "
+            "(`python scripts/migrate.py --diagnose` reports whether a database is already in that "
+            "state.)"
         )
 
     await database.create_all()

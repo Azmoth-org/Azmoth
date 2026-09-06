@@ -226,8 +226,9 @@ class Settings(BaseSettings):
     db_retry_base_delay_seconds: float = Field(default=1.0, ge=0)
 
     #: Run `Base.metadata.create_all()` at startup instead of requiring Alembic. True is right for
-    #: the SQLite default and for the test suite; it is refused in production (see
-    #: `app.db.session.init_models`), where the schema must arrive through a reviewed migration.
+    #: the SQLite default and for the test suite; it is refused in production AND against any
+    #: Postgres URL (see `app.db.session.init_models`), where the schema must arrive through a
+    #: reviewed migration. The default therefore only ever takes effect on SQLite.
     database_auto_create: bool = True
 
     # -- retention (DSGVO Art. 5 Abs. 1 lit. e) -------------------------------------------

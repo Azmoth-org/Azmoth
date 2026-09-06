@@ -18,6 +18,56 @@ the default and creates the tables directly — but note that a database built t
 revision stamp, so `alembic upgrade head` against it will try to create tables that already exist.
 Delete the SQLite file, or `alembic stamp head`, before switching a dev database over.
 
+`DATABASE_AUTO_CREATE` only applies to SQLite. `app/db/session.py::init_models` refuses it on a
+Postgres URL in *every* environment, because that is how this went wrong once: see below.
+
+
+## "relation X already exists"
+
+`alembic upgrade head` failing on a table that is already there means the schema and
+`alembic_version` disagree. Four different things cause that and they do not share a repair, so
+find out which one it is before typing anything:
+
+    python scripts/migrate.py --diagnose
+
+It reflects the database and reports, per pending revision, which of the objects that revision
+creates already exist. Two verdicts matter:
+
+* **"everything it creates is already present"** — the revision has nothing left to do. Either it
+  applied and the stamp was lost, or this schema was built by another deployment. Confirm the rows
+  in those tables are the ones you expect, then `alembic stamp <revision>` and carry on.
+
+* **"but still missing: …"** — the revision did *not* half-apply. A revision is a unit; half of it
+  present means something else created those objects, without knowing the revision existed.
+  **Do not stamp**: the missing half would never be created, and the schema would silently disagree
+  with `app/db/models.py` until something read it. Run `python scripts/migrate.py` instead —
+  `0010` is idempotent and fills in only what is absent.
+
+If neither fits, the tables may belong to a different database than you think. `scripts/migrate.py`
+logs the resolved URL with the password stripped as its first line; check it against the deployment
+before doing anything else.
+
+### The incident this section is written from
+
+`organization_billing` already existed in the Neon database and `alembic_version` read
+`0009_api_usage_logs`. A laptop had been pointed at the deployed `DATABASE_URL` with `APP_ENV` at
+its default of `development`, where `DATABASE_AUTO_CREATE` defaults to true — so app startup ran
+`Base.metadata.create_all` against production. `create_all` is `CREATE TABLE IF NOT EXISTS` over the
+whole of `app/db/models.py`: it skipped `api_usage_logs`, which already existed, created
+`organization_billing` and `billing_invoices`, which did not, and never touched `alembic_version`,
+which it has never heard of.
+
+`alembic stamp head` was the obvious fix and would have been the wrong one — `0010` also adds
+`api_usage_logs.invoices_processed`, which `create_all` could not add to a table it had skipped, and
+that column is what an invoice is counted from. Stamping would have declared the database migrated
+with the column still missing.
+
+Three changes came out of it, and `tests/test_migration_recovery.py` holds each to its claim:
+`init_models` now refuses `create_all` on any Postgres URL rather than only under
+`APP_ENV=production`; `0010` creates only what is absent, so the databases already damaged can
+migrate through it; and `--diagnose` tells the two repairs apart instead of leaving it to judgement
+during an outage.
+
 To add a migration after changing `app/db/models.py`:
 
     alembic revision --autogenerate -m "what changed"
