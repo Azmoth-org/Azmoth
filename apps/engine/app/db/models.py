@@ -117,6 +117,16 @@ class AuditEventType(StrEnum):
     REJECTED = "REJECTED"
     EXPORTED = "EXPORTED"
 
+    #: The retention purge removed the proposal this row is about — `scripts/purge_old_data.py`.
+    #:
+    #: The only member that describes something happening to a proposal that no longer exists, and
+    #: the reason `target_id` is on this table: after the purge, this row and its siblings are the
+    #: entire remaining record of that proposal, and `proposal_id` has been set to `NULL` by the
+    #: foreign key. Under DSGVO Art. 5 Abs. 1 lit. e the deletion is the obligation; under Art. 5
+    #: Abs. 2 being able to *demonstrate* it happened is a second, separate obligation, and this is
+    #: what discharges it.
+    DATA_PURGED = "DATA_PURGED"
+
 
 def utcnow() -> datetime:
     """Application-side UTC.
@@ -257,9 +267,17 @@ class ProposalRecord(Base):
     #: caller having to flush first for an id. Deliberately NOT eagerly loaded: the log for a
     #: proposal only grows, and reading a proposal must not cost a scan of its whole history.
     #: `proposal_store.audit_events` queries the table directly when the log is what is wanted.
+    #:
+    #: **No delete cascade, and `passive_deletes` so the ORM does not invent one.** Deleting a
+    #: proposal must leave its log standing — see `AuditEvent.proposal_id`. Without
+    #: `passive_deletes=True` SQLAlchemy would load the children on a parent delete and issue its
+    #: own `UPDATE … SET proposal_id = NULL`, which is the one statement `_reject_update` exists to
+    #: refuse; with it, the nullification is the database's `ON DELETE SET NULL` and the ORM stays
+    #: out of it. The append-only guards therefore keep meaning what they say.
     events: Mapped[list[AuditEvent]] = relationship(
         back_populates="proposal",
-        cascade="all, delete-orphan",
+        cascade="save-update, merge",
+        passive_deletes=True,
         order_by="AuditEvent.timestamp",
     )
 
@@ -285,12 +303,45 @@ class AuditEvent(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
 
-    proposal_id: Mapped[uuid.UUID] = mapped_column(
+    #: The proposal this row is about, **while that proposal still exists**.
+    #:
+    #: `ON DELETE SET NULL`, and it was `ON DELETE CASCADE` until the retention purge existed. The
+    #: original reasoning was sound on its own terms — an audit row pointing at a proposal that no
+    #: longer exists is a record nobody can interpret — and it rested on an assumption stated in
+    #: `0001`: "no code path here deletes a proposal". `scripts/purge_old_data.py` is that code
+    #: path, and under the old constraint every purge would have silently destroyed the log of what
+    #: was approved along with the row, which is precisely the evidence a deletion has to leave
+    #: behind. `target_id` is what answers the interpretability objection instead: it names the
+    #: proposal in a value the deletion cannot reach.
+    #:
+    #: Nullable therefore means exactly one thing — the proposal was purged. It never means the
+    #: event was written without one: `ProposalStore._add_event` always attaches a proposal, and it
+    #: is the only writer.
+    proposal_id: Mapped[uuid.UUID | None] = mapped_column(
         UUIDVariant,
-        ForeignKey("proposals.id", ondelete="CASCADE"),
+        ForeignKey("proposals.id", ondelete="SET NULL"),
         index=True,
-        nullable=False,
+        default=None,
     )
+
+    #: The public handle of the proposal this row is about — `prop_<hex>` — copied in at write time
+    #: and never a join.
+    #:
+    #: Denormalised on purpose, and the duplication is the feature: this is the only column on this
+    #: table whose value survives the deletion of the row it refers to. Every other way of naming
+    #: the proposal is a foreign key, and a foreign key is by definition emptied when the target
+    #: goes. Carrying the handle rather than the surrogate `id` because the handle is what appears
+    #: in a receipt, in an export and in the API a Rechnungsprüfer was shown — it is the identifier
+    #: an outside question is asked in.
+    #:
+    #: Not null, including on rows written before the purge existed: `0011` backfills it from the
+    #: join. A row that could not name its subject would be exactly the uninterpretable record the
+    #: old `CASCADE` was trying to prevent.
+    #:
+    #: No index of its own — the `(target_id, timestamp)` composite below leads on this column and
+    #: serves the equality lookup by itself, so a second index would be write cost for no read. Same
+    #: reasoning as `proposals.organization_id`.
+    target_id: Mapped[str] = mapped_column(String(64), nullable=False)
 
     #: One of `AuditEventType`. Indexed: "every approval last quarter" must not scan the log.
     event_type: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
@@ -307,11 +358,15 @@ class AuditEvent(Base):
     #: came from. `metadata` is taken by SQLAlchemy's declarative API, hence the suffix.
     metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSONVariant, default=None)
 
-    proposal: Mapped[ProposalRecord] = relationship(back_populates="events")
+    proposal: Mapped[ProposalRecord | None] = relationship(back_populates="events")
 
     __table_args__ = (
         # The audit view for one proposal, in order — the only read this table has to be fast at.
         Index("ix_audit_events_proposal_id_timestamp", "proposal_id", "timestamp"),
+        # The same view for a proposal that has been purged, whose `proposal_id` is now NULL. This
+        # is the index the compliance question uses: "show me everything that ever happened to
+        # prop_abc123", asked after the proposal itself is gone.
+        Index("ix_audit_events_target_id_timestamp", "target_id", "timestamp"),
     )
 
     def __repr__(self) -> str:  # pragma: no cover - diagnostics only
@@ -516,7 +571,8 @@ def _reject_update(_mapper, _connection, target: AuditEvent) -> None:
 def _reject_delete(_mapper, _connection, target: AuditEvent) -> None:
     raise AuditLogIsAppendOnly(
         f"audit_events is append-only: {target.event_type} event {target.id} cannot be deleted. "
-        "Retention deletion is a policy decision and has no code path here."
+        "The retention purge deletes proposals and leaves this log standing on purpose — see "
+        "scripts/purge_old_data.py."
     )
 
 

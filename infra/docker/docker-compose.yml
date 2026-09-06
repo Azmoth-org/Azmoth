@@ -143,6 +143,19 @@ services:
       # it off if a gateway in front is already doing the job, because two limiters that disagree
       # are worse than one. See apps/engine/app/api/ratelimit.py.
       RATE_LIMIT_ENABLED: "${RATE_LIMIT_ENABLED:-true}"
+
+      # -- retention (DSGVO Art. 5 Abs. 1 lit. e) ---------------------------------------------
+      # Nothing in this container expires anything: there is no scheduler in the image and there is
+      # deliberately not going to be one. These configure `scripts/purge_old_data.py`, which the
+      # host's crontab runs against this service — see apps/engine/README.md for the crontab line.
+      #
+      # 90 is the default here and the pilot sets 30 in its .env, because a pilot's deliveries are
+      # test data whose value expires with the sprint. Raise it before the first real run if a
+      # longer statutory retention applies; what the purge deletes does not come back.
+      DATA_RETENTION_DAYS: "${DATA_RETENTION_DAYS:-90}"
+      # false is the legal hold: the purge reports what is over the window, deletes nothing, and
+      # still exits 0, so a preservation order does not turn into a nightly cron failure mail.
+      RETENTION_ENABLED: "${RETENTION_ENABLED:-true}"
     volumes:
       # A named volume, NOT a bind mount into the repo, and for the same reason `postgres-data` is
       # one: this holds uploaded billing deliveries, and a `git clean` must not be able to delete a

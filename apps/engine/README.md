@@ -213,6 +213,61 @@ SQLite persists, but it is not a deployment target: one writer, one file inside 
 replaced on every deploy, no replication, no encryption at rest. Under `APP_ENV=production` the
 engine **refuses to start** on anything but Postgres.
 
+## Retention
+
+DSGVO Art. 5 Abs. 1 lit. e says personal data may be kept in identifiable form no longer than is
+necessary. `scripts/purge_old_data.py` is how that is enforced here; nothing expires on its own, and
+the engine has no scheduler.
+
+```bash
+.venv/bin/python -m scripts.purge_old_data --dry-run   # report what would go, change nothing
+.venv/bin/python -m scripts.purge_old_data             # do it
+.venv/bin/python -m scripts.purge_old_data --days 30   # override DATA_RETENTION_DAYS for this run
+```
+
+It removes, in one transaction, everything older than `DATA_RETENTION_DAYS` (90 by default, 30 for
+the pilot): `batch_files`, then `batch_jobs` and the uploaded ZIP each one names on disk, then
+`proposals`, then `error_log`. Run it twice and the second run deletes nothing — the predicate is
+`created_at < cutoff`, so the rows are simply not there any more.
+
+**`audit_events` is never deleted.** Art. 5 Abs. 1 lit. e obliges you to delete; Art. 5 Abs. 2
+obliges you to be able to *demonstrate* that you did, and those are two different obligations. Each
+purged proposal leaves a `DATA_PURGED` row naming what went, when, and under which setting — so the
+log of a deleted proposal reads `CREATED → APPROVED → DATA_PURGED` after its `proposals` row is
+gone. Migration `0011` is what makes that possible (`ON DELETE SET NULL` plus a `target_id` that is a
+value rather than a join); before it, a purge would have destroyed the log along with the row.
+
+`RETENTION_ENABLED=false` is the legal-hold switch: the script still reports what is over the window,
+deletes nothing, and exits `0`, so a cron job under a preservation order stays quiet instead of
+mailing a failure every night.
+
+### As a nightly cron job
+
+Exit status is `0` for success and `1` for a failure that committed nothing, so cron's own mail is
+the alerting. Run it as the user that owns `UPLOAD_DIR` — it deletes files as well as rows.
+
+```cron
+# /etc/cron.d/azmoth-retention  — 03:30 daily, after the backup at 03:00 and off the traffic peak.
+# The backup ordering is deliberate: a purge is irreversible, and the night's backup is what you
+# restore from if the retention window turns out to have been set wrong.
+SHELL=/bin/sh
+MAILTO=ops@example.org
+
+30 3 * * *  azmoth  cd /srv/azmoth/apps/engine && /srv/azmoth/apps/engine/.venv/bin/python -m scripts.purge_old_data >> /var/log/azmoth/retention.log 2>&1
+```
+
+In the shipped Docker stack the engine image has the script and the environment already, so the host
+crontab drives the container instead:
+
+```cron
+30 3 * * *  root  docker compose -f /srv/azmoth/infra/docker/docker-compose.yml exec -T engine python -m scripts.purge_old_data >> /var/log/azmoth/retention.log 2>&1
+```
+
+Do the first run of either with `--dry-run` and read the counts. `DATA_RETENTION_DAYS` is a *floor*
+under your own policy, not a substitute for having one: a deployment subject to a longer statutory
+retention (§ 147 AO, § 10 MBO-Ä) raises it before the first real run, because what the purge deletes
+does not come back.
+
 ## CLI
 
 ```bash
@@ -351,6 +406,8 @@ secrets in this repository** and the engine needs no API key or token of any kin
 | `CATALOG_VERSION` | *(empty)* | set it to assert an expected snapshot; a mismatch fails at startup |
 | `MAX_REQUEST_BYTES` | `33554432` | refused at the perimeter, before the body is buffered |
 | `PADNEXT_ALLOW_REAL_DATA` | `false` | a delivery flagged as production data is refused |
+| `DATA_RETENTION_DAYS` | `90` | how old a row must be before `scripts/purge_old_data.py` deletes it. 30 for the pilot. Never applies to `audit_events` |
+| `RETENTION_ENABLED` | `true` | `false` is the legal hold: the purge reports and deletes nothing |
 
 ### The input boundary
 

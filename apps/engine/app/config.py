@@ -230,6 +230,39 @@ class Settings(BaseSettings):
     #: `app.db.session.init_models`), where the schema must arrive through a reviewed migration.
     database_auto_create: bool = True
 
+    # -- retention (DSGVO Art. 5 Abs. 1 lit. e) -------------------------------------------
+    #
+    # Storage limitation: billing data about identifiable treatment is kept for as long as it is
+    # needed and no longer. Nothing here expires anything on its own — the engine has no scheduler
+    # and deliberately does not grow one. These two settings configure `scripts/purge_old_data.py`,
+    # which an operator runs from cron; see `docs/DATA_HANDLING_POLICY.md` for what is promised.
+
+    #: How old a row must be before the purge will delete it, counted from `created_at`
+    #: (`occurred_at` for `error_log`).
+    #:
+    #: 90 days is the production default and is a *technical* default, not legal advice: it is long
+    #: enough that a practice querying last quarter's audit still finds it, and short enough that a
+    #: breach exposes one quarter rather than the whole history. The pilot runs 30 through the
+    #: environment, because a pilot's deliveries are test data whose value expires with the sprint.
+    #:
+    #: A deployment subject to a longer statutory retention (§ 147 AO, § 10 MBO-Ä) raises this — the
+    #: purge is a floor under the operator's own policy, never a substitute for having one.
+    #:
+    #: **`audit_events` is not subject to this and there is no setting that makes it so.** The log
+    #: of what was decided — and of what was deleted — is the evidence that the deletion was lawful,
+    #: and a retention policy that erased its own record would be self-defeating. See
+    #: `app.db.models.AuditEvent`.
+    data_retention_days: int = Field(default=90, ge=1)
+
+    #: Whether the purge script is allowed to delete anything at all.
+    #:
+    #: True, because a retention policy that ships switched off is one nobody notices is not running
+    #: until an audit asks. It is a setting rather than a constant so that a deployment under a legal
+    #: hold — a dispute where evidence must be preserved — can stop the cron job's deletions without
+    #: editing the crontab on a box at 2 a.m. With it off the script still reports what it *would*
+    #: have removed and exits successfully, so the cron mail stays quiet and the hold is visible.
+    retention_enabled: bool = True
+
     # -- batch --------------------------------------------------------------------------
     #: Close batches a previous process left mid-flight, at startup, before serving a request.
     #:
