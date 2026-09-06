@@ -759,7 +759,11 @@ def test_no_llm_sdk_is_a_dependency():
 
     requirements = (ENGINE_DIR / "requirements.txt").read_text(encoding="utf-8").lower()
 
-    for package in ("openai", "anthropic", "langchain", "litellm", "transformers"):
+    # `boto3` is on this list for the same reason as the rest: botocore carries the
+    # `bedrock-runtime` service model, so boto3 in the image is a model client in the image, even
+    # though nothing under `app/` imports it. `scripts/auto_verify_rules.py --provider bedrock`
+    # pins it in `requirements-tooling.txt` instead.
+    for package in ("openai", "anthropic", "langchain", "litellm", "transformers", "boto3"):
         assert package not in requirements, f"{package} must not be a dependency of the engine"
 
 
@@ -802,7 +806,7 @@ def test_the_curation_tooling_stays_out_of_the_image():
             except (ImportError, ValueError):
                 return False
 
-        for package in ("anthropic", "openai", "google.genai"):
+        for package in ("anthropic", "openai", "google.genai", "boto3"):
             assert not installed(package), (
                 f"{package} is installed in the shipped image; the engine can reach a model API"
             )
@@ -811,7 +815,9 @@ def test_the_curation_tooling_stays_out_of_the_image():
     # A source checkout. The image is not here to inspect, so the guarantee is read off the two
     # files that produce it: the tooling has its own pin, and the Dockerfile installs the other one.
     assert tooling.exists(), "the curation tooling's dependencies need a file of their own"
-    assert "anthropic" in tooling.read_text(encoding="utf-8").lower()
+    tooling_text = tooling.read_text(encoding="utf-8").lower()
+    assert "anthropic" in tooling_text
+    assert "boto3" in tooling_text
 
     recipe = dockerfile.read_text(encoding="utf-8")
     assert "requirements.txt" in recipe, "the image is expected to install the engine's deps"

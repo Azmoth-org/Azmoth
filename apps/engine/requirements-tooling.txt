@@ -27,3 +27,15 @@ anthropic==1.2.0
 # The same script can call Gemini instead (`--provider gemini`), which is what a key without
 # Anthropic access gets used for. Same contract, same parser, same conservative default.
 google-genai==2.20.0
+
+# And `--provider bedrock`, which reaches the same models through an AWS account rather than an
+# Anthropic key — the option for a deployment whose data-processing agreement is already with AWS.
+# It belongs in THIS file and not in `requirements.txt` for the reason stated at the top: boto3 with
+# botocore's `bedrock-runtime` service model *is* a model client, so installing it into the image
+# would end the "this process cannot reach a model API" property that
+# `tests/test_production_fixes.py` asserts, for a script the image never runs.
+#
+# Pinned because botocore ships the `bedrock-runtime` service model as data inside the wheel: which
+# Converse fields exist, and which error codes the retry classification sees, are properties of this
+# version rather than of the account.
+boto3==1.43.89
