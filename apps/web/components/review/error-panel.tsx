@@ -78,8 +78,16 @@ export function ErrorPanel({
   return (
     <Alert variant="destructive">
       <AlertTriangleIcon />
-      <AlertTitle className="flex flex-wrap items-center gap-2">
-        <span>{error.message}</span>
+      {/*
+        `min-w-0` on both cells is what keeps this panel inside the content column. `Alert` lays
+        itself out as `grid-cols-[auto_1fr]`, and a grid item's automatic minimum is its content's
+        intrinsic width — so an engine message with no spaces to break at, or the `<pre>` in
+        `RawJson` below, widens the `1fr` column past the page and puts a scrollbar on the
+        viewport. `break-words` is the same guard for the message itself: these are German
+        compounds and XML paths.
+      */}
+      <AlertTitle className="flex min-w-0 flex-wrap items-center gap-2">
+        <span className="min-w-0 break-words">{error.message}</span>
         <Badge variant="destructive" className="font-mono">
           {error.error}
         </Badge>
@@ -87,7 +95,7 @@ export function ErrorPanel({
           <Badge variant="outline">HTTP {error.status}</Badge>
         ) : null}
       </AlertTitle>
-      <AlertDescription className="space-y-3">
+      <AlertDescription className="min-w-0 space-y-3">
         {hint ? <p className="text-foreground/80">{hint}</p> : null}
         {onRetry ? (
           <Button

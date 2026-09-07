@@ -146,7 +146,15 @@ export function AppShell({
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset>
+      {/*
+        `min-w-0` is what stops one wide child from widening the whole application. `SidebarInset`
+        is the flex item beside the rail, and a flex item's automatic minimum is its content's
+        intrinsic width — so a screen containing something genuinely wide (a raw JSON payload, a
+        long unbroken path) pushed this column past the viewport and put a horizontal scrollbar on
+        the page rather than on the box that was too wide. With the minimum at zero the column
+        stays at the viewport's width and the wide child scrolls inside its own container.
+      */}
+      <SidebarInset className="min-w-0">
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 rounded-t-xl border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
           <SidebarTrigger />
           <Separator orientation="vertical" className="mr-1 h-4" />

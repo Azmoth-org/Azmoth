@@ -51,7 +51,16 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+#: Where `app` lives. Two layouts, and the fallback is not defensive padding — it is what lets CI
+#: run this script's tests. In a checkout the engine is `apps/engine`; inside the engine image the
+#: app is unpacked at the root (`/srv/app`, see `app.config._find_repo_root`, which resolves the
+#: same two cases) and this file is copied next to it. Without the fallback the eleven CLI tests in
+#: `tests/test_padnext_validation.py` cannot run in the image, and CI runs the suite only there —
+#: they would have to be skipped, which is the one thing this repo's CI is built not to do.
 ENGINE = REPO_ROOT / "apps" / "engine"
+if not (ENGINE / "app").is_dir():
+    ENGINE = REPO_ROOT
 
 #: Exit codes, named because a shell script reading them should be able to quote this file.
 EXIT_VALID = 0

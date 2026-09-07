@@ -18,6 +18,15 @@ import {
 } from "@/lib/padnext/issue-language"
 import type { PadnextValidationReport } from "@/lib/padnext/types"
 
+/** `JSON.stringify` that cannot throw: a payload with a cycle must still render as *something*. */
+function formatRaw(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2) ?? String(value)
+  } catch {
+    return String(value)
+  }
+}
+
 /**
  * Every problem with one delivery: blocking ones listed, notes folded away, preview underneath.
  *
@@ -51,8 +60,21 @@ import type { PadnextValidationReport } from "@/lib/padnext/types"
  */
 export function ValidationErrorList({
   report,
+  raw,
 }: {
   report: PadnextValidationReport
+  /**
+   * The untouched `details` payload, rendered collapsed at the very bottom.
+   *
+   * Passed only when this list is the *whole* error surface — see `AuditWorkbench`. When the
+   * legacy `ErrorPanel` renders instead, it already carries its own "Details (unverändert)"
+   * block, and two raw dumps on one screen is the wall this component exists to remove.
+   *
+   * Omitted, nothing is rendered: the escape hatch is for the reader who has to compare what the
+   * cards say against what the engine actually sent, and it costs them one click rather than
+   * costing every other reader a screen of JSON.
+   */
+  raw?: unknown
 }) {
   const [language, setLanguage] = useIssueLanguageState()
 
@@ -174,6 +196,39 @@ export function ValidationErrorList({
         {report.parsed_preview ? (
           <ParsedPreview preview={report.parsed_preview} />
         ) : null}
+
+        {raw === undefined || raw === null ? null : (
+          /*
+            The developer escape hatch, and the reason the cards above are allowed to be a
+            summary. Closed by default and last on the page: an open dump is what made the
+            previous version of this screen unreadable, and a payload carrying one issue object
+            per position is thousands of lines that no practice will ever read.
+
+            A native <details> rather than a Collapsible — no state of its own, keyboard- and
+            screen-reader-accessible as it stands, and it prints open, which is the one time
+            somebody wants the payload beside the report.
+
+            The wrapper, not the <pre>, owns the scrolling: `max-w-full` gives it a definite width
+            to scroll *within*, so an unbroken 400-character JSON line moves this box's own
+            scrollbar instead of widening the page under it.
+          */
+          <details className="group/raw max-w-full rounded-lg border bg-muted/30">
+            <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-muted-foreground marker:content-none hover:text-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <ChevronRightIcon
+                  className="size-3 shrink-0 transition-transform group-open/raw:rotate-90"
+                  aria-hidden
+                />
+                Rohdetails (JSON)
+              </span>
+            </summary>
+            <div className="max-h-96 max-w-full overflow-x-auto overflow-y-auto border-t">
+              <pre className="w-max min-w-full p-3 font-mono text-xs leading-relaxed text-foreground">
+                {formatRaw(raw)}
+              </pre>
+            </div>
+          </details>
+        )}
       </div>
     </IssueLanguageProvider>
   )
