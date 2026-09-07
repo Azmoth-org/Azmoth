@@ -1,0 +1,79 @@
+{
+  "case": "case_b_verified_exclusion",
+  "delivery": "delivery_padx.xml",
+  "http_status": 200,
+  "report": {
+    "invoice_ids": [
+      "GOLDEN-B-0001"
+    ],
+    "echtdaten_declared": "0",
+    "catalog_version": "goae_official_snapshot_2026-07-25",
+    "claimed_total_eur": "69.71",
+    "recomputed_total_eur": "69.71",
+    "comparable_claimed_eur": "69.71",
+    "arithmetic_delta_eur": "0.00",
+    "unpriceable_claimed_eur": "0.00",
+    "confirmed_fine_eur": "40.22",
+    "confirmed_wrong_eur": "29.49",
+    "unconfirmed_eur": "0.00",
+    "coverage_ratio": 1.0,
+    "finding_types": [
+      "advisory_rules_present",
+      "padnext_blocked_exclusion"
+    ],
+    "findings": [
+      {
+        "type": "padnext_blocked_exclusion",
+        "severity": "error",
+        "positionsnr": "2",
+        "ziffer": "4",
+        "rule_id": "excl_auto_34_4",
+        "legal_basis": "GOÄ Anmerkung zu Nummer 4"
+      },
+      {
+        "type": "advisory_rules_present",
+        "severity": "warning",
+        "positionsnr": null,
+        "ziffer": null,
+        "rule_id": "",
+        "legal_basis": ""
+      }
+    ],
+    "positions": [
+      {
+        "positionsnr": "1",
+        "ziffer": "34",
+        "punkte": 300,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "40.22",
+        "recomputed_amount_eur": "40.22",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "confirmed_fine",
+        "blocked_by": null,
+        "verified_rule_ids": [
+          "excl_auto_34_4"
+        ],
+        "cited_rule_ids": []
+      },
+      {
+        "positionsnr": "2",
+        "ziffer": "4",
+        "punkte": 220,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "29.49",
+        "recomputed_amount_eur": "29.49",
+        "amount_delta_eur": "0.00",
+        "verdict": "blocked",
+        "bucket": "confirmed_wrong",
+        "blocked_by": "34",
+        "verified_rule_ids": [
+          "excl_auto_34_4"
+        ],
+        "cited_rule_ids": [
+          "excl_auto_34_4"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "case": "case_d_arithmetic_mismatch",
+  "delivery": "delivery_padx.xml",
+  "http_status": 200,
+  "report": {
+    "invoice_ids": [
+      "2024-0847"
+    ],
+    "echtdaten_declared": "0",
+    "catalog_version": "goae_official_snapshot_2026-07-25",
+    "claimed_total_eur": "88.81",
+    "recomputed_total_eur": "78.81",
+    "comparable_claimed_eur": "88.81",
+    "arithmetic_delta_eur": "10.00",
+    "unpriceable_claimed_eur": "0.00",
+    "confirmed_fine_eur": "0.00",
+    "confirmed_wrong_eur": "20.72",
+    "unconfirmed_eur": "68.09",
+    "coverage_ratio": 0.2333,
+    "finding_types": [
+      "advisory_rules_present",
+      "padnext_amount_mismatch"
+    ],
+    "findings": [
+      {
+        "type": "padnext_amount_mismatch",
+        "severity": "error",
+        "positionsnr": "1",
+        "ziffer": "1",
+        "rule_id": "",
+        "legal_basis": "§ 5 Abs. 1 GOÄ"
+      },
+      {
+        "type": "advisory_rules_present",
+        "severity": "warning",
+        "positionsnr": null,
+        "ziffer": null,
+        "rule_id": "",
+        "legal_basis": ""
+      }
+    ],
+    "positions": [
+      {
+        "positionsnr": "1",
+        "ziffer": "1",
+        "punkte": 80,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "20.72",
+        "recomputed_amount_eur": "10.72",
+        "amount_delta_eur": "10.00",
+        "verdict": "chargeable",
+        "bucket": "confirmed_wrong",
+        "blocked_by": null,
+        "verified_rule_ids": [],
+        "cited_rule_ids": []
+      },
+      {
+        "positionsnr": "2",
+        "ziffer": "5",
+        "punkte": 80,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "10.72",
+        "recomputed_amount_eur": "10.72",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "unconfirmed",
+        "blocked_by": null,
+        "verified_rule_ids": [],
+        "cited_rule_ids": []
+      },
+      {
+        "positionsnr": "3",
+        "ziffer": "651",
+        "punkte": 253,
+        "claimed_faktor": "1.8",
+        "claimed_amount_eur": "26.54",
+        "recomputed_amount_eur": "26.54",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "unconfirmed",
+        "blocked_by": null,
+        "verified_rule_ids": [],
+        "cited_rule_ids": []
+      },
+      {
+        "positionsnr": "4",
+        "ziffer": "3550",
+        "punkte": 60,
+        "claimed_faktor": "1.15",
+        "claimed_amount_eur": "4.02",
+        "recomputed_amount_eur": "4.02",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "unconfirmed",
+        "blocked_by": null,
+        "verified_rule_ids": [],
+        "cited_rule_ids": []
+      },
+      {
+        "positionsnr": "5",
+        "ziffer": "410",
+        "punkte": 200,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "26.81",
+        "recomputed_amount_eur": "26.81",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "unconfirmed",
+        "blocked_by": null,
+        "verified_rule_ids": [],
+        "cited_rule_ids": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Golden case C: a VERIFIED Leistungslegende factor cap fires, and the boundary holds.
+
+     cap_auto_440 (data/rules/factor_caps.csv, verified=true): GOÄ 440 may only be charged at
+     max_factor 1.0. Legal basis: GOÄ Allgemeine Bestimmung.
+
+     Two invoices in one delivery, deliberately:
+       GOLDEN-C-0001  GOÄ 440 at faktor 2.3  — above the cap, must be nachweislich falsch
+       GOLDEN-C-0002  GOÄ 440 at faktor 1.0  — exactly AT the cap, must stay berechnungsfähig
+
+     2.3 is above the 1.0 cap but at (not above) the Abschnitt C Schwellenwert of 2.3, so
+     § 12 Abs. 3 GOÄ does not additionally require a written Begründung — the only defect on the
+     line is the cap. 2.3 is also below the § 5 Höchstsatz 3.5, so the cap is the ceiling that
+     was actually broken and cap_auto_440 is the rule the finding must cite.
+
+     The at-cap line is numbered 2, not 1: `positionsnr` is unique only within an
+     <abrechnungsfall>, and app/padnext/audit.py attributes findings to positions by that
+     number alone, so two invoices both numbering their line "1" would share one attribution
+     slot and the cap finding would convict both. That collision is reproduced deliberately in
+     tests/golden/bug_positionsnr_collision/ and reported in docs/api/E2E_GOLDEN.md.
+
+     The at-cap invoice is second on purpose: app/padnext/audit.py folds duplicate Ziffern with
+     "last one wins" before grounding, so the Ziffer-keyed solver relation sees 1.0 and the
+     per-position cap check is what convicts position 1 alone. See docs/api/E2E_GOLDEN.md.
+
+     Synthetic data throughout: echtdaten="0". -->
+<rechnungen anzahl="2" echtdaten="0"
+            xmlns="http://padinfo.de/ns/pad"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://padinfo.de/ns/pad http://www.padinfo.de/ns/pad/padx_adl_v2.13.xsd">
+  <nachrichtentyp version="02.13">ADL</nachrichtentyp>
+  <rechnungsersteller>
+    <name>Testpraxis Golden C</name>
+    <kundennr>123456</kundennr>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <iknr>912345678</iknr>
+  </rechnungsersteller>
+  <leistungserbringer id="01">
+    <anrede>Herr</anrede>
+    <titel>Dr. med.</titel>
+    <vorname>Test</vorname>
+    <name>Arzt</name>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <lanr>123456789</lanr>
+  </leistungserbringer>
+  <rechnung id="GOLDEN-C-0001" aisrechnungsnr="GOLDEN-C-0001">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Herr</anrede>
+        <vorname>Test</vorname>
+        <name>Testperson</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Testweg</strasse>
+            <hausnr>2</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="T-000001">
+        <anrede>Herr</anrede>
+        <vorname>Test</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Herr</anrede>
+        <vorname>Test</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+      </versicherter>
+      <positionen posanzahl="1">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="440">
+          <datum>2026-09-01</datum>
+          <anzahl>1</anzahl>
+          <text>Zuschlag für die Anwendung eines Operationsmikroskops</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>400</punktzahl>
+          <gesamtbetrag>53.62</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+  <rechnung id="GOLDEN-C-0002" aisrechnungsnr="GOLDEN-C-0002">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Frau</anrede>
+        <vorname>Test</vorname>
+        <name>Zweitperson</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Testweg</strasse>
+            <hausnr>3</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="T-000002">
+        <anrede>Frau</anrede>
+        <vorname>Test</vorname>
+        <name>Zweitperson</name>
+        <gebdatum>1975-06-30</gebdatum>
+        <geschlecht>w</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Frau</anrede>
+        <vorname>Test</vorname>
+        <name>Zweitperson</name>
+        <gebdatum>1975-06-30</gebdatum>
+        <geschlecht>w</geschlecht>
+      </versicherter>
+      <positionen posanzahl="1">
+        <goziffer positionsnr="2" go="GOÄ" ziffer="440">
+          <datum>2026-09-01</datum>
+          <anzahl>1</anzahl>
+          <text>Zuschlag für die Anwendung eines Operationsmikroskops</text>
+          <faktor>1.0</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>400</punktzahl>
+          <gesamtbetrag>23.31</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

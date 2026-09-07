@@ -1,0 +1,115 @@
+{
+  "case": "case_e_echtdaten_gate",
+  "delivery": "delivery_padx.xml",
+  "http_status": 422,
+  "error_code": "ECHTDATEN_UNDECLARED",
+  "batched_error_codes_include": [
+    "echtdaten_undeclared"
+  ],
+  "batched_blocking_error_count_at_least": 1,
+  "after_anonymisation": {
+    "http_status": 200,
+    "report": {
+      "invoice_ids": [
+        "2024-0847"
+      ],
+      "echtdaten_declared": "0",
+      "catalog_version": "goae_official_snapshot_2026-07-25",
+      "claimed_total_eur": "78.81",
+      "recomputed_total_eur": "78.81",
+      "comparable_claimed_eur": "78.81",
+      "arithmetic_delta_eur": "0.00",
+      "unpriceable_claimed_eur": "0.00",
+      "confirmed_fine_eur": "0.00",
+      "confirmed_wrong_eur": "0.00",
+      "unconfirmed_eur": "78.81",
+      "coverage_ratio": 0.0,
+      "finding_types": [
+        "advisory_rules_present"
+      ],
+      "findings": [
+        {
+          "type": "advisory_rules_present",
+          "severity": "warning",
+          "positionsnr": null,
+          "ziffer": null,
+          "rule_id": "",
+          "legal_basis": ""
+        }
+      ],
+      "positions": [
+        {
+          "positionsnr": "1",
+          "ziffer": "1",
+          "punkte": 80,
+          "claimed_faktor": "2.3",
+          "claimed_amount_eur": "10.72",
+          "recomputed_amount_eur": "10.72",
+          "amount_delta_eur": "0.00",
+          "verdict": "chargeable",
+          "bucket": "unconfirmed",
+          "blocked_by": null,
+          "verified_rule_ids": [],
+          "cited_rule_ids": []
+        },
+        {
+          "positionsnr": "2",
+          "ziffer": "5",
+          "punkte": 80,
+          "claimed_faktor": "2.3",
+          "claimed_amount_eur": "10.72",
+          "recomputed_amount_eur": "10.72",
+          "amount_delta_eur": "0.00",
+          "verdict": "chargeable",
+          "bucket": "unconfirmed",
+          "blocked_by": null,
+          "verified_rule_ids": [],
+          "cited_rule_ids": []
+        },
+        {
+          "positionsnr": "3",
+          "ziffer": "651",
+          "punkte": 253,
+          "claimed_faktor": "1.8",
+          "claimed_amount_eur": "26.54",
+          "recomputed_amount_eur": "26.54",
+          "amount_delta_eur": "0.00",
+          "verdict": "chargeable",
+          "bucket": "unconfirmed",
+          "blocked_by": null,
+          "verified_rule_ids": [],
+          "cited_rule_ids": []
+        },
+        {
+          "positionsnr": "4",
+          "ziffer": "3550",
+          "punkte": 60,
+          "claimed_faktor": "1.15",
+          "claimed_amount_eur": "4.02",
+          "recomputed_amount_eur": "4.02",
+          "amount_delta_eur": "0.00",
+          "verdict": "chargeable",
+          "bucket": "unconfirmed",
+          "blocked_by": null,
+          "verified_rule_ids": [],
+          "cited_rule_ids": []
+        },
+        {
+          "positionsnr": "5",
+          "ziffer": "410",
+          "punkte": 200,
+          "claimed_faktor": "2.3",
+          "claimed_amount_eur": "26.81",
+          "recomputed_amount_eur": "26.81",
+          "amount_delta_eur": "0.00",
+          "verdict": "chargeable",
+          "bucket": "unconfirmed",
+          "blocked_by": null,
+          "verified_rule_ids": [],
+          "cited_rule_ids": []
+        }
+      ]
+    },
+    "note": "scripts/anonymize_padnext.py stamps echtdaten=\"false\" and rebuilds the payload from its allowlist, so the audit is case A's again."
+  }
+}

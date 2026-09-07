@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rechnungen anzahl="1"
+            xmlns="http://padinfo.de/ns/pad"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://padinfo.de/ns/pad http://www.padinfo.de/ns/pad/padx_adl_v2.13.xsd">
+  <nachrichtentyp version="02.13">ADL</nachrichtentyp>
+  <rechnungsersteller>
+    <name>Praxis Dr. med. Thomas Weber</name>
+    <namezusatz>Facharzt für Innere Medizin</namezusatz>
+    <kundennr>123456</kundennr>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Hauptstraße</strasse>
+        <hausnr>45</hausnr>
+      </hausadresse>
+    </anschrift>
+    <iknr>912345678</iknr>
+  </rechnungsersteller>
+  <leistungserbringer id="01">
+    <anrede>Herr</anrede>
+    <titel>Dr. med.</titel>
+    <vorname>Thomas</vorname>
+    <name>Weber</name>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Hauptstraße</strasse>
+        <hausnr>45</hausnr>
+      </hausadresse>
+    </anschrift>
+    <lanr>123456789</lanr>
+  </leistungserbringer>
+  <rechnung id="2024-0847" aisrechnungsnr="2024-0847">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Herr</anrede>
+        <vorname>Max</vorname>
+        <name>Mustermann</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Musterweg</strasse>
+            <hausnr>12</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="P-100234">
+        <anrede>Herr</anrede>
+        <vorname>Max</vorname>
+        <name>Mustermann</name>
+        <gebdatum>1985-05-12</gebdatum>
+        <geschlecht>m</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Herr</anrede>
+        <vorname>Max</vorname>
+        <name>Mustermann</name>
+        <gebdatum>1985-05-12</gebdatum>
+        <geschlecht>m</geschlecht>
+      </versicherter>
+      <diagnose>
+        <text>Essentielle Hypertonie</text>
+        <code system="ICD-10">I10</code>
+      </diagnose>
+      <diagnose>
+        <text>Sonstige und nicht näher bezeichnete Bauchschmerzen</text>
+        <code system="ICD-10">R10.4</code>
+      </diagnose>
+      <positionen posanzahl="5">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="1">
+          <datum>2024-03-15</datum>
+          <anzahl>1</anzahl>
+          <text>Beratung, eventuell auch nur mittels Fernsprecher</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>80</punktzahl>
+          <gesamtbetrag>10.72</gesamtbetrag>
+        </goziffer>
+        <goziffer positionsnr="2" go="GOÄ" ziffer="5">
+          <datum>2024-03-15</datum>
+          <anzahl>1</anzahl>
+          <text>Symptombezogene Untersuchung</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>80</punktzahl>
+          <gesamtbetrag>10.72</gesamtbetrag>
+        </goziffer>
+        <goziffer positionsnr="3" go="GOÄ" ziffer="651">
+          <datum>2024-03-15</datum>
+          <anzahl>1</anzahl>
+          <text>Elektrokardiographische Untersuchung in Ruhe (mindestens 9 Ableitungen)</text>
+          <faktor>1.8</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>253</punktzahl>
+          <gesamtbetrag>26.54</gesamtbetrag>
+        </goziffer>
+        <goziffer positionsnr="4" go="GOÄ" ziffer="3550">
+          <datum>2024-03-15</datum>
+          <anzahl>1</anzahl>
+          <text>Blutbild und Blutbildbestandteile (kleines Blutbild)</text>
+          <faktor>1.15</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>60</punktzahl>
+          <gesamtbetrag>4.02</gesamtbetrag>
+        </goziffer>
+        <goziffer positionsnr="5" go="GOÄ" ziffer="410">
+          <datum>2024-03-15</datum>
+          <anzahl>1</anzahl>
+          <text>Ultraschalluntersuchung eines Organs, einer Organgruppe oder eines Körperhohlenraums</text>
+          <zusatztext>Abdomen: Leber, Gallenblase, Pankreas, Milz, Nieren beidseits</zusatztext>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>200</punktzahl>
+          <gesamtbetrag>26.81</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+    <endetext>Zahlbar innerhalb von 14 Tagen ohne Abzug. Bankverbindung: IBAN DE89 3704 0044 0532 0130 00, BIC: COBADEFFXXX</endetext>
+  </rechnung>
+</rechnungen>
