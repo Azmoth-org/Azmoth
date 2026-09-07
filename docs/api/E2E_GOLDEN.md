@@ -390,3 +390,52 @@ unexpectedly.
 **Never make a failing expectation pass by editing it to match the engine.** That converts a golden
 test into a snapshot of whatever the engine currently does, which is the one thing it must not be.
 Either the data moved (regenerate, and read the diff) or the engine is wrong (report it).
+
+---
+
+## 7. If roll-forward fails
+
+`E2E_LEGACY_PASSWORDS` (§1) recovers an account that is stale by *one* password change. If it is
+stale in some other way — the password predates every name the script still knows, or the account
+is simply broken — there is no endpoint left to reach for: no admin plugin exists on this
+deployment, and `POST /api/auth/request-password-reset` is hard-disabled
+(`RESET_PASSWORD_DISABLED`). The only way forward is to delete the two `user` rows by hand and let
+the next run sign up fresh:
+
+```bash
+docker compose -f infra/docker/docker-compose.dev.yml exec postgres \
+  psql -U azmoth -d azmoth -c "DELETE FROM \"user\" WHERE email LIKE '%@e2e.azmoth.test';"
+```
+
+There is deliberately no `--reset-users` flag that wraps this. The script's whole design is that it
+writes to the database through **only** the product's own endpoints (§1, "No sideways access"), so a
+change that broke sign-up or onboarding cannot be hidden by a flag that repairs the damage from
+outside the API. This SQL is the one documented opt-in escape from that rule, and it is a human
+running it, not the script.
+
+**Before you run it, know what it does not clean up.** `doctor_profiles`, `organization`,
+`practices` and `member` have no database-level foreign key back to `user` — deleting the user row
+does not cascade to them, and Better Auth's own `organization/delete` (which does clean up `member`
+and `organization`) never runs here because there is no session left to call it with. That leaves
+`doctor_profiles` and `practices` rows behind, keyed to a `user_id` / `organization_id` that no
+longer resolves to anyone — and since `doctor_profiles.lanr` and `practices.organization_id` are
+**unique columns**, those orphaned rows permanently refuse the next onboarding attempt for the same
+synthetic identity (`lanr_already_registered`, HTTP 409), no matter how many times the account
+itself is deleted and recreated. This is not hypothetical: it is exactly what happened while
+preparing this section, and step 1 alone was not enough to un-stick it.
+
+If onboarding 409s on `lanr_already_registered` for `999000101` or `999000102` after a `user` delete,
+also clear the rows it left behind — first confirm the `doctor_profiles` row's `user_id` no longer
+matches a live `user` (so this cannot delete something another account still depends on), then:
+
+```bash
+docker compose -f infra/docker/docker-compose.dev.yml exec postgres psql -U azmoth -d azmoth -c "
+DELETE FROM doctor_profiles WHERE lanr IN ('999000101','999000102');
+DELETE FROM practices WHERE bsnr IN ('999000201','999000202');
+DELETE FROM organization WHERE id NOT IN (SELECT \"organizationId\" FROM member);
+"
+```
+
+The last line is deliberately scoped to organizations with zero members rather than to a name or id
+literal — a membership-less organization cannot be signed into by anyone, e2e or otherwise, so it is
+safe to treat as orphaned wherever this deployment's history left one.
