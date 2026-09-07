@@ -46,9 +46,9 @@
   "startseite": {
     "hero": {
       "badge": "Für Abrechnungsstellen, PVS-Hersteller und Privatliquidation nach GOÄ",
-      "titel": "Deterministische GOÄ-Prüfung. Mathematisch beweisbar. 100 % nachvollziehbar.",
-      "untertitel": "Azmoth ist keine Blackbox-KI. Jede akzeptierte oder blockierte Position wird mit einem verifizierbaren Beweis (Proof Atom) und exakter gesetzlicher Begründung geliefert.",
-      "ctaPrimaer": "Kostenlose Demo testen",
+      "titel": "Jede Position geprüft. Jeder Befund belegt.",
+      "untertitel": "Azmoth prüft PADnext-Lieferungen deterministisch gegen die GOÄ — mit Paragraph und Beweis neben jedem Befund. Kein Sprachmodell, keine Schätzung.",
+      "ctaPrimaer": "Demo starten — ohne Anmeldung",
       "ctaSekundaer": "Pilot-Zugang anfordern",
       "hinweis": "Die Demo läuft ohne Anmeldung und ohne Upload — geprüft wird eine synthetische Beispiellieferung. Der Pilotbetrieb ist derzeit auf freigeschaltete Teilnehmer beschränkt."
     },
@@ -109,19 +109,19 @@
     "ablauf": {
       "eyebrow": "Ablauf",
       "titel": "So funktioniert Azmoth",
-      "untertitel": "Von der PADnext-Lieferung zum begründeten Prüfbericht — in drei Schritten, ohne Zwischenschritt in einer Tabelle.",
+      "untertitel": "Von der PADnext-Lieferung zum begründeten Prüfbericht — in drei Schritten.",
       "schritte": [
         {
-          "titel": "Upload",
-          "text": "Laden Sie Ihre PADnext-XML-Datei hoch (oder testen Sie mit Beispieldaten). Jede Lieferung wird vor der Verarbeitung gegen das ADL-Schema geprüft; fehlerhafte Datensätze werden mit Zeilenangabe abgewiesen statt still verarbeitet."
+          "titel": "Hochladen",
+          "text": "PADnext-XML per Drag & Drop oder API. Ungültige Lieferungen werden mit Zeilenangabe abgewiesen."
         },
         {
-          "titel": "Deterministische Prüfung",
-          "text": "Unsere Engine prüft jede Position gegen {regeln} durchgesetzte GOÄ-Regeln – mathematisch beweisbar, in rund {laufzeit} ms je Rechnung. Dieselbe Eingabe ergibt dasselbe Ergebnis: heute, morgen und in der Rückfrage in acht Monaten."
+          "titel": "Prüfen",
+          "text": "{regeln} durchgesetzte GOÄ-Regeln auf jede Position — in rund {laufzeit} ms je Lieferung."
         },
         {
-          "titel": "Klares Ergebnis",
-          "text": "Erhalten Sie einen detaillierten Prüfbericht mit drei Kategorien: Bestätigt korrekt, Nachweislich falsch, Unbestätigt – inklusive PDF-Export."
+          "titel": "Bericht laden",
+          "text": "Ein Befund je Ziffer, mit Regel-ID und Paragraph. Als PDF exportierbar."
         }
       ]
     },
@@ -231,6 +231,103 @@
       "text": "Der einzige Test, der etwas aussagt: eine Rechnung prüfen lassen, bei der Sie das richtige Ergebnis bereits kennen. Die Demo braucht dafür weder Konto noch Upload.",
       "primaer": "Kostenlose Demo testen",
       "sekundaer": "Fragen? Sprechen Sie uns an"
+    },
+    "pipeline": {
+      "ariaLabel": "Ablauf: PADnext-Lieferung, Prüfung durch die Azmoth-Engine, Prüfbericht",
+      "eingabe": {
+        "titel": "PADnext-Lieferung",
+        "detail": "lieferung-beispiel.padx"
+      },
+      "engine": {
+        "titel": "Azmoth Engine",
+        "detail": "{regeln} Regeln · {laufzeit} ms"
+      },
+      "ausgabe": {
+        "titel": "Prüfbericht",
+        "detail": "Befund je Ziffer, mit Grundlage"
+      },
+      "ziffer": "Ziffer {ziffer}",
+      "hinweis": "Synthetische Beispiellieferung. Dieselben vier Positionen zeigt der Prüfbericht unten."
+    },
+    "vergleich": {
+      "eyebrow": "Gegenüberstellung",
+      "titel": "Was sich ändert, wenn die Prüfung nicht mehr im Kopf stattfindet",
+      "untertitel": "Links die Eigenschaften manueller Durchsicht. Rechts, was Azmoth zusichert — und belegen kann.",
+      "manuellTitel": "Manuelle Durchsicht",
+      "azmothTitel": "Mit Azmoth",
+      "zeilen": [
+        {
+          "manuell": "Zwei Prüfer, zwei Einschätzungen — beide vertretbar.",
+          "azmoth": "Deterministisch: dieselbe Lieferung ergibt denselben Befund."
+        },
+        {
+          "manuell": "Stichprobe statt Vollprüfung, sobald der Stapel wächst.",
+          "azmoth": "{regeln} durchgesetzte Regeln auf jede Position jeder Lieferung."
+        },
+        {
+          "manuell": "Die Begründung entsteht erst bei der Rückfrage.",
+          "azmoth": "Paragraph und Beweis stehen im Bericht, bevor jemand fragt."
+        },
+        {
+          "manuell": "Der Aufwand wächst mit jeder weiteren Lieferung.",
+          "azmoth": "{laufzeit} ms pro Lieferung — die Stapelgröße ändert daran nichts."
+        },
+        {
+          "manuell": "Unklare Fälle verschwinden in „geht schon“.",
+          "azmoth": "Unklare Fälle bekommen eine eigene Kategorie statt einer Vermutung."
+        }
+      ]
+    },
+    "zahlen": {
+      "eyebrow": "Nachprüfbar",
+      "titel": "Drei Zahlen, die an den Motor gebunden sind",
+      "untertitel": "Keine Referenzkunden, keine geschätzten Ersparnisse. Diese Werte prüft die Testsuite der Engine bei jedem Build gegen das, was die Pipeline tatsächlich rechnet.",
+      "kacheln": [
+        {
+          "titel": "Durchgesetzte Regeln",
+          "text": "Regeln, die eine Position tatsächlich sperren können — nicht bloß geladen sind."
+        },
+        {
+          "titel": "Ziffern unter Regel",
+          "text": "GOÄ-Ziffern, zu denen mindestens eine durchgesetzte Regel etwas sagt."
+        },
+        {
+          "titel": "Laufzeit je Lieferung",
+          "text": "Median einer vollständigen Lieferung durch die Pipeline — nicht je Position."
+        }
+      ],
+      "regeln": {
+        "einheit": "von {gesamt} geladen"
+      },
+      "katalog": {
+        "einheit": "von {gesamt} im Katalog"
+      },
+      "laufzeit": {
+        "einheit": "ms (Median)"
+      },
+      "anteile": "Das sind {regelnAnteil} der geladenen Regeln und {katalogAnteil} des GOÄ-Katalogs."
+    },
+    "sicherheit": {
+      "eyebrow": "Sicherheit & Compliance",
+      "titel": "Wo die Daten liegen, steht im Vertrag",
+      "untertitel": "Vier Angaben, die Ihre Datenschutzbeauftragte prüfen kann, bevor das Gespräch beginnt.",
+      "aws": {
+        "titel": "Anwendung: AWS",
+        "text": "Region eu-central-1, Frankfurt am Main"
+      },
+      "neon": {
+        "titel": "Datenbank: Neon",
+        "text": "Postgres auf aws-eu-central-1, Frankfurt am Main"
+      },
+      "dsgvo": {
+        "titel": "AVV & TOM",
+        "text": "Beide Dokumente liegen vor und werden Vertragsbestandteil."
+      },
+      "pilot": {
+        "titel": "Pilot ohne Klardaten",
+        "text": "Nur anonymisierte Lieferungen — das Skript läuft bei Ihnen."
+      },
+      "cta": "Datenschutzerklärung lesen"
     }
   },
   "funktionen": {
