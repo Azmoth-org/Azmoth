@@ -39,6 +39,16 @@ import type { PadnextParsedPreview } from "@/lib/padnext/types"
  * the 3 they exported has to be told which of the two numbers to doubt.
  */
 export function ParsedPreview({ preview }: { preview: PadnextParsedPreview }) {
+  // A preview that found nothing is not worth a card: it would say "echtdaten: —" under a heading
+  // promising what was read, which reads as a second failure rather than as reassurance. The CLI
+  // suppresses its own block on the same condition.
+  //
+  // First rather than last, which is where it used to be. It is a statement about the input, and a
+  // guard that runs after the work it exists to skip is one a later reader has to reconstruct.
+  if (!preview.invoice_count && !preview.position_count) {
+    return null
+  }
+
   const rows: Array<[string, string]> = []
 
   if (preview.invoice_count) {
@@ -84,13 +94,6 @@ export function ParsedPreview({ preview }: { preview: PadnextParsedPreview }) {
   }
   rows.push(["echtdaten", preview.echtdaten_declared ?? "— nicht erklärt"])
 
-  // A preview that found nothing is not worth a card: it would say "echtdaten: —" under a heading
-  // promising what was read, which reads as a second failure rather than as reassurance. The CLI
-  // suppresses its own block on the same condition.
-  if (!preview.invoice_count && !preview.position_count) {
-    return null
-  }
-
   return (
     <section className="rounded-lg border bg-card/50 p-3">
       <h3 className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -109,13 +112,21 @@ export function ParsedPreview({ preview }: { preview: PadnextParsedPreview }) {
         {rows.map(([label, value]) => (
           <div key={label} className="contents">
             <dt className="text-muted-foreground">{label}</dt>
-            <dd className="min-w-0 font-medium break-words">{value}</dd>
+            <dd
+              className="notranslate min-w-0 font-medium break-words"
+              translate="no"
+            >
+              {value}
+            </dd>
           </div>
         ))}
       </dl>
 
       {preview.container_members && preview.container_members.length > 0 ? (
-        <p className="mt-2 font-mono text-[10px] break-all text-muted-foreground">
+        <p
+          className="notranslate mt-2 font-mono text-[10px] break-all text-muted-foreground"
+          translate="no"
+        >
           {preview.container_members.join(" · ")}
         </p>
       ) : null}

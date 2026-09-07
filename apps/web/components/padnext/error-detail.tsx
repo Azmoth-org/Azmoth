@@ -15,10 +15,7 @@ import {
 } from "@workspace/ui/components/collapsible"
 
 import { FixSuggestion } from "@/components/padnext/fix-suggestion"
-import {
-  issueTexts,
-  useIssueLanguage,
-} from "@/lib/padnext/issue-language"
+import { issueTexts, useIssueLanguage } from "@/lib/padnext/issue-language"
 import type { PadnextValidationIssue } from "@/lib/padnext/types"
 
 /**
@@ -64,8 +61,8 @@ const TONE = {
   warning: {
     Icon: AlertTriangleIcon,
     badge: "secondary" as const,
-    row: "border-amber-300/60 bg-amber-50/60 hover:bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/[0.06] dark:hover:bg-amber-500/10",
-    icon: "text-amber-600 dark:text-amber-400",
+    row: "border-amber-300/60 bg-amber-50/60 hover:bg-amber-50",
+    icon: "text-amber-600",
   },
   info: {
     Icon: InfoIcon,
@@ -102,7 +99,9 @@ export function ErrorDetail({ issue }: { issue: PadnextValidationIssue }) {
           text — a German compound or an XML path has no spaces to break at.
         */}
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-sm leading-snug break-words">{text.summary}</p>
+          <p className="text-sm leading-snug break-words" lang={language}>
+            {text.summary}
+          </p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <Badge
               variant={tone.badge}
@@ -118,7 +117,10 @@ export function ErrorDetail({ issue }: { issue: PadnextValidationIssue }) {
             {issue.severity === "error" && issue.blocking === false ? (
               // The one label the two fields make necessary: red, and yet not what is stopping
               // the upload. Without it a reader reasonably concludes that it is.
-              <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-normal">
+              <Badge
+                variant="outline"
+                className="px-1.5 py-0 text-[10px] font-normal"
+              >
                 nicht blockierend
               </Badge>
             ) : null}
@@ -128,7 +130,10 @@ export function ErrorDetail({ issue }: { issue: PadnextValidationIssue }) {
 
       <CollapsibleContent className="space-y-3 border-t px-2.5 pt-3 pb-3 sm:px-3 sm:pl-11">
         {text.message && text.message !== text.summary ? (
-          <p className="text-sm leading-relaxed whitespace-pre-line break-words">
+          <p
+            className="text-sm leading-relaxed break-words whitespace-pre-line"
+            lang={language}
+          >
             {text.message}
           </p>
         ) : null}
@@ -145,10 +150,15 @@ export function ErrorDetail({ issue }: { issue: PadnextValidationIssue }) {
                   className="size-3 transition-transform group-open/why:rotate-90"
                   aria-hidden
                 />
-                {language === "de" ? "Warum das wichtig ist" : "Why this matters"}
+                {language === "de"
+                  ? "Warum das wichtig ist"
+                  : "Why this matters"}
               </span>
             </summary>
-            <p className="px-2.5 pb-2.5 text-xs leading-relaxed whitespace-pre-line break-words text-foreground/75">
+            <p
+              className="px-2.5 pb-2.5 text-xs leading-relaxed break-words whitespace-pre-line text-foreground/75"
+              lang={language}
+            >
               {text.why}
             </p>
           </details>
@@ -159,7 +169,10 @@ export function ErrorDetail({ issue }: { issue: PadnextValidationIssue }) {
             <p className="text-xs font-medium">
               {language === "de" ? "Lösung" : "How to fix it"}
             </p>
-            <p className="text-xs leading-relaxed whitespace-pre-line break-words text-foreground/75">
+            <p
+              className="text-xs leading-relaxed break-words whitespace-pre-line text-foreground/75"
+              lang={language}
+            >
               {text.fix}
             </p>
           </div>

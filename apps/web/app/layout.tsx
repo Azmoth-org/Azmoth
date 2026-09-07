@@ -4,8 +4,6 @@ import { Geist_Mono, Inter } from "next/font/google"
 import "./globals.css"
 import { cn } from "@workspace/ui/lib/utils"
 
-import { ThemeProvider } from "@/components/theme-provider"
-
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 const fontMono = Geist_Mono({
@@ -54,6 +52,12 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   manifest: "/site.webmanifest",
+  /*
+   * The `<html translate="no">` below in the tag Chrome has honoured longest. See the comment on
+   * that attribute for why this application refuses machine translation outright — it is the fix
+   * for a real crash, not a stylistic objection.
+   */
+  other: { google: "notranslate" },
 }
 
 /**
@@ -77,6 +81,35 @@ export default function RootLayout({
     // offer the wrong translation and the wrong hyphenation.
     <html
       lang="de"
+      /*
+       * ## `translate="no"` is a crash fix, not a preference
+       *
+       * The reported failure was `NotFoundError: Failed to execute 'insertBefore' on 'Node'`,
+       * intermittently, on the PADnext refusal screen. Nothing in that screen renders differently
+       * on the server than on the client, and it does not have to: the error is what React throws
+       * when something *outside* React has moved the nodes it is holding references to.
+       *
+       * Chrome's built-in translator is that something. It replaces every translatable text node
+       * with a `<font>` element of its own, so the sibling React kept a pointer to is no longer a
+       * child of the parent it asks to insert before. Intermittent, because it is a race between
+       * the translator's pass and React's — which is also why it showed up on the refusal screen
+       * first: several hundred words of German arriving at once is the longest translation pass
+       * this application ever triggers.
+       *
+       * `lang="de"` on a browser set to anything else is precisely the condition Chrome offers to
+       * translate on, so the two attributes belong together. And the translation was never wanted:
+       * every string here is German for a German medical practice, and what the machine would be
+       * rewriting is GOÄ codes, XML paths, shell commands and legally-adjacent refusal text, where
+       * a plausible mistranslation is worse than no translation. Where a reader genuinely needs
+       * English, the engine ships its own and `lib/padnext/issue-language.tsx` serves it.
+       *
+       * A `<meta name="google" content="notranslate">` goes with it, from `metadata` above — the
+       * attribute is the standard, the meta tag is what older Chrome honours, and the two disagree
+       * about nothing.
+       */
+      translate="no"
+      // Kept, and now for a different reason than the theme class it was added for: it stops React
+      // tearing down the document over an attribute injected by an extension before hydration.
       suppressHydrationWarning
       className={cn(
         "antialiased",
@@ -85,9 +118,7 @@ export default function RootLayout({
         inter.variable
       )}
     >
-      <body>
-        <ThemeProvider>{children}</ThemeProvider>
-      </body>
+      <body>{children}</body>
     </html>
   )
 }
