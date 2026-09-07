@@ -24,5 +24,27 @@
 @source "../{app,components,hooks,lib}/**/*.{ts,tsx}";
 @source "../middleware.ts";
 
+/*
+ * The two exclusions the comment above claims and, until now, did not enforce.
+ *
+ * `@source` ADDS to Tailwind's automatic source detection, it does not replace it — and that
+ * detection walks the project excluding whatever `.gitignore` excludes. In a checkout that
+ * silently covered `.next`, so the globs above read as the whole story. In a container built
+ * from `COPY`d sources there is no `.gitignore` and no `.git` (see
+ * infra/docker/docker-compose.dev.yml — only `apps/` and `packages/` are mounted), so the scan
+ * reached into the build output, and that output is a feedback loop: Next writes the rendered
+ * DOM into it with every class attribute HTML-escaped, so
+ * `*:[svg:not([class*='size-'])]:size-4` from `Alert` came back as a candidate spelled
+ * `...[class*=&#x27;size-&#x27;]...`. Tailwind duly generated a rule for it, and the browser
+ * dropped the declaration it could not parse — "Unexpected token CurlyBracketBlock", with a
+ * `size-4` that silently stopped applying to every alert icon.
+ *
+ * Excluding rather than `source(none)`: the detection still covers anything these globs have
+ * not thought of, which is the behaviour a checkout has today. Only generated output is removed,
+ * and generated output is never a source of class names anybody wrote.
+ */
+@source not "../.next";
+@source not "../node_modules";
+
 /* The shared design system, in full. */
 @source "../../../packages/ui/src/**/*.{ts,tsx}";
