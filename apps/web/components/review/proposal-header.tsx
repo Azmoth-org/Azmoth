@@ -108,7 +108,7 @@ function CountLine({
     count === 0
       ? "text-muted-foreground"
       : tone === "accepted"
-        ? "text-emerald-700 dark:text-emerald-400"
+        ? "text-emerald-700"
         : "text-destructive"
 
   return (

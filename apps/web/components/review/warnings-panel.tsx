@@ -42,9 +42,9 @@ function SeverityIcon({
   if (severity === "error")
     return <OctagonAlertIcon className="text-destructive" />
   if (severity === "warning") {
-    return <AlertTriangleIcon className="text-amber-600 dark:text-amber-400" />
+    return <AlertTriangleIcon className="text-amber-600" />
   }
-  return <InfoIcon className="text-azm-indigo-deep dark:text-azm-indigo-subdued" />
+  return <InfoIcon className="text-azm-indigo-deep" />
 }
 
 /**

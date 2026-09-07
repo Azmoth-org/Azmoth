@@ -66,22 +66,22 @@ const TONE: Record<MetricTone, { chip: string; value: string }> = {
     value: "text-foreground",
   },
   positive: {
-    chip: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
+    chip: "bg-emerald-500/10 text-emerald-700",
     value: "text-foreground",
   },
   attention: {
-    chip: "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
+    chip: "bg-amber-500/10 text-amber-700",
     value: "text-foreground",
   },
   critical: {
-    chip: "bg-destructive/10 text-destructive dark:text-red-400",
+    chip: "bg-destructive/10 text-destructive",
     /*
      * Lightened in dark mode, the same move `lib/status.ts` makes for every one of its badge
      * palettes. `--destructive` is tuned against the light canvas; on the dark shell's navy it
      * lands near the 3:1 floor that a 48px numeral only just clears, and "only just" is not where
      * the one figure on this row that means *something broke* should sit.
      */
-    value: "text-destructive dark:text-red-400",
+    value: "text-destructive",
   },
 }
 

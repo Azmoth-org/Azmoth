@@ -48,10 +48,10 @@ function verifiedFraction(
 type Tone = "enforced" | "advisory" | "unverified" | "analog"
 
 const TONE_COLOR: Record<Tone, string> = {
-  enforced: "text-emerald-700 dark:text-emerald-400",
-  advisory: "text-azm-indigo-deep dark:text-azm-indigo-subdued",
+  enforced: "text-emerald-700",
+  advisory: "text-azm-indigo-deep",
   unverified: "text-muted-foreground",
-  analog: "text-amber-600 dark:text-amber-400",
+  analog: "text-amber-600",
 }
 
 /**

@@ -13,7 +13,7 @@ type Tone = "ok" | "neutral" | "warn"
 function ToneIcon({ tone }: { tone: Tone }) {
   if (tone === "ok") {
     return (
-      <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
+      <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-emerald-700" />
     )
   }
   if (tone === "warn") {

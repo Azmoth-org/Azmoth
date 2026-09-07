@@ -258,9 +258,19 @@ services:
       # real one, and CI fails the build if a credential-shaped string is committed.
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-}"
       #
-      # Only needed when a proxy terminates TLS on a different hostname than the container sees.
-      # Same-origin use — which is all this application does — needs nothing here.
-      BETTER_AUTH_URL: "${BETTER_AUTH_URL:-}"
+      # Defaulted here, and NOT left empty as in docker-compose.yml — which is the one place this
+      # file may differ, because unlike a deployment this stack knows its own address.
+      #
+      # `"${BETTER_AUTH_URL:-}"` *defines* the variable as "", and Better Auth treats "" as unset:
+      # it logged "Base URL is not set" on every request and derived the origin from the incoming
+      # `Host` header instead. That works for the same-origin calls this app makes and is why the
+      # warning was tolerated — but it means the origin a callback is built against is whatever the
+      # request claimed, which is a difference nobody wants to discover from an OAuth redirect that
+      # lands on the wrong host. The dev stack publishes on a known port, so it can simply say so.
+      #
+      # Still overridable: a developer terminating TLS in front of this, or reaching it by a LAN
+      # address, sets BETTER_AUTH_URL in their .env and that wins.
+      BETTER_AUTH_URL: "${BETTER_AUTH_URL:-http://localhost:${WEB_PORT:-3000}}"
       #
       # Who may create an account — see apps/web/lib/auth-allowlist.ts and the longer note in
       # docker-compose.yml. Passed BARE here, and that is the one line where this file deliberately

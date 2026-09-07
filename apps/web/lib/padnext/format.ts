@@ -95,9 +95,9 @@ export const BUCKET: Record<PadnextPositionBucket, BucketPresentation> = {
  * Tailwind classes per tone, in one place so the three buckets cannot drift apart.
  *
  * `wrong` uses the design system's `destructive` token; `fine` and `unknown` use literal palettes
- * because the system is otherwise monochrome and defines no success or warning token. Both carry an
- * explicit `dark:` variant — the app is theme-aware and an amber that only works on white would
- * read as a different bucket at night.
+ * because the system is otherwise monochrome and defines no success or warning token. Each is a
+ * single light-mode palette: this application renders on one theme, so a bucket colour has exactly
+ * one ground to be legible on, and the `dark:` halves these used to carry went with the theme.
  */
 export const BUCKET_TONE_CLASS: Record<
   BucketTone,
@@ -105,19 +105,17 @@ export const BUCKET_TONE_CLASS: Record<
 > = {
   wrong: {
     text: "text-destructive",
-    badge: "bg-destructive/10 text-destructive dark:bg-destructive/20",
+    badge: "bg-destructive/10 text-destructive",
     bar: "bg-destructive",
   },
   fine: {
-    text: "text-emerald-700 dark:text-emerald-400",
-    badge:
-      "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
-    bar: "bg-emerald-600 dark:bg-emerald-500",
+    text: "text-emerald-700",
+    badge: "bg-emerald-500/10 text-emerald-700",
+    bar: "bg-emerald-600",
   },
   unknown: {
-    text: "text-amber-700 dark:text-amber-400",
-    badge:
-      "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
+    text: "text-amber-700",
+    badge: "bg-amber-500/10 text-amber-700",
     bar: "bg-amber-500",
   },
 }

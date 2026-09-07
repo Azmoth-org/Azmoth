@@ -28,11 +28,8 @@ import { InfoIcon } from "lucide-react"
  */
 export function CatalogScopeNotice() {
   return (
-    <div className="flex items-start gap-2.5 rounded-xl border border-sky-300 bg-sky-50 px-3 py-2 text-sky-950 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100 print:rounded-lg">
-      <InfoIcon
-        aria-hidden
-        className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400"
-      />
+    <div className="flex items-start gap-2.5 rounded-xl border border-sky-300 bg-sky-50 px-3 py-2 text-sky-950 print:rounded-lg">
+      <InfoIcon aria-hidden className="mt-0.5 size-4 shrink-0 text-sky-600" />
       <p className="min-w-0 text-xs leading-relaxed">
         <strong className="font-semibold">Pilot-Hinweis:</strong> Diese Engine
         verwendet den <strong>aktuellen GOÄ-Katalog</strong>. Wir empfehlen die

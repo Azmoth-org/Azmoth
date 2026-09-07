@@ -28,6 +28,28 @@ function formatRaw(value: unknown): string {
 }
 
 /**
+ * A key that survives the list changing under it.
+ *
+ * `code` alone is not unique and never was: one systematic export mistake produces one issue per
+ * position, so a refused delivery routinely carries forty issues all coded
+ * `padnext_position_without_ziffer`. `location` is what separates them — it is the XML path of the
+ * position the finding is about, which is exactly the identity a reader would use.
+ *
+ * The index stays as the last resort rather than as the key. Two issues can share a code *and* a
+ * location (a position that is both unreadable and mispriced), and a duplicate key is a React
+ * warning and a reconciliation that reuses the wrong node — which is the failure class this file
+ * was audited for. Position is the only thing left that distinguishes those two, and within one
+ * response it is stable: the array is rendered in the order the engine sent it and is never sorted,
+ * filtered or reordered in the browser.
+ */
+function issueKey(
+  issue: { code: string; location?: string },
+  index: number
+): string {
+  return `${issue.code}::${issue.location ?? ""}::${index}`
+}
+
+/**
  * Every problem with one delivery: blocking ones listed, notes folded away, preview underneath.
  *
  * ## The grouping is by `blocking`, not by `severity`
@@ -85,7 +107,42 @@ export function ValidationErrorList({
 
   return (
     <IssueLanguageProvider language={language}>
-      <div className="space-y-4">
+      {/*
+        ## `translate="no"` is what stops this screen crashing, and it is not a workaround
+
+        The reported failure was `NotFoundError: Failed to execute 'insertBefore' on 'Node'`,
+        intermittently, after a 422. Nothing in this subtree renders differently on the server than
+        on the client — no clock, no `localStorage`, no `typeof window`, no random key — and it does
+        not have to for that error to happen. It happens when something *outside* React edits the
+        document: Chrome's built-in translator replaces every text node with a `<font>` wrapper of
+        its own, so the sibling React kept a reference to is no longer a child of the parent it asks
+        to insert before, and the call throws. Intermittent, because it is a race between the
+        translator's pass and React's.
+
+        The trigger is this component specifically. `<html lang="de">` on a browser set to any other
+        language is exactly the condition Chrome offers to translate on, and a refusal report is the
+        largest block of German prose the application ever renders — several hundred words arriving
+        at once, which is also what makes the translator's pass long enough to overlap a render.
+
+        `translate="no"` is the standards-defined way to say this subtree must not be rewritten, and
+        it is the correct answer here on the merits rather than merely the convenient one. What is
+        inside is a GOÄ code, an XML path, a shell command, and a legally-adjacent message the engine
+        deliberately ships in both languages — a machine translation of any of those is wrong, and of
+        the command it is actively harmful. The reader who wants English has the toggle, which serves
+        the engine's own English text.
+
+        `notranslate` alongside it: the attribute is what the HTML spec defines, the class is what
+        Google's translator has honoured for longer, and neither costs anything.
+
+        `suppressHydrationWarning` covers the residue. It stops React tearing down and regenerating
+        this whole tree over a text node some extension has already touched — the regeneration being
+        the step that turns a cosmetic difference into a thrown `insertBefore`.
+      */}
+      <div
+        className="notranslate space-y-4"
+        translate="no"
+        suppressHydrationWarning
+      >
         <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex flex-wrap items-center gap-2">
             {errorCount > 0 ? (
@@ -141,14 +198,14 @@ export function ValidationErrorList({
 
         {errors.length > 0 ? (
           <section className="space-y-2">
-            <h3 className="text-sm font-medium">
+            <h3 className="text-sm font-medium" lang={language}>
               {language === "de"
                 ? "Das muss geändert werden, damit die Datei geprüft werden kann"
                 : "This must change before the file can be audited"}
             </h3>
             <div className="space-y-1.5">
               {errors.map((issue, index) => (
-                <ErrorDetail key={`${issue.code}-${index}`} issue={issue} />
+                <ErrorDetail key={issueKey(issue, index)} issue={issue} />
               ))}
             </div>
             {report.errors_omitted ? (
@@ -170,7 +227,10 @@ export function ValidationErrorList({
                 className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
                 aria-hidden
               />
-              <span className="min-w-0 flex-1 text-sm font-medium">
+              <span
+                className="min-w-0 flex-1 text-sm font-medium"
+                lang={language}
+              >
                 {language === "de"
                   ? "Hinweise — sie verhindern die Prüfung nicht"
                   : "Notes — these do not block the audit"}
@@ -181,7 +241,7 @@ export function ValidationErrorList({
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-1.5 border-t p-3">
               {warnings.map((issue, index) => (
-                <ErrorDetail key={`${issue.code}-${index}`} issue={issue} />
+                <ErrorDetail key={issueKey(issue, index)} issue={issue} />
               ))}
               {report.warnings_omitted ? (
                 <p className="text-xs text-muted-foreground">

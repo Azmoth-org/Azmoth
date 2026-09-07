@@ -56,10 +56,10 @@ export function AnonymisationGate({
   onCheckedChange: (next: boolean) => void
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+    <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
       <ShieldAlertIcon
         aria-hidden
-        className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+        className="mt-0.5 size-4 shrink-0 text-amber-600"
       />
       <div className="min-w-0 space-y-3">
         <div className="flex items-start gap-3">
@@ -67,7 +67,7 @@ export function AnonymisationGate({
             id="anonymisation-confirmed"
             checked={checked}
             onCheckedChange={(value) => onCheckedChange(value === true)}
-            className="mt-0.5 border-amber-600 dark:border-amber-400"
+            className="mt-0.5 border-amber-600"
             aria-describedby="anonymisation-consequence"
           />
           <Label
@@ -94,7 +94,7 @@ export function AnonymisationGate({
 
         <p
           id="anonymisation-consequence"
-          className="text-xs leading-relaxed text-amber-900/80 dark:text-amber-100/70"
+          className="text-xs leading-relaxed text-amber-900/80"
         >
           Diese Bestätigung ersetzt keine technische Prüfung. Die Engine weist
           eine Lieferung ab, die als Echtdaten gekennzeichnet ist — und ebenso
@@ -109,7 +109,7 @@ export function AnonymisationGate({
           Datei überhaupt hochladbar zu machen.
         </p>
 
-        <p className="text-xs leading-relaxed text-amber-900/80 dark:text-amber-100/70">
+        <p className="text-xs leading-relaxed text-amber-900/80">
           Das Skript entfernt keinen Freitext. Prüfen Sie die Felder{" "}
           <code className="font-mono">text</code> und{" "}
           <code className="font-mono">begruendung</code> selbst — das Skript

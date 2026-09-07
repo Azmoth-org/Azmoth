@@ -10,9 +10,10 @@
  * Colour is never the only signal. Every badge carries a German label, so a reader with a
  * colour-vision deficiency, a greyscale print of a dispute letter and a screen reader all get the
  * same answer. The palettes are literal because the design system is monochrome apart from
- * `destructive`, and each carries an explicit `dark:` variant — the app is theme-aware and a green
- * that only works on white reads as a different status at night. They are the same amber, emerald and
- * sky the audit and rule screens already use (`lib/padnext/format.ts`, `lib/rules/format.ts`).
+ * `destructive`. Each is a single light-mode palette: this application renders on one theme, so a
+ * status colour has exactly one value to be legible at, and the `dark:` halves these used to carry
+ * were removed with the theme rather than left as dead variants. They are the same amber, emerald
+ * and sky the audit and rule screens already use (`lib/padnext/format.ts`, `lib/rules/format.ts`).
  */
 
 import type { BatchAuditJobSummary, Proposal } from "@workspace/contracts"
@@ -25,11 +26,9 @@ export type StatusPresentation = {
 }
 
 const GRAY = "bg-muted text-muted-foreground"
-const YELLOW =
-  "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300"
-const BLUE = "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300"
-const GREEN =
-  "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300"
+const YELLOW = "bg-amber-500/10 text-amber-700"
+const BLUE = "bg-sky-500/10 text-sky-700"
+const GREEN = "bg-emerald-500/10 text-emerald-700"
 
 /**
  * Grey, green, red, blue — and the greys and the reds are the load-bearing ones.

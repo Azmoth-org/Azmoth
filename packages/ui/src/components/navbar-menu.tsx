@@ -29,9 +29,9 @@ import { cn } from "@workspace/ui/lib/utils";
  * combined with no exit animation it leaves an invisible 4rem-tall element over the page during
  * the frames it is fading. Anything under it stops being clickable.
  *
- * **Brand tokens and the shared glass.** `bg-white dark:bg-black` becomes the same `.azm-glass`
- * material the bar and the hero cards use, so the panel reads as part of the header rather than as
- * a white rectangle dropped onto it.
+ * **Brand tokens and the shared glass.** The upstream panel's flat `bg-white` becomes the same
+ * `.azm-glass` material the bar and the hero cards use, so the panel reads as part of the header
+ * rather than as a white rectangle dropped onto it.
  */
 
 /**

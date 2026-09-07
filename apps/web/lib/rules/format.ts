@@ -28,28 +28,25 @@ export const KIND: Record<RuleKind, KindPresentation> = {
     label: "Zielleistung",
     hint: "Die Kindleistung ist methodisch notwendiger Bestandteil der Zielleistung und daher nicht gesondert berechnungsfähig (§ 4 Abs. 2a GOÄ).",
     connector: "enthält",
-    className: "bg-destructive/10 text-destructive dark:bg-destructive/20",
+    className: "bg-destructive/10 text-destructive",
   },
   exclusion: {
     label: "Ausschluss",
     hint: "Die eine Leistung ist neben der anderen nicht berechnungsfähig. Richtung prüfen: einseitig oder wechselseitig.",
     connector: "schließt aus",
-    className:
-      "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
+    className: "bg-amber-500/10 text-amber-700",
   },
   specificity: {
     label: "Spezifität",
     hint: "Die spezifischere Ziffer verdrängt die allgemeinere.",
     connector: "vor",
-    className:
-      "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
+    className: "bg-sky-500/10 text-sky-700",
   },
   factor_cap: {
     label: "Faktor-Obergrenze",
     hint: "Die Leistungslegende begrenzt den Steigerungsfaktor unterhalb des § 5 Abs. 1 Höchstsatzes.",
     connector: "",
-    className:
-      "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
+    className: "bg-emerald-500/10 text-emerald-700",
   },
 }
 

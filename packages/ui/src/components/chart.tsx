@@ -6,8 +6,17 @@ import type { TooltipValueType } from "recharts"
 
 import { cn } from "@workspace/ui/lib/utils"
 
-// Format: { THEME_NAME: CSS_SELECTOR }
-const THEMES = { light: "", dark: ".dark" } as const
+/*
+ * Format: { THEME_NAME: CSS_SELECTOR }
+ *
+ * One entry, because there is one theme. This was `{ light: "", dark: ".dark" }`, which made
+ * `ChartStyle` emit each chart's custom properties twice — once bare and once under `.dark` — and
+ * widened `ChartConfig`'s `theme` to demand a colour per theme from every caller. With the dark
+ * ramp gone the second block would select on a class nothing sets, so it is dropped rather than
+ * left to emit dead CSS. The shape is kept as a map so a second theme is an entry here rather than
+ * a rewrite of `ChartStyle`.
+ */
+const THEMES = { light: "" } as const
 
 const INITIAL_DIMENSION = { width: 320, height: 200 } as const
 type TooltipNameType = number | string
@@ -191,7 +200,7 @@ function ChartTooltipContent({
   return (
     <div
       className={cn(
-        "grid min-w-32 items-start gap-1.5 rounded-xl bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-lg ring-1 ring-foreground/5 dark:ring-foreground/10",
+        "grid min-w-32 items-start gap-1.5 rounded-xl bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-lg ring-1 ring-foreground/5",
         className
       )}
     >

@@ -32,7 +32,6 @@ import {
   OrganisationSwitcher,
   type OrganisationSnapshot,
 } from "@/components/layout/organisation-switcher"
-import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { authClient } from "@/lib/auth-client"
 
 /** What the shell knows about the signed-in person. Resolved on the server, passed down as props. */
@@ -168,7 +167,6 @@ export function AppShell({
             <Badge variant="outline" className="hidden sm:inline-flex">
               Nur synthetische Daten
             </Badge>
-            <ThemeToggle />
           </div>
         </header>
 
