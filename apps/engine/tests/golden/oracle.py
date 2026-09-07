@@ -38,8 +38,27 @@ from pathlib import Path
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
 
-#: `apps/engine/tests/golden/oracle.py` → the monorepo root.
-REPO_ROOT = Path(__file__).resolve().parents[4]
+def _find_repo_root() -> Path:
+    """The nearest ancestor holding both `logic/` and `data/`.
+
+    Checkout:  …/TARGET_MONOREPO/apps/engine/tests/golden/oracle.py → …/TARGET_MONOREPO (4 parents up)
+    Container: /srv/tests/golden/oracle.py                          → /srv (2 parents up)
+
+    The Dockerfile (`apps/engine/Dockerfile`) copies `apps/engine/tests` to `/srv/tests` directly,
+    so this file sits at a different depth inside the image than in a checkout. A fixed
+    `parents[4]` assumed the checkout depth unconditionally and raised `IndexError` under `docker
+    run … azmoth-engine:ci`. Walking up mirrors `app.config._find_repo_root`, which this module
+    does not import — see the module docstring on why oracle.py imports nothing from `app`.
+    """
+    here = Path(__file__).resolve()
+    for candidate in (here.parent, *here.parents):
+        if (candidate / "logic").is_dir() and (candidate / "data").is_dir():
+            return candidate
+    raise RuntimeError(f"no ancestor of {here} holds both logic/ and data/")
+
+
+#: `apps/engine/tests/golden/oracle.py` → the monorepo root (or `/srv` inside the CI image).
+REPO_ROOT = _find_repo_root()
 GOLDEN_DIR = Path(__file__).resolve().parent
 CATALOG_PATH = REPO_ROOT / "data" / "catalogs" / "goae_current" / "goae.official.json"
 RULES_DIR = REPO_ROOT / "data" / "rules"
@@ -55,11 +74,13 @@ CASES = (
     "case_e_echtdaten_gate",
 )
 
-#: Not a golden case: a reproducer for a defect. Same delivery as case C, except that both lines
-#: are numbered `positionsnr="1"` in their own `<abrechnungsfall>` — which PADnext permits, since
-#: the number is unique per case and not per delivery. `expected.json` here is what the contract
-#: requires, and `tests/test_golden_cases.py` carries it as a **strict** xfail: the day the
-#: attribution is keyed per delivery, that test fails and the case is promoted.
+#: A regression fixture, not one of the five golden cases: the delivery that caught the
+#: `positionsnr` collision bug (see `app/padnext/audit.py::audit_delivery`'s `errors_per_row` /
+#: `verified_defects_per_row`). Same delivery as case C, except that both lines are numbered
+#: `positionsnr="1"` in their own `<abrechnungsfall>` — which PADnext permits, since the number is
+#: unique per case and not per delivery. `expected.json` here is what the contract requires, and
+#: `tests/test_golden_cases.py::test_findings_are_attributed_per_delivery_and_not_per_positionsnr`
+#: asserts the engine now gets it right, with no `xfail`.
 BUG_CASES = ("bug_positionsnr_collision",)
 
 #: Case A's receipt canary. Not computable from the catalog — it is a SHA-256 over the engine's own
@@ -591,7 +612,7 @@ def compare_report(report: dict, expected: dict) -> list[str]:
     Positions are compared **in document order** rather than by `positionsnr`. That number is unique
     within an `<abrechnungsfall>` and not across a delivery, so keying on it would quietly pair up
     the wrong lines in a multi-invoice case — which is exactly the defect
-    `tests/golden/bug_positionsnr_collision/` exists to hold open.
+    `tests/golden/bug_positionsnr_collision/` was built to catch, and now guards as a regression.
     """
     problems: list[str] = []
 

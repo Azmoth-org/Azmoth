@@ -300,22 +300,18 @@ def test_case_e_anonymised_audits_to_case_a(client, tmp_path):
 
 
 # ==========================================================================================
-# a known defect, kept reproducible
+# a formerly known defect, now a regular golden case
 # ==========================================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "positionsnr collision: app/padnext/audit.py attributes findings to positions by "
-        "`positionsnr` alone, which PADnext scopes to an <abrechnungsfall> and not to a delivery. "
-        "Two invoices each numbering their line '1' share one attribution slot, so a cap breach on "
-        "one convicts the compliant line on the other and moves its euros into confirmed_wrong — "
-        "the one figure docs/api/PARTNER_API.md permits to be presented as exposure. See "
-        "docs/api/E2E_GOLDEN.md. When this starts passing, promote it to a golden case."
-    ),
-)
 def test_findings_are_attributed_per_delivery_and_not_per_positionsnr(client):
+    """positionsnr collision, fixed: `app/padnext/audit.py` used to attribute findings to
+    positions by `positionsnr` alone, which PADnext scopes to an `<abrechnungsfall>` and not to a
+    delivery. Two invoices each numbering their line "1" shared one attribution slot, so a cap
+    breach on one convicted the compliant line on the other and moved its euros into
+    confirmed_wrong. The audit now keys its per-position aggregation by `id(row)` instead — see
+    `errors_per_row` / `verified_defects_per_row` in `audit_delivery`. See docs/api/E2E_GOLDEN.md.
+    """
     case = "bug_positionsnr_collision"
     expected = _expected(case)
     response = _audit(client, case)

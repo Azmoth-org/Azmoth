@@ -26,7 +26,7 @@ cd apps/engine
 ```
 
 No stack, no database, no network: `conftest.py` forces in-memory SQLite and the tests drive the
-real app through `TestClient`. One `xfail` is expected — see §5.
+real app through `TestClient`.
 
 ### The partner end-to-end, against the live stack
 
@@ -64,7 +64,7 @@ Two environment variables move the targets, and nothing else is configuration:
 ```bash
 E2E_WEB_BASE_URL=http://localhost:3000     # the Next.js tier — auth and the key-minting proxy
 E2E_ENGINE_BASE_URL=http://localhost:8000  # the engine — the partner API itself
-E2E_PASSWORD=…                             # the test accounts' password, if not the default
+E2E_PASSWORD=…                             # the test accounts' password, if not the derived default
 ```
 
 ### What it creates, and what it removes
@@ -283,7 +283,7 @@ data", the receipt is unchanged, and case A's report comes back identical.
 | 4 | the same request with no key, then a well-formed unknown one | `401 API_KEY_REQUIRED`, `401 API_KEY_INVALID` |
 | 5 | case A again | an identical `receipt_hash`, and the canary prefix |
 | 6 | cases B and C | the buckets above, and a finding citing `excl_auto_34_4` / `cap_auto_440` |
-| 6b | the `positionsnr` collision reproducer | **not a numbered step and not a FAIL** — reports the open defect in §5 as a `BUG` row, and turns into a `PASS` the day it is fixed |
+| 6b | the `positionsnr` collision reproducer | **not a numbered step** — re-checks the fix described in §5. `PASS` since the fix landed; would report a `BUG` row again if the attribution regressed |
 | 7 | case E raw, then anonymised | `422 ECHTDATEN_UNDECLARED` with batched errors; `200` and case A's report |
 | 8 | three audits and four refused-auth calls | `by_endpoint["/api/v1/audit/single"]` **+3**; `failed_requests` unchanged; `invoices_processed` **+3**; `api_usage_logs` **+3** rows |
 | 9 | `DELETE /api/engine/settings/api-keys/{key_id}` | `200`; the same key immediately `401`; the row survives with `revoked_at` |
@@ -310,7 +310,10 @@ it. The job is polled to `COMPLETED` before the cross-tenant read, so a `404` ca
 yet" wearing the costume of "not yours". A second organisation is two requests through the product,
 so this is asserted rather than skipped — `--skip-tenancy` exists for a stack where sign-up is shut.
 
-**A `BUG` row is not a `FAIL`.** Step 6b re-checks a defect this repository has already written down (§5) and holds open as a strict `xfail`, so the one command that proves the paid path also says whether that defect is still live. It does not change the exit status — a known, documented, reproducible defect is not a regression, and making the whole run red for it would mean nobody could tell the day something *new* broke.
+**A `BUG` row is not a `FAIL`.** Step 6b re-checks the defect §5 describes, so the one command that
+proves the paid path also says whether that defect is still live. A `BUG` row does not change the
+exit status — a reproducible regression here is worth a loud row, not a red build that looks
+identical to every other kind of failure.
 
 ### Two optional database reads
 
@@ -321,19 +324,21 @@ degrade to a printed `SKIP` with a reason on a stack Docker cannot reach. **Neit
 
 ---
 
-## 5. BUG — findings are attributed by `positionsnr`, which is not unique across a delivery
+## 5. FIXED — findings were attributed by `positionsnr`, which is not unique across a delivery
 
-**Status:** open. Reproducer committed and held as a strict `xfail`.
+**Status:** fixed. `tests/golden/bug_positionsnr_collision/` is a regular case now; the reproducer
+test carries no `xfail`.
 **Reproducer:** [`tests/golden/bug_positionsnr_collision/`](../../apps/engine/tests/golden/bug_positionsnr_collision/) ·
 `test_findings_are_attributed_per_delivery_and_not_per_positionsnr`
 **Found by:** building case C. The first version of that fixture numbered both lines `1`.
 
-`app/padnext/audit.py` builds `errors_per_position` and `verified_defects_per_position` keyed on
-`positionsnr` alone. PADnext scopes that number to an `<abrechnungsfall>`, not to a delivery, so two
-invoices each numbering their line `"1"` — which is normal and valid — **share one attribution slot**.
+`app/padnext/audit.py` used to build `errors_per_position` and `verified_defects_per_position` keyed
+on `positionsnr` alone. PADnext scopes that number to an `<abrechnungsfall>`, not to a delivery, so
+two invoices each numbering their line `"1"` — which is normal and valid — **shared one attribution
+slot**.
 
-The reproducer is case C's delivery with the second line renumbered back to `1`. Observed against
-the live stack:
+The reproducer is case C's delivery with the second line renumbered back to `1`. Before the fix,
+observed against the live stack:
 
 ```
 GOLDEN-C-0001  pos 1  GOÄ 440 @ 2.3  53.62 €   confirmed_wrong  ← correct, breaks cap_auto_440
@@ -343,37 +348,29 @@ GOLDEN-C-0002  pos 1  GOÄ 440 @ 1.0  23.31 €   confirmed_wrong  ← WRONG, it
 confirmed_fine 0.00 €   confirmed_wrong 76.93 €   unconfirmed 0.00 €
 ```
 
-Expected `confirmed_fine 23.31 € / confirmed_wrong 53.62 €`. Only **one**
-`padnext_factor_above_maximum` finding is emitted, for `positionsnr "1"`, and there is no way for a
-reader to tell which of the two lines it convicts.
+Expected, and what the fixed engine now reports, is `confirmed_fine 23.31 € / confirmed_wrong
+53.62 €`. Before the fix, only **one** `padnext_factor_above_maximum` finding was emitted, for
+`positionsnr "1"`, with no way for a reader to tell which of the two lines it convicted.
 
-**Why it matters rather than being a curiosity.** `confirmed_wrong_eur` is the one figure
-[`PARTNER_API.md`](./PARTNER_API.md) §2 permits to be presented as exposure. This moves compliant
-euros into it, in a shape that gets *more* likely as deliveries get bigger: a billing centre's export
+**Why it mattered rather than being a curiosity.** `confirmed_wrong_eur` is the one figure
+[`PARTNER_API.md`](./PARTNER_API.md) §2 permits to be presented as exposure. The bug moved compliant
+euros into it, in a shape that got *more* likely as deliveries got bigger: a billing centre's export
 is many `<abrechnungsfall>` elements, and per-case numbering restarting at 1 is the norm, not an edge
-case. The same map drives `accepted_as_claimed`, so `defensible_total_eur` is wrong with it.
+case. The same map drove `accepted_as_claimed`, so `defensible_total_eur` was wrong with it.
 
-**It is a known limitation, not a surprise.** The comment above the map says so, and says the fix is
-out of scope where it sits:
+**The fix:** a delivery-unique position key, exactly as anticipated below. `id(row)` is what
+`blocking_rule_id` and `mutual_exclusion_survivors` already keyed on for this same reason, so the two
+remaining maps (`errors_per_row`, `verified_defects_per_row` — renamed from the `*_per_position` pair
+above) moved to it too, with **no contract change**: `PadnextFinding.positionsnr` is unchanged, and
+so is the OpenAPI schema. Each position's findings are now folded into its row's counters inline, in
+the same loop iteration that creates the row, rather than re-derived afterwards from a flat list
+matched by the ambiguous string. See the comment above `errors_per_row` in
+[`audit.py`](../../apps/engine/app/padnext/audit.py) for the mechanics.
 
-> Keyed by `positionsnr`, and therefore carrying the same pre-existing limitation as
-> `errors_per_position` above: a `PadnextFinding` identifies its position only by that number, which
-> is unique within an `abrechnungsfall` but not across a multi-case delivery. […] De-colliding it
-> means giving findings a delivery-unique position key, which is an API change and out of scope here
-> — noted rather than silently inherited.
-
-That is a correct scoping call and this page is not arguing with it. What it adds is a **failing
-test**, because a comment does not fail a build.
-
-**The fix, when it is taken:** a delivery-unique position key. The rows already have one — `id(row)`
-is what `blocking_rule_id` and `mutual_exclusion_survivors` key on, for exactly this reason — so the
-internal maps can move to it with no contract change. Surfacing it on `PadnextFinding` (an
-`invoice_id`, or a delivery-scoped ordinal beside `positionsnr`) *is* a contract change and needs the
-OpenAPI schema and `PARTNER_API.md` moving with it. The internal half is the part that stops
-misreporting money.
-
-The `xfail` is **strict**: the day the attribution is de-collided, that test fails for passing
-unexpectedly. Promote the directory to a golden case then, and delete this section.
+The old `xfail` was **strict**, so the fix is what made
+`test_findings_are_attributed_per_delivery_and_not_per_positionsnr` start passing — at which point,
+per that test's own rule, the marker came off rather than the test starting to fail for passing
+unexpectedly.
 
 ---
 
