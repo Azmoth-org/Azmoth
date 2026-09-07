@@ -34,8 +34,12 @@ against. `--detect` alone prints that and exits. Either compose stack works
 Everything goes through a published surface. The account is created by `POST
 /api/auth/sign-up/email` and named by `POST /api/onboarding`; the key is minted by `POST
 /api/engine/settings/api-keys` and revoked by `DELETE /api/engine/settings/api-keys/{key_id}` — the
-same routes the settings screen calls. Nothing writes to the database, and no key is seeded by
-hand, so a change that broke minting or revocation cannot be hidden by a fixture that built its own.
+same routes the settings screen calls. If `E2E_LEGACY_PASSWORDS` names a password the account was
+signed up under before a prior run's password scheme changed, `POST /api/auth/change-password` rolls
+it onto today's password — there is no admin plugin in this deployment and `request-password-reset`
+is hard-disabled, so this is the only endpoint that can recover an account short of deleting it by
+hand. Nothing writes to the database outside that one recovery path, and no key is seeded by hand,
+so a change that broke minting or revocation cannot be hidden by a fixture that built its own.
 
 Two steps additionally *read* the database when `docker compose` can reach Postgres, because there
 is no endpoint that can answer them and the alternative is to assert nothing: that `api_keys.key_hash`
@@ -145,6 +149,15 @@ _PASSWORD_SEED = "azmoth-e2e-partner-api-synthetic-test-account-v1"
 PASSWORD = os.environ.get("E2E_PASSWORD") or (
     "E2e-" + hashlib.sha256(_PASSWORD_SEED.encode("utf-8")).hexdigest()[:20] + "!"
 )
+
+#: Passwords a practice may have been signed up under before `PASSWORD`'s derivation changed —
+#: comma-separated in `E2E_LEGACY_PASSWORDS`. Empty by default: nothing in source ever names an old
+#: password, since that would be exactly the secret-shaped literal this file stopped committing.
+#: `sign_in` tries each once, and on a match rolls the account onto `PASSWORD` through the product's
+#: own `/api/auth/change-password` — there is no admin plugin here and `/api/auth/request-password-
+#: reset` is hard-disabled (`RESET_PASSWORD_DISABLED`, no `sendResetPassword` configured), so this is
+#: the only endpoint that can recover an account without deleting and re-onboarding it by hand.
+LEGACY_PASSWORDS = [p for p in os.environ.get("E2E_LEGACY_PASSWORDS", "").split(",") if p]
 
 #: A well-formed token for a key that does not exist. Shaped correctly on purpose: a malformed
 #: string is refused by a length check before any lookup, which tests a cheaper path than the one a
@@ -439,6 +452,10 @@ def sign_in(client: Client, practice: dict) -> tuple[str, bool]:
     signed_in = _auth_with_backoff(
         client, "sign-in/email", {"email": practice["email"], "password": PASSWORD}
     )
+    if signed_in.status != 200 and _migrate_legacy_password(client, practice):
+        signed_in = _auth_with_backoff(
+            client, "sign-in/email", {"email": practice["email"], "password": PASSWORD}
+        )
     if signed_in.status != 200:
         signed_up = _auth_with_backoff(
             client,
@@ -450,7 +467,9 @@ def sign_in(client: Client, practice: dict) -> tuple[str, bool]:
                 "1", "signed in through Better Auth",
                 f"neither sign-in ({signed_in.status}) nor sign-up ({signed_up.status}) worked for "
                 f"{practice['email']}: {signed_up.excerpt()} — if this deployment sets "
-                "SIGNUP_ALLOWLIST, add e2e.azmoth.test to it (apps/web/lib/auth-allowlist.ts)",
+                "SIGNUP_ALLOWLIST, add e2e.azmoth.test to it (apps/web/lib/auth-allowlist.ts); if "
+                "the account exists under an older password, set E2E_LEGACY_PASSWORDS to it so this "
+                "run can migrate it forward",
             )
 
     session = client.get(f"{WEB_BASE}/api/auth/get-session").json()
@@ -476,6 +495,33 @@ def sign_in(client: Client, practice: dict) -> tuple[str, bool]:
             created_org = True
 
     return organization_id, created_org
+
+
+def _migrate_legacy_password(client: Client, practice: dict) -> bool:
+    """Try each of `LEGACY_PASSWORDS` and, on a match, roll the account onto `PASSWORD`.
+
+    Both calls are published Better Auth routes — `sign-in/email` and `change-password` — so this
+    writes nothing this script does not already have a product-endpoint story for. Returns whether
+    the account is now signed in under `PASSWORD`.
+    """
+    for old_password in LEGACY_PASSWORDS:
+        attempt = _auth_with_backoff(
+            client, "sign-in/email", {"email": practice["email"], "password": old_password}
+        )
+        if attempt.status != 200:
+            continue
+        changed = client.post(
+            f"{WEB_BASE}/api/auth/change-password",
+            json_body={
+                "currentPassword": old_password,
+                "newPassword": PASSWORD,
+                "revokeOtherSessions": False,
+            },
+        )
+        if changed.status == 200:
+            print(f"    {practice['email']}: migrated off a legacy password onto today's PASSWORD")
+            return True
+    return False
 
 
 def _onboard(client: Client, practice: dict) -> str:
