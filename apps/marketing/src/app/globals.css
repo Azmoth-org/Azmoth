@@ -161,3 +161,206 @@
     }
   }
 }
+
+/*
+ * ---------------------------------------------------------------------------------------------
+ * The hero pipeline — PADnext delivery in, Prüfbericht out, with the rules landing in between.
+ * ---------------------------------------------------------------------------------------------
+ *
+ * All of it is CSS, and that is the whole design constraint rather than a stylistic preference.
+ *
+ * The brief that asked for this visualisation also asked for a Lighthouse score above 95, and on
+ * this page those two requests point in opposite directions unless the animation stays off the
+ * main thread. `components/pipeline-flow.tsx` sits in the hero, directly under the `<h1>` that is
+ * this document's Largest Contentful Paint. Every measurement in this file's earlier comments says
+ * the same thing about that position: a client component there does not cost a bundle, it costs
+ * *the metric* — the hero's five `.azm-enter` elements exist because the `<Reveal>` versions of
+ * them pushed LCP from 320 ms to 1050 ms waiting on hydration.
+ *
+ * So the pipeline ships as forty nodes of server-rendered markup with `animation-delay` on them.
+ * It starts when the stylesheet is parsed, before React exists on the page, and it cannot regress
+ * LCP because there is nothing for it to wait for. It also survives with JavaScript off, which for
+ * the one element carrying this site's "what does it actually do" answer is worth having.
+ *
+ * Every keyframe below animates `opacity` and `transform` only — no `filter`, no `width`, no
+ * `background-position`. That is the same rule `azm-enter` had to learn: a non-composited property
+ * re-runs paint on every frame, Lighthouse reports it as a non-composited animation, and the
+ * frames it costs land in exactly the window the visitor is waiting for the headline.
+ */
+
+@layer components {
+  /*
+   * A stage card arriving. Same gesture as `.azm-enter`, separated so the two can be re-timed
+   * independently — the hero's text stagger is 60ms apart, the pipeline's is 180ms, because these
+   * are read as a sequence of events rather than as one block of content settling.
+   */
+  @keyframes azm-stage-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /*
+   * The connector drawing itself between two stages.
+   *
+   * `scaleX` from a left origin, not `width`. Width is a layout property: animating it reflows the
+   * flex row on every frame and drags the two stage cards with it. `scaleX` on the compositor
+   * moves no other element on the page.
+   */
+  @keyframes azm-connector-draw {
+    from {
+      opacity: 0;
+      transform: scaleX(0);
+    }
+    to {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+  }
+
+  /*
+   * The travelling pulse — the only thing here that loops.
+   *
+   * It exists because the rest of the pipeline is an entrance: it plays once and then the hero is
+   * static, which reads as a diagram rather than as a machine. A light sweeping down the connector
+   * is enough to say "this is running".
+   *
+   * It is a sweep rather than a travelling dot, and the difference is not cosmetic. A dot has to be
+   * told how far to go, and the connector's width is `1fr` of a grid track — unknown at author
+   * time, different at every breakpoint, and not expressible as a `translateX` length. The first
+   * version of this shipped `--azm-pulse-distance: 0px` as a placeholder for a number there was no
+   * way to write, which animated nothing at all.
+   *
+   * A full-width element instead makes the percentage meaningful: `translateX(-100%)` to `100%` is
+   * measured against the sweeping element's own width, which *is* the connector's width, so it
+   * crosses exactly once at every size with no measurement and no JavaScript. The visible pulse is
+   * a bright segment in the middle of an otherwise transparent gradient.
+   *
+   * It is also the first thing `prefers-reduced-motion` turns off, below — a permanent loop is
+   * precisely what that setting is asking not to see.
+   */
+  @keyframes azm-pulse-travel-y {
+    0% {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+    20%,
+    70% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+
+  @keyframes azm-pulse-travel-x {
+    0% {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+    20%,
+    70% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+
+  /*
+   * A rule-check chip landing over the engine stage.
+   *
+   * The overshoot is deliberate and is why this is not just `azm-stage-in` again: the chips
+   * represent discrete results arriving, and a slight scale past 1 before settling reads as
+   * something snapping into place rather than fading in. `cubic-bezier` with a value above 1 in
+   * the third position does the same job in one curve, but staging it in the keyframes keeps the
+   * shared `--ease-brand` on the property and the character in the animation.
+   */
+  @keyframes azm-chip-land {
+    0% {
+      opacity: 0;
+      transform: translateY(8px) scale(0.9);
+    }
+    60% {
+      opacity: 1;
+      transform: translateY(0) scale(1.04);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .azm-stage {
+    animation: azm-stage-in 0.55s var(--ease-brand) both;
+    animation-delay: var(--azm-stage-delay, 0ms);
+  }
+
+  .azm-connector {
+    transform-origin: left center;
+    animation: azm-connector-draw 0.45s var(--ease-brand) both;
+    animation-delay: var(--azm-stage-delay, 0ms);
+  }
+
+  /*
+   * The sweep travels along whichever axis the connector currently is, and the axis is a
+   * breakpoint rather than a prop.
+   *
+   * `Connector` is `h-10 w-px` while the pipeline is stacked and `h-px w-full` from `md` up — one
+   * element that rotates with the layout. A single `translateX` sweep therefore works on exactly
+   * one of those two: on the stacked vertical rule it is a 1px-wide element translating by 100%
+   * of its own width, which is one pixel of travel and reads as a stationary dot.
+   *
+   * Selecting the keyframe by media query keeps that correction in the stylesheet, where the
+   * orientation is already decided, rather than pushing a `direction` prop through the component
+   * that JSX could not resolve at render time anyway — the breakpoint is not knowable on the
+   * server, which is the whole reason this is CSS.
+   *
+   * `48rem` is Tailwind's `md`, matched by hand because a raw `@media` cannot read the theme's
+   * breakpoint token. If that token moves, this moves with it.
+   */
+  .azm-pulse {
+    animation: azm-pulse-travel-y 2.6s var(--ease-brand-in-out) infinite;
+    animation-delay: var(--azm-stage-delay, 0ms);
+  }
+
+  @media (width >= 48rem) {
+    .azm-pulse {
+      animation-name: azm-pulse-travel-x;
+    }
+  }
+
+  .azm-chip {
+    animation: azm-chip-land 0.5s var(--ease-brand) both;
+    animation-delay: var(--azm-stage-delay, 0ms);
+  }
+
+  /*
+   * Reduced motion: the diagram, not the film.
+   *
+   * Everything resolves to its end state immediately rather than being disabled — an element left
+   * at an `azm-*-in` from-state would sit at `opacity: 0` forever, which is how "respect reduced
+   * motion" usually ships as "the content is invisible". The looping pulse is the one element
+   * removed outright, because its end state is `opacity: 0` and a stationary dot at the end of a
+   * connector means nothing.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .azm-stage,
+    .azm-connector,
+    .azm-chip {
+      animation-duration: 1ms;
+      animation-delay: 0ms;
+    }
+
+    .azm-pulse {
+      display: none;
+    }
+  }
+}

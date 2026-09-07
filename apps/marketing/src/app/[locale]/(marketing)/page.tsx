@@ -8,32 +8,28 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   CircleHelpIcon,
-  ClockIcon,
   CpuIcon,
-  EyeOffIcon,
   FileCheckIcon,
-  GaugeIcon,
-  PlugIcon,
-  ScaleIcon,
-  ShieldCheckIcon,
   StethoscopeIcon,
   TerminalIcon,
-  TriangleAlertIcon,
   UploadIcon,
 } from "lucide-react";
 
 import { AuroraBackground } from "@workspace/ui/components/aurora-background";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader } from "@workspace/ui/components/card";
-import { cn } from "@workspace/ui/lib/utils";
 
 import { ButtonLink } from "@/components/button-link";
 import { CardHeading } from "@/components/card-heading";
 import { CodeBlock } from "@/components/code-block";
+import { Comparison } from "@/components/comparison";
 import { GradientMesh } from "@/components/gradient-mesh";
 import { HeroMockup } from "@/components/hero-mockup";
+import { Metrics } from "@/components/metrics";
+import { PipelineFlow } from "@/components/pipeline-flow";
 import { Reveal, RevealGroup, RevealItem } from "@/components/reveal";
 import { Section, SectionHeading } from "@/components/section";
+import { SecurityBadges } from "@/components/security-badges";
 import { TrustBadges } from "@/components/trust-badges";
 import { CURL_EXAMPLE } from "@/lib/api-example";
 import { engineFacts } from "@/lib/engine-facts";
@@ -47,16 +43,7 @@ import { getDocsUrl, getProductLinks, routes, siteConfig } from "@/lib/site";
  * the same order as its catalogue key, and the fallbacks make a length mismatch render
  * plainly rather than crash the build.
  */
-const PROBLEM_ICONS = [ClockIcon, TriangleAlertIcon, EyeOffIcon] as const;
 const STEP_ICONS = [UploadIcon, CpuIcon, FileCheckIcon] as const;
-const FEATURE_ICONS = [
-  CpuIcon,
-  ScaleIcon,
-  GaugeIcon,
-  FileCheckIcon,
-  PlugIcon,
-  ShieldCheckIcon,
-] as const;
 const AUDIENCE_ICONS = [BuildingIcon, TerminalIcon, StethoscopeIcon] as const;
 
 /**
@@ -133,10 +120,11 @@ export default async function HomePage({
     <>
       <Hero />
       <TrustBand />
-      <Problem />
+      <Vergleich />
       <Workflow />
       <Buckets />
-      <Features />
+      <Zahlen />
+      <Sicherheit />
       <Audiences />
       <Pilot />
       <ApiTeaser />
@@ -145,7 +133,7 @@ export default async function HomePage({
   );
 }
 
-/* --- 1. Hero ------------------------------------------------------------------ */
+/* --- 1. Hero ------------------------------------------------------------------- */
 
 /**
  * Three backdrop layers, and each earns its place rather than being stacked for effect.
@@ -282,21 +270,33 @@ function Hero() {
       </div>
 
       {/*
-        The mockup arrives last and travels furthest, because it is the only element here that a
+        The pipeline arrives last and travels furthest, because it is the only element here that a
         visitor has to *look at* rather than read. Delaying it past the headline means the eye
-        settles on the claim before the evidence for it slides up underneath.
+        settles on the claim before the evidence for it assembles underneath.
+
+        It replaces `<HeroMockup>` in this slot, which has moved down to the three-categories
+        section. The two were answering different questions and only one of them belongs above the
+        fold: the pipeline says *what the product does* — a delivery goes in, rules are applied, a
+        report comes out — in about a second of looking, which is the job of a hero. The report
+        mockup says *what the output looks like*, which is a question a visitor only has once they
+        have decided the first answer interests them, and it reads far better beside the copy
+        explaining the three verdict categories it is colour-coded by.
+
+        The outer `.azm-enter` and the pipeline's own internal stagger compose rather than fight:
+        this wrapper fades the figure in as one object at 300ms, and `DELAYS` inside it sequences
+        the stages from there. Both are CSS, so the hero still hydrates nothing.
       */}
       <div
         className="azm-enter mx-auto mt-14 max-w-4xl lg:mt-20"
         style={{ "--azm-enter-delay": "300ms" } as React.CSSProperties}
       >
-        <HeroMockup />
+        <PipelineFlow />
       </div>
     </Section>
   );
 }
 
-/* --- 2. Trust band ------------------------------------------------------------ */
+/* --- 2. Trust band ------------------------------------------------------------- */
 
 /**
  * A quiet band between the hero and the argument.
@@ -321,19 +321,25 @@ function TrustBand() {
   );
 }
 
-/* --- 3. The problem ----------------------------------------------------------- */
+/* --- 3. Manual review, beside the alternative ---------------------------------- */
 
 /**
- * A bento grid rather than three equal columns.
+ * This replaces the old three-card "Problem" bento.
  *
- * The first point is the one a billing centre already agrees with before it arrives — manual
- * review costs time — so it takes the wide cell and carries the section. The other two are the
- * reasons they have not solved it yet and sit beside it at half the width. Three identical cards
- * would give equal visual weight to three claims that do not have equal weight.
+ * That section listed three reasons GOÄ review is hard — time, error-proneness, opacity — in three
+ * paragraphs of German prose. It was accurate and it was the most-scrolled-past block on the page,
+ * because it spent a full screen telling billing centres something they already know better than
+ * we do. A visitor who works in Abrechnung does not need to be told that manual review takes time.
+ *
+ * The comparison keeps the same argument and makes it a glance instead of a read: the left column
+ * is their current situation in five short lines, the right is what changes. Same claim, a third
+ * of the words, and it ends on the product rather than on the problem.
+ *
+ * See `components/comparison.tsx` for what the two columns are allowed to assert — in particular
+ * why only the right-hand one carries numbers.
  */
-function Problem() {
-  const t = useTranslations("startseite.problem");
-  const points = t.raw("punkte") as Titled[];
+function Vergleich() {
+  const t = useTranslations("startseite.vergleich");
 
   return (
     <Section>
@@ -342,57 +348,12 @@ function Problem() {
         title={t("titel")}
         subtitle={t("untertitel")}
       />
-      <RevealGroup
-        as="ul"
-        className="mt-14 grid gap-4 sm:gap-6 lg:grid-cols-2 lg:grid-rows-2"
-      >
-        {points.map((point, index) => {
-          const Icon = PROBLEM_ICONS[index] ?? TriangleAlertIcon;
-          const isLead = index === 0;
-          return (
-            <RevealItem key={point.titel} className={isLead ? "lg:row-span-2" : undefined}>
-              {/*
-                The lead cell centres its content vertically. Without it a two-line body floats at
-                the top of a cell twice its height, which is the failure mode that makes a bento
-                grid read as an ordinary grid with a hole in it.
-              */}
-              <Card
-                className={cn(
-                  "azm-lift h-full bg-white ring-1 ring-azm-hairline",
-                  isLead && "flex flex-col justify-center p-2 sm:p-4"
-                )}
-              >
-                <CardHeader>
-                  <span
-                    className={cn(
-                      "mb-3 flex items-center justify-center rounded-xl bg-azm-ruby/10 text-azm-ruby",
-                      isLead ? "size-12" : "size-10"
-                    )}
-                  >
-                    <Icon aria-hidden="true" className={isLead ? "size-6" : "size-5"} />
-                  </span>
-                  <CardHeading className={isLead ? "text-display-md" : "text-lg"}>
-                    {point.titel}
-                  </CardHeading>
-                </CardHeader>
-                <CardContent
-                  className={cn(
-                    "leading-relaxed text-muted-foreground",
-                    isLead && "sm:text-lg"
-                  )}
-                >
-                  {point.text}
-                </CardContent>
-              </Card>
-            </RevealItem>
-          );
-        })}
-      </RevealGroup>
+      <Comparison />
     </Section>
   );
 }
 
-/* --- 4. How it works ---------------------------------------------------------- */
+/* --- 4. How it works ----------------------------------------------------------- */
 
 function Workflow() {
   const t = useTranslations("startseite.ablauf");
@@ -446,7 +407,7 @@ function Workflow() {
   );
 }
 
-/* --- 5. The three buckets ----------------------------------------------------- */
+/* --- 5. The three buckets ------------------------------------------------------ */
 
 /**
  * `id="kategorien"` — the navigation's "Drei-Kategorien-Modell" entry links here, and the section
@@ -504,6 +465,23 @@ function Buckets() {
       </RevealGroup>
 
       {/*
+        The report, directly under the three categories it is colour-coded by.
+
+        This used to sit in the hero and has moved here, which is a better home for it than the one
+        it lost. Above the fold it was an unlabelled screenshot: the reader saw green, red and
+        amber rows and had no way to know those were three *defined verdicts* rather than three
+        severities. Here the definitions are on screen immediately above it, so the mockup stops
+        being decoration and becomes the worked example — the reader has just been told what
+        "unbestätigt" means and can now see A 7008 sitting in it.
+
+        `<Reveal>` rather than the hero's CSS entrance, because down here there is a viewport
+        threshold to cross and nothing on the critical path to protect.
+      */}
+      <Reveal delay={0.1} className="mt-14">
+        <HeroMockup />
+      </Reveal>
+
+      {/*
         The claim the three columns exist to support, and the number that makes it
         credible. They sit together on one panel on purpose: "we do not guess" is a
         slogan until it is followed by the share of the catalogue we cannot judge.
@@ -536,61 +514,76 @@ function Buckets() {
   );
 }
 
-/* --- 6. Features -------------------------------------------------------------- */
+/* --- 6. The verified numbers --------------------------------------------------- */
 
-function Features() {
-  const t = useTranslations("startseite.funktionen");
-  const features = t.raw("punkte") as Titled[];
-
-  /* Interpolated into both the title and the body of the rule-count card. */
-  const values = {
-    regeln: engineFacts.regelnDurchgesetzt,
-    regelnGesamt: engineFacts.regelnGesamt,
-    anteil: engineFacts.regelnAnteil,
-    laufzeit: engineFacts.laufzeitMs,
-  };
+/**
+ * What stands where a customer testimonial normally would.
+ *
+ * The six-card "Funktionen" grid that used to occupy this slot is gone from the home page. It was
+ * not wrong — it is the honest feature list, and it still exists in full at `/funktionen`, which
+ * the header links and which is where a reader who wants a feature list goes. On the home page it
+ * was the fourth consecutive grid of German paragraphs, arriving at the point in the scroll where
+ * a visitor has either understood the product or left.
+ *
+ * Three large numbers do more conversion work in that position, and they do it for a reason
+ * specific to this product: the objection in a billing centre's head at this point is "everyone
+ * says their tool checks the GOÄ". A rule count, a catalogue share and a latency figure — all
+ * three pinned by the engine's own test suite — are an answer to that. A feature card saying
+ * "deterministische Prüfung" is a restatement of the headline.
+ *
+ * `components/metrics.tsx` carries the argument for why there is no testimonial here at all.
+ */
+function Zahlen() {
+  const t = useTranslations("startseite.zahlen");
 
   return (
-    <Section id="funktionen" tone="soft" className="border-y border-azm-hairline">
+    <Section id="zahlen" tone="soft" className="border-y border-azm-hairline">
       <SectionHeading
         eyebrow={t("eyebrow")}
         title={t("titel")}
         subtitle={t("untertitel")}
       />
-      <RevealGroup as="ul" className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {/* The raw array supplies the count and the order; every string is read by index
-            through `t()` so the placeholders in it are interpolated. */}
-        {features.map((_feature, index) => {
-          const Icon = FEATURE_ICONS[index] ?? FileCheckIcon;
-          return (
-            /*
-              Keyed by position, not by title: one of these titles carries an ICU
-              placeholder (`{regeln}`), and using the raw string would put an
-              uninterpolated token into the RSC payload as a DOM key.
-            */
-            <RevealItem key={`funktion-${index}`}>
-              <Card className="azm-lift h-full bg-white ring-1 ring-azm-hairline">
-                <CardHeader>
-                  <span className="mb-3 flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon aria-hidden="true" className="size-5" />
-                  </span>
-                  <CardHeading className="azm-tnum text-lg">
-                    {t(`punkte.${index}.titel`, values)}
-                  </CardHeading>
-                </CardHeader>
-                <CardContent className="leading-relaxed text-muted-foreground">
-                  {t(`punkte.${index}.text`, values)}
-                </CardContent>
-              </Card>
-            </RevealItem>
-          );
-        })}
-      </RevealGroup>
+      <Metrics />
     </Section>
   );
 }
 
-/* --- 7. Who it is for --------------------------------------------------------- */
+/* --- 7. Hosting and compliance ------------------------------------------------- */
+
+/**
+ * Four infrastructure facts, placed immediately before the two sections that ask for a commitment.
+ *
+ * The order is the objection order rather than the importance order. A German billing centre
+ * evaluating this reaches "where does the data live" *before* "what does it cost" — often before
+ * they will take a call at all, because the answer decides whether their Datenschutzbeauftragte
+ * has to be involved. Putting it after the pilot pitch means asking for a signature and answering
+ * the blocking question afterwards.
+ *
+ * Every claim is sourced from `legal/AVV_Anlage.md`; see `components/security-badges.tsx` for what
+ * is deliberately *not* claimed, which is the more interesting half.
+ */
+function Sicherheit() {
+  const t = useTranslations("startseite.sicherheit");
+
+  return (
+    <Section id="sicherheit">
+      <SectionHeading
+        eyebrow={t("eyebrow")}
+        title={t("titel")}
+        subtitle={t("untertitel")}
+      />
+      <SecurityBadges />
+      <Reveal delay={0.15} className="mt-10 flex justify-center">
+        <ButtonLink href={routes.datenschutz} variant="outline" size="sm">
+          {t("cta")}
+          <ArrowRightIcon data-icon="inline-end" />
+        </ButtonLink>
+      </Reveal>
+    </Section>
+  );
+}
+
+/* --- 8. Who it is for ---------------------------------------------------------- */
 
 function Audiences() {
   const t = useTranslations("startseite.zielgruppen");
@@ -656,7 +649,7 @@ function Audiences() {
   );
 }
 
-/* --- 8. The pilot programme --------------------------------------------------- */
+/* --- 9. The pilot programme ---------------------------------------------------- */
 
 function Pilot() {
   const t = useTranslations("startseite.pilot");
@@ -723,7 +716,7 @@ function Pilot() {
   );
 }
 
-/* --- 9. For developers -------------------------------------------------------- */
+/* --- 10. For developers -------------------------------------------------------- */
 
 function ApiTeaser() {
   const t = useTranslations("startseite.api");
