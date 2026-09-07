@@ -1,6 +1,10 @@
 import { InfoIcon } from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
 
 import type { PadnextAuditReport } from "@/lib/padnext/types"
 

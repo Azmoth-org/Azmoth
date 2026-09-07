@@ -103,7 +103,7 @@ function Section({
 }) {
   const iconColor =
     tone === "accepted"
-      ? "text-emerald-700 dark:text-emerald-400"
+      ? "text-emerald-700"
       : tone === "blocked"
         ? "text-destructive"
         : "text-muted-foreground"

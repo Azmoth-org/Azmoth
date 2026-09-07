@@ -5,8 +5,6 @@ import { AzmothMark } from "@/components/brand/azmoth-mark"
 import { buttonVariants } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 
-import { ThemeToggle } from "@/components/layout/theme-toggle"
-
 /**
  * The shell for the public demo. **No session, no sidebar, no organisation switcher.**
  *
@@ -16,10 +14,9 @@ import { ThemeToggle } from "@/components/layout/theme-toggle"
  * session check that guards every clinical screen, or rendering a navigation menu that answers
  * `/login` to every click.
  *
- * What is left is the minimum a public page needs: the product name, a way back, the theme toggle
- * (a visitor arriving in dark mode should not be handed a white page), and the route to the gated
- * track. The header is where the two tracks are visibly different things rather than two buttons
- * that look alike.
+ * What is left is the minimum a public page needs: the product name, a way back, and the route to
+ * the gated track. The header is where the two tracks are visibly different things rather than two
+ * buttons that look alike.
  *
  * ## The mesh
  *
@@ -62,17 +59,13 @@ export default function DemoLayout({
           </Link>
 
           <div className="ml-auto flex items-center gap-2">
-            <ThemeToggle />
             <Link
               href="/login"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
             >
               Anmelden
             </Link>
-            <Link
-              href="/signup"
-              className={cn(buttonVariants({ size: "sm" }))}
-            >
+            <Link href="/signup" className={cn(buttonVariants({ size: "sm" }))}>
               Pilot-Zugang anfordern
             </Link>
           </div>

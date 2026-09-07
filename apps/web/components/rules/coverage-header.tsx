@@ -64,7 +64,7 @@ export function CoverageHeader({
         >
           {verifiedWidth > 0 ? (
             <div
-              className="bg-emerald-600 dark:bg-emerald-500"
+              className="bg-emerald-600"
               style={{ width: `${verifiedWidth}%` }}
             />
           ) : null}
@@ -79,14 +79,14 @@ export function CoverageHeader({
         <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-3">
           <Figure
             icon={CircleCheckIcon}
-            tone="text-emerald-700 dark:text-emerald-400"
+            tone="text-emerald-700"
             value={verified}
             label="durchgesetzt"
             hint="Können eine Position entfernen. Die verifizierten CSV-Regeln plus alles, was hier freigegeben wurde."
           />
           <Figure
             icon={CircleHelpIcon}
-            tone="text-amber-700 dark:text-amber-400"
+            tone="text-amber-700"
             value={pending}
             label="offen"
             hint="Maschinell aus dem Verordnungstext extrahiert und von niemandem geprüft. Blockieren nichts — und sind der Grund für die Gruppe „unbestätigt“ in jeder Prüfung."

@@ -169,9 +169,6 @@ importers:
       next:
         specifier: 16.2.6
         version: 16.2.6(@playwright/test@1.62.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      next-themes:
-        specifier: ^0.4.6
-        version: 0.4.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       pg:
         specifier: ^8.23.0
         version: 8.23.0
@@ -310,9 +307,6 @@ importers:
       motion:
         specifier: ^13.1.1
         version: 13.1.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      next-themes:
-        specifier: ^0.4.6
-        version: 0.4.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react:
         specifier: 19.2.4
         version: 19.2.4

@@ -94,9 +94,9 @@ export function MissingDocumentationPanel({
             key={`${entry.ziffer}-${index}`}
             // Amber on the border as well as on the icon. An icon alone is 16px of colour in a list
             // of six identical rows; the edge is what makes the row itself read as unresolved.
-            className="border-amber-300 dark:border-amber-500/30"
+            className="border-amber-300"
             icon={
-              <TriangleAlertIcon className="text-amber-600 dark:text-amber-400" />
+              <TriangleAlertIcon className="text-amber-600" />
             }
             title={
               <span className="tabular-nums">

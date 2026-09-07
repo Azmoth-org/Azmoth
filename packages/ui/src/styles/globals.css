@@ -2,8 +2,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
-
 /*
  * No `@source` here. Each consumer declares what it renders, and that is a performance
  * decision rather than a stylistic one.
@@ -103,8 +101,8 @@
     /*
      * The three buckets, as utilities. Not brand — these are the engine's verdicts rendered, and
      * both apps have to reach them by name so that `bg-azm-wrong-bg` on the marketing site and on
-     * the demo report resolve to one value. They are the only colour pair in the system that
-     * changes between light and dark, because a green-700 chip on a navy card is a smudge.
+     * the demo report resolve to one value. They used to be the one pair in the system with a
+     * second set of values for a dark ground; there is one theme now, so there is one set.
      */
     --color-azm-confirmed: var(--azm-confirmed);
     --color-azm-confirmed-bg: var(--azm-confirmed-bg);
@@ -250,11 +248,15 @@
  * marketing app keeps only what is genuinely marketing — its `@source` scan and the hero mesh's
  * placement — and picks the palette up from this import.
  *
- * **The two things that did not move.** The verdict colours below stay Tailwind green/red/amber
- * because they are not brand, they are the engine's three buckets rendered; and dark mode is
- * still a preference the toggle serves rather than an OS setting the product follows, because a
- * screen carrying money and a signature should not change colour because somebody's laptop
- * switched at sunset.
+ * **The one thing that did not move.** The verdict colours below stay Tailwind green/red/amber
+ * because they are not brand, they are the engine's three buckets rendered.
+ *
+ * **There is no dark theme, and that is a decision rather than an omission.** It was a preference a
+ * toggle served, which meant every colour in this file had to be argued twice and every screen
+ * verified twice — for a product whose readers work in a lit practice and whose output is printed
+ * and attached to a dispute. A screen carrying an amount and a signature has one appearance, and it
+ * is the one the paper gets. `next-themes`, the toggle and the `.dark` ramp were removed together;
+ * nothing here is theme-aware any more.
  *
  * Values are `DESIGN.md`'s hexes converted to oklch — the notation the rest of this file already
  * uses, and mixing two colour spaces in one token set means two meanings for "the same grey".
@@ -289,7 +291,7 @@
      * The rail, one step under `canvas-soft`. DESIGN.md documents a marketing surface and a dark
      * dashboard shell but no light navigation rail, so this is derived rather than quoted: the
      * same cool hue as `canvas-soft`, one step down, so the three surfaces the product needs —
-     * rail, ground, card — stay one step apart exactly as they do in dark mode.
+     * rail, ground, card — stay one step apart.
      */
     --azm-canvas-rail: oklch(0.9526 0.0114 252.09);   /* #eaf0f7  derived          */
 
@@ -327,7 +329,7 @@
     --chart-5: var(--azm-navy);
     /* DESIGN.md `{rounded.lg}` is 12px, and every derived step follows from it. */
     --radius: 0.75rem;
-    /* Rail, ground, card — three surfaces one step apart, the same stack dark mode has. */
+    /* Rail, ground, card — three surfaces one step apart. */
     --sidebar: var(--azm-canvas-rail);
     --sidebar-foreground: var(--azm-ink);
     --sidebar-primary: var(--azm-indigo);
@@ -357,74 +359,6 @@
     --azm-unconfirmed-bg: oklch(0.9869 0.0214 95.28); /* amber-50  */
 }
 
-/*
- * Dark, as DESIGN.md's dashboard track rather than an inverted brochure.
- *
- * DESIGN.md describes exactly one dark surface — "the dashboard track flips polarity to a familiar
- * dark-app shell", filled with `brand-dark-900` (#1c1e54). That is a card colour, not a whole
- * theme, so the ramp around it is derived: the same navy hue and chroma, three steps, matching the
- * light mode's rail / ground / card stack so the layout reads identically whichever theme is on.
- * The previous dark mode was Tailwind `gray` at hue 260 — a near-neighbour of this navy, which is
- * why the change reads as a saturation of the old theme rather than a different product.
- *
- * **Indigo does not lift in dark.** A dark theme reaches for a lighter accent by reflex; here that
- * would trade the label's contrast for the fill's. White on `indigo-soft` measures 4.58:1 and white
- * on `indigo` measures 6.19:1, identically in both modes — the right answer for the one button on
- * this screen whose meaning must never be in question. The focus ring is where the lighter indigo
- * goes, because nothing has to be read off a ring.
- *
- * **Borders are opaque, and the input border is not the card border.** A 1px `--border` separates
- * two surfaces and only has to be visible; `--input` is the boundary of a control a person has to
- * find, which WCAG 1.4.11 puts at 3:1. They were one value, at 1.5:1, so the form fields were the
- * thing that disappeared. Now they are two: #3f4694 for hairlines, #6b76c9 for controls, at 3.71:1.
- */
-.dark {
-    --background: oklch(0.2437 0.0796 275.77);        /* #171a45  ground, derived  */
-    --foreground: oklch(0.9409 0.0243 280.86);        /* #e8eafc  off-white, not #fff */
-    --card: oklch(0.2701 0.0962 276.24);              /* #1c1e54  brand-dark-900   */
-    --card-foreground: oklch(0.9409 0.0243 280.86);
-    --popover: oklch(0.2701 0.0962 276.24);
-    --popover-foreground: oklch(0.9409 0.0243 280.86);
-    --primary: var(--azm-indigo);
-    --primary-foreground: oklch(1 0 0);
-    --secondary: oklch(0.3232 0.1114 275.57);         /* #262a6b  raised, derived  */
-    --secondary-foreground: oklch(0.9409 0.0243 280.86);
-    --muted: oklch(0.3232 0.1114 275.57);
-    --muted-foreground: oklch(0.7239 0.0648 275.66);  /* #9aa3cf  6.25:1 on card   */
-    --accent: oklch(0.3232 0.1114 275.57);
-    --accent-foreground: oklch(0.9409 0.0243 280.86);
-    --destructive: oklch(0.704 0.191 22.216);         /* red-400 — red-600 is unreadable here */
-    --border: oklch(0.3814 0.1120 275.87);            /* #3f4694  hairline         */
-    --input: oklch(0.5290 0.1372 277.45);             /* #6b76c9  control boundary */
-    --ring: var(--azm-indigo-soft);
-    --chart-1: var(--azm-indigo-soft);
-    --chart-2: oklch(0.8085 0.0899 284.21);           /* indigo-subdued */
-    --chart-3: var(--azm-ruby);
-    --chart-4: var(--azm-magenta);
-    --chart-5: oklch(0.7239 0.0648 275.66);
-    /* One step darker than the ground — the rail is the frame, not another panel. */
-    --sidebar: oklch(0.2029 0.0640 276.46);           /* #101233  rail, derived    */
-    --sidebar-foreground: oklch(0.8584 0.0474 278.75);/* #c9cef0                   */
-    --sidebar-primary: var(--azm-indigo);
-    --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-accent: oklch(0.3232 0.1114 275.57);
-    --sidebar-accent-foreground: oklch(0.9409 0.0243 280.86);
-    --sidebar-border: oklch(0.3232 0.1114 275.57);
-    --sidebar-ring: var(--azm-indigo-soft);
-
-    /*
-     * The verdict colours, lifted for a dark ground and *only* here. The hue is the same claim;
-     * green-700 on a navy card is a smudge. Backgrounds become low-alpha washes of the same hue
-     * rather than the green-50 / red-50 / amber-50 tints, which on this ground would read as three
-     * light rectangles rather than three states.
-     */
-    --azm-confirmed: oklch(0.765 0.177 163.223);      /* emerald-400 */
-    --azm-confirmed-bg: oklch(0.393 0.075 165.61);
-    --azm-wrong: oklch(0.7040 0.1910 22.216);         /* red-400   */
-    --azm-wrong-bg: oklch(0.3960 0.1300 25.72);
-    --azm-unconfirmed: oklch(0.8290 0.1590 75.83);    /* amber-400 */
-    --azm-unconfirmed-bg: oklch(0.4140 0.0960 65.36);
-}
 
 @layer base {
   * {
@@ -464,17 +398,13 @@
    * object. The inner corners have to follow, or a card's header clips its own rounding against a
    * radius 19px larger than the box it sits in.
    *
-   * The shadow is light-mode only. `shadow-blue` is a navy at 8% alpha, which on the dark shell's
-   * own navy ground is invisible — there, the card's one step of surface lift is what separates
-   * it, and the `ring-1` the component already carries draws the edge.
+   * `shadow-blue` is a navy at 8% alpha. It used to be paired with a `.dark` override that cleared
+   * it, because on the old navy shell it was invisible; with one theme the override is gone and
+   * this is simply the card shadow.
    */
   [data-slot="card"] {
     border-radius: var(--radius);
     box-shadow: rgba(0, 55, 112, 0.08) 0 1px 3px;
-    }
-
-  .dark [data-slot="card"] {
-    box-shadow: none;
     }
 
   [data-slot="card-header"] {
@@ -545,13 +475,6 @@
     mask-image: linear-gradient(to bottom, black 0%, black 52%, transparent 100%);
   }
 
-  /*
-   * The mesh, on the dark shell. Same five stops, a third of the alpha: at full strength on a navy
-   * ground the indigo and ruby stops stop being atmosphere and become two coloured blobs.
-   */
-  .dark .azm-mesh {
-    opacity: 0.35;
-  }
 
   /*
    * DESIGN.md's display tier as a class, for the case the `text-display-*` tokens do not cover:
@@ -642,11 +565,12 @@
  * responsible for it, or attached as a PDF to a dispute with a Rechnungsprüfer. Three things have to
  * be true for that to be worth anything.
  *
- * **The dark theme must not reach the printer.** Browsers drop background colours from a print job
- * by default but keep foreground ones, so a page printed from dark mode is near-white text on white
- * paper: perfectly legible on screen, blank on the page. The light palette is therefore restored
- * here for every print job, whatever theme the reader is using. The block sits last in the file, so
- * it wins over `.dark` on source order without needing `!important` on twenty custom properties.
+ * **The palette is pinned for the printer, and stays pinned now that there is only one.** The block
+ * originally existed because a page printed from the dark theme came out near-white on white —
+ * browsers drop background colours from a print job by default but keep foreground ones. That theme
+ * is gone, and this block is kept deliberately: it makes the printed palette explicit rather than
+ * inherited, so a screen colour introduced later cannot quietly become an ink colour. It sits last
+ * in the file and wins on source order, without `!important` on twenty custom properties.
  *
  * **A row is a record, and a total is not a running header.** A position split across a page break
  * reads as two half-positions, with the Betrag on a different sheet from the Ziffer it belongs to,
@@ -669,8 +593,11 @@
  * live in this block. It is filed separately below, with the reason.
  */
 @media print {
-  :root,
-  .dark {
+  /*
+   * The print palette. `.dark` used to be listed beside `:root` here, back when a reader could be
+   * printing from a dark screen; there is one theme now, so there is one selector.
+   */
+  :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
