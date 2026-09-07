@@ -29,7 +29,7 @@ refund. See the comment above those fields for what conflating them cost.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -433,3 +433,127 @@ class PadnextAuditReport(BaseModel):
         for position in self.positions:
             counts[position.bucket] += 1
         return counts
+
+
+# ==============================================================================================
+# the validation report
+# ==============================================================================================
+#
+# The wire form of `app.padnext.validation`. Those are frozen dataclasses, deliberately: the
+# validator is pure logic over untrusted bytes and has no business depending on the response
+# layer, and the same split already exists between `app.padnext.schema.SchemaViolation` and the
+# `Warning_` it converts itself into. These models are the published contract — they reach
+# `packages/contracts` through the OpenAPI document, so the web UI's error panel is typed against
+# the same fields the CLI prints.
+
+
+class PadnextValidationIssue(BaseModel):
+    """One problem with a delivery: what, where, why it matters, and how to fix it.
+
+    Every text field is German first. `message_en` and `fix_en` are the English halves and may be
+    empty — the reader's own findings (`padnext_position_without_ziffer` and its siblings) exist
+    only in German, and a machine translation of a legal-adjacent message is worse than a client
+    falling back to the German it already has to render.
+
+    `severity` and `blocking` are separate, and the gap is this engine's central rule made
+    visible: a position that cannot be checked is `severity="error"` and `blocking=false`, because
+    refusing the delivery over it would refuse exactly the export most worth auditing.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    #: Stable, fine-grained, and NOT the HTTP `error_code`. `xml_syntax_error`,
+    #: `echtdaten_undeclared`, `unsupported_version` — or a reader finding's own type, unchanged.
+    code: str
+    #: The XML field or attribute the problem is about, where there is one.
+    field: str = ""
+    #: Readable element path, e.g. `rechnungen/rechnung/abrechnungsfall/positionen`.
+    path: str = ""
+    line: int | None = None
+    column: int | None = None
+    severity: Literal["info", "warning", "error"] = "error"
+    blocking: bool = True
+    #: The collapsed one-line form — one clause, at most 120 characters, no reasoning and no
+    #: instruction. It is what a reader scans to pick which problem to open first, so a UI renders
+    #: THIS in the closed row and `message_de` only once the row is expanded.
+    summary_de: str = ""
+    summary_en: str = ""
+    message_de: str = ""
+    message_en: str = ""
+    why_de: str = ""
+    why_en: str = ""
+    fix: str = ""
+    fix_en: str = ""
+    #: The exact command that fixes this, when one exists. Rendered as a copyable block.
+    command: str = ""
+    #: `Zeile 12, Spalte 8 (rechnungen/@echtdaten)`, pre-rendered so every surface agrees.
+    location: str = ""
+
+
+class PadnextParsedPreview(BaseModel):
+    """What could be read out of the document, whether or not it validated.
+
+    Present on a failure as well as a success, and that is the point: "3 Rechnungen, 47 Positionen,
+    ein Feld fehlt" and "die Datei ist kaputt" call for different next actions from the person
+    holding the file, and only one of them is true.
+
+    Nothing here is trusted for anything. No amount, no verdict and no total is computed from it —
+    it is a description of the file, not a reading of it, and the audit recomputes everything from
+    the catalog regardless (see the module docstring).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    invoice_count: int = 0
+    case_count: int = 0
+    #: `<goziffer>` elements. Other position types are counted separately, because the audit does
+    #: not model them and one total would overstate what was actually checked.
+    position_count: int = 0
+    other_position_count: int = 0
+    first_service_date: str | None = None
+    last_service_date: str | None = None
+    #: `01.09.2026 bis 15.09.2026`, German order, pre-rendered.
+    date_range: str = ""
+    nachrichtentyp: str = ""
+    version: str = ""
+    transfernr: str = ""
+    echtdaten_declared: str | None = None
+    invoice_ids: list[str] = Field(default_factory=list)
+    container_members: list[str] = Field(default_factory=list)
+    first_invoice: dict[str, Any] | None = None
+    #: True when the counts come from a recovering parse of a document that is not well formed —
+    #: they are then a floor, not the truth.
+    recovered: bool = False
+    #: Line of the element that should carry `@echtdaten`, so an absent attribute still has a
+    #: position to point at.
+    declaration_line: int | None = None
+
+
+class PadnextValidationReport(BaseModel):
+    """Every problem with one delivery, in one answer.
+
+    `status` distinguishes the two failures that need different words: `parse_failed` means the
+    bytes are not a document, so the preview is a floor and nothing else was checked;
+    `validation_failed` means the document was read and its contents are refused.
+
+    The two counts are the honest totals. `errors` and `warnings` are capped
+    (`app.padnext.validation.MAX_REPORTED_ISSUES`) because a systematic export mistake produces
+    one issue per position, and `*_omitted` says how many did not fit.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["valid", "validation_failed", "parse_failed"]
+    source_name: str = ""
+    schema_policy: str = "strict"
+    error_count: int = 0
+    warning_count: int = 0
+    errors: list[PadnextValidationIssue] = Field(default_factory=list)
+    warnings: list[PadnextValidationIssue] = Field(default_factory=list)
+    errors_omitted: int = 0
+    warnings_omitted: int = 0
+    parsed_preview: PadnextParsedPreview = Field(default_factory=PadnextParsedPreview)
+
+    @property
+    def ok(self) -> bool:
+        return self.error_count == 0

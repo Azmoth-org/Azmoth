@@ -752,6 +752,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/padnext/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Padnext Validate
+         * @description Prüft eine PADnext-Lieferung auf Lesbarkeit, ohne sie zu bewerten.
+         *
+         *     Antwortet mit `200` und einer vollständigen Liste aller Fehler und Hinweise — auch dann, wenn
+         *     die Lieferung abgewiesen würde. Zu jedem Punkt: Feld, Zeile, XML-Pfad, warum es wichtig ist
+         *     und wie es behoben wird, auf Deutsch und auf Englisch. `parsed_preview` zeigt zusätzlich, was
+         *     aus der Datei gelesen werden konnte.
+         *
+         *     ---
+         *
+         *     The dry run. Same checks as `POST /padnext/audit`, no rules engine, no report, nothing stored,
+         *     and — the point — **no error status**: a delivery with three problems answers `200` with three
+         *     problems in the body rather than a `422` naming one of them. `status` says which way it went
+         *     (`valid`, `validation_failed`, `parse_failed`) and `error_count` is the number to branch on.
+         *
+         *     Why a `200` for a file that would be refused: this endpoint's answer is not "your request
+         *     failed", it is "here is the state of your file". A client that has to distinguish "the
+         *     validation ran and found four things" from "the validation itself could not run" needs those
+         *     to be different statuses, and collapsing them into `422` would take that distinction away —
+         *     which is exactly the problem `/audit` has to live with, because there a refusal genuinely is
+         *     a failed request.
+         *
+         *     **Cheap on purpose.** No quota is consumed, no usage row is written and Soufflé is never
+         *     started, so a practice can iterate on a broken export profile without paying per attempt and
+         *     without the pilot's invoice counter drifting away from the number of audits actually run. It
+         *     is a plain `def` because there is nothing to await; FastAPI dispatches it to the threadpool,
+         *     and the work is one XSD validation plus two parses.
+         *
+         *     The only failures it can answer with are `EMPTY_REQUEST_BODY` (400) and `REQUEST_TOO_LARGE`
+         *     (413, from the middleware) — everything about the *delivery* arrives in the body.
+         */
+        post: operations["padnext_validate_api_v1_padnext_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/proposals": {
         parameters: {
             query?: never;
@@ -3105,6 +3153,227 @@ export interface components {
             /** Ziffer */
             ziffer?: string | null;
         };
+        /**
+         * PadnextParsedPreview
+         * @description What could be read out of the document, whether or not it validated.
+         *
+         *     Present on a failure as well as a success, and that is the point: "3 Rechnungen, 47 Positionen,
+         *     ein Feld fehlt" and "die Datei ist kaputt" call for different next actions from the person
+         *     holding the file, and only one of them is true.
+         *
+         *     Nothing here is trusted for anything. No amount, no verdict and no total is computed from it —
+         *     it is a description of the file, not a reading of it, and the audit recomputes everything from
+         *     the catalog regardless (see the module docstring).
+         */
+        PadnextParsedPreview: {
+            /**
+             * Case Count
+             * @default 0
+             */
+            case_count: number;
+            /** Container Members */
+            container_members?: string[];
+            /**
+             * Date Range
+             * @default
+             */
+            date_range: string;
+            /** Declaration Line */
+            declaration_line?: number | null;
+            /** Echtdaten Declared */
+            echtdaten_declared?: string | null;
+            /** First Invoice */
+            first_invoice?: {
+                [key: string]: unknown;
+            } | null;
+            /** First Service Date */
+            first_service_date?: string | null;
+            /**
+             * Invoice Count
+             * @default 0
+             */
+            invoice_count: number;
+            /** Invoice Ids */
+            invoice_ids?: string[];
+            /** Last Service Date */
+            last_service_date?: string | null;
+            /**
+             * Nachrichtentyp
+             * @default
+             */
+            nachrichtentyp: string;
+            /**
+             * Other Position Count
+             * @default 0
+             */
+            other_position_count: number;
+            /**
+             * Position Count
+             * @default 0
+             */
+            position_count: number;
+            /**
+             * Recovered
+             * @default false
+             */
+            recovered: boolean;
+            /**
+             * Transfernr
+             * @default
+             */
+            transfernr: string;
+            /**
+             * Version
+             * @default
+             */
+            version: string;
+        };
+        /**
+         * PadnextValidationIssue
+         * @description One problem with a delivery: what, where, why it matters, and how to fix it.
+         *
+         *     Every text field is German first. `message_en` and `fix_en` are the English halves and may be
+         *     empty — the reader's own findings (`padnext_position_without_ziffer` and its siblings) exist
+         *     only in German, and a machine translation of a legal-adjacent message is worse than a client
+         *     falling back to the German it already has to render.
+         *
+         *     `severity` and `blocking` are separate, and the gap is this engine's central rule made
+         *     visible: a position that cannot be checked is `severity="error"` and `blocking=false`, because
+         *     refusing the delivery over it would refuse exactly the export most worth auditing.
+         */
+        PadnextValidationIssue: {
+            /**
+             * Blocking
+             * @default true
+             */
+            blocking: boolean;
+            /** Code */
+            code: string;
+            /** Column */
+            column?: number | null;
+            /**
+             * Command
+             * @default
+             */
+            command: string;
+            /**
+             * Field
+             * @default
+             */
+            field: string;
+            /**
+             * Fix
+             * @default
+             */
+            fix: string;
+            /**
+             * Fix En
+             * @default
+             */
+            fix_en: string;
+            /** Line */
+            line?: number | null;
+            /**
+             * Location
+             * @default
+             */
+            location: string;
+            /**
+             * Message De
+             * @default
+             */
+            message_de: string;
+            /**
+             * Message En
+             * @default
+             */
+            message_en: string;
+            /**
+             * Path
+             * @default
+             */
+            path: string;
+            /**
+             * Severity
+             * @default error
+             * @enum {string}
+             */
+            severity: "info" | "warning" | "error";
+            /**
+             * Summary De
+             * @default
+             */
+            summary_de: string;
+            /**
+             * Summary En
+             * @default
+             */
+            summary_en: string;
+            /**
+             * Why De
+             * @default
+             */
+            why_de: string;
+            /**
+             * Why En
+             * @default
+             */
+            why_en: string;
+        };
+        /**
+         * PadnextValidationReport
+         * @description Every problem with one delivery, in one answer.
+         *
+         *     `status` distinguishes the two failures that need different words: `parse_failed` means the
+         *     bytes are not a document, so the preview is a floor and nothing else was checked;
+         *     `validation_failed` means the document was read and its contents are refused.
+         *
+         *     The two counts are the honest totals. `errors` and `warnings` are capped
+         *     (`app.padnext.validation.MAX_REPORTED_ISSUES`) because a systematic export mistake produces
+         *     one issue per position, and `*_omitted` says how many did not fit.
+         */
+        PadnextValidationReport: {
+            /**
+             * Error Count
+             * @default 0
+             */
+            error_count: number;
+            /** Errors */
+            errors?: components["schemas"]["PadnextValidationIssue"][];
+            /**
+             * Errors Omitted
+             * @default 0
+             */
+            errors_omitted: number;
+            parsed_preview?: components["schemas"]["PadnextParsedPreview"];
+            /**
+             * Schema Policy
+             * @default strict
+             */
+            schema_policy: string;
+            /**
+             * Source Name
+             * @default
+             */
+            source_name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "valid" | "validation_failed" | "parse_failed";
+            /**
+             * Warning Count
+             * @default 0
+             */
+            warning_count: number;
+            /** Warnings */
+            warnings?: components["schemas"]["PadnextValidationIssue"][];
+            /**
+             * Warnings Omitted
+             * @default 0
+             */
+            warnings_omitted: number;
+        };
         /** Patient */
         Patient: {
             /** Age */
@@ -4939,6 +5208,48 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    padnext_validate_api_v1_padnext_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": string;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PadnextValidationReport"];
+                };
             };
             /** @description See docs/errors.md for the codes. */
             "4XX": {

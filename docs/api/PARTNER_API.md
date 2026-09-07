@@ -384,6 +384,46 @@ The codes this API produces, with the complete catalog in
 | `RULES_ENGINE_UNAVAILABLE` | 503 | Ours. Retry once after the header's delay. |
 | `UPLOAD_STORAGE_UNAVAILABLE` | 503 | The archive could not be stored; **the job was not accepted**. Retry. |
 
+### A refused delivery names every problem, not the first one
+
+A real export usually has more than one thing wrong with it, and a refusal that names one costs
+you a deploy per mistake. So `POST /api/v1/audit/single` validates in a single pass and the 4xx
+body carries **all** of it under `details`, alongside the code-specific keys in the table above:
+
+```json
+{
+  "error_code": "PADNEXT_SCHEMA_VIOLATION",
+  "details": {
+    "violations": [{ "line": 57, "path": "…" }],
+
+    "status": "validation_failed",
+    "error_count": 2,
+    "warning_count": 3,
+    "errors": [{ "code": "echtdaten_undeclared", "field": "echtdaten", "line": 39,
+                 "severity": "error", "blocking": true,
+                 "message_de": "…", "message_en": "…", "why_en": "…", "fix_en": "…",
+                 "command": "python3 scripts/anonymize_padnext.py …" }],
+    "warnings": [{ "code": "unsupported_version", "blocking": false, "…": "…" }],
+    "parsed_preview": { "invoice_count": 3, "position_count": 47 }
+  }
+}
+```
+
+`error_code`, the status and `message` are unchanged: they are still those of the most fundamental
+problem, so existing branching keeps working. Three things to know before you render the list:
+
+- Group by **`blocking`**, colour by **`severity`**. They are different questions — a claimed
+  position that cannot be checked is `severity: "error"` with `blocking: false`, because refusing
+  a delivery over one unreadable line would refuse exactly the invoices worth auditing.
+- **`error_count` is the total; `errors` is capped at 100.** `errors_omitted` says what did not fit.
+- `message_de` / `fix` are always populated. `message_en` / `fix_en` may be empty for the reader's
+  own findings, which exist only in German.
+
+`parsed_preview` is a description of the file, not a reading of it — no amount in it is audited.
+
+The full shape, and the `POST /api/v1/padnext/validate` dry run that returns it with `200`
+whatever it finds, are in [`docs/errors.md`](../errors.md).
+
 ---
 
 ## 6. Rate limits

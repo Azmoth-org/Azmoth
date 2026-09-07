@@ -4,6 +4,12 @@
 `PadnextAuditReport` out, synchronously. Sync (`def`) for the same reason as `solve` — the audit
 runs Soufflé.
 
+`POST /padnext/validate` is the dry run beside it: the same checks, `200` whatever the answer, and
+every problem in the body instead of the first one in a status code. It exists because "is this
+export readable" and "what does this invoice cost" are different questions, and a practice fixing
+an export profile was previously made to ask the second in order to get an answer to the first —
+paying a quota unit and starting a solve each time. See `app.padnext.validation`.
+
 `POST /padnext/batch`, `GET /padnext/batch` and `GET /padnext/batch/{batch_id}` are the batch path.
 They exist because a practice's real question is not "is this invoice defensible" but "is our
 billing systematically wrong, and where" — and that question needs a hundred files, which is far too
@@ -57,13 +63,14 @@ from app.api.quota import apply as apply_quota, check_and_refuse, optional_quota
 from app.api.tenancy import RequestOrganization
 from app.core.observability import record_invoices
 from app.errors import EmptyRequestBody, UnknownZifferError
-from app.padnext import audit_delivery, read_delivery
+from app.padnext import audit_delivery, validate_bytes
 from app.schemas import (
     BatchAuditAccepted,
     BatchAuditJob,
     BatchAuditJobList,
     BatchJobStatus,
     PadnextAuditReport,
+    PadnextValidationReport,
 )
 from app.services.batch_audit import (
     DEFAULT_BATCH_LIST_LIMIT,
@@ -116,10 +123,20 @@ def _audit_bytes(body: bytes, *, source_name: str) -> PadnextAuditReport:
             "payload — with Content-Type application/xml or application/octet-stream."
         )
 
-    # `read_delivery` raises `InvalidXmlError` (400, with the line and column), `PadnextSchemaError`
-    # (422, with every violation) or a bare `PadnextError` (422). All three are in the catalog and
-    # all three are rendered by the handler, so there is nothing to translate here.
-    delivery, read_findings = read_delivery(body, source_name=source_name)
+    # Validation is one pass that collects instead of raising, so a delivery with three problems
+    # is answered with three problems rather than with the first one — see `app.padnext.validation`
+    # for why that is worth a module. `raise_for_status` then raises `PadnextValidationFailed`,
+    # which *adopts* the primary problem's `error_code`, HTTP status, message and `details`. So the
+    # contract a client already switches on is unchanged — `INVALID_XML` is still a 400 carrying
+    # `details.line`, `PADNEXT_SCHEMA_VIOLATION` still a 422 carrying `details.violations`,
+    # `ECHTDATEN_UNDECLARED` still a 422 carrying `details.echtdaten_declared` — and the batched
+    # list, the warnings and the preview arrive beside them under `details.errors`.
+    result = validate_bytes(body, source_name=source_name)
+    result.raise_for_status()
+
+    # Not `None` once nothing is blocking: a readable delivery is exactly what "no errors" means.
+    delivery, read_findings = result.delivery, result.findings
+    assert delivery is not None  # noqa: S101 - invariant of `ok`, and a 500 beats a None deref
 
     pipe = pipeline()
     refuse_catalog_mismatch(delivery, pipe.catalog)
@@ -133,6 +150,63 @@ def _audit_bytes(body: bytes, *, source_name: str) -> PadnextAuditReport:
         read_findings=read_findings,
         settings=pipe.settings,
     )
+
+
+@router.post("/validate", response_model=PadnextValidationReport)
+def padnext_validate(
+    request: Request, body: bytes = Body(default=b"")
+) -> PadnextValidationReport:
+    """Prüft eine PADnext-Lieferung auf Lesbarkeit, ohne sie zu bewerten.
+
+    Antwortet mit `200` und einer vollständigen Liste aller Fehler und Hinweise — auch dann, wenn
+    die Lieferung abgewiesen würde. Zu jedem Punkt: Feld, Zeile, XML-Pfad, warum es wichtig ist
+    und wie es behoben wird, auf Deutsch und auf Englisch. `parsed_preview` zeigt zusätzlich, was
+    aus der Datei gelesen werden konnte.
+
+    ---
+
+    The dry run. Same checks as `POST /padnext/audit`, no rules engine, no report, nothing stored,
+    and — the point — **no error status**: a delivery with three problems answers `200` with three
+    problems in the body rather than a `422` naming one of them. `status` says which way it went
+    (`valid`, `validation_failed`, `parse_failed`) and `error_count` is the number to branch on.
+
+    Why a `200` for a file that would be refused: this endpoint's answer is not "your request
+    failed", it is "here is the state of your file". A client that has to distinguish "the
+    validation ran and found four things" from "the validation itself could not run" needs those
+    to be different statuses, and collapsing them into `422` would take that distinction away —
+    which is exactly the problem `/audit` has to live with, because there a refusal genuinely is
+    a failed request.
+
+    **Cheap on purpose.** No quota is consumed, no usage row is written and Soufflé is never
+    started, so a practice can iterate on a broken export profile without paying per attempt and
+    without the pilot's invoice counter drifting away from the number of audits actually run. It
+    is a plain `def` because there is nothing to await; FastAPI dispatches it to the threadpool,
+    and the work is one XSD validation plus two parses.
+
+    The only failures it can answer with are `EMPTY_REQUEST_BODY` (400) and `REQUEST_TOO_LARGE`
+    (413, from the middleware) — everything about the *delivery* arrives in the body.
+    """
+    if not body:
+        raise EmptyRequestBody(
+            "Empty body. POST the PADnext file itself — a .padx container or a *_padx.xml "
+            "payload — with Content-Type application/xml or application/octet-stream."
+        )
+    result = validate_bytes(body, source_name=request.headers.get("x-padnext-filename", ""))
+    log.info(
+        "padnext/validate: status=%s, %d error(s), %d warning(s)",
+        result.status,
+        len(result.errors),
+        len(result.warnings),
+        extra={
+            "event": "padnext_validate",
+            "padnext_validation_status": result.status,
+            "error_count": len(result.errors),
+            "warning_count": len(result.warnings),
+            # Codes only — never a message, which quotes document content.
+            "error_codes": sorted({e.code for e in result.errors}),
+        },
+    )
+    return result.to_report()
 
 
 @router.post("/audit", response_model=PadnextAuditReport)

@@ -71,7 +71,7 @@ from app.api.ratelimit import BulkRateLimit, Decision, SingleRateLimit
 from app.config import get_settings
 from app.core.observability import bind, record_invoices
 from app.errors import EmptyRequestBody, UnsupportedInputFormat
-from app.padnext import audit_delivery, read_delivery
+from app.padnext import audit_delivery, validate_bytes
 from app.padnext.formats import FORMAT_ADVICE, InputFormat, detect_format
 from app.schemas import (
     BatchAuditAccepted,
@@ -234,16 +234,28 @@ def _read_refuse_and_audit(content: bytes, *, source_name: str, pipe) -> Padnext
     """Read one delivery, refuse a catalog mismatch, audit it. Blocking — for the threadpool.
 
     The same three steps `POST /api/v1/padnext/audit` performs, in the same order, calling the same
-    `read_delivery`, `refuse_catalog_mismatch` and `audit_delivery`. Spelled out here rather than
+    `validate_bytes`, `refuse_catalog_mismatch` and `audit_delivery`. Spelled out here rather than
     routed through `app.services.batch_audit.audit_bytes` for one reason: the catalog-mismatch
     refusal needs the parsed `PadnextDelivery`, and `audit_bytes` does not hand one back — so
     reusing it would mean parsing every upload twice to ask a question the first parse already
     answered.
 
     What must not diverge between the two endpoints is the verdict, and that lives entirely in
-    `read_delivery` and `audit_delivery`. This function contains no judgement of its own.
+    `validate_bytes` and `audit_delivery`. This function contains no judgement of its own.
+
+    **The refusal carries every problem, and the codes in `docs/api/PARTNER_API.md` are unchanged.**
+    `validate_bytes` collects instead of raising on the first thing it finds, and
+    `PadnextValidationFailed` then adopts the primary problem's `error_code`, HTTP status, message
+    and `details` — so an integrator switching on `PADNEXT_SCHEMA_VIOLATION` or reading
+    `details.line` sees exactly what shipped, with `details.errors` added beside it. That matters
+    more here than on the web path: a partner integrating against this endpoint hits three export
+    mistakes at once on their first real file, and one code per round trip is three deploys.
     """
-    delivery, read_findings = read_delivery(content, source_name=source_name)
+    result = validate_bytes(content, source_name=source_name)
+    result.raise_for_status()
+
+    delivery, read_findings = result.delivery, result.findings
+    assert delivery is not None  # noqa: S101 - invariant of "no blocking errors"
     refuse_catalog_mismatch(delivery, pipe.catalog)
     return audit_delivery(
         delivery,

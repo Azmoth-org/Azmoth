@@ -35,6 +35,76 @@ Every error body, from every endpoint, has the same shape:
   existed keep working. `error` is `error_code` lower-cased; `detail` mirrors the body. New code
   should read the top level.
 
+## Every PADnext problem, in one refusal
+
+A PADnext delivery routinely has more than one thing wrong with it, and answering with the first
+one costs a practice a round trip per mistake — fix the `@echtdaten`, upload, be told the
+`posanzahl` is wrong, fix that, upload again. So the reader validates in one pass and the refusal
+carries **all** of it. `details` gains these keys on every PADnext failure, alongside the
+code-specific ones documented in the table:
+
+```json
+{
+  "error_code": "PADNEXT_SCHEMA_VIOLATION",
+  "details": {
+    "violation_count": 1,
+    "violations": [{ "line": 57, "column": 0, "path": "…", "location": "…" }],
+
+    "status": "validation_failed",
+    "error_count": 2,
+    "warning_count": 3,
+    "errors": [
+      {
+        "code": "echtdaten_undeclared",
+        "field": "echtdaten",
+        "path": "rechnungen/@echtdaten",
+        "line": 39,
+        "column": null,
+        "severity": "error",
+        "blocking": true,
+        "message_de": "Das Feld 'echtdaten' fehlt oder ist ungültig…",
+        "message_en": "The delivery does not declare whether it holds production data…",
+        "why_de": "Ohne diese Angabe kann Azmoth nicht feststellen…",
+        "why_en": "Without the declaration this deployment cannot tell…",
+        "fix": "1. Automatisiert: führen Sie das Anonymisierungsskript aus…",
+        "fix_en": "Run scripts/anonymize_padnext.py and upload its output…",
+        "command": "python3 scripts/anonymize_padnext.py lieferung.padx -o anonymisiert.padx",
+        "location": "Zeile 39 (rechnungen/@echtdaten)"
+      }
+    ],
+    "warnings": ["…the same shape, non-blocking…"],
+    "errors_omitted": 0,
+    "warnings_omitted": 0,
+    "parsed_preview": { "invoice_count": 3, "position_count": 47, "date_range": "…" }
+  }
+}
+```
+
+**Nothing a client already read has moved.** `error_code`, `http` status and `message` are still
+those of whichever problem is most fundamental — the bytes, then the document, then the framing,
+then the declaration, then the structure — and its own `details` keys are still where they were.
+The batched list arrives beside them.
+
+Four things are worth knowing before rendering it:
+
+- **`code` is not `error_code`.** It is a finer-grained namespace (`xml_syntax_error`,
+  `echtdaten_undeclared`, `unsupported_version`), and it may also be one of the reader's own
+  finding types (`padnext_position_without_ziffer`), which are unchanged from what audit reports
+  already carry.
+- **`severity` and `blocking` are different questions.** A claimed position that cannot be checked
+  is `severity: "error"` and `blocking: false` — a serious finding that does not refuse the
+  delivery, because refusing over it would refuse exactly the export most worth auditing. Group by
+  `blocking`; colour by `severity`.
+- **`error_count` is the honest total, `errors` is capped at 100.** One systematic export mistake
+  produces one issue per position. `errors_omitted` says how many did not fit.
+- **`message_en` and `fix_en` may be empty.** German is the primary language; the reader's own
+  findings exist only in it. Fall back to `message_de`, never to the code.
+
+`POST /api/v1/padnext/validate` returns exactly this document at the top level, with `200`
+whatever it found — the dry run, for a client that wants the list without an audit and without
+spending a quota unit. See [`app/padnext/validation.py`](../apps/engine/app/padnext/validation.py)
+and `scripts/validate_padnext.py`, which prints the same list in a terminal.
+
 ## The catalog
 
 | Error Code | HTTP | Trigger condition | Resolution / action for the client |

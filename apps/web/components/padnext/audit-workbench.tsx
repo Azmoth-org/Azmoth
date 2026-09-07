@@ -19,9 +19,10 @@ import { PilotWarningsPanel } from "@/components/padnext/pilot-warnings-panel"
 import { PositionsTable } from "@/components/padnext/positions-table"
 import { SinglePruefberichtButton } from "@/components/padnext/pruefbericht-button"
 import { ReportProvenance } from "@/components/padnext/report-provenance"
+import { ValidationErrorList } from "@/components/padnext/validation-error-list"
 import { ErrorPanel } from "@/components/review/error-panel"
 import { auditPadnextFile } from "@/lib/padnext/client"
-import type { PadnextResult } from "@/lib/padnext/types"
+import { toValidationReport, type PadnextResult } from "@/lib/padnext/types"
 
 /** What the engine's reader accepts: a `.padx` container, or a bare payload/order file. */
 const ACCEPTED = ".padx,.xml,.auf"
@@ -57,6 +58,19 @@ const ACCEPTED = ".padx,.xml,.auf"
  *
  * A refusal arrives here as a normal error panel carrying the engine's own German message, which
  * names the anonymisation script — so the reader is told what to do rather than only what failed.
+ *
+ * ## Why a refusal renders twice
+ *
+ * `ErrorPanel` above, `ValidationErrorList` below. The engine validates in one pass and refuses
+ * with *every* problem attached (`app/padnext/validation.py`), so a delivery with a schema
+ * violation and a missing `@echtdaten` is one 422 describing two things — and a panel with one
+ * title cannot say two. The panel keeps naming the `error_code` and the status, which is what an
+ * integrator reads and what every other failure on this screen renders; the list underneath is
+ * the part a practice acts on, with the line, the reason and the command per problem.
+ *
+ * Failures that are not about the delivery — a quota refusal, an unreachable engine, an engine old
+ * enough not to send the list — carry no report, so `toValidationReport` returns null and the
+ * screen looks exactly as it did before. That is why it is a shape check and not a status check.
  */
 export function AuditWorkbench() {
   const [result, setResult] = useState<PadnextResult | null>(null)
@@ -67,6 +81,11 @@ export function AuditWorkbench() {
   const [audited, setAudited] = useState<File | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Derived rather than stored: it is a projection of `result`, and a second piece of state that
+  // had to be cleared alongside it is a second piece of state that will one day not be.
+  const validation =
+    result?.kind === "error" ? toValidationReport(result.error) : null
 
   async function onPick(file: File | undefined) {
     if (!file) return
@@ -139,7 +158,20 @@ export function AuditWorkbench() {
         </CardContent>
       </Card>
 
-      {result?.kind === "error" ? <ErrorPanel error={result.error} /> : null}
+      {result?.kind === "error" ? (
+        <>
+          <ErrorPanel error={result.error} />
+          {/*
+            The batched list, when the engine sent one. `ErrorPanel` stays above it and unchanged:
+            it names the `error_code` and the HTTP status, which is what an integrator needs and
+            what every other failure on this screen already renders. What it cannot do is show
+            four problems — it has one title — so the list sits beneath it rather than replacing
+            it, and `toValidationReport` returns null for every failure that is not about the
+            delivery (a quota refusal, an unreachable engine) so those look exactly as they did.
+          */}
+          {validation ? <ValidationErrorList report={validation} /> : null}
+        </>
+      ) : null}
 
       {result?.kind === "report" ? (
         <>

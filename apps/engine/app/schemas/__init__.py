@@ -85,7 +85,10 @@ from app.schemas.padnext import (
     PadnextDelivery,
     PadnextFinding,
     PadnextInvoice,
+    PadnextParsedPreview,
     PadnextPosition,
+    PadnextValidationIssue,
+    PadnextValidationReport,
     PositionBucket,
 )
 from app.schemas.proposal import (
@@ -178,7 +181,10 @@ __all__ = [
     "PadnextDelivery",
     "PadnextFinding",
     "PadnextInvoice",
+    "PadnextParsedPreview",
     "PadnextPosition",
+    "PadnextValidationIssue",
+    "PadnextValidationReport",
     "PositionBucket",
     "Patient",
     "Procedure",

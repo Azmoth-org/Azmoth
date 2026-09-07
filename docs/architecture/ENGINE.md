@@ -254,7 +254,10 @@ record now, rather than instead of one. Schema and migration commands:
   and says so in every response.
 - **It does not trust a PADnext file's arithmetic.** The spec is explicit that `punktzahl`,
   `punktwert` and `gesamtbetrag` are carried *für Kontrollzwecke*, so the audit recomputes from our
-  own catalog and reports the difference to the cent.
+  own catalog and reports the difference to the cent. Those control fields are in **euros**, while
+  § 5 Abs. 1 Satz 3 GOÄ states the Punktwert in **cents** — the audit converts before comparing,
+  and accepts either spelling, because they denote one value. See `punktwert_matches` in
+  `app/padnext/audit.py` for the evidence and for what not converting cost.
 - **It does not read patient identity.** The PADnext models have no field that could hold a name, an
   address or a date of birth, and a test asserts it. A delivery flagged `echtdaten="1"` is refused.
 - **It does not call a gap in its own rules a defect in someone's invoice.** A PADnext audit splits

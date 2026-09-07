@@ -503,6 +503,11 @@ UNSCOPED_BY_DESIGN = {
     # the document — a label, not a filter. Nothing is looked up by it and no data is withheld
     # without it, which is exactly why that is a header read and not the tenant dependency.
     ("POST", "/api/v1/padnext/audit.pdf"),
+    # The dry run. It stores less than the audit does — no report, no solve, no usage row — and
+    # answers only with a description of the bytes it was handed. There is nothing here that could
+    # belong to one practice rather than another, so a tenant would be a gate in front of an empty
+    # room, exactly as for `/audit`. See `app.padnext.validation`.
+    ("POST", "/api/v1/padnext/validate"),
 }
 
 
