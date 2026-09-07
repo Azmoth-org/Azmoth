@@ -125,6 +125,40 @@ export type PadnextVerdict = PadnextAuditedPosition["verdict"];
  */
 export type PadnextPositionBucket = PadnextAuditedPosition["bucket"];
 
+/**
+ * What `POST /api/v1/padnext/validate` returns, and — under `details` — what a `/padnext/audit`
+ * refusal now carries beside the fields that shipped before it.
+ *
+ * `status` distinguishes the two failures that need different words: `parse_failed` means the
+ * bytes are not a document, so `parsed_preview` is a floor and nothing else ran;
+ * `validation_failed` means the document was read and its contents are refused. `error_count` is
+ * the number to branch on — `errors` is capped, and `errors_omitted` says what did not fit.
+ */
+export type PadnextValidationReport = Schemas["PadnextValidationReport"];
+
+/**
+ * One problem with a delivery: what, where, why it matters, how to fix it.
+ *
+ * `severity` and `blocking` are separate, and the gap between them is the engine's central rule.
+ * A claimed position that cannot be checked is `severity: "error"` and `blocking: false`, because
+ * refusing the delivery over it would refuse exactly the export most worth auditing — so a UI must
+ * group by `blocking`, and may colour by `severity`. Grouping by severity alone turns findings
+ * into a wall of red that nothing distinguishes from an actual refusal.
+ *
+ * `message_en` and `fix_en` may be empty: the reader's own findings exist only in German, which is
+ * the primary language here. Fall back to `message_de`, never to the code.
+ */
+export type PadnextValidationIssue = Schemas["PadnextValidationIssue"];
+
+/**
+ * What could be read out of the delivery, whether or not it validated — present on a failure too.
+ *
+ * Not trusted for anything. No amount, no verdict and no total comes from it; the audit recomputes
+ * everything from the catalog. It exists because "3 Rechnungen, 47 Positionen, ein Feld fehlt" and
+ * "die Datei ist kaputt" call for different next actions, and only one of them is true.
+ */
+export type PadnextParsedPreview = Schemas["PadnextParsedPreview"];
+
 /* -- PADnext, in batch --------------------------------------------------------------------- */
 
 /**

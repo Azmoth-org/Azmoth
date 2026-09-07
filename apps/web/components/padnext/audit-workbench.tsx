@@ -19,9 +19,10 @@ import { PilotWarningsPanel } from "@/components/padnext/pilot-warnings-panel"
 import { PositionsTable } from "@/components/padnext/positions-table"
 import { SinglePruefberichtButton } from "@/components/padnext/pruefbericht-button"
 import { ReportProvenance } from "@/components/padnext/report-provenance"
+import { ValidationErrorList } from "@/components/padnext/validation-error-list"
 import { ErrorPanel } from "@/components/review/error-panel"
 import { auditPadnextFile } from "@/lib/padnext/client"
-import type { PadnextResult } from "@/lib/padnext/types"
+import { toValidationReport, type PadnextResult } from "@/lib/padnext/types"
 
 /** What the engine's reader accepts: a `.padx` container, or a bare payload/order file. */
 const ACCEPTED = ".padx,.xml,.auf"
@@ -57,6 +58,31 @@ const ACCEPTED = ".padx,.xml,.auf"
  *
  * A refusal arrives here as a normal error panel carrying the engine's own German message, which
  * names the anonymisation script — so the reader is told what to do rather than only what failed.
+ *
+ * ## One refusal, one surface
+ *
+ * A validation failure renders as `ValidationErrorList` and nothing else. It replaced a layout
+ * that showed both — `ErrorPanel` above, the list below — on the reasoning that the panel names
+ * the `error_code` and the HTTP status while the list carries the problems. In front of a real
+ * refusal that reasoning does not survive: the engine adopts the *primary* problem's message for
+ * the envelope, so the panel's title was the first card restated, in full, in both languages, as
+ * an unwrapped red paragraph, above a "Details (unverändert)" dump of the identical payload the
+ * cards below were rendering. Every failure was shown twice, and the worse copy was on top.
+ *
+ * The `error_code` was not lost with it — it is the badge on the card it belongs to, which is
+ * also the only place it is unambiguous once a delivery has four problems with four codes. The
+ * payload an integrator diffs against the API is still one click away, at the bottom of the list
+ * (`raw`, below), rather than open by default in the middle of the page.
+ *
+ * ## What still renders the legacy panel
+ *
+ * Everything that is not a batched validation failure: a quota refusal, an unreachable engine, a
+ * 5xx, an engine old enough not to send the list. Those carry no `errors` array, so
+ * `toValidationReport` returns null, and they render exactly as they always have — a screen that
+ * assumed the list was present would answer a 503 with an empty "0 Fehler" card.
+ *
+ * The switch is `errors.length`, not the presence of a report: a report whose blocking list is
+ * empty says nothing about what failed, so the panel stays as the thing that names it.
  */
 export function AuditWorkbench() {
   const [result, setResult] = useState<PadnextResult | null>(null)
@@ -67,6 +93,15 @@ export function AuditWorkbench() {
   const [audited, setAudited] = useState<File | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Derived rather than stored: it is a projection of `result`, and a second piece of state that
+  // had to be cleared alongside it is a second piece of state that will one day not be.
+  const validation =
+    result?.kind === "error" ? toValidationReport(result.error) : null
+  // Whether the list is allowed to *be* the error surface rather than sit beneath one. It can
+  // only replace the panel when it has something blocking to show; see the note above.
+  const batched =
+    validation && (validation.errors?.length ?? 0) > 0 ? validation : null
 
   async function onPick(file: File | undefined) {
     if (!file) return
@@ -139,7 +174,25 @@ export function AuditWorkbench() {
         </CardContent>
       </Card>
 
-      {result?.kind === "error" ? <ErrorPanel error={result.error} /> : null}
+      {result?.kind === "error" ? (
+        batched ? (
+          // The whole failure, once. `raw` is what the panel's "Details (unverändert)" block used
+          // to show — same payload, same completeness, collapsed and at the bottom.
+          <ValidationErrorList report={batched} raw={result.error.details} />
+        ) : (
+          <>
+            <ErrorPanel error={result.error} />
+            {/*
+              A report with no blocking problem, beside a refusal that is not about the delivery —
+              the anonymisation gate raises on a file the validator itself calls valid. The panel
+              names that refusal; the list is here for the warnings and the preview, which are the
+              only thing in the report and would otherwise be dropped. No `raw`: the panel's own
+              "Details (unverändert)" block is already showing it.
+            */}
+            {validation ? <ValidationErrorList report={validation} /> : null}
+          </>
+        )
+      ) : null}
 
       {result?.kind === "report" ? (
         <>

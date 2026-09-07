@@ -32,6 +32,15 @@
   Position 1 is worth a note: 3.5 IS the legal maximum for Abschnitt B, so it is not too high —
   it just may not be charged without a written reason. An earlier draft of this file called it
   "above the maximum", and the audit correctly disagreed.
+
+  Position 6 carries the ONE deliberate error its line above describes and no other. <punktwert>
+  is written in EUROS — 0.0582873 — because that is the unit PADnext uses for currency amounts,
+  the same one <einzelbetrag> and <gesamtbetrag> use. An earlier draft wrote 5.82873, the figure
+  § 5 Abs. 1 Satz 3 GOÄ quotes in CENTS, and that gave this position a second, undocumented
+  error: 180 × 2.3 × 5.82873 is 2413.09, not the 26.81 the same element claims. The gesamtbetrag
+  was computed from the euro value all along (200 × 2.3 × 0.0582873 = 26.81, with the catalog's
+  punktzahl), so the euro spelling is the one this file always meant. Both spellings are accepted
+  by the audit — see the block comment above `punktwert_matches` in app/padnext/audit.py.
 -->
 <rechnungen anzahl="1"
             echtdaten="false"
@@ -113,7 +122,7 @@
           <zusatztext>Kniegelenk rechts</zusatztext>
           <faktor>2.3</faktor>
           <punktzahl>180</punktzahl>
-          <punktwert>5.82873</punktwert>
+          <punktwert>0.0582873</punktwert>
           <gesamtbetrag>26.81</gesamtbetrag>
         </goziffer>
 

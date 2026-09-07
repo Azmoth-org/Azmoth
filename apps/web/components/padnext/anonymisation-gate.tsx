@@ -71,12 +71,20 @@ export function AnonymisationGate({
             aria-describedby="anonymisation-consequence"
           />
           <Label
+            // `block` and `break-words` override the primitive, and they are what keeps this
+            // screen inside a 390 px viewport. `Label` is `flex items-center` — right for a word
+            // beside a control, wrong for a paragraph: a flex item will not shrink below its
+            // content's intrinsic width, so this sentence and the unbreakable
+            // `scripts/anonymize_padnext.py` below laid the gate out 471 px wide and put a
+            // scrollbar on the whole page, before anything had even been uploaded.
             htmlFor="anonymisation-confirmed"
-            className="text-xs leading-relaxed font-normal"
+            className="block min-w-0 text-xs leading-relaxed font-normal break-words"
           >
             Ich bestätige, dass ich diese Datei mit dem
             Azmoth-Anonymisierungsskript{" "}
-            <code className="font-mono">scripts/anonymize_padnext.py</code>{" "}
+            <code className="font-mono break-all">
+              scripts/anonymize_padnext.py
+            </code>{" "}
             erzeugt habe und dass sie keine Patientendaten mehr enthält —
             insbesondere keinen Namen, keine Anschrift, kein Geburtsdatum und
             keine Versichertennummer. Das Hochladen echter Patientendaten ist

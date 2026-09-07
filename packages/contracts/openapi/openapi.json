@@ -3097,6 +3097,308 @@
         "title": "PadnextFinding",
         "type": "object"
       },
+      "PadnextParsedPreview": {
+        "additionalProperties": false,
+        "description": "What could be read out of the document, whether or not it validated.\n\nPresent on a failure as well as a success, and that is the point: \"3 Rechnungen, 47 Positionen,\nein Feld fehlt\" and \"die Datei ist kaputt\" call for different next actions from the person\nholding the file, and only one of them is true.\n\nNothing here is trusted for anything. No amount, no verdict and no total is computed from it —\nit is a description of the file, not a reading of it, and the audit recomputes everything from\nthe catalog regardless (see the module docstring).",
+        "properties": {
+          "case_count": {
+            "default": 0,
+            "title": "Case Count",
+            "type": "integer"
+          },
+          "container_members": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Container Members",
+            "type": "array"
+          },
+          "date_range": {
+            "default": "",
+            "title": "Date Range",
+            "type": "string"
+          },
+          "declaration_line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declaration Line"
+          },
+          "echtdaten_declared": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Echtdaten Declared"
+          },
+          "first_invoice": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Invoice"
+          },
+          "first_service_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Service Date"
+          },
+          "invoice_count": {
+            "default": 0,
+            "title": "Invoice Count",
+            "type": "integer"
+          },
+          "invoice_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Invoice Ids",
+            "type": "array"
+          },
+          "last_service_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Service Date"
+          },
+          "nachrichtentyp": {
+            "default": "",
+            "title": "Nachrichtentyp",
+            "type": "string"
+          },
+          "other_position_count": {
+            "default": 0,
+            "title": "Other Position Count",
+            "type": "integer"
+          },
+          "position_count": {
+            "default": 0,
+            "title": "Position Count",
+            "type": "integer"
+          },
+          "recovered": {
+            "default": false,
+            "title": "Recovered",
+            "type": "boolean"
+          },
+          "transfernr": {
+            "default": "",
+            "title": "Transfernr",
+            "type": "string"
+          },
+          "version": {
+            "default": "",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "title": "PadnextParsedPreview",
+        "type": "object"
+      },
+      "PadnextValidationIssue": {
+        "additionalProperties": false,
+        "description": "One problem with a delivery: what, where, why it matters, and how to fix it.\n\nEvery text field is German first. `message_en` and `fix_en` are the English halves and may be\nempty — the reader's own findings (`padnext_position_without_ziffer` and its siblings) exist\nonly in German, and a machine translation of a legal-adjacent message is worse than a client\nfalling back to the German it already has to render.\n\n`severity` and `blocking` are separate, and the gap is this engine's central rule made\nvisible: a position that cannot be checked is `severity=\"error\"` and `blocking=false`, because\nrefusing the delivery over it would refuse exactly the export most worth auditing.",
+        "properties": {
+          "blocking": {
+            "default": true,
+            "title": "Blocking",
+            "type": "boolean"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "command": {
+            "default": "",
+            "title": "Command",
+            "type": "string"
+          },
+          "field": {
+            "default": "",
+            "title": "Field",
+            "type": "string"
+          },
+          "fix": {
+            "default": "",
+            "title": "Fix",
+            "type": "string"
+          },
+          "fix_en": {
+            "default": "",
+            "title": "Fix En",
+            "type": "string"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "location": {
+            "default": "",
+            "title": "Location",
+            "type": "string"
+          },
+          "message_de": {
+            "default": "",
+            "title": "Message De",
+            "type": "string"
+          },
+          "message_en": {
+            "default": "",
+            "title": "Message En",
+            "type": "string"
+          },
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          },
+          "severity": {
+            "default": "error",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "summary_de": {
+            "default": "",
+            "title": "Summary De",
+            "type": "string"
+          },
+          "summary_en": {
+            "default": "",
+            "title": "Summary En",
+            "type": "string"
+          },
+          "why_de": {
+            "default": "",
+            "title": "Why De",
+            "type": "string"
+          },
+          "why_en": {
+            "default": "",
+            "title": "Why En",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "PadnextValidationIssue",
+        "type": "object"
+      },
+      "PadnextValidationReport": {
+        "additionalProperties": false,
+        "description": "Every problem with one delivery, in one answer.\n\n`status` distinguishes the two failures that need different words: `parse_failed` means the\nbytes are not a document, so the preview is a floor and nothing else was checked;\n`validation_failed` means the document was read and its contents are refused.\n\nThe two counts are the honest totals. `errors` and `warnings` are capped\n(`app.padnext.validation.MAX_REPORTED_ISSUES`) because a systematic export mistake produces\none issue per position, and `*_omitted` says how many did not fit.",
+        "properties": {
+          "error_count": {
+            "default": 0,
+            "title": "Error Count",
+            "type": "integer"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/PadnextValidationIssue"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "errors_omitted": {
+            "default": 0,
+            "title": "Errors Omitted",
+            "type": "integer"
+          },
+          "parsed_preview": {
+            "$ref": "#/components/schemas/PadnextParsedPreview"
+          },
+          "schema_policy": {
+            "default": "strict",
+            "title": "Schema Policy",
+            "type": "string"
+          },
+          "source_name": {
+            "default": "",
+            "title": "Source Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "valid",
+              "validation_failed",
+              "parse_failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "warning_count": {
+            "default": 0,
+            "title": "Warning Count",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/PadnextValidationIssue"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "warnings_omitted": {
+            "default": 0,
+            "title": "Warnings Omitted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "PadnextValidationReport",
+        "type": "object"
+      },
       "Patient": {
         "additionalProperties": false,
         "properties": {
@@ -5854,6 +6156,60 @@
           }
         },
         "summary": "Padnext Batch Report Pdf",
+        "tags": [
+          "padnext"
+        ]
+      }
+    },
+    "/api/v1/padnext/validate": {
+      "post": {
+        "description": "Prüft eine PADnext-Lieferung auf Lesbarkeit, ohne sie zu bewerten.\n\nAntwortet mit `200` und einer vollständigen Liste aller Fehler und Hinweise — auch dann, wenn\ndie Lieferung abgewiesen würde. Zu jedem Punkt: Feld, Zeile, XML-Pfad, warum es wichtig ist\nund wie es behoben wird, auf Deutsch und auf Englisch. `parsed_preview` zeigt zusätzlich, was\naus der Datei gelesen werden konnte.\n\n---\n\nThe dry run. Same checks as `POST /padnext/audit`, no rules engine, no report, nothing stored,\nand — the point — **no error status**: a delivery with three problems answers `200` with three\nproblems in the body rather than a `422` naming one of them. `status` says which way it went\n(`valid`, `validation_failed`, `parse_failed`) and `error_count` is the number to branch on.\n\nWhy a `200` for a file that would be refused: this endpoint's answer is not \"your request\nfailed\", it is \"here is the state of your file\". A client that has to distinguish \"the\nvalidation ran and found four things\" from \"the validation itself could not run\" needs those\nto be different statuses, and collapsing them into `422` would take that distinction away —\nwhich is exactly the problem `/audit` has to live with, because there a refusal genuinely is\na failed request.\n\n**Cheap on purpose.** No quota is consumed, no usage row is written and Soufflé is never\nstarted, so a practice can iterate on a broken export profile without paying per attempt and\nwithout the pilot's invoice counter drifting away from the number of audits actually run. It\nis a plain `def` because there is nothing to await; FastAPI dispatches it to the threadpool,\nand the work is one XSD validation plus two parses.\n\nThe only failures it can answer with are `EMPTY_REQUEST_BODY` (400) and `REQUEST_TOO_LARGE`\n(413, from the middleware) — everything about the *delivery* arrives in the body.",
+        "operationId": "padnext_validate_api_v1_padnext_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "contentMediaType": "application/octet-stream",
+                "default": "",
+                "title": "Body",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PadnextValidationReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "Padnext Validate",
         "tags": [
           "padnext"
         ]

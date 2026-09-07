@@ -18,6 +18,16 @@ Shape, from the PADneXt 2.12 specification (PADline GmbH / PVS-Verband, namespac
               datum, anzahl, text, faktor | einzelbetrag, begruendung,
               minderungssatz, punktzahl, punktwert, gesamtbetrag
 
+**Units.** Every monetary leaf here is in EUROS — `einzelbetrag`, `gesamtbetrag` and, the one that
+is easy to get wrong, `punktwert`. § 5 Abs. 1 Satz 3 GOÄ states the Punktwert in *cents*
+(5,82873 Cent), so the file's `0.0582873` and the catalog's `punktwert_cent` are the same value in
+two units and comparing them without converting finds them different. The evidence that euros is
+the file's unit is the position's own arithmetic — `punktzahl × faktor × punktwert = gesamtbetrag`
+holds to the cent for a euro reading and is off by 100 for a cent one — and the subset XSD cannot
+settle it, because every numeric leaf there is `xs:string` (divergence 2 in its header). This
+reader parses the value and converts nothing; `app.padnext.audit.punktwert_matches` owns the
+comparison and the full reasoning.
+
 This is a reader for the subset that affects whether a position is chargeable and what it should
 cost. It is **not** a conforming PADnext implementation. Anything it does not understand becomes a
 finding rather than being dropped — the same rule the GOÄ importer follows.
@@ -37,6 +47,14 @@ same footing for the day a real export is 99 % conforming. See `app/padnext/sche
 
 Encrypted payloads (`verschluesselung/@verfahren` other than 0 — the spec uses PKCS#7) are reported
 as unsupported rather than half-handled.
+
+**This module raises on the first fatal problem, and `app.padnext.validation` is the reason that is
+still the right shape.** The audit pipeline has nothing useful to do with a half-read delivery, so
+refusing early is correct here. What a *person* holding the file needs is every problem at once —
+three export mistakes are one editing session, and discovering them one upload at a time is three
+round trips. `validation.validate_bytes` therefore runs these same checks in this same order and
+collects instead of raising, calling this function for the reading itself rather than repeating it.
+The API paths go through that; nothing about how a valid delivery is read has changed.
 """
 
 from __future__ import annotations
@@ -279,10 +297,14 @@ def parse_xml(data: bytes) -> ElementTree.Element:
         ) from exc
 
 
-def _unpack_container(data: bytes, findings: list[Warning_]) -> tuple[bytes | None, list[str]]:
+def unpack_container(data: bytes, findings: list[Warning_]) -> tuple[bytes | None, list[str]]:
     """Pull the payload XML out of a `.padx` ZIP, reading the order file for context.
 
     Returns (payload_bytes_or_None, member_names).
+
+    Public because `app.padnext.validation` unpacks the same container in order to report on it
+    without reading it. Two implementations of *which member is the payload* would eventually
+    disagree about which file was audited, and that is the one disagreement nobody would notice.
     """
     try:
         archive = zipfile.ZipFile(io.BytesIO(data))
@@ -309,7 +331,7 @@ def _unpack_container(data: bytes, findings: list[Warning_]) -> tuple[bytes | No
 
         lowered = name.lower()
         if lowered.endswith(".auf") or lowered.endswith("_auf.xml"):
-            continue  # the order file; handled by the caller via _read_order_file
+            continue  # the order file; handled by the caller via read_order_files
         if PADX_NAME.match(name) or lowered.endswith("_padx.xml"):
             payload = archive.read(info)
         elif lowered.endswith(".xml") and payload is None:
@@ -328,20 +350,27 @@ def _unpack_container(data: bytes, findings: list[Warning_]) -> tuple[bytes | No
     return payload, members
 
 
-def _read_order_file(data: bytes, findings: list[Warning_]) -> dict:
-    """Whatever the `auftrag` root tells us. Only ever used for context, never for billing."""
+def _read_order_file(
+    data: bytes, findings: list[Warning_], *, root: ElementTree.Element | None = None
+) -> dict:
+    """Whatever the `auftrag` root tells us. Only ever used for context, never for billing.
+
+    `root` short-circuits the parse for a caller that already has the element — the validator,
+    which reaches here holding an order file that was uploaded on its own.
+    """
     info: dict = {}
-    try:
-        root = parse_xml(data)
-    except PadnextError as exc:
-        findings.append(
-            Warning_(
-                type="padnext_order_file_unreadable",
-                severity="warning",
-                message=f"Auftragsdatei konnte nicht gelesen werden: {exc}",
+    if root is None:
+        try:
+            root = parse_xml(data)
+        except PadnextError as exc:
+            findings.append(
+                Warning_(
+                    type="padnext_order_file_unreadable",
+                    severity="warning",
+                    message=f"Auftragsdatei konnte nicht gelesen werden: {exc}",
+                )
             )
-        )
-        return info
+            return info
 
     if _local(root.tag) != "auftrag":
         return info
@@ -373,6 +402,68 @@ def _read_order_file(data: bytes, findings: list[Warning_]) -> dict:
             )
         )
     return info
+
+
+def read_order_files(
+    data: bytes,
+    findings: list[Warning_],
+    *,
+    root: ElementTree.Element | None = None,
+) -> dict:
+    """The order file's declarations, from a `.padx` container's bytes or from a parsed root.
+
+    Extracted from `read_delivery` so that `app.padnext.validation` learns `@echtdaten`, the
+    transfer number and the encryption method from the same code the audit does. The alternative
+    was for the validator to walk the archive itself, and the failure mode of that is a validator
+    that reports on a different `<auftrag>` than the one the audit believed — a disagreement about
+    whether a delivery holds real patients is not a disagreement to leave to two implementations.
+
+    Returns `{}` when there is no order file: a bare `*_padx.xml` is a supported upload.
+    """
+    if root is not None:
+        return _read_order_file(b"", findings, root=root)
+    if data[:4] != ZIP_MAGIC:
+        return {}
+    archive = zipfile.ZipFile(io.BytesIO(data))
+    for info in archive.infolist():
+        name = Path(info.filename).name.lower()
+        if name.endswith(".auf") or name.endswith("_auf.xml"):
+            return _read_order_file(archive.read(info), findings)
+    return {}
+
+
+def resolve_echtdaten(
+    root: ElementTree.Element, order: dict
+) -> tuple[bool | None, str | None]:
+    """Where the anonymisation declaration comes from. Returns `(parsed, as_written)`.
+
+    The order file first, because that is where the PADnext specification puts `@echtdaten` and a
+    container that has one is the authoritative case.
+
+    Then the payload root, which the specification does NOT define an `@echtdaten` for — it is an
+    extension, permitted by the subset schema's `xs:anyAttribute` on `<rechnungen>`, and it exists
+    for one situation: a BARE `*_padx.xml` uploaded without its order file. That is a supported
+    input (the API takes either) and it has no `<auftrag>` to carry the flag, so before this it
+    could not declare anything at all. Since an undeclared delivery is refused, "cannot declare"
+    would have meant "can never be audited", which would have removed a working path rather than
+    securing one. `scripts/anonymize_padnext.py` writes the attribute in both places.
+
+    The order file wins where both are present and disagree. It is the document the sending system
+    signs the delivery with, and a payload that contradicts it is not a tie to break in the
+    payload's favour.
+
+    Its own function so that the reader and the validator cannot come to different conclusions
+    about the same file — see `app.padnext.validation`, which needs the answer before, and
+    independently of, a successful read.
+    """
+    declared = order.get("echtdaten_declared")
+    if declared is not None:
+        return order.get("echtdaten"), declared
+
+    raw_root = root.get("echtdaten")
+    if raw_root is not None and raw_root.strip():
+        return parse_echtdaten(raw_root), raw_root.strip()
+    return None, None
 
 
 def _parse_position(
@@ -553,14 +644,9 @@ def read_delivery(
     payload = data
 
     if data[:4] == ZIP_MAGIC:
-        extracted, members = _unpack_container(data, findings)
+        extracted, members = unpack_container(data, findings)
         # Read the order file separately so its echtdaten flag and encryption notice survive.
-        archive = zipfile.ZipFile(io.BytesIO(data))
-        for info in archive.infolist():
-            name = Path(info.filename).name.lower()
-            if name.endswith(".auf") or name.endswith("_auf.xml"):
-                order = _read_order_file(archive.read(info), findings)
-                break
+        order = read_order_files(data, findings)
         if extracted is None:
             raise PadnextError(
                 "container holds no payload XML. Expected a member named "
@@ -620,29 +706,10 @@ def read_delivery(
 
     declared_invoices = _int(root.get("anzahl", ""), field="rechnungen/@anzahl", findings=findings)
 
-    # ── Where the anonymisation declaration comes from ────────────────────────────────────────
-    #
-    # The order file first, because that is where the PADnext specification puts `@echtdaten` and
-    # a container that has one is the authoritative case.
-    #
-    # Then the payload root, which the specification does NOT define an `@echtdaten` for — it is an
-    # extension, permitted by the subset schema's `xs:anyAttribute` on `<rechnungen>`, and it exists
-    # for one situation: a BARE `*_padx.xml` uploaded without its order file. That is a supported
-    # input (the API takes either) and it has no `<auftrag>` to carry the flag, so before this it
-    # could not declare anything at all. Now that an undeclared delivery is refused, "cannot
-    # declare" would have meant "can never be audited", which would have removed a working path
-    # rather than securing one. `scripts/anonymize_padnext.py` writes the attribute in both places.
-    #
-    # The order file wins where both are present and disagree. It is the document the sending
-    # system signs the delivery with, and a payload that contradicts it is not a tie to break in
-    # the payload's favour.
-    declared = order.get("echtdaten_declared")
-    echtdaten = order.get("echtdaten")
-    if declared is None:
-        raw_root = root.get("echtdaten")
-        if raw_root is not None and raw_root.strip():
-            declared = raw_root.strip()
-            echtdaten = parse_echtdaten(raw_root)
+    # Where the anonymisation declaration comes from — the order file first, the payload root
+    # second, and why each of those is the case: `resolve_echtdaten`. Extracted so that the
+    # validator reaches the same answer from the same code.
+    echtdaten, declared = resolve_echtdaten(root, order)
 
     delivery = PadnextDelivery(
         nachrichtentyp=nachrichtentyp,

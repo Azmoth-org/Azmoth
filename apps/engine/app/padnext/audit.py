@@ -185,6 +185,102 @@ def real_data_allowed(settings: Settings | None = None) -> bool:
     return bool((settings or get_settings()).padnext_allow_real_data)
 
 
+# ==============================================================================================
+# the unit of `<punktwert>`, and why it needs converting
+# ==============================================================================================
+#
+# **The file writes euros. The law states cents. Both are true and they are not the same number.**
+#
+# `§ 5 Abs. 1 Satz 3 GOÄ` fixes the Punktwert at *5,82873 Cent*, and that is the figure the catalog
+# carries as `punktwert_cent` — correctly, with that citation. A PADnext `<punktwert>` leaf is a
+# different thing: it is a **currency amount**, sitting beside `<einzelbetrag>` and
+# `<gesamtbetrag>` in the same position, and those are euros. So a conforming export writes
+# `0.0582873`, and comparing it to `5.82873` without converting compares a euro amount to a cent
+# amount and finds them different — which they are, dimensionally, while denoting the same value.
+#
+# The evidence that euros is the file's unit is the document's own arithmetic. PADnext carries
+# `punktzahl`, `faktor` and `gesamtbetrag` on the same element, and the identity
+#
+#     punktzahl × faktor × punktwert = gesamtbetrag
+#
+# holds exactly, to the cent, for every position of an export that writes `0.0582873` — and is off
+# by a factor of 100 for one that writes `5.82873`. `gesamtbetrag` is unambiguously euros (a
+# two-decimal amount a practice puts on an invoice), so `punktwert` is euros too, or the position
+# does not multiply out. `tests/test_padnext_punktwert.py::test_the_spec_unit_is_the_one_the_file_s
+# _own_arithmetic_uses` asserts that identity against the bundled examples rather than trusting
+# this comment.
+#
+# **What went wrong, and what it cost.** The check was `position.punktwert != catalog.punktwert_cent`
+# with no conversion. Every position of every conforming delivery therefore raised
+# `padnext_punktwert_mismatch` — five identical warnings on a five-position invoice, saying a value
+# deviates from a value it is exactly equal to. On an otherwise clean invoice they were the *only*
+# findings, so the entire report was noise. A findings list that is wrong on the files it is
+# quietest about is worse than no findings list: it teaches a reader that findings can be ignored,
+# and the next one will be.
+#
+# **Both spellings are accepted, deliberately.** `0.0582873` is the spec unit and the primary
+# reading. `5.82873` is also treated as a match, because it denotes the identical legal value, some
+# exporters write it (this repository's own bundled fixture did), and refusing to recognise it
+# would re-introduce the false positive for those senders. That tolerance costs nothing real: this
+# is a **control field**, and the money is never taken from it. Every euro on the report is
+# recomputed from the versioned catalog, and a genuinely wrong amount is caught by
+# `padnext_amount_mismatch` against that recomputation — see `_recompute`. So the worst a tolerated
+# spelling can do is fail to raise a *warning* about a field whose value did not enter any total.
+
+#: Cents per euro. Named because it appears in a currency conversion, where a bare `100` beside a
+#: `Decimal` is the kind of literal that gets "simplified" into a float by someone in a hurry.
+CENT_PER_EURO = Decimal("100")
+
+
+def punktwert_in_cent(claimed: Decimal) -> Decimal:
+    """The file's `<punktwert>` expressed in cents, so it is comparable to the catalog's figure.
+
+    `Decimal` throughout and never a float. Scaling a decimal fraction by 100 in binary floating
+    point is not reliably exact — `0.058 * 100` is `5.800000000000001` and `0.29 * 100` is
+    `28.999999999999996` — so a float version of this reinstates the very false positive it exists
+    to remove, for some punktwert values and not others, with a mismatch of 1e-15 in the message.
+    (Today's figure happens to survive the round trip; that is luck, not a property to rely on, and
+    the Punktwert is a number the legislator can change.)
+    """
+    return claimed * CENT_PER_EURO
+
+
+def punktwert_matches(claimed: Decimal, catalog_cent: Decimal) -> bool:
+    """Whether a file's `<punktwert>` denotes the legal Punktwert, under either spelling.
+
+    Euros first, because that is the specification's unit (see the block comment above). Cents
+    second, as a documented tolerance for exporters that write the figure the GOÄ text quotes.
+    """
+    return punktwert_in_cent(claimed) == catalog_cent or claimed == catalog_cent
+
+
+def _plain(amount: Decimal) -> str:
+    """A `Decimal` without an exponent, so a message never reads `5.82873E+0`.
+
+    `Decimal("0.0582873") * 100` normalises to `5.828730` and `Decimal("58.2873E-1")` is a valid
+    spelling of the same number; `str()` on either is not what a practice should be shown.
+    """
+    return f"{amount.normalize():f}"
+
+
+def describe_punktwert_mismatch(claimed: Decimal, catalog_cent: Decimal) -> str:
+    """The message, stating the expected value in BOTH units and naming which one is expected.
+
+    The old text said only "weicht vom gesetzlichen Punktwert 5.82873 ct ab", which is what made
+    the false positive unreadable: a sender looking at `0.0582873` in their own file and `5.82873`
+    in the message had no way to tell that the two were the same number in different units, or
+    which unit was wanted. Naming the expected euro figure first, with the cent figure beside it,
+    answers both questions in one line.
+    """
+    euro = (catalog_cent / CENT_PER_EURO).normalize()
+    return (
+        f"punktwert {_plain(claimed)} weicht vom gesetzlichen Punktwert ab. Erwartet wird "
+        f"{_plain(euro)} — PADnext führt den Punktwert in EURO, wie einzelbetrag und "
+        f"gesamtbetrag (§ 5 Abs. 1 Satz 3 GOÄ nennt ihn als {_plain(catalog_cent)} Cent; "
+        f"beide Schreibweisen bezeichnen denselben Wert und werden akzeptiert)."
+    )
+
+
 def _as_finding(warning: Warning_, *, positionsnr: str | None = None) -> PadnextFinding:
     return PadnextFinding(
         type=warning.type,
@@ -755,6 +851,19 @@ def audit_delivery(
     #: `confirmed_wrong`.
     blocking_rule_id: dict[int, str] = {}
 
+    #: Positions whose `<punktwert>` matches neither spelling of the legal figure, keyed by the
+    #: value they wrote. Accumulated instead of reported, and emitted as ONE finding per distinct
+    #: value after the loop.
+    #:
+    #: `punktwert` is a property of the fee schedule, not of a position: an export writes the same
+    #: figure on every line, so a wrong one is wrong on every line. Reported per position it
+    #: produced N copies of a single sentence — five on a five-position invoice, forty-seven on a
+    #: real one — which is not five problems described five times but one problem, described in a
+    #: way that buries every other finding on the report. `punktzahl` is deliberately NOT collapsed
+    #: the same way: that value is per-Ziffer and each mismatch is a different claim about a
+    #: different service, so those really are N findings.
+    punktwert_offenders: dict[Decimal, list[str]] = {}
+
     for position in claimed:
         entry = catalog.get(position.ziffer)
         row = PadnextAuditedPosition(
@@ -1022,21 +1131,13 @@ def audit_delivery(
                 )
             )
 
-        if position.punktwert is not None and position.punktwert != catalog.punktwert_cent:
-            findings.append(
-                PadnextFinding(
-                    type="padnext_punktwert_mismatch",
-                    severity="warning",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=(
-                        f"punktwert {position.punktwert} weicht vom gesetzlichen Punktwert "
-                        f"{catalog.punktwert_cent} ct ab."
-                    ),
-                    legal_basis="§ 5 Abs. 1 Satz 3 GOÄ",
-                    claimed=str(position.punktwert),
-                    recomputed=str(catalog.punktwert_cent),
-                )
+        # Converted before comparing, and collected rather than reported — see `punktwert_matches`
+        # and `punktwert_offenders` for the two separate bugs that made this three lines longer.
+        if position.punktwert is not None and not punktwert_matches(
+            position.punktwert, catalog.punktwert_cent
+        ):
+            punktwert_offenders.setdefault(position.punktwert, []).append(
+                position.positionsnr
             )
 
         if position.is_analog:
@@ -1056,6 +1157,35 @@ def audit_delivery(
             )
 
         audited.append(row)
+
+    # ── the collapsed punktwert finding ───────────────────────────────────────────────────────
+    #
+    # One finding per distinct wrong value, carrying the positions it was written on, instead of
+    # one per position. Emitted here rather than inside the loop because the sentence is about the
+    # delivery's fee-schedule constant, and a per-position copy of it is the same sentence N times.
+    #
+    # `positionsnr` is left unset on purpose: the field names *one* position, and this finding is
+    # about several. Naming the first of them would make the other forty-six invisible to a reader
+    # who filters by position, which is worse than a finding that honestly belongs to the invoice.
+    # The list goes in the message, where it can say how many there are.
+    for value, affected in punktwert_offenders.items():
+        where = (
+            f"Betroffen: alle {len(affected)} Positionen."
+            if len(affected) == len(goae)
+            else f"Betroffen: {len(affected)} Position(en) — {', '.join(affected[:20])}"
+            + (" …" if len(affected) > 20 else "")
+        )
+        findings.append(
+            PadnextFinding(
+                type="padnext_punktwert_mismatch",
+                severity="warning",
+                ziffer=None,
+                message=f"{describe_punktwert_mismatch(value, catalog.punktwert_cent)} {where}",
+                legal_basis="§ 5 Abs. 1 Satz 3 GOÄ",
+                claimed=_plain(value),
+                recomputed=_plain((catalog.punktwert_cent / CENT_PER_EURO).normalize()),
+            )
+        )
 
     # A line is billable as claimed only if the rules kept it AND nothing else about it is wrong.
     # Computing this after the loop is deliberate: an error finding can be raised about a position
