@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Golden case B: a VERIFIED one-way exclusion fires.
+
+     excl_auto_34_4 (data/rules/exclusions.csv, verified=true, direction=one_way):
+     if GOÄ 34 is charged, GOÄ 4 is not chargeable beside it. Legal basis: GOÄ Anmerkung zu
+     Nummer 4. No rule in the table names the reverse direction, which is what
+     logic/datalog/goae_rules.dl LAYER 3 requires before it will decide a direction.
+
+     Synthetic data throughout: echtdaten="0". -->
+<rechnungen anzahl="1" echtdaten="0"
+            xmlns="http://padinfo.de/ns/pad"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://padinfo.de/ns/pad http://www.padinfo.de/ns/pad/padx_adl_v2.13.xsd">
+  <nachrichtentyp version="02.13">ADL</nachrichtentyp>
+  <rechnungsersteller>
+    <name>Testpraxis Golden B</name>
+    <kundennr>123456</kundennr>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <iknr>912345678</iknr>
+  </rechnungsersteller>
+  <leistungserbringer id="01">
+    <anrede>Herr</anrede>
+    <titel>Dr. med.</titel>
+    <vorname>Test</vorname>
+    <name>Arzt</name>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <lanr>123456789</lanr>
+  </leistungserbringer>
+  <rechnung id="GOLDEN-B-0001" aisrechnungsnr="GOLDEN-B-0001">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Herr</anrede>
+        <vorname>Test</vorname>
+        <name>Testperson</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Testweg</strasse>
+            <hausnr>2</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="T-000001">
+        <anrede>Herr</anrede>
+        <vorname>Test</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Herr</anrede>
+        <vorname>Test</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+      </versicherter>
+      <positionen posanzahl="2">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="34">
+          <datum>2026-09-01</datum>
+          <anzahl>1</anzahl>
+          <text>Erörterung der Auswirkungen einer Krankheit auf die Lebensgestaltung</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>300</punktzahl>
+          <gesamtbetrag>40.22</gesamtbetrag>
+        </goziffer>
+        <goziffer positionsnr="2" go="GOÄ" ziffer="4">
+          <datum>2026-09-01</datum>
+          <anzahl>1</anzahl>
+          <text>Erhebung der Fremdanamnese über einen Kranken</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>220</punktzahl>
+          <gesamtbetrag>29.49</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

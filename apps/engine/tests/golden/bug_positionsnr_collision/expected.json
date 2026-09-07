@@ -1,0 +1,89 @@
+{
+  "case": "bug_positionsnr_collision",
+  "delivery": "delivery_padx.xml",
+  "http_status": 200,
+  "report": {
+    "invoice_ids": [
+      "GOLDEN-C-0001",
+      "GOLDEN-C-0002"
+    ],
+    "echtdaten_declared": "0",
+    "catalog_version": "goae_official_snapshot_2026-07-25",
+    "claimed_total_eur": "76.93",
+    "recomputed_total_eur": "76.93",
+    "comparable_claimed_eur": "76.93",
+    "arithmetic_delta_eur": "0.00",
+    "unpriceable_claimed_eur": "0.00",
+    "confirmed_fine_eur": "23.31",
+    "confirmed_wrong_eur": "53.62",
+    "unconfirmed_eur": "0.00",
+    "coverage_ratio": 1.0,
+    "finding_types": [
+      "advisory_rules_present",
+      "padnext_duplicate_ziffer",
+      "padnext_factor_above_maximum"
+    ],
+    "findings": [
+      {
+        "type": "padnext_factor_above_maximum",
+        "severity": "error",
+        "positionsnr": "1",
+        "ziffer": "440",
+        "rule_id": "cap_auto_440",
+        "legal_basis": "GOÄ Allgemeine Bestimmung"
+      },
+      {
+        "type": "padnext_duplicate_ziffer",
+        "severity": "warning",
+        "positionsnr": "1",
+        "ziffer": "440",
+        "rule_id": "",
+        "legal_basis": ""
+      },
+      {
+        "type": "advisory_rules_present",
+        "severity": "warning",
+        "positionsnr": null,
+        "ziffer": null,
+        "rule_id": "",
+        "legal_basis": ""
+      }
+    ],
+    "positions": [
+      {
+        "positionsnr": "1",
+        "ziffer": "440",
+        "punkte": 400,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "53.62",
+        "recomputed_amount_eur": "53.62",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "confirmed_wrong",
+        "blocked_by": null,
+        "verified_rule_ids": [
+          "cap_auto_440"
+        ],
+        "cited_rule_ids": [
+          "cap_auto_440"
+        ]
+      },
+      {
+        "positionsnr": "1",
+        "ziffer": "440",
+        "punkte": 400,
+        "claimed_faktor": "1.0",
+        "claimed_amount_eur": "23.31",
+        "recomputed_amount_eur": "23.31",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "confirmed_fine",
+        "blocked_by": null,
+        "verified_rule_ids": [
+          "cap_auto_440"
+        ],
+        "cited_rule_ids": []
+      }
+    ]
+  }
+}

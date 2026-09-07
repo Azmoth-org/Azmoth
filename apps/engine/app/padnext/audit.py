@@ -864,8 +864,33 @@ def audit_delivery(
     #: different service, so those really are N findings.
     punktwert_offenders: dict[Decimal, list[str]] = {}
 
+    # `errors_per_row` / `verified_defects_per_row`, below: a `PadnextFinding` names its position
+    # only by `positionsnr`, and that number is scoped by the PADnext spec to one `<abrechnungsfall>`
+    # (an invoice's case) — it is not unique across a delivery. A delivery with two invoices can
+    # legally carry two positions both numbered "1" (see `tests/golden/bug_positionsnr_collision/`),
+    # and aggregating by the bare string would let a factor-cap breach on invoice 1's position "1"
+    # convict the compliant position "1" on invoice 2, moving correctly-billed money into
+    # `confirmed_wrong_eur`. So this is keyed by `id(row)` instead — same fix, and the same reason,
+    # as `blocking_rule_id` above.
+    errors_per_row: dict[int, int] = {}
+    verified_defects_per_row: dict[int, set[str]] = {}
+
+    def _record_position_findings(row: PadnextAuditedPosition, findings_from: int) -> None:
+        """Fold every finding raised for `row` in this iteration into the two maps above.
+
+        `findings_from` is `len(findings)` as it stood before this position was processed, so
+        `findings[findings_from:]` is exactly the slice this position's checks appended — never a
+        finding belonging to another position, whatever `positionsnr` it carries.
+        """
+        for finding in findings[findings_from:]:
+            if finding.severity == "error":
+                errors_per_row[id(row)] = errors_per_row.get(id(row), 0) + 1
+            if finding.type in VERIFIED_DEFECT_FINDINGS:
+                verified_defects_per_row.setdefault(id(row), set()).add(finding.type)
+
     for position in claimed:
         entry = catalog.get(position.ziffer)
+        findings_before_position = len(findings)
         row = PadnextAuditedPosition(
             positionsnr=position.positionsnr,
             ziffer=position.ziffer,
@@ -896,6 +921,7 @@ def audit_delivery(
                 )
             )
             unpriceable_claimed += position.gesamtbetrag or Decimal("0.00")
+            _record_position_findings(row, findings_before_position)
             audited.append(row)
             continue
 
@@ -912,6 +938,7 @@ def audit_delivery(
                 )
             )
             unpriceable_claimed += position.gesamtbetrag or Decimal("0.00")
+            _record_position_findings(row, findings_before_position)
             audited.append(row)
             continue
 
@@ -1156,6 +1183,7 @@ def audit_delivery(
                 )
             )
 
+        _record_position_findings(row, findings_before_position)
         audited.append(row)
 
     # ── the collapsed punktwert finding ───────────────────────────────────────────────────────
@@ -1188,35 +1216,14 @@ def audit_delivery(
         )
 
     # A line is billable as claimed only if the rules kept it AND nothing else about it is wrong.
-    # Computing this after the loop is deliberate: an error finding can be raised about a position
-    # after its verdict is set (an illegal factor, an amount that does not recompute), and a
-    # single-pass version silently counted those euros as defensible.
-    errors_per_position: dict[str, int] = {}
-    #: positionsnr → the VERIFIED_DEFECT_FINDINGS raised against it. Collected in the same pass, so
-    #: a defect can never be counted for `accepted_as_claimed` but missed for the buckets.
-    #:
-    #: Keyed by `positionsnr`, and therefore carrying the same pre-existing limitation as
-    #: `errors_per_position` above: a `PadnextFinding` identifies its position only by that number,
-    #: which is unique within an `abrechnungsfall` but not across a multi-case delivery. Two cases
-    #: each numbering a position "1" would share both maps. De-colliding it means giving findings a
-    #: delivery-unique position key, which is an API change and out of scope here — noted rather
-    #: than silently inherited.
-    verified_defects_per_position: dict[str, set[str]] = {}
-    for finding in findings:
-        if not finding.positionsnr:
-            continue
-        if finding.severity == "error":
-            errors_per_position[finding.positionsnr] = (
-                errors_per_position.get(finding.positionsnr, 0) + 1
-            )
-        if finding.type in VERIFIED_DEFECT_FINDINGS:
-            verified_defects_per_position.setdefault(finding.positionsnr, set()).add(finding.type)
-
+    # `errors_per_row` / `verified_defects_per_row` were filled in above, inline in the position
+    # loop, keyed by `id(row)` rather than by `positionsnr` — see the comment where they are
+    # declared. Reading them back here, after the loop, is still deliberate: an error finding can be
+    # raised about a position after its verdict is set (an illegal factor, an amount that does not
+    # recompute), and a single-pass version silently counted those euros as defensible.
     defensible_total = Decimal("0.00")
     for row in audited:
-        row.accepted_as_claimed = row.verdict == "chargeable" and not errors_per_position.get(
-            row.positionsnr
-        )
+        row.accepted_as_claimed = row.verdict == "chargeable" and not errors_per_row.get(id(row))
         if row.accepted_as_claimed and row.recomputed_amount_eur is not None:
             defensible_total += row.recomputed_amount_eur
 
@@ -1256,7 +1263,7 @@ def audit_delivery(
 
         row.bucket, row.bucket_reason = classify_position(
             row,
-            verified_defects=verified_defects_per_position.get(row.positionsnr, set()),
+            verified_defects=verified_defects_per_row.get(id(row), set()),
             blocking_rule_verified=blocking_rule_verified,
             mutual_exclusion_survivor=id(row) in survivors,
         )

@@ -52,14 +52,20 @@ RUN pip install --no-cache-dir --retries 10 --timeout 120 -r requirements.txt
 COPY apps/engine/app ./app
 COPY apps/engine/scripts ./scripts
 COPY apps/engine/tests ./tests
-# The offline validator, which lives at the monorepo root because it is offered to PVS vendors as
-# `./scripts/validate_padnext.py` next to the stdlib-only `anonymize_padnext.py`. It is copied in
-# for two reasons. The suite's eleven CLI tests run it as a subprocess, and CI runs the suite only
-# inside this image — without the file they fail here while passing in every checkout, which is
-# how they were failing. And "can I try this without sending you patient data" has a better answer
-# from an operator holding the image: `docker run --rm -v "$PWD:/w" azmoth-engine
-# python scripts/validate_padnext.py /w/lieferung.padx`.
+# Two offline, stdlib-only scripts that live at the monorepo root because they are offered to PVS
+# vendors as `./scripts/validate_padnext.py` and `./scripts/anonymize_padnext.py`. Both are copied
+# in for the same two reasons. The suite runs each as a subprocess — the validator's eleven CLI
+# tests, and the golden suite's `test_case_e_anonymised_audits_to_case_a` for the anonymiser — and
+# CI runs the suite only inside this image, so without the files they fail here while passing in
+# every checkout, which is how they were failing. And "can I try this without sending you patient
+# data" has a better answer from an operator holding the image: `docker run --rm -v "$PWD:/w"
+# azmoth-engine python scripts/validate_padnext.py /w/lieferung.padx`.
 COPY scripts/validate_padnext.py ./scripts/validate_padnext.py
+COPY scripts/anonymize_padnext.py ./scripts/anonymize_padnext.py
+# The committed example the golden suite's case A is copied from — also monorepo-root, also read by
+# `test_case_a_fixture_is_the_committed_example` as a subprocess-free byte comparison. Same reasoning
+# as the two scripts above: without it, this fails in the image alone.
+COPY padnext_example ./padnext_example
 COPY apps/engine/pytest.ini ./pytest.ini
 # The migration history and its Alembic configuration are part of the image, not a dev-only
 # artefact: the container migrates itself on start (see the entrypoint), so `alembic upgrade head`
