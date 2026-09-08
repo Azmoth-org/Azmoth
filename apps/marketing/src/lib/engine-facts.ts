@@ -52,9 +52,6 @@ export const ZIFFERN_UNDER_RULE_COUNT = 358;
  */
 export const LATENCY_MS_PER_INVOICE = 80;
 
-/** Share of loaded constraint rules the engine actually enforces — "96 %". */
-export const ENFORCED_RULE_SHARE = ENFORCED_RULE_COUNT / CONSTRAINT_RULE_COUNT;
-
 /** Share of the GOÄ catalog any enforced rule speaks to — "16 %". The weak spot, stated. */
 export const CATALOG_COVERAGE_SHARE = ZIFFERN_UNDER_RULE_COUNT / CATALOG_ZIFFER_COUNT;
 
@@ -74,14 +71,13 @@ const dePercent = new Intl.NumberFormat("de-DE", {
 /**
  * The values the message catalogue interpolates, pre-formatted.
  *
- * Percentages are *computed* from the counts, not written down: "96 %" and "858 von
- * 894" are the same claim twice, and the failure mode this whole file guards against
+ * Percentages are *computed* from the counts, not written down: "16 %" and "358 von
+ * 2.192" are the same claim twice, and the failure mode this whole file guards against
  * is exactly the version where one of the two gets updated.
  */
 export const engineFacts = {
   regelnDurchgesetzt: de.format(ENFORCED_RULE_COUNT),
   regelnGesamt: de.format(CONSTRAINT_RULE_COUNT),
-  regelnAnteil: dePercent.format(ENFORCED_RULE_SHARE),
   katalogZiffern: de.format(CATALOG_ZIFFER_COUNT),
   katalogGeprueft: de.format(ZIFFERN_UNDER_RULE_COUNT),
   katalogAnteil: dePercent.format(CATALOG_COVERAGE_SHARE),

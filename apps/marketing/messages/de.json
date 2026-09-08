@@ -301,7 +301,7 @@
       "laufzeit": {
         "einheit": "ms (Median)"
       },
-      "anteile": "Das sind {regelnAnteil} der geladenen Regeln und {katalogAnteil} des GOÄ-Katalogs."
+      "anteile": "Das sind {katalogAnteil} des vollständigen GOÄ-Katalogs."
     },
     "sicherheit": {
       "eyebrow": "Sicherheit & Compliance",
