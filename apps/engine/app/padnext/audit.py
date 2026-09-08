@@ -626,6 +626,7 @@ def classify_position(
     verified_defects: set[str],
     blocking_rule_verified: bool | None,
     mutual_exclusion_survivor: bool = False,
+    cross_date_match: bool | None = None,
 ) -> tuple[PositionBucket, str]:
     """Put one audited position into one of the three buckets, and say why.
 
@@ -633,6 +634,14 @@ def classify_position(
     `blocking_rule_verified` is whether the rule that suppressed it has been human-verified —
     `None` when nothing suppressed it, or when the solver simply failed to confirm it and there is
     no rule to point at.
+
+    `cross_date_match` is `True` when this position and whatever blocked it are known to have been
+    claimed on different service dates, `False` when they are known to share one, and `None` when
+    either side's `datum` is missing and nothing can be said. "Neben" (alongside) in a GOÄ exclusion
+    is a clinical term — the two services performed at once — not an invoice-level one, and an
+    exclusion rule today matches on Ziffer alone, across the whole delivery, however far apart the
+    two claimed dates actually are. Until datum is in the fact base, cross-date matches are
+    advisory, not confirmed wrong.
 
     The order of the tests is the argument. Proof that a position is wrong comes first and is not
     softened by advisory noise. Everything that follows is a reason we *cannot* speak, and only a
@@ -653,6 +662,16 @@ def classify_position(
             "berechnungsfähig, die Rechnung lässt aber offen welche. Als teurere Position wird "
             "diese nicht als Überzahlung gewertet — der Ausschluss ist gegen die günstigere "
             "gebucht. Welche Leistung tatsächlich erbracht wurde, muss ein Mensch entscheiden."
+        )
+
+    if row.verdict == "blocked" and blocking_rule_verified and cross_date_match:
+        return "unconfirmed", (
+            f"Durch die verifizierte Regel '{row.blocked_by or 'Ausschluss'}' theoretisch "
+            "ausgeschlossen, aber die Positionen wurden an unterschiedlichen Leistungsdaten "
+            "erbracht. „Neben“ ist ein klinischer Begriff, kein rechnungsweiter — solange das "
+            "Leistungsdatum nicht in der Faktenbasis abgebildet ist, ist ein Ausschluss über "
+            "Leistungsdaten hinweg ein Hinweis, kein bestätigter Fehler. Erfordert menschliche "
+            "Prüfung."
         )
 
     if row.verdict == "blocked" and blocking_rule_verified:
@@ -791,6 +810,15 @@ def audit_delivery(
     claimed = delivery.positions()
     goae = [p for p in claimed if p.is_goae]
 
+    #: Every distinct `datum` a Ziffer was claimed on, across the whole delivery. Empty for a
+    #: Ziffer that never carried a `<datum>` at all. Read at classification time to tell a
+    #: same-date exclusion apart from one whose two positions were never billed together — see
+    #: `classify_position`.
+    datum_by_ziffer: dict[str, set[str]] = {}
+    for position in goae:
+        if position.datum:
+            datum_by_ziffer.setdefault(position.ziffer, set()).add(position.datum)
+
     seen: dict[str, str] = {}
     for position in goae:
         if position.ziffer in seen:
@@ -901,6 +929,7 @@ def audit_delivery(
             claimed_faktor=position.faktor,
             claimed_amount_eur=position.gesamtbetrag,
             punkte=entry.punkte if entry else None,
+            datum=position.datum,
         )
 
         if position.gesamtbetrag is not None:
@@ -1261,11 +1290,22 @@ def audit_delivery(
         # the suppression is real but the basis is not — `None` keeps it out of `confirmed_wrong`.
         blocking_rule_verified = rule.verified if rule is not None else None
 
+        # Whether this position and whatever blocked it are known to have been claimed on
+        # different service dates. `None` — not just "no", "unknown" — when either side's `datum`
+        # is missing, so a delivery that never states dates at all behaves exactly as it did
+        # before this field existed. Only a *known* mismatch downgrades the finding — see
+        # `classify_position`.
+        blocking_dates = datum_by_ziffer.get(row.blocked_by) if row.blocked_by else None
+        cross_date_match = (
+            row.datum not in blocking_dates if row.datum and blocking_dates else None
+        )
+
         row.bucket, row.bucket_reason = classify_position(
             row,
             verified_defects=verified_defects_per_row.get(id(row), set()),
             blocking_rule_verified=blocking_rule_verified,
             mutual_exclusion_survivor=id(row) in survivors,
+            cross_date_match=cross_date_match,
         )
         bucket_totals[row.bucket] += row.claimed_amount_eur or Decimal("0.00")
 
