@@ -1,3 +1,4 @@
+import { CalendarIcon } from "lucide-react"
 import Link from "next/link"
 
 import { AzmothMark } from "@/components/brand/azmoth-mark"
@@ -67,7 +68,8 @@ export default function DemoLayout({
               rel="noopener noreferrer"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
             >
-              Anmelden
+              Termin buchen
+              <CalendarIcon aria-hidden data-icon="inline-end" />
             </a>
             <a
               href={getCalComUrl()}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { BookOpenIcon, LayersIcon, ScaleIcon, TerminalIcon } from "lucide-react";
+import { BookOpenIcon, CalendarIcon, LayersIcon, ScaleIcon, TerminalIcon } from "lucide-react";
 
 import { Logo } from "@workspace/ui/components/logo";
 import {
@@ -227,9 +227,11 @@ export function SiteHeader({
         <div className="relative z-10 flex shrink-0 items-center gap-2">
           <ButtonLink external href={login} variant="ghost" size="sm">
             {t("anmelden")}
+            <CalendarIcon data-icon="inline-end" />
           </ButtonLink>
           <ButtonLink external href={demo} size="sm">
             {t("testen")}
+            <CalendarIcon data-icon="inline-end" />
           </ButtonLink>
         </div>
       </NavBody>
@@ -269,9 +271,11 @@ export function SiteHeader({
           <div className="mt-3 flex flex-col gap-2 border-t border-azm-hairline pt-3">
             <ButtonLink external href={login} variant="outline">
               {t("anmelden")}
+              <CalendarIcon data-icon="inline-end" />
             </ButtonLink>
             <ButtonLink external href={demo}>
               {t("testen")}
+              <CalendarIcon data-icon="inline-end" />
             </ButtonLink>
           </div>
         </MobileNavMenu>

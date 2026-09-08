@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import {
   ArrowRightIcon,
   BuildingIcon,
+  CalendarIcon,
   CheckIcon,
   CircleAlertIcon,
   CircleCheckIcon,
@@ -248,7 +249,7 @@ function Hero() {
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <ButtonLink external href={links.demo} size="lg">
               {t("ctaPrimaer")}
-              <ArrowRightIcon data-icon="inline-end" />
+              <CalendarIcon data-icon="inline-end" />
             </ButtonLink>
             <ButtonLink
               external
@@ -674,6 +675,7 @@ function Pilot() {
               </ButtonLink>
               <ButtonLink external href={links.demo} size="lg" variant="outline">
                 {t("ctaSekundaer")}
+                <CalendarIcon data-icon="inline-end" />
               </ButtonLink>
             </div>
           </Reveal>
@@ -798,7 +800,7 @@ function ClosingCta() {
             <div className="flex flex-col justify-center gap-3 sm:flex-row">
               <ButtonLink external href={links.demo} size="lg">
                 {t("primaer")}
-                <ArrowRightIcon data-icon="inline-end" />
+                <CalendarIcon data-icon="inline-end" />
               </ButtonLink>
               <ButtonLink href={routes.kontakt} size="lg" variant="outline">
                 {t("sekundaer")}

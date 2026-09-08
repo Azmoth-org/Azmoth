@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
 import { Logo } from "@workspace/ui/components/logo";
@@ -45,10 +45,10 @@ export function baseOptions(): BaseLayoutProps {
       },
       {
         type: "button",
-        text: "Anmelden",
+        text: "Termin buchen",
         url: getCalComUrl(),
         external: true,
-        icon: <ArrowUpRightIcon />,
+        icon: <CalendarIcon />,
       },
     ],
   };

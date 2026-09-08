@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { useTranslations } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { MailIcon, SendIcon } from "lucide-react";
+import { CalendarIcon, MailIcon, SendIcon } from "lucide-react";
 
 import {Card, CardContent, CardHeader} from "@workspace/ui/components/card";
 
@@ -108,6 +108,7 @@ function KontaktContent() {
             <p className="text-muted-foreground">{t("hinweisText")}</p>
             <ButtonLink external href={getProductLinks().login} variant="outline" size="sm">
               {t("hinweisCta")}
+              <CalendarIcon data-icon="inline-end" />
             </ButtonLink>
           </CardContent>
         </Card>
