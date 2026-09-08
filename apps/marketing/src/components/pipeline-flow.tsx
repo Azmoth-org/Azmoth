@@ -305,11 +305,11 @@ export function PipelineFlow() {
               {/*
                 The legal citation when there is one, and nothing when there is not.
 
-                This is the detail that makes the chips worth rendering at all. "Ziffer 5 ✗" is a
-                claim; "Ziffer 5 · § 4 Abs. 2a GOÄ" is the claim plus the thing a billing centre
-                would have to quote back to an Erstattungsstelle. The site's whole argument is
-                that the second one is what it produces, so the hero should show it rather than
-                describe it.
+                This is the detail that makes the chips worth rendering at all. "Ziffer 4 ✗" is a
+                claim; "Ziffer 4 · GOÄ Anmerkung zu Nummer 4 · excl_auto_34_4" is the claim plus the
+                thing a billing centre would have to quote back to an Erstattungsstelle. The site's
+                whole argument is that the second one is what it produces, so the hero should show
+                it rather than describe it.
               */}
               {row.grundlage ? (
                 <span className="border-l border-current/25 pl-1.5 opacity-80">

@@ -64,11 +64,11 @@
           "befund": "Keine Ausschlussregel verletzt"
         },
         {
-          "ziffer": "5",
-          "leistung": "Symptombezogene Untersuchung",
+          "ziffer": "4",
+          "leistung": "Fremdanamnese-Erhebung",
           "kategorie": "falsch",
-          "befund": "Nicht neben Ziffer 3 berechnungsfähig",
-          "grundlage": "§ 4 Abs. 2a GOÄ"
+          "befund": "Nicht neben Ziffer 34 berechnungsfähig",
+          "grundlage": "GOÄ Anmerkung zu Nummer 4 · excl_auto_34_4"
         },
         {
           "ziffer": "410",

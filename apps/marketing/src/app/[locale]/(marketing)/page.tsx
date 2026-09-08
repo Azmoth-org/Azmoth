@@ -444,7 +444,7 @@ function Buckets() {
                   */}
                   {index === 1 ? (
                     <code className="azm-tnum mt-4 inline-block rounded-md bg-azm-wrong/10 px-2 py-1 text-xs font-medium text-azm-wrong">
-                      § 4 Abs. 2a GOÄ
+                      GOÄ Anmerkung zu Nummer 4
                     </code>
                   ) : null}
                 </div>
