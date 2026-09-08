@@ -18,6 +18,7 @@ import { PositionsTable } from "@/components/padnext/positions-table"
 import { ReportProvenance } from "@/components/padnext/report-provenance"
 import { callPublicEngine } from "@/lib/engine"
 import { isAuditReportShape } from "@/lib/padnext/types"
+import { getCalComUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Demo-Prüfbericht",
@@ -130,7 +131,7 @@ export default async function DemoReportPage() {
           beschränkt.
         </p>
         <a
-          href={process.env.NEXT_PUBLIC_CAL_COM_URL}
+          href={getCalComUrl()}
           target="_blank"
           rel="noopener noreferrer"
           className={cn(buttonVariants(), "mt-4")}

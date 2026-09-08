@@ -12,6 +12,8 @@ import {
 import { Button, buttonVariants } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 
+import { getCalComUrl } from "@/lib/site"
+
 /**
  * »Mit Beispieldaten testen« — runs the public audit, then opens the report.
  *
@@ -79,7 +81,7 @@ export function StartDemoButton() {
           )}
         </Button>
         <a
-          href={process.env.NEXT_PUBLIC_CAL_COM_URL}
+          href={getCalComUrl()}
           target="_blank"
           rel="noopener noreferrer"
           className={cn(buttonVariants({ variant: "outline", size: "lg" }))}

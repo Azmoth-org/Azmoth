@@ -33,20 +33,31 @@ export function appHref(path: string): string {
 }
 
 /**
+ * Where every product-app handoff sends a visitor to book a call instead, for as long as there is
+ * no partner pipeline and no hosted app to send them to. Same idea, and the same variable, as
+ * `apps/web/lib/site.ts` and `apps/docs/lib/site.ts`.
+ */
+export function getCalComUrl(): string {
+  return process.env.NEXT_PUBLIC_CAL_COM_URL ?? "https://cal.com/azmoth";
+}
+
+/**
  * The product entry points every page links to. Server-side only.
  *
- * `demo` is the one a stranger can actually use, and it is why the hero's primary call to action
- * no longer points at `signup`. Registration is gated by `SIGNUP_ALLOWLIST` in the product app, so
- * a "Kostenlos testen" button aimed there sends most visitors to a form that refuses them — which
- * is a worse first impression than not offering it. `/demo` needs no account, takes no upload and
- * shows the real engine on a synthetic delivery; `signup` stays as the deliberate second step for
- * somebody who wants their own data audited.
+ * All three currently resolve to the Cal.com link, not the app. `demo` used to be the one a
+ * stranger could actually use — no account, no upload, the real engine on a synthetic delivery —
+ * which is why the hero's primary call to action pointed here instead of at `signup`. That
+ * reasoning holds again once the app is hosted somewhere other than `getAppUrl()`'s
+ * `localhost:3000` fallback; until then, sending a visitor to a login screen or a demo on a
+ * machine that is not listening is a worse first impression than a booking page. Swap the three
+ * bodies back to `appHref(...)` when that changes — the callers below don't.
  */
 export function getProductLinks() {
+  const calCom = getCalComUrl();
   return {
-    login: appHref("/login"),
-    signup: appHref("/signup"),
-    demo: appHref("/demo"),
+    login: calCom,
+    signup: calCom,
+    demo: calCom,
   };
 }
 

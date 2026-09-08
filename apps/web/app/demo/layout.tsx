@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { AzmothMark } from "@/components/brand/azmoth-mark"
+import { getCalComUrl } from "@/lib/site"
 
 import { buttonVariants } from "@workspace/ui/components/button"
 import { SocialLinks } from "@workspace/ui/components/social-links"
@@ -61,7 +62,7 @@ export default function DemoLayout({
 
           <div className="ml-auto flex items-center gap-2">
             <a
-              href={process.env.NEXT_PUBLIC_CAL_COM_URL}
+              href={getCalComUrl()}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
@@ -69,7 +70,7 @@ export default function DemoLayout({
               Anmelden
             </a>
             <a
-              href={process.env.NEXT_PUBLIC_CAL_COM_URL}
+              href={getCalComUrl()}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(buttonVariants({ size: "sm" }))}
