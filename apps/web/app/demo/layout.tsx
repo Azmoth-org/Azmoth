@@ -3,6 +3,7 @@ import Link from "next/link"
 import { AzmothMark } from "@/components/brand/azmoth-mark"
 
 import { buttonVariants } from "@workspace/ui/components/button"
+import { SocialLinks } from "@workspace/ui/components/social-links"
 import { cn } from "@workspace/ui/lib/utils"
 
 /**
@@ -59,15 +60,22 @@ export default function DemoLayout({
           </Link>
 
           <div className="ml-auto flex items-center gap-2">
-            <Link
-              href="/login"
+            <a
+              href={process.env.NEXT_PUBLIC_CAL_COM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
             >
               Anmelden
-            </Link>
-            <Link href="/signup" className={cn(buttonVariants({ size: "sm" }))}>
+            </a>
+            <a
+              href={process.env.NEXT_PUBLIC_CAL_COM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants({ size: "sm" }))}
+            >
               Pilot-Zugang anfordern
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -77,11 +85,14 @@ export default function DemoLayout({
       </main>
 
       <footer className="relative border-t print:hidden">
-        <div className="mx-auto w-full max-w-5xl px-4 py-6 text-xs leading-relaxed text-muted-foreground">
-          Azmoth prüft GOÄ-Abrechnungen deterministisch und ohne Sprachmodell.
-          Das Ergebnis ist ein Prüfbericht und keine Rechnung; die ärztliche und
-          abrechnungsfachliche Verantwortung bleibt beim Rechnungssteller. Diese
-          Demo verarbeitet ausschliesslich synthetische Testdaten.
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Azmoth prüft GOÄ-Abrechnungen deterministisch und ohne Sprachmodell.
+            Das Ergebnis ist ein Prüfbericht und keine Rechnung; die ärztliche und
+            abrechnungsfachliche Verantwortung bleibt beim Rechnungssteller. Diese
+            Demo verarbeitet ausschliesslich synthetische Testdaten.
+          </p>
+          <SocialLinks className="shrink-0" />
         </div>
       </footer>
     </div>

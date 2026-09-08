@@ -129,10 +129,15 @@ export default async function DemoReportPage() {
           werden. Der Zugang ist derzeit auf freigeschaltete Pilot-Teilnehmer
           beschränkt.
         </p>
-        <Link href="/signup" className={cn(buttonVariants(), "mt-4")}>
+        <a
+          href={process.env.NEXT_PUBLIC_CAL_COM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(buttonVariants(), "mt-4")}
+        >
           Mit eigenen Daten prüfen (Pilot-Zugang anfordern)
           <ArrowRightIcon aria-hidden />
-        </Link>
+        </a>
       </section>
     </>
   )

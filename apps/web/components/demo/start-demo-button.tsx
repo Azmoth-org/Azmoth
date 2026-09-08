@@ -1,7 +1,6 @@
 "use client"
 
 import { ArrowRightIcon, Loader2Icon, PlayIcon } from "lucide-react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -79,13 +78,15 @@ export function StartDemoButton() {
             </>
           )}
         </Button>
-        <Link
-          href="/signup"
+        <a
+          href={process.env.NEXT_PUBLIC_CAL_COM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
         >
           Mit eigenen Daten prüfen (Pilot-Zugang anfordern)
           <ArrowRightIcon aria-hidden />
-        </Link>
+        </a>
       </div>
 
       <p className="text-xs text-muted-foreground">

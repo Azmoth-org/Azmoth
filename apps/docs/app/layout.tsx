@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { RootProvider } from "fumadocs-ui/provider/next";
 
+import { SocialLinks } from "@workspace/ui/components/social-links";
 import { cn } from "@workspace/ui/lib/utils";
 
 import { absoluteUrl, getDocsUrl, siteConfig } from "@/lib/site";
@@ -113,6 +114,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           {children}
         </RootProvider>
+        <footer className="border-t px-4 py-6 print:hidden">
+          <div className="mx-auto flex w-full max-w-6xl justify-end">
+            <SocialLinks />
+          </div>
+        </footer>
         <Analytics />
         <SpeedInsights />
       </body>
