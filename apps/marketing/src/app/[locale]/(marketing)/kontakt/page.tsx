@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { useTranslations } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { CalendarIcon, MailIcon, SendIcon } from "lucide-react";
+import { MailIcon, SendIcon } from "lucide-react";
 
 import {Card, CardContent, CardHeader} from "@workspace/ui/components/card";
 
@@ -9,7 +9,7 @@ import { ButtonLink } from "@/components/button-link";
 import { CardHeading } from "@/components/card-heading";
 import { Section, SectionHeading } from "@/components/section";
 import { buildPageMetadata } from "@/lib/seo";
-import { getProductLinks, siteConfig } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
 
 /**
  * Contact is a mail link, not a form.
@@ -61,19 +61,20 @@ function KontaktContent() {
         as="h1"
       />
 
-      <div className="mt-10 grid max-w-4xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-10 grid max-w-2xl gap-6 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <MailIcon aria-hidden="true" className="mb-2 size-5 text-primary" />
             <CardHeading>{t("emailLabel")}</CardHeading>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col items-start gap-4">
             <a
               href={`mailto:${siteConfig.email}`}
               className="text-primary underline underline-offset-4"
             >
               {siteConfig.email}
             </a>
+            <p className="text-sm text-muted-foreground">{t("emailHinweis")}</p>
           </CardContent>
         </Card>
 
@@ -96,19 +97,6 @@ function KontaktContent() {
               size="sm"
             >
               {t("pilotCta")}
-            </ButtonLink>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardHeading>{t("hinweisTitel")}</CardHeading>
-          </CardHeader>
-          <CardContent className="flex flex-col items-start gap-4">
-            <p className="text-muted-foreground">{t("hinweisText")}</p>
-            <ButtonLink external href={getProductLinks().login} variant="outline" size="sm">
-              {t("hinweisCta")}
-              <CalendarIcon data-icon="inline-end" />
             </ButtonLink>
           </CardContent>
         </Card>

@@ -236,11 +236,9 @@ function Hero() {
         </div>
 
         {/*
-          The two tracks, in the order a stranger can actually use them. Primary is the
-          demo, which needs no account and takes no upload; secondary is the gated pilot.
-          A "kostenlos testen" button aimed at `signup` would send most visitors to a form
-          that refuses them — `SIGNUP_ALLOWLIST` gates it — which is a worse first
-          impression than not offering it.
+          One CTA, not two: `demo` and `signup` both resolve to the same Cal.com link while
+          there is no partner pipeline and no hosted app (see `getProductLinks()`), so a second
+          button here would just be the first one's text in a different shape.
         */}
         <div
           className="azm-enter mt-2 w-full sm:w-auto"
@@ -250,15 +248,6 @@ function Hero() {
             <ButtonLink external href={links.demo} size="lg">
               {t("ctaPrimaer")}
               <CalendarIcon data-icon="inline-end" />
-            </ButtonLink>
-            <ButtonLink
-              external
-              href={links.signup}
-              size="lg"
-              variant="outline"
-              className="azm-glass"
-            >
-              {t("ctaSekundaer")}
             </ButtonLink>
           </div>
         </div>
@@ -672,10 +661,6 @@ function Pilot() {
               <ButtonLink external href={links.signup} size="lg">
                 {t("cta")}
                 <ArrowRightIcon data-icon="inline-end" />
-              </ButtonLink>
-              <ButtonLink external href={links.demo} size="lg" variant="outline">
-                {t("ctaSekundaer")}
-                <CalendarIcon data-icon="inline-end" />
               </ButtonLink>
             </div>
           </Reveal>

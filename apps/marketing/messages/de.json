@@ -13,7 +13,6 @@
     "impressum": "Impressum",
     "datenschutz": "Datenschutz",
     "anmelden": "Termin buchen",
-    "testen": "Demo vereinbaren",
     "pilot": "Pilot-Zugang anfordern",
     "ablauf": "So funktioniert es",
     "entwickler": "Entwickler",
@@ -40,8 +39,7 @@
     "datenschutz": "Datenschutz",
     "kontaktLabel": "Kontakt",
     "rechte": "Alle Rechte vorbehalten.",
-    "hinweis": "Azmoth ersetzt keine ärztliche oder rechtliche Beratung.",
-    "madeInGermany": "Made in Germany"
+    "hinweis": "Azmoth ersetzt keine ärztliche oder rechtliche Beratung."
   },
   "startseite": {
     "hero": {
@@ -49,7 +47,6 @@
       "titel": "Jede Position geprüft. Jeder Befund belegt.",
       "untertitel": "Azmoth prüft PADnext-Lieferungen deterministisch gegen die GOÄ — mit Paragraph und Beweis neben jedem Befund. Kein Sprachmodell, keine Schätzung.",
       "ctaPrimaer": "Demo-Termin vereinbaren",
-      "ctaSekundaer": "Pilot-Zugang anfordern",
       "hinweis": "Ein kurzes Gespräch, keine Verpflichtung — wir zeigen Ihnen die Prüfung an einer synthetischen Beispiellieferung. Der Pilotbetrieb ist derzeit auf freigeschaltete Teilnehmer beschränkt."
     },
     "mockup": {
@@ -212,7 +209,6 @@
         "Ihr Feedback formt die Produkt-Roadmap"
       ],
       "cta": "Pilot-Zugang anfordern",
-      "ctaSekundaer": "Erst ein Demo-Gespräch vereinbaren",
       "hinweis": "Der Pilotbetrieb verarbeitet ausschließlich anonymisierte Lieferungen. Das Anonymisierungsskript läuft bei Ihnen, bevor eine Datei unser Haus erreicht.",
       "hinweisKatalog": "Hinweis für den Pilotbetrieb: Azmoth prüft Abrechnungen anhand des aktuellen GOÄ-Katalogs. Für die höchste Genauigkeit bitten wir Sie, im Pilot ausschließlich Rechnungen der letzten 6–12 Monate einzureichen."
     },
@@ -428,9 +424,7 @@
     "titel": "Kontakt",
     "untertitel": "Fragen zur Einführung, zum Regelwerk oder zur Datenhaltung? Schreiben Sie uns — eine Antwort kommt von einem Menschen.",
     "emailLabel": "E-Mail",
-    "hinweisTitel": "Bereits Kundin oder Kunde?",
-    "hinweisText": "Support-Anfragen gehen am schnellsten direkt aus der Anwendung heraus.",
-    "hinweisCta": "Gespräch buchen",
+    "emailHinweis": "Antwort in der Regel innerhalb eines Werktags.",
     "pilotTitel": "Pilot-Zugang anfordern",
     "pilotText": "Schreiben Sie uns kurz, welche Software Sie einsetzen und mit welchem Volumen Sie arbeiten. Wir melden uns mit einem Termin und dem Anonymisierungsskript.",
     "pilotCta": "Pilot-Zugang anfordern"

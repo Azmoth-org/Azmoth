@@ -127,13 +127,7 @@ export function SiteFooter() {
           <p className="azm-tnum">
             © {new Date().getFullYear()} {siteConfig.name}. {t("rechte")}
           </p>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <p>{t("hinweis")}</p>
-            <p className="flex items-center gap-1.5 font-medium text-azm-ink-secondary">
-              <span aria-hidden="true">🇩🇪</span>
-              {t("madeInGermany")}
-            </p>
-          </div>
+          <p>{t("hinweis")}</p>
         </div>
       </div>
     </footer>
