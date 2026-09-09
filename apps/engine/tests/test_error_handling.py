@@ -220,6 +220,30 @@ def test_a_delivery_no_position_of_which_is_in_the_catalog_is_422(client):
     assert details["goae_position_count"] >= 1
 
 
+def test_a_delivery_of_nothing_but_percentage_surcharges_is_not_a_catalog_mismatch(client):
+    """The refusal above must not fire on a file that is coded correctly.
+
+    Nummer 441 and 5298 are Zuschläge § 5 GOÄ states as a percentage of another Ziffer's einfacher
+    Gebührensatz, so **no** edition of the fee schedule carries a Punktzahl for them and their
+    absence from the catalog proves nothing about which edition the sender used. A correction file
+    listing only the surcharges of an earlier invoice is exactly this shape, and it used to be
+    refused 422 with "die Lieferung wurde vermutlich gegen eine andere Fassung der GOÄ kodiert" —
+    a false statement about a correct file. It now audits, and every position comes back
+    `surcharge_not_modelled`: our limit, named as ours.
+    """
+    payload = re.sub(rb'ziffer="[^"]+"', rb'ziffer="441"', VALID_DELIVERY.read_bytes())
+
+    response = post_delivery(client, payload)
+
+    assert response.status_code == 200, response.text
+    report = response.json()
+    goae = [p for p in report["positions"] if p["go"].upper() in {"GOÄ", "GOAE"}]
+    assert goae, "the fixture must still carry GOÄ lines, or this asserts nothing"
+    assert {p["verdict"] for p in goae} == {"surcharge_not_modelled"}
+    assert "padnext_unknown_ziffer" not in {f["type"] for f in report["findings"]}
+    assert report["confirmed_wrong_eur"] == "0.00"
+
+
 def test_a_delivery_with_only_some_unknown_positions_still_audits(client):
     """The other half of the rule above, and the one that protects the product decision.
 

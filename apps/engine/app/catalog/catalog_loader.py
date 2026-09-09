@@ -54,6 +54,7 @@ from app.config import (
     CATALOGS_DIR,
     DEFAULT_CATALOG_VERSION,
     OVERRIDES_FILENAME,
+    UNPARSED_ROWS_FILENAME,
 )
 from app.errors import EngineError, ErrorCode
 
@@ -234,6 +235,18 @@ class Catalog:
     special_factor_ziffern: dict[str, FactorBand] = field(default_factory=dict)
     source: CatalogSource = field(default_factory=CatalogSource)
     overrides_applied: list[dict] = field(default_factory=list)
+    #: Ziffern the official source defines as a percentage of another Ziffer's fee — Nummer 441
+    #: (Laser-Zuschlag) and Nummer 5298 (digitale Radiographie) in the current edition — mapped to
+    #: the Leistungstext printed beside them.
+    #:
+    #: These are **not** in `ziffern` and must not be: § 5 GOÄ gives them no Punktzahl at all ("…
+    #: v. H. des einfachen Gebührensatzes"), so there is no `punkte` for `Ziffer` to hold and no
+    #: amount this catalog can recompute. Nor are they missing data. The distinction they exist to
+    #: carry is the one between "this engine has no entry for that number" and "the law defines
+    #: that number as a percentage and this engine does not model surcharges" — the first is a
+    #: statement about somebody's export, the second about our own coverage, and `audit.py` used to
+    #: make the first one when only the second was true. See `is_percentage_surcharge`.
+    percentage_surcharges: dict[str, str] = field(default_factory=dict)
 
     # -- construction ----------------------------------------------------------------------
 
@@ -280,6 +293,7 @@ class Catalog:
         catalog = cls(raw=raw, path=path, routed_version=routed)
         catalog._build()
         catalog._apply_overrides(overrides_path)
+        catalog._read_percentage_surcharges(path.parent / UNPARSED_ROWS_FILENAME)
         catalog._validate()
         if catalog.is_synthetic:
             log.warning(
@@ -358,6 +372,39 @@ class Catalog:
             )
             self.overrides_applied.append(override)
 
+    def _read_percentage_surcharges(self, unparsed_path: Path) -> None:
+        """Pick the `typ: prozent_zuschlag` rows out of the importer's residue file.
+
+        Deliberately read from `unparsed_rows.json` rather than added to `goae.official.json`, and
+        the reason is provenance rather than tidiness. The importer already decided these rows and
+        already wrote down why (`PERCENTAGE_ZUSCHLAG_RE` in `scripts/import_goae.py`); copying that
+        conclusion into the catalog file would create a second place for it to be wrong, and would
+        move `catalog_sha256` — and therefore every receipt hash ever issued — for a change that
+        adds no priceable position. What a surcharge changes is a *verdict*, and verdicts are inside
+        the hashed output already, so a delivery whose GOÄ 441 is classified differently still
+        hashes differently. Nothing goes unrecorded.
+
+        Missing file, unreadable file or a row with no `ziffer`: no surcharges, no error. The
+        synthetic temporal fixtures carry no residue file at all, and a catalog that fails to load
+        because an optional annotation is absent would be a worse failure than the one this
+        prevents.
+        """
+        if not unparsed_path.exists():
+            return
+        try:
+            payload = json.loads(unparsed_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            log.warning("could not read %s, no percentage surcharges: %s", unparsed_path, exc)
+            return
+        for row in payload.get("rows", []):
+            if row.get("typ") != "prozent_zuschlag":
+                continue
+            ziffer = str(row.get("ziffer", "")).strip()
+            if not ziffer:
+                continue
+            cells = row.get("cells") or []
+            self.percentage_surcharges[ziffer] = str(cells[1]).strip() if len(cells) > 1 else ""
+
     def _validate(self) -> None:
         if not self.ziffern:
             raise CatalogError(f"catalog at {self.path} contains no Ziffern")
@@ -427,6 +474,19 @@ class Catalog:
     def get(self, ziffer: str) -> Ziffer | None:
         return self.ziffern.get(ziffer)
 
+    def is_percentage_surcharge(self, ziffer: str) -> bool:
+        """Is this Ziffer a Zuschlag the law states as a percentage of another Ziffer's fee?
+
+        True only for a Ziffer the catalog does *not* hold — a percentage Zuschlag has no Punktzahl,
+        so it is never a `Ziffer` — which is what makes this the right question to ask exactly where
+        `get()` returned `None`. See the `surcharge_not_modelled` verdict.
+        """
+        return ziffer in self.percentage_surcharges
+
+    def surcharge_text(self, ziffer: str) -> str:
+        """The Leistungstext printed beside a percentage Zuschlag, or `""`."""
+        return self.percentage_surcharges.get(ziffer, "")
+
     def is_active(self, ziffer: str) -> bool:
         entry = self.ziffern.get(ziffer)
         return entry is not None and entry.is_active
@@ -476,6 +536,7 @@ class Catalog:
                 "legal_status": self.source.legal_status,
             },
             "overrides_applied": len(self.overrides_applied),
+            "percentage_surcharges": sorted(self.percentage_surcharges),
             "text_quality_flagged": sum(
                 1 for z in self.ziffern.values() if z.text_quality != "ok"
             ),

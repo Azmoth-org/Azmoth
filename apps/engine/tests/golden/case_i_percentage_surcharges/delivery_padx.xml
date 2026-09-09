@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Golden case I: a percentage Zuschlag is unmodelled, not unknown.
+
+     One invoice, one patient: GOÄ 2440 (operative Entfernung eines Naevus flammeus) at the
+     Schwellenwert 2.3, and beside it GOÄ 441, the Zuschlag for using a laser during an ambulant
+     operative Leistung. 441 is exactly what such an invoice looks like in practice, and it is the
+     line this engine used to get wrong.
+
+     § 5 GOÄ states Nummer 441 as a percentage of another Ziffer's einfacher Gebührensatz — "… v. H.
+     des einfachen Gebührensatzes" — so the law gives it no Punktzahl, the importer has nothing to
+     import, and `data/catalogs/goae_current/unparsed_rows.json` records exactly that with
+     `typ: prozent_zuschlag` (Nummer 5298, the Zuschlag for digital radiography, is the other one).
+     The audit nonetheless reported it as `unknown_ziffer`, severity `error`, with the message "ist
+     im Katalog … nicht enthalten" — which a billing centre reads, correctly, as "your delivery is
+     coded against a GOÄ version we do not hold". That is a defect in their export, and it was not
+     true: the gap is ours, and it is that we do not model surcharges.
+
+     Expected: GOÄ 441 gets the verdict `surcharge_not_modelled` and a `padnext_surcharge_not_
+     modelled` finding at severity `info` — nothing to correct — while the money stays exactly where
+     `unknown_ziffer` put it, in `unconfirmed`. The three-bucket model does not move for this: a
+     surcharge is no more judged than an unknown Ziffer is, and the only thing that changes is
+     whose gap the report names. GOÄ 2440 is untouched beside it: `chargeable`, 107.25 €,
+     `unconfirmed`, because no verified rule bears on it.
+
+     441 carries `einzelbetrag` rather than `faktor` for the same reason it carries no `punktzahl`:
+     there is no Punktzahl to multiply, so the amount is the one the percentage produced —
+     100 v. H. of 800 Punkte × 5,82873 ct = 46,63 €. The engine recomputes neither, and counts the
+     46,63 € as `unpriceable_claimed_eur`.
+
+     Synthetic data throughout: echtdaten="0". -->
+<rechnungen anzahl="1" echtdaten="0"
+            xmlns="http://padinfo.de/ns/pad"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://padinfo.de/ns/pad http://www.padinfo.de/ns/pad/padx_adl_v2.13.xsd">
+  <nachrichtentyp version="02.13">ADL</nachrichtentyp>
+  <rechnungsersteller>
+    <name>Testpraxis Golden I</name>
+    <kundennr>123456</kundennr>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <iknr>912345678</iknr>
+  </rechnungsersteller>
+  <leistungserbringer id="01">
+    <anrede>Herr</anrede>
+    <titel>Dr. med.</titel>
+    <vorname>Test</vorname>
+    <name>Arzt</name>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <lanr>123456789</lanr>
+  </leistungserbringer>
+  <rechnung id="GOLDEN-I-0001" aisrechnungsnr="GOLDEN-I-0001">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Herr</anrede>
+        <vorname>Erste</vorname>
+        <name>Testperson</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Testweg</strasse>
+            <hausnr>2</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="T-000001">
+        <anrede>Herr</anrede>
+        <vorname>Erste</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Herr</anrede>
+        <vorname>Erste</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+      </versicherter>
+      <positionen posanzahl="2">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="2440">
+          <datum>2026-09-01</datum>
+          <anzahl>1</anzahl>
+          <text>Operative Entfernung eines Naevus flammeus, je Sitzung</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>800</punktzahl>
+          <gesamtbetrag>107.25</gesamtbetrag>
+        </goziffer>
+        <goziffer positionsnr="2" go="GOÄ" ziffer="441">
+          <datum>2026-09-01</datum>
+          <anzahl>1</anzahl>
+          <text>Zuschlag für die Anwendung eines Lasers bei ambulanten operativen Leistungen, je Sitzung</text>
+          <einzelbetrag>46.63</einzelbetrag>
+          <gesamtbetrag>46.63</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

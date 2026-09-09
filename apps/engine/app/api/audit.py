@@ -752,6 +752,10 @@ async def audit_pdf(job_id: str, key: RequestApiKey) -> Response:
             },
         ) from None
 
+    # `key.organization_id` is read off the `api_keys` row this request authenticated against, not
+    # off a header — it is an organisation the database knows, which is exactly what
+    # `app.api.tenancy.organization_label` exists to establish for the header-fed routes. Nothing to
+    # check here; a caller cannot choose the value.
     document = await run_in_threadpool(
         render_batch_report, job, organization_id=key.organization_id
     )

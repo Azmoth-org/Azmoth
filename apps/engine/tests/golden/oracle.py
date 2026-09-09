@@ -61,6 +61,13 @@ def _find_repo_root() -> Path:
 REPO_ROOT = _find_repo_root()
 GOLDEN_DIR = Path(__file__).resolve().parent
 CATALOG_PATH = REPO_ROOT / "data" / "catalogs" / "goae_current" / "goae.official.json"
+#: The importer's residue file, read for one thing only: the rows it marked `typ:
+#: prozent_zuschlag`. Those Ziffern — 441 and 5298 — are absent from the catalog because § 5 GOÄ
+#: states them as a percentage of another Ziffer's einfacher Gebührensatz and gives them no
+#: Punktzahl, so "not in the catalog" and "not modelled" are different claims about them and the
+#: contract makes the second one. Read from `data/` like everything else here; the engine's own
+#: reader is `app.catalog.Catalog._read_percentage_surcharges`, which this module may not import.
+UNPARSED_ROWS_PATH = CATALOG_PATH.parent / "unparsed_rows.json"
 RULES_DIR = REPO_ROOT / "data" / "rules"
 
 PAD_NS = "{http://padinfo.de/ns/pad}"
@@ -82,6 +89,22 @@ CASES = (
 #: `tests/test_golden_cases.py::test_findings_are_attributed_per_delivery_and_not_per_positionsnr`
 #: asserts the engine now gets it right, with no `xfail`.
 BUG_CASES = ("bug_positionsnr_collision",)
+
+#: Cases added after the five, each pinning one T2 defect from the pilot-readiness audit. Derived
+#: through `expected_report` like the five — unlike case F and case G, whose expectations are
+#: hand-computed because the oracle's generic walker cannot express a per-case fact base (see the
+#: comment above their tests in `tests/test_golden_cases.py`). These two need nothing it cannot
+#: express: case H turns on how the *duplicate* check is scoped, which this module now states
+#: itself, and case I on a catalog fact read straight out of `data/`.
+#:
+#:   case_h_cross_invoice_duplicates  three patients, each billed GOÄ 1 once → zero duplicate
+#:                                    warnings. The flat `delivery.positions()` walk produced two.
+#:   case_i_percentage_surcharges     GOÄ 441 beside its base service → `surcharge_not_modelled`,
+#:                                    not `unknown_ziffer`, and no error blaming the GOÄ edition.
+REGRESSION_CASES = (
+    "case_h_cross_invoice_duplicates",
+    "case_i_percentage_surcharges",
+)
 
 #: Case A's receipt canary. Not computable from the catalog — it is a SHA-256 over the engine's own
 #: canonical output — so it is pinned as a *witness* rather than derived, and the golden test
@@ -118,6 +141,9 @@ class Catalog:
     bands: dict[str, dict[str, str]]
     special_bands: dict[str, dict[str, str]]
     version: str
+    #: Ziffern the law defines as a percentage Zuschlag: in the catalog's residue file, not in the
+    #: catalog. See `UNPARSED_ROWS_PATH`.
+    percentage_surcharges: frozenset[str] = frozenset()
 
     def band(self, ziffer: str) -> dict[str, str]:
         if ziffer in self.special_bands:
@@ -133,6 +159,17 @@ class Catalog:
         return (cents / Decimal(100)).quantize(CENT, rounding=ROUND_HALF_UP) * anzahl
 
 
+def _load_percentage_surcharges() -> frozenset[str]:
+    if not UNPARSED_ROWS_PATH.exists():
+        return frozenset()
+    payload = json.loads(UNPARSED_ROWS_PATH.read_text(encoding="utf-8"))
+    return frozenset(
+        str(row["ziffer"]).strip()
+        for row in payload.get("rows", [])
+        if row.get("typ") == "prozent_zuschlag" and str(row.get("ziffer", "")).strip()
+    )
+
+
 def load_catalog() -> Catalog:
     raw = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
     ziffern = raw["ziffern"]
@@ -145,6 +182,7 @@ def load_catalog() -> Catalog:
         bands=raw["factor_bands"],
         special_bands=raw.get("special_factor_ziffern", {}),
         version=raw["catalog_version"],
+        percentage_surcharges=_load_percentage_surcharges(),
     )
 
 
@@ -274,10 +312,26 @@ class ClaimedPosition:
 
 
 @dataclass
+class BillingCase:
+    """One `<abrechnungsfall>`: the invoice it sits in, and the lines billed on it.
+
+    The unit the engine grounds a Soufflé run in, and — since the duplicate-Ziffer fix — the unit a
+    repeated Ziffer is judged against. Kept here so this module can state that expectation without
+    reading `app/padnext/audit.py`, which it may not import.
+    """
+
+    rechnungs_id: str
+    positions: list[ClaimedPosition]
+
+
+@dataclass
 class ParsedDelivery:
     echtdaten_declared: str | None
     invoice_ids: list[str]
     positions: list[ClaimedPosition]
+    #: The same lines as `positions`, still grouped by the `<abrechnungsfall>` they were billed on
+    #: and in the same document order, so `positions == [p for c in cases for p in c.positions]`.
+    cases: list[BillingCase] = field(default_factory=list)
 
 
 def _text(element: ET.Element, tag: str) -> str | None:
@@ -295,28 +349,41 @@ def parse_delivery(path: Path) -> ParsedDelivery:
     ids, and each `<goziffer>`'s Ziffer, factor, quantity, punktzahl and claimed amount. No patient
     field is read, for the same reason `app/schemas/padnext.py` does not model one.
     """
-    root = ET.fromstring(path.read_bytes())
-    positions: list[ClaimedPosition] = []
-    for goziffer in root.iter(f"{PAD_NS}goziffer"):
+    def _position(goziffer: ET.Element) -> ClaimedPosition:
         faktor = _text(goziffer, "faktor")
         anzahl = _text(goziffer, "anzahl")
         punktzahl = _text(goziffer, "punktzahl")
         betrag = _text(goziffer, "gesamtbetrag")
-        positions.append(
-            ClaimedPosition(
-                positionsnr=goziffer.get("positionsnr", ""),
-                ziffer=goziffer.get("ziffer", ""),
-                go=goziffer.get("go", "GOÄ"),
-                faktor=Decimal(faktor) if faktor else None,
-                anzahl=int(anzahl) if anzahl else 1,
-                punktzahl=int(punktzahl) if punktzahl else None,
-                gesamtbetrag=Decimal(betrag) if betrag else None,
-            )
+        return ClaimedPosition(
+            positionsnr=goziffer.get("positionsnr", ""),
+            ziffer=goziffer.get("ziffer", ""),
+            go=goziffer.get("go", "GOÄ"),
+            faktor=Decimal(faktor) if faktor else None,
+            anzahl=int(anzahl) if anzahl else 1,
+            punktzahl=int(punktzahl) if punktzahl else None,
+            gesamtbetrag=Decimal(betrag) if betrag else None,
         )
+
+    root = ET.fromstring(path.read_bytes())
+
+    # Walked as a tree rather than with `root.iter(goziffer)`, so the `<abrechnungsfall>` a line was
+    # billed on survives the parse. Flattening it away here is what let the duplicate-Ziffer
+    # expectation below compare two patients' invoices with each other.
+    cases: list[BillingCase] = []
+    for invoice in root.iter(f"{PAD_NS}rechnung"):
+        for case in invoice.iter(f"{PAD_NS}abrechnungsfall"):
+            cases.append(
+                BillingCase(
+                    rechnungs_id=invoice.get("id", ""),
+                    positions=[_position(g) for g in case.iter(f"{PAD_NS}goziffer")],
+                )
+            )
+
     return ParsedDelivery(
         echtdaten_declared=root.get("echtdaten"),
         invoice_ids=[inv.get("id", "") for inv in root.iter(f"{PAD_NS}rechnung")],
-        positions=positions,
+        positions=[p for case in cases for p in case.positions],
+        cases=cases,
     )
 
 
@@ -489,7 +556,24 @@ def expected_report(path: Path, *, catalog: Catalog, rules: Rules) -> dict:
                 }
             )
 
-        if not in_catalog:
+        if not in_catalog and position.ziffer in catalog.percentage_surcharges:
+            # Not `unknown_ziffer`. The Ziffer is absent from the catalog because the law gives it
+            # no Punktzahl, not because the importer lost it, and the contract's two sentences say
+            # different things to a billing centre: one is about their export, the other about this
+            # engine's coverage. Same `unconfirmed` bucket — a surcharge is no more judged than an
+            # unknown Ziffer is — and the finding is `info`, because there is nothing to correct.
+            verdict, bucket, blocked_by = "surcharge_not_modelled", "unconfirmed", None
+            findings.append(
+                {
+                    "type": "padnext_surcharge_not_modelled",
+                    "severity": "info",
+                    "positionsnr": position.positionsnr,
+                    "ziffer": position.ziffer,
+                    "rule_id": "",
+                    "legal_basis": "§ 5 GOÄ",
+                }
+            )
+        elif not in_catalog:
             verdict, bucket, blocked_by = "unknown_ziffer", "unconfirmed", None
         elif suppressed:
             verdict, blocked_by = "blocked", suppressed[0]
@@ -526,28 +610,35 @@ def expected_report(path: Path, *, catalog: Catalog, rules: Rules) -> dict:
             )
         )
 
-    # A Ziffer claimed twice is reported once: the rule evaluation is Ziffer-keyed, so it cannot
-    # see the second line, and a reader is entitled to know that. Severity `warning` — it says the
-    # rule check was coarser than the invoice, not that a line is wrong — so it does not move any
-    # euro into `confirmed_wrong`.
+    # A Ziffer claimed twice **on one `<abrechnungsfall>`** is reported once: the rule evaluation is
+    # Ziffer-keyed within a billing case, so it cannot see the second line, and a reader is entitled
+    # to know that. Severity `warning` — it says the check was coarser than the invoice, not that a
+    # line is wrong — so it moves no euro into `confirmed_wrong`.
+    #
     # Attributed to the *repeat* line, not the first one: the first line is the one the Ziffer-keyed
-    # rule check actually judged, and the repeat is the one nothing was said about. Severity
-    # `warning` — it says the check was coarser than the invoice, not that a line is wrong — so it
-    # moves no euro into `confirmed_wrong`.
-    seen: set[str] = set()
-    for position in delivery.positions:
-        if position.ziffer in seen:
-            findings.append(
-                {
-                    "type": "padnext_duplicate_ziffer",
-                    "severity": "warning",
-                    "positionsnr": position.positionsnr,
-                    "ziffer": position.ziffer,
-                    "rule_id": "",
-                    "legal_basis": "",
-                }
-            )
-        seen.add(position.ziffer)
+    # rule check actually judged, and the repeat is the one nothing was said about.
+    #
+    # **Scoped to the billing case, and that scope is the expectation.** A delivery of twenty
+    # invoices in which each patient is billed GOÄ 1 once has no repeat anywhere — one Ziffer per
+    # case, twenty separate rule evaluations, nothing folded away and so nothing to warn about. This
+    # module used to walk `delivery.positions()` flat and produce nineteen warnings for that
+    # delivery, exactly as the engine did; both were wrong, and an oracle that shares the engine's
+    # bug cannot catch it. `case_h_cross_invoice_duplicates/` is the delivery that pins this.
+    for case in delivery.cases:
+        seen: set[str] = set()
+        for position in case.positions:
+            if position.ziffer in seen:
+                findings.append(
+                    {
+                        "type": "padnext_duplicate_ziffer",
+                        "severity": "warning",
+                        "positionsnr": position.positionsnr,
+                        "ziffer": position.ziffer,
+                        "rule_id": "",
+                        "legal_basis": "",
+                    }
+                )
+            seen.add(position.ziffer)
 
     # The engine reports one global `advisory_rules_present` finding whenever the rule set holds
     # any advisory rule at all, which it does at this rules_version. Its counts are read from
@@ -752,7 +843,7 @@ def main() -> int:
     parser.add_argument("--write", action="store_true", help="rewrite every expected.json")
     args = parser.parse_args()
 
-    for case in (*CASES, *BUG_CASES):
+    for case in (*CASES, *BUG_CASES, *REGRESSION_CASES):
         payload = build(case)
         target = GOLDEN_DIR / case / "expected.json"
         rendered = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"

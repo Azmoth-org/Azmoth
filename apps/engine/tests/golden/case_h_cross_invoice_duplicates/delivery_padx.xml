@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Golden case H: a Ziffer billed once per patient is not a duplicate.
+
+     Three invoices, three different `<abrechnungsfall>` — three different patients — and each one
+     is billed GOÄ 1 (Beratung) exactly once. Nothing is repeated anywhere: every billing case
+     holds one line, and the three cases are audited in three separate Soufflé runs.
+
+     `audit_delivery` used to run its duplicate-Ziffer check over `delivery.positions()`, which is
+     every invoice in the delivery flattened into one list. On this delivery that produced two
+     warnings reading "GOÄ 1 kommt mehrfach vor (Positionen 1 und 1)" — and on a real twenty-invoice
+     ADL delivery, nineteen of them. Every one was false. The sentence the finding makes ("die
+     Regelprüfung betrachtet eine Ziffer nur einmal") is true only inside a single fact base, which
+     has been a single `<abrechnungsfall>` since the cross-patient fix (case F), so a Ziffer
+     appearing on two patients' invoices is not folded away and there is nothing to warn about. A
+     billing centre reading a Prüfbericht for their second delivery would have had to sort nineteen
+     spurious warnings from the real findings, with no invoice id on any of them to sort by.
+
+     Expected: **zero** `padnext_duplicate_ziffer` findings, three `chargeable` positions,
+     `confirmed_wrong_eur` 0.00, and 32.16 € in `unconfirmed` — the same honest reading case A and
+     case F get, because no verified rule bears on a lone GOÄ 1 either.
+
+     `tests/golden/case_c_verified_factor_cap/` is the case that shows the check still fires where
+     it should not be silenced: it bills GOÄ 440 twice, and the two lines sit on two separate
+     billing cases, so its duplicate warning was spurious for the same reason and is gone too. A
+     genuine repeat — one Ziffer twice on ONE `<abrechnungsfall>` — is still reported, now naming
+     the invoice it is in.
+
+     Synthetic data throughout: echtdaten="0". -->
+<rechnungen anzahl="3" echtdaten="0"
+            xmlns="http://padinfo.de/ns/pad"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://padinfo.de/ns/pad http://www.padinfo.de/ns/pad/padx_adl_v2.13.xsd">
+  <nachrichtentyp version="02.13">ADL</nachrichtentyp>
+  <rechnungsersteller>
+    <name>Testpraxis Golden H</name>
+    <kundennr>123456</kundennr>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <iknr>912345678</iknr>
+  </rechnungsersteller>
+  <leistungserbringer id="01">
+    <anrede>Herr</anrede>
+    <titel>Dr. med.</titel>
+    <vorname>Test</vorname>
+    <name>Arzt</name>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <lanr>123456789</lanr>
+  </leistungserbringer>
+  <rechnung id="GOLDEN-H-0001" aisrechnungsnr="GOLDEN-H-0001">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Herr</anrede>
+        <vorname>Erste</vorname>
+        <name>Testperson</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Testweg</strasse>
+            <hausnr>2</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="T-000001">
+        <anrede>Herr</anrede>
+        <vorname>Erste</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Herr</anrede>
+        <vorname>Erste</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+      </versicherter>
+      <positionen posanzahl="1">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="1">
+          <datum>2026-09-01</datum>
+          <anzahl>1</anzahl>
+          <text>Beratung - auch mittels Fernsprecher -</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>80</punktzahl>
+          <gesamtbetrag>10.72</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+  <rechnung id="GOLDEN-H-0002" aisrechnungsnr="GOLDEN-H-0002">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Frau</anrede>
+        <vorname>Zweite</vorname>
+        <name>Testperson</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Testweg</strasse>
+            <hausnr>3</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="T-000002">
+        <anrede>Frau</anrede>
+        <vorname>Zweite</vorname>
+        <name>Testperson</name>
+        <gebdatum>1985-05-05</gebdatum>
+        <geschlecht>w</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Frau</anrede>
+        <vorname>Zweite</vorname>
+        <name>Testperson</name>
+        <gebdatum>1985-05-05</gebdatum>
+        <geschlecht>w</geschlecht>
+      </versicherter>
+      <positionen posanzahl="1">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="1">
+          <datum>2026-09-01</datum>
+          <anzahl>1</anzahl>
+          <text>Beratung - auch mittels Fernsprecher -</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>80</punktzahl>
+          <gesamtbetrag>10.72</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+  <rechnung id="GOLDEN-H-0003" aisrechnungsnr="GOLDEN-H-0003">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Herr</anrede>
+        <vorname>Dritte</vorname>
+        <name>Testperson</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Testweg</strasse>
+            <hausnr>4</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="T-000003">
+        <anrede>Herr</anrede>
+        <vorname>Dritte</vorname>
+        <name>Testperson</name>
+        <gebdatum>1990-09-09</gebdatum>
+        <geschlecht>m</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Herr</anrede>
+        <vorname>Dritte</vorname>
+        <name>Testperson</name>
+        <gebdatum>1990-09-09</gebdatum>
+        <geschlecht>m</geschlecht>
+      </versicherter>
+      <positionen posanzahl="1">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="1">
+          <datum>2026-09-01</datum>
+          <anzahl>1</anzahl>
+          <text>Beratung - auch mittels Fernsprecher -</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>80</punktzahl>
+          <gesamtbetrag>10.72</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

@@ -20,7 +20,6 @@
     "coverage_ratio": 1.0,
     "finding_types": [
       "advisory_rules_present",
-      "padnext_duplicate_ziffer",
       "padnext_factor_above_maximum"
     ],
     "findings": [
@@ -31,14 +30,6 @@
         "ziffer": "440",
         "rule_id": "cap_auto_440",
         "legal_basis": "GOÄ Allgemeine Bestimmung"
-      },
-      {
-        "type": "padnext_duplicate_ziffer",
-        "severity": "warning",
-        "positionsnr": "1",
-        "ziffer": "440",
-        "rule_id": "",
-        "legal_basis": ""
       },
       {
         "type": "advisory_rules_present",

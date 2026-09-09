@@ -131,6 +131,28 @@ VERIFIED_DEFECT_FINDINGS = frozenset(
 )
 
 
+#: Fields projected out of `PadnextAuditedPosition` before it is hashed into the receipt.
+#:
+#: The receipt is a fingerprint of *what was decided about what was claimed*, and these two fields
+#: are neither. They are the `<rechnung @id>` the delivery already stated and the ordinal of the
+#: `<abrechnungsfall>` it was printed in — labels copied off the input onto the output so a report
+#: can say which invoice a line belongs to. `PadnextAuditReport.invoice_ids` has been carried the
+#: same way and out of the hash for the same reason, stated at the field: surfacing an identifier
+#: that was already parsed is not a change to the audit.
+#:
+#: Excluding them keeps the guarantee `app/services/receipt.py` actually makes — two identical
+#: deliveries audited under identical data and policy hash identically — true across this change,
+#: rather than reissuing every receipt ever printed for a relabelling. It costs nothing in
+#: detectability: reordering or renaming an invoice reorders `facts`, which *is* hashed, and any
+#: change these labels could disguise would have to change a verdict, which is hashed too.
+#:
+#: Nothing that decides money, a verdict or a bucket may ever be added here. That is the same rule
+#: `app.core.canonical.VOLATILE_KEYS` carries, and this list is deliberately separate from it: a key
+#: named there is dropped from every hashed payload in the engine, and `rechnungs_id` must keep
+#: counting everywhere else it appears.
+RECEIPT_EXCLUDED_POSITION_FIELDS = frozenset({"rechnungs_id", "abrechnungsfall_id"})
+
+
 class RealDataRefused(EngineError, RuntimeError):
     """The delivery says it holds production data, which this POC will not process.
 
@@ -282,13 +304,26 @@ def describe_punktwert_mismatch(claimed: Decimal, catalog_cent: Decimal) -> str:
     )
 
 
-def _as_finding(warning: Warning_, *, positionsnr: str | None = None) -> PadnextFinding:
+def _as_finding(
+    warning: Warning_,
+    *,
+    positionsnr: str | None = None,
+    rechnungs_id: str = "",
+    abrechnungsfall_id: str = "",
+) -> PadnextFinding:
+    """A rules-engine warning as a report finding, attributed to the invoice it came from.
+
+    `rechnungs_id` / `abrechnungsfall_id` default to `""` because two of the three callers have no
+    invoice to name: the reader's own findings are about the file, not about a line in it.
+    """
     return PadnextFinding(
         type=warning.type,
         severity=warning.severity,
         message=warning.message,
         ziffer=warning.ziffer,
         positionsnr=positionsnr,
+        rechnungs_id=rechnungs_id,
+        abrechnungsfall_id=abrechnungsfall_id,
         legal_basis=warning.legal_basis,
         rule_id=warning.rule_id,
     )
@@ -707,6 +742,18 @@ def classify_position(
             f"Gebührenordnung '{row.go}' wird nicht geprüft — keine Aussage möglich, kein Befund."
         )
 
+    if row.verdict == "surcharge_not_modelled":
+        # Beside `unknown_ziffer` below and deliberately not merged into it: both are `unconfirmed`,
+        # and the two sentences are about different things. This one names a limit of the engine
+        # ("Zuschläge werden … nicht geprüft"); that one names a Ziffer we do not hold. A billing
+        # centre acts on the difference — there is nothing to correct in an invoice that charges a
+        # Zuschlag correctly, and the old wording sent them looking for a GOÄ version that would
+        # have contained Nummer 441, which no edition does.
+        return "unconfirmed", (
+            f"GOÄ {row.ziffer} ist ein prozentualer Zuschlag. Zuschläge werden derzeit von der "
+            "Engine nicht auf Plausibilität geprüft (unbestätigt)."
+        )
+
     if row.verdict == "unknown_ziffer":
         return "unconfirmed", (
             "Ziffer ist in unserem Katalog nicht enthalten. Nicht nachrechenbar und nicht "
@@ -804,6 +851,8 @@ def _audit_group(
     catalog: Catalog,
     rules: RuleStore,
     souffle_run,
+    rechnungs_id: str = "",
+    abrechnungsfall_id: str = "",
 ) -> _GroupOutcome:
     """Audit one `<abrechnungsfall>` in isolation: one Soufflé run, one set of verdicts.
 
@@ -812,9 +861,56 @@ def _audit_group(
     billing case's positions instead of a whole delivery's, so `billable` and `blocked_exclusion`
     can never mix two patients' Ziffern. `audit_delivery` calls this once per case and adds the
     `_GroupOutcome`s up; nothing here decides money across groups.
+
+    `rechnungs_id` and `abrechnungsfall_id` are stamped onto every row and every finding this call
+    produces. They decide nothing — the audit is identical without them — but a delivery of forty
+    invoices produces forty "Position 1"s, and until these were carried through, a report could not
+    say which invoice any of them was about.
     """
     outcome = _GroupOutcome()
     goae = [p for p in positions if p.is_goae]
+
+    def _finding(**fields) -> PadnextFinding:
+        """A finding attributed to this billing case. Every one raised here goes through it."""
+        return PadnextFinding(
+            rechnungs_id=rechnungs_id, abrechnungsfall_id=abrechnungsfall_id, **fields
+        )
+
+    # ── the duplicate-Ziffer check, scoped to THIS billing case ──────────────────────────────
+    #
+    # It used to run once over `delivery.positions()`, which is every invoice in the delivery
+    # flattened into one list — so a twenty-invoice delivery in which each patient is billed GOÄ 1
+    # exactly once produced nineteen warnings reading "Positionen 1 und 1". Every one of them was
+    # false: two patients billing the same Ziffer is what a normal day looks like, and the sentence
+    # the finding makes ("die Regelprüfung betrachtet eine Ziffer nur einmal") is true only within
+    # a single Soufflé run, which is a single `<abrechnungsfall>` and has been since the fact base
+    # was narrowed. Scoping the check to the same unit the solver is grounded in is what makes the
+    # warning mean what it says.
+    #
+    # `<rechnung>` would be the wider choice and is the wrong one for the same reason `_audit_group`
+    # is keyed the way it is: what is folded to one fact is a case's Ziffer, so what is worth
+    # warning about is a case's repeat. The message still names the invoice, because that is the
+    # handle a billing centre files by.
+    seen: dict[str, str] = {}
+    for position in goae:
+        first = seen.get(position.ziffer)
+        if first is None:
+            seen[position.ziffer] = position.positionsnr
+            continue
+        where = f"in Rechnung {rechnungs_id} " if rechnungs_id else ""
+        outcome.findings.append(
+            _finding(
+                type="padnext_duplicate_ziffer",
+                severity="warning",
+                positionsnr=position.positionsnr,
+                ziffer=position.ziffer,
+                message=(
+                    f"GOÄ {position.ziffer} kommt {where}mehrfach vor (Positionen "
+                    f"{first} und {position.positionsnr}). Die Regelprüfung betrachtet eine "
+                    "Ziffer nur einmal; Mengenregeln sind nicht modelliert."
+                ),
+            )
+        )
 
     extraction, bridge, proposed_factors, _ = _build_group_audit_input(positions, setting)
     rules_result = (
@@ -841,7 +937,12 @@ def _audit_group(
         if warning.type in ENGINE_WARNINGS_REPORTED_PER_POSITION:
             continue
         outcome.findings.append(
-            _as_finding(warning, positionsnr=position_of_ziffer.get(warning.ziffer or ""))
+            _as_finding(
+                warning,
+                positionsnr=position_of_ziffer.get(warning.ziffer or ""),
+                rechnungs_id=rechnungs_id,
+                abrechnungsfall_id=abrechnungsfall_id,
+            )
         )
 
     #: Rule id of whatever suppressed a position, keyed by `id()` of the audited row — see
@@ -864,6 +965,8 @@ def _audit_group(
         findings_before_position = len(outcome.findings)
         row = PadnextAuditedPosition(
             positionsnr=position.positionsnr,
+            rechnungs_id=rechnungs_id,
+            abrechnungsfall_id=abrechnungsfall_id,
             ziffer=position.ziffer,
             go=position.go,
             is_analog=position.is_analog,
@@ -884,12 +987,43 @@ def _audit_group(
                 f"Gebührenordnung '{position.go}' wird von diesem Proof of Concept nicht geprüft."
             )
             outcome.findings.append(
-                PadnextFinding(
+                _finding(
                     type="padnext_fee_schedule_out_of_scope",
                     severity="info",
                     positionsnr=position.positionsnr,
                     ziffer=position.ziffer,
                     message=row.reason,
+                )
+            )
+            outcome.unpriceable_claimed += position.gesamtbetrag or Decimal("0.00")
+            _record_position_findings(row, findings_before_position)
+            outcome.audited.append(row)
+            continue
+
+        # A percentage Zuschlag before an unknown Ziffer, because it is not one. Nummer 441 and
+        # 5298 are absent from the catalog by law rather than by omission: § 5 GOÄ states them as a
+        # percentage of another Ziffer's einfacher Gebührensatz, so there is no Punktzahl to import
+        # and no amount this engine can recompute. Routing them to `unknown_ziffer` produced a
+        # sentence that blamed the sender — "ist im Katalog … nicht enthalten", which a billing
+        # centre correctly reads as "your export names a Ziffer that does not exist" — for a gap
+        # that is ours. Same bucket either way (`unconfirmed`; a surcharge is no more judged than an
+        # unknown Ziffer is), different statement about whose gap it is, and `severity="info"`
+        # rather than `error` for the same reason: nothing here is a defect in the invoice.
+        if entry is None and catalog.is_percentage_surcharge(position.ziffer):
+            row.verdict = "surcharge_not_modelled"
+            row.official_text = catalog.surcharge_text(position.ziffer)
+            row.reason = (
+                f"GOÄ {position.ziffer} ist ein prozentualer Zuschlag. Zuschläge werden derzeit "
+                "von der Engine nicht auf Plausibilität geprüft (unbestätigt)."
+            )
+            outcome.findings.append(
+                _finding(
+                    type="padnext_surcharge_not_modelled",
+                    severity="info",
+                    positionsnr=position.positionsnr,
+                    ziffer=position.ziffer,
+                    message=row.reason,
+                    legal_basis="§ 5 GOÄ",
                 )
             )
             outcome.unpriceable_claimed += position.gesamtbetrag or Decimal("0.00")
@@ -903,7 +1037,7 @@ def _audit_group(
                 f"GOÄ {position.ziffer} ist im Katalog {catalog.catalog_version} nicht enthalten."
             )
             outcome.findings.append(
-                PadnextFinding(
+                _finding(
                     type="padnext_unknown_ziffer",
                     severity="error",
                     positionsnr=position.positionsnr,
@@ -918,7 +1052,7 @@ def _audit_group(
 
         if not entry.is_active:
             outcome.findings.append(
-                PadnextFinding(
+                _finding(
                     type="padnext_inactive_ziffer",
                     severity="error",
                     positionsnr=position.positionsnr,
@@ -940,7 +1074,7 @@ def _audit_group(
             row.legal_basis = blocked.legal_basis
             blocking_rule_id[id(row)] = blocked.rule_id
             outcome.findings.append(
-                PadnextFinding(
+                _finding(
                     type=f"padnext_blocked_{blocked.reason}",
                     severity="error",
                     positionsnr=position.positionsnr,
@@ -971,7 +1105,7 @@ def _audit_group(
                 "Rechnung enthält beide; nur eine davon ist berechnungsfähig."
             )
             outcome.findings.append(
-                PadnextFinding(
+                _finding(
                     type="padnext_mutual_exclusion",
                     severity="error",
                     positionsnr=position.positionsnr,
@@ -988,7 +1122,7 @@ def _audit_group(
                 "Es liegt keine spezifischere Begründung vor."
             )
             outcome.findings.append(
-                PadnextFinding(
+                _finding(
                     type="padnext_not_confirmed",
                     severity="warning",
                     positionsnr=position.positionsnr,
@@ -1040,7 +1174,7 @@ def _audit_group(
                         f"festgelegten Höchstwert {limit} für GOÄ {position.ziffer}."
                     )
                 outcome.findings.append(
-                    PadnextFinding(
+                    _finding(
                         type="padnext_factor_above_maximum",
                         severity="error",
                         positionsnr=position.positionsnr,
@@ -1055,7 +1189,7 @@ def _audit_group(
             elif position.faktor > band.threshold:
                 if not position.begruendung:
                     outcome.findings.append(
-                        PadnextFinding(
+                        _finding(
                             type="padnext_justification_missing",
                             severity="error",
                             positionsnr=position.positionsnr,
@@ -1071,7 +1205,7 @@ def _audit_group(
                     )
         elif position.einzelbetrag is None:
             outcome.findings.append(
-                PadnextFinding(
+                _finding(
                     type="padnext_no_faktor_or_einzelbetrag",
                     severity="error",
                     positionsnr=position.positionsnr,
@@ -1099,7 +1233,7 @@ def _audit_group(
                 row.amount_delta_eur = delta
                 if delta != 0:
                     outcome.findings.append(
-                        PadnextFinding(
+                        _finding(
                             type="padnext_amount_mismatch",
                             severity="error",
                             positionsnr=position.positionsnr,
@@ -1118,7 +1252,7 @@ def _audit_group(
 
         if position.punktzahl is not None and position.punktzahl != entry.punkte:
             outcome.findings.append(
-                PadnextFinding(
+                _finding(
                     type="padnext_punktzahl_mismatch",
                     severity="warning",
                     positionsnr=position.positionsnr,
@@ -1143,7 +1277,7 @@ def _audit_group(
 
         if position.is_analog:
             outcome.findings.append(
-                PadnextFinding(
+                _finding(
                     type="padnext_analog_needs_review",
                     severity="warning",
                     positionsnr=position.positionsnr,
@@ -1307,33 +1441,21 @@ def audit_delivery(
     claimed = delivery.positions()
     goae = [p for p in claimed if p.is_goae]
 
-    seen: dict[str, str] = {}
-    for position in goae:
-        if position.ziffer in seen:
-            findings.append(
-                PadnextFinding(
-                    type="padnext_duplicate_ziffer",
-                    severity="warning",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=(
-                        f"GOÄ {position.ziffer} kommt mehrfach vor (Positionen "
-                        f"{seen[position.ziffer]} und {position.positionsnr}). Die Regelprüfung "
-                        "betrachtet eine Ziffer nur einmal; Mengenregeln sind nicht modelliert."
-                    ),
-                )
-            )
-        else:
-            seen[position.ziffer] = position.positionsnr
-
     # ── one Soufflé run per `<abrechnungsfall>`, never one over the whole delivery ─────────────
     #
     # See the comment above `_GroupOutcome` for why. `groups` walks invoices then cases in
     # document order, which is exactly `delivery.positions()`'s own nesting, so concatenating the
     # groups' audited rows below reproduces `claimed`'s order — the receipt hash (built from both
     # lists further down) does not move because of how this loop is shaped.
-    groups: list[list[PadnextPosition]] = [
-        case.positions for inv in delivery.invoices for case in inv.cases
+    #
+    # Each group carries the `<rechnung @id>` it came from and its 1-based ordinal within that
+    # invoice. Nothing about the audit turns on either; they exist so a row and a finding can name
+    # the invoice they belong to, and so the per-case duplicate check inside `_audit_group` can say
+    # which invoice it is warning about.
+    groups: list[tuple[str, str, list[PadnextPosition]]] = [
+        (inv.invoice_id, str(index), case.positions)
+        for inv in delivery.invoices
+        for index, case in enumerate(inv.cases, start=1)
     ]
 
     engine_started = time.perf_counter()
@@ -1344,8 +1466,10 @@ def audit_delivery(
             catalog=catalog,
             rules=rules,
             souffle_run=souffle_run,
+            rechnungs_id=rechnungs_id,
+            abrechnungsfall_id=abrechnungsfall_id,
         )
-        for group_positions in groups
+        for rechnungs_id, abrechnungsfall_id, group_positions in groups
     ]
     solve_time_ms = round((time.perf_counter() - engine_started) * 1000, 2)
 
@@ -1439,7 +1563,11 @@ def audit_delivery(
         solver_version=settings.clingo_version,
         policy=settings.policy_fingerprint(),
         facts=[p.model_dump(mode="python") for p in claimed],
-        output=[r.model_dump(mode="python") for r in audited],
+        # `RECEIPT_EXCLUDED_POSITION_FIELDS`: the invoice attribution is projected out, so carrying
+        # it does not move a hash. See the constant for the argument.
+        output=[
+            r.model_dump(mode="python", exclude=RECEIPT_EXCLUDED_POSITION_FIELDS) for r in audited
+        ],
     )
 
     return PadnextAuditReport(

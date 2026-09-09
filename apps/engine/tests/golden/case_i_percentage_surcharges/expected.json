@@ -1,0 +1,73 @@
+{
+  "case": "case_i_percentage_surcharges",
+  "delivery": "delivery_padx.xml",
+  "http_status": 200,
+  "report": {
+    "invoice_ids": [
+      "GOLDEN-I-0001"
+    ],
+    "echtdaten_declared": "0",
+    "catalog_version": "goae_official_snapshot_2026-07-25",
+    "claimed_total_eur": "153.88",
+    "recomputed_total_eur": "107.25",
+    "comparable_claimed_eur": "107.25",
+    "arithmetic_delta_eur": "0.00",
+    "unpriceable_claimed_eur": "46.63",
+    "confirmed_fine_eur": "0.00",
+    "confirmed_wrong_eur": "0.00",
+    "unconfirmed_eur": "153.88",
+    "coverage_ratio": 0.0,
+    "finding_types": [
+      "advisory_rules_present",
+      "padnext_surcharge_not_modelled"
+    ],
+    "findings": [
+      {
+        "type": "padnext_surcharge_not_modelled",
+        "severity": "info",
+        "positionsnr": "2",
+        "ziffer": "441",
+        "rule_id": "",
+        "legal_basis": "§ 5 GOÄ"
+      },
+      {
+        "type": "advisory_rules_present",
+        "severity": "warning",
+        "positionsnr": null,
+        "ziffer": null,
+        "rule_id": "",
+        "legal_basis": ""
+      }
+    ],
+    "positions": [
+      {
+        "positionsnr": "1",
+        "ziffer": "2440",
+        "punkte": 800,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "107.25",
+        "recomputed_amount_eur": "107.25",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "unconfirmed",
+        "blocked_by": null,
+        "verified_rule_ids": [],
+        "cited_rule_ids": []
+      },
+      {
+        "positionsnr": "2",
+        "ziffer": "441",
+        "punkte": null,
+        "claimed_faktor": null,
+        "claimed_amount_eur": "46.63",
+        "recomputed_amount_eur": null,
+        "amount_delta_eur": null,
+        "verdict": "surcharge_not_modelled",
+        "bucket": "unconfirmed",
+        "blocked_by": null,
+        "verified_rule_ids": [],
+        "cited_rule_ids": []
+      }
+    ]
+  }
+}

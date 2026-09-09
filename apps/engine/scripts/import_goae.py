@@ -710,6 +710,13 @@ def import_official(xml_path: Path, source_meta: dict) -> dict:
 
                 if punkte is None or not official_text:
                     reason = "row starts with a Ziffer but has no Punktzahl"
+                    # `typ` classifies the residue for a *reader of the engine*, not just for a
+                    # reader of this file. A percentage Zuschlag is the one kind of unparsed row
+                    # that names a Ziffer somebody will actually bill, so the audit has to be able
+                    # to tell it apart from a Ziffer that is genuinely absent — see
+                    # `app.catalog.Catalog.is_percentage_surcharge`, which reads exactly this
+                    # marker back, and the `surcharge_not_modelled` verdict it feeds.
+                    typ = ""
                     if punkte is None:
                         following = _peek_cells(rows, row_index + 1)
                         following_text = following[0] if following else ""
@@ -719,16 +726,19 @@ def import_official(xml_path: Path, source_meta: dict) -> dict:
                                 "(see the following row), not a fixed Punktzahl — nothing to "
                                 "recover"
                             )
+                            typ = "prozent_zuschlag"
                     else:
                         reason = "row starts with a Ziffer but has no service text"
-                    unparsed.append(
-                        {
-                            "table": table_index,
-                            "row": row_index,
-                            "cells": raw_cells,
-                            "reason": reason,
-                        }
-                    )
+                    entry = {
+                        "table": table_index,
+                        "row": row_index,
+                        "cells": raw_cells,
+                        "reason": reason,
+                    }
+                    if typ:
+                        entry["ziffer"] = normalize_ziffer(head)
+                        entry["typ"] = typ
+                    unparsed.append(entry)
                     row_index += 1
                     continue
 

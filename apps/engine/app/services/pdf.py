@@ -55,7 +55,7 @@ from decimal import Decimal
 from typing import Literal, NamedTuple
 
 from app.schemas.batch import BatchAggregateSummary, BatchAuditJob, BatchFileStatus
-from app.schemas.padnext import PadnextAuditReport, PadnextFinding
+from app.schemas.padnext import PadnextAuditedPosition, PadnextAuditReport, PadnextFinding
 
 from app.services.pdf_metrics import text_width
 from app.services.pdf_mark import (
@@ -1437,11 +1437,17 @@ def _single_coverage_sentence(report: PadnextAuditReport) -> str:
     return "".join(parts).strip()
 
 
-#: The position table's shape. Five columns across 483 pt, with the three numeric ones right
+#: The position table's shape. Six columns across 483 pt, with the three numeric ones right
 #: aligned so their last digits form a line a reader can add up down the page.
+#:
+#: `Pos.` leads, and it is the column this document was missing. A `positionsnr` is unique within an
+#: `<abrechnungsfall>` and not across a delivery, so it only says which line it is once the invoice
+#: is named — which is what the `Rechnung …` heading above each block now does. Together they are
+#: the address a billing centre corrects an invoice by: "Rechnung GOLDEN-F-0002, Position 1".
 _POSITION_COLUMNS = (
-    Column("Ziffer", 0, 46),
-    Column("Leistung nach GOÄ", 46, 244),
+    Column("Pos.", 0, 30),
+    Column("Ziffer", 30, 46),
+    Column("Leistung nach GOÄ", 76, 214),
     Column("Faktor", 290, 40, "right"),
     Column("Abgerechnet", 330, 76, "right"),
     Column("Nachgerechnet", 406, 77, "right"),
@@ -1449,7 +1455,7 @@ _POSITION_COLUMNS = (
 
 #: Where a position's explanatory lines are indented to: under the Leistung column, so the block
 #: reads as belonging to the Ziffer on its left rather than as a new row.
-_POSITION_INDENT = 46.0
+_POSITION_INDENT = 76.0
 
 
 def _legal_bases_for(
@@ -1472,13 +1478,66 @@ def _legal_bases_for(
     return " · ".join(seen)
 
 
-def _findings_by_position(report: PadnextAuditReport) -> dict[str, list[PadnextFinding]]:
+#: What identifies one line across a whole delivery: the invoice, the billing case inside it, and
+#: the position number inside that. Not the `positionsnr` alone, which PADnext scopes to the
+#: `<abrechnungsfall>` — a six-invoice delivery has six "Position 1"s, and keying an index on that
+#: number attached invoice 2's findings to invoice 1's line. That is the printed twin of the
+#: collision `tests/golden/bug_positionsnr_collision/` caught inside the audit.
+_PositionKey = tuple[str, str, str]
+
+
+def _key_of(item: PadnextAuditedPosition | PadnextFinding) -> _PositionKey:
+    return (item.rechnungs_id, item.abrechnungsfall_id, item.positionsnr or "")
+
+
+#: How long an account label may be before this document truncates it. Generous for an organisation
+#: id and far too short for a sentence, which is the distinction that matters — see `_account_label`.
+_MAX_ACCOUNT_LABEL = 72
+
+
+def _account_label(organization: str | None) -> str:
+    """What goes on the "Praxis / Konto" line, with the renderer's own floor under it.
+
+    The route is where the policy lives (`app.api.tenancy.organization_label` decides whether a
+    request's asserted organisation may be printed at all); this is the last line of defence, and it
+    is here because `render_single_report` is a public function that a future caller could hand a
+    raw header to. It strips anything unprintable and caps the length, so no caller can put a
+    control character, a line break or a paragraph of text into a table cell — whatever else it gets
+    wrong, this document cannot be made to say something it was not designed to say.
+    """
+    cleaned = "".join(c for c in (organization or "") if c.isprintable()).strip()
+    if not cleaned:
+        return "—"
+    return fit(cleaned, size=SIZE_TABLE, width=CONTENT_WIDTH / 2)[:_MAX_ACCOUNT_LABEL]
+
+
+def _findings_by_position(
+    report: PadnextAuditReport,
+) -> dict[_PositionKey, list[PadnextFinding]]:
     """Index the findings by the position they were raised against, keeping their order."""
-    index: dict[str, list[PadnextFinding]] = {}
+    index: dict[_PositionKey, list[PadnextFinding]] = {}
     for finding in report.findings:
         if finding.positionsnr:
-            index.setdefault(finding.positionsnr, []).append(finding)
+            index.setdefault(_key_of(finding), []).append(finding)
     return index
+
+
+def _invoice_groups(
+    positions: Sequence[PadnextAuditedPosition],
+) -> list[tuple[str, list[PadnextAuditedPosition]]]:
+    """`[(rechnungs_id, its positions)]` in the delivery's own order, or one unnamed group.
+
+    The unnamed group is the fallback for a report whose positions carry no invoice id at all — a
+    report built by hand, or one produced before the audit carried the attribution. Printing
+    "Rechnung —" over such a document would be a heading that answers nothing, so the § 2 layout
+    falls back to what it was: bucket first, no invoice heading.
+    """
+    if not any(position.rechnungs_id for position in positions):
+        return [("", list(positions))]
+    grouped: dict[str, list[PadnextAuditedPosition]] = {}
+    for position in positions:
+        grouped.setdefault(position.rechnungs_id, []).append(position)
+    return list(grouped.items())
 
 
 def render_single_report(
@@ -1541,7 +1600,7 @@ def render_single_report(
             ("Nachrichtentyp", report.nachrichtentyp or "—"),
             ("Rechnung", invoice_ids),
             ("Positionen", str(len(report.positions))),
-            ("Praxis / Konto", organization or "—"),
+            ("Praxis / Konto", _account_label(organization)),
         ],
     )
     canvas.space(6)
@@ -1567,11 +1626,32 @@ def render_single_report(
     _reading_note(canvas, _single_coverage_sentence(report))
     canvas.space(8)
 
-    # ---- 2. the positions, grouped by bucket, riskiest group first ---------------------------
+    # ---- 2. the positions, grouped by invoice, then by bucket within it ----------------------
+    #
+    # **Invoice first, bucket second, and the order is the whole point of this section.** The
+    # document used to open § 2 with "Belegbar nicht abrechenbar — 6 Positionen" and print six rows
+    # reading `Ziffer 4 · 29,49 €`, one per invoice in the delivery, with nothing to tell them
+    # apart: `positionsnr` is scoped to an `<abrechnungsfall>`, so all six were "Position 1". A
+    # billing centre's next action after reading this report is to correct an invoice, and the
+    # report did not say which one. Grouping by `<rechnung>` first makes that address printable —
+    # `Rechnung GOLDEN-F-0002` over `1 · GOÄ 4 · 29,49 €` — and costs the bucket ordering nothing,
+    # because it is kept inside each invoice: within one invoice the riskiest group still comes
+    # first, which is the question a reader opens a single-invoice report with.
+    #
+    # A report whose positions carry no invoice id falls back to the old bucket-first layout; see
+    # `_invoice_groups`.
     _section(canvas, 2, "Positionen im Einzelnen", needs=100)
+    grouped_by_invoice = _invoice_groups(report.positions)
+    named = len(grouped_by_invoice) > 1 or bool(grouped_by_invoice[0][0])
     canvas.paragraph(
-        "Nach Belegbarkeit gruppiert, innerhalb einer Gruppe in der Reihenfolge der Rechnung. "
-        "»Nachgerechnet« ist der Betrag aus dem versionierten Katalog — die Datei wird nicht als "
+        (
+            "Nach Rechnung gruppiert, innerhalb einer Rechnung nach Belegbarkeit und darin in der "
+            "Reihenfolge der Rechnung. "
+            if named
+            else "Nach Belegbarkeit gruppiert, innerhalb einer Gruppe in der Reihenfolge der "
+            "Rechnung. "
+        )
+        + "»Nachgerechnet« ist der Betrag aus dem versionierten Katalog — die Datei wird nicht als "
         "Preisauskunft geglaubt. Unter jeder beanstandeten Position steht die Begründung und, wo "
         "eine Regel gegriffen hat, die Rechtsgrundlage und die Regel-ID zur Nachprüfung.",
         size=SIZE_SMALL,
@@ -1579,70 +1659,102 @@ def render_single_report(
     )
     canvas.space(4)
 
-    for bucket in sorted(_BUCKET_ORDER, key=lambda b: _BUCKET_ORDER[b]):
-        group = [p for p in report.positions if p.bucket == bucket]
-        if not group:
-            continue
-        subtotal = sum(
-            (p.claimed_amount_eur or Decimal("0.00") for p in group), Decimal("0.00")
-        )
-        canvas.reserve(64)
-        canvas.space(4)
-        canvas.row(
-            [
-                Cell(0, f"{_BUCKET_LABEL[bucket]} — {len(group)} Position"
-                        f"{'en' if len(group) != 1 else ''}", 300, "left", True),
-                Cell(300, _euro(subtotal), 183, "right", True),
-            ],
-            size=SIZE_SUBSECTION,
-            leading=17,
-        )
+    for rechnungs_id, invoice_positions in grouped_by_invoice:
+        if rechnungs_id:
+            invoice_total = sum(
+                (p.claimed_amount_eur or Decimal("0.00") for p in invoice_positions),
+                Decimal("0.00"),
+            )
+            # Reserved as one block with the first bucket heading that follows it, so an invoice
+            # heading is never the last thing on a page — a reader would attribute the rows at the
+            # top of the next page to the invoice named before it.
+            canvas.reserve(96)
+            canvas.space(6)
+            canvas.row(
+                [
+                    Cell(
+                        0,
+                        f"Rechnung {fit(rechnungs_id, size=SIZE_SUBSECTION, width=230, bold=True)}"
+                        f" — {len(invoice_positions)} Position"
+                        f"{'en' if len(invoice_positions) != 1 else ''}",
+                        300,
+                        "left",
+                        True,
+                    ),
+                    Cell(300, _euro(invoice_total), 183, "right", True),
+                ],
+                size=SIZE_SUBSECTION,
+                leading=17,
+            )
+            canvas.rule(thickness=0.5)
+            canvas.space(2)
 
-        with canvas.table(_POSITION_COLUMNS) as table:
-            for position in group:
-                position_findings = findings_by_position.get(position.positionsnr, [])
-                reason = position.bucket_reason or position.reason
-                basis = _legal_bases_for(position_findings)
+        for bucket in sorted(_BUCKET_ORDER, key=lambda b: _BUCKET_ORDER[b]):
+            group = [p for p in invoice_positions if p.bucket == bucket]
+            if not group:
+                continue
+            subtotal = sum(
+                (p.claimed_amount_eur or Decimal("0.00") for p in group), Decimal("0.00")
+            )
+            canvas.reserve(64)
+            canvas.space(4)
+            canvas.row(
+                [
+                    Cell(0, f"{_BUCKET_LABEL[bucket]} — {len(group)} Position"
+                            f"{'en' if len(group) != 1 else ''}", 300, "left", True),
+                    Cell(300, _euro(subtotal), 183, "right", True),
+                ],
+                size=SIZE_SUBSECTION if not rechnungs_id else SIZE_TABLE,
+                leading=17 if not rechnungs_id else 14,
+            )
 
-                # Measure the whole block — headline row, reason, legal ground — and take a page
-                # break before it rather than through it. A position whose reason is orphaned on
-                # the next page reads as belonging to the position printed above it there.
-                needed = SIZE_TABLE + 5.0
-                if reason:
-                    needed += canvas.measure_paragraph(
-                        reason, size=SIZE_FOOTER, indent=_POSITION_INDENT
-                    )
-                if basis:
-                    needed += canvas.measure_paragraph(
-                        basis, size=SIZE_FOOTER, indent=_POSITION_INDENT
-                    )
-                canvas.reserve(needed + 4)
+            with canvas.table(_POSITION_COLUMNS) as table:
+                for position in group:
+                    position_findings = findings_by_position.get(_key_of(position), [])
+                    reason = position.bucket_reason or position.reason
+                    basis = _legal_bases_for(position_findings)
 
-                label = position.ziffer or "—"
-                if position.go and position.go.upper() not in {"GOÄ", "GOAE", "GOAE_1982"}:
-                    label = f"{position.go} {label}"
-                official = position.official_text or (
-                    "Nicht im geprüften Katalog enthalten"
-                    if not position.in_catalog
-                    else "—"
-                )
-                table.row(
-                    [
-                        label,
-                        fit(official, size=SIZE_TABLE, width=240),
-                        _factor(position.claimed_faktor),
-                        _euro(position.claimed_amount_eur),
-                        _euro(position.recomputed_amount_eur),
-                    ],
-                    bold=bucket == "confirmed_wrong",
-                )
-                if reason:
-                    canvas.paragraph(reason, size=SIZE_FOOTER, indent=_POSITION_INDENT)
-                if basis:
-                    canvas.paragraph(
-                        basis, size=SIZE_FOOTER, indent=_POSITION_INDENT, grey=GREY_MUTED
+                    # Measure the whole block — headline row, reason, legal ground — and take a
+                    # page break before it rather than through it. A position whose reason is
+                    # orphaned on the next page reads as belonging to the position printed above
+                    # it there.
+                    needed = SIZE_TABLE + 5.0
+                    if reason:
+                        needed += canvas.measure_paragraph(
+                            reason, size=SIZE_FOOTER, indent=_POSITION_INDENT
+                        )
+                    if basis:
+                        needed += canvas.measure_paragraph(
+                            basis, size=SIZE_FOOTER, indent=_POSITION_INDENT
+                        )
+                    canvas.reserve(needed + 4)
+
+                    label = position.ziffer or "—"
+                    if position.go and position.go.upper() not in {"GOÄ", "GOAE", "GOAE_1982"}:
+                        label = f"{position.go} {label}"
+                    official = position.official_text or (
+                        "Nicht im geprüften Katalog enthalten"
+                        if not position.in_catalog
+                        else "—"
                     )
-                canvas.space(2)
+                    table.row(
+                        [
+                            fit(position.positionsnr or "—", size=SIZE_TABLE, width=26),
+                            label,
+                            fit(official, size=SIZE_TABLE, width=210),
+                            _factor(position.claimed_faktor),
+                            _euro(position.claimed_amount_eur),
+                            _euro(position.recomputed_amount_eur),
+                        ],
+                        bold=bucket == "confirmed_wrong",
+                    )
+                    if reason:
+                        canvas.paragraph(reason, size=SIZE_FOOTER, indent=_POSITION_INDENT)
+                    if basis:
+                        canvas.paragraph(
+                            basis, size=SIZE_FOOTER, indent=_POSITION_INDENT, grey=GREY_MUTED
+                        )
+                    canvas.space(2)
 
     canvas.space(8)
 
@@ -1672,7 +1784,18 @@ def render_single_report(
             # `advisory_rules_present` is far wider than a Ziffer column. So the label takes
             # whatever room it needs and the severity is right-aligned against the far margin,
             # which keeps both readable whether the label is `410` or a thirty-character slug.
+            #
+            # Where the audit knew which invoice and line a finding was about, the label says so.
+            # This list is the one a reviewer works through top to bottom, and "GOÄ 4" repeated six
+            # times across a six-invoice delivery is six identical rows unless it does. A finding
+            # about the delivery as a whole — the schema warnings, the rule-coverage note — carries
+            # no invoice and gets no prefix, which is the correct silence rather than a missing one.
             label = finding.ziffer or finding.positionsnr or finding.type
+            if finding.rechnungs_id:
+                where = f"Rechnung {finding.rechnungs_id}"
+                if finding.positionsnr:
+                    where += f", Position {finding.positionsnr}"
+                label = f"{label} — {where}"
             severity = _SEVERITY_LABEL.get(finding.severity, finding.severity)
             canvas.row(
                 [

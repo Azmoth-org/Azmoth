@@ -1,0 +1,80 @@
+{
+  "case": "case_h_cross_invoice_duplicates",
+  "delivery": "delivery_padx.xml",
+  "http_status": 200,
+  "report": {
+    "invoice_ids": [
+      "GOLDEN-H-0001",
+      "GOLDEN-H-0002",
+      "GOLDEN-H-0003"
+    ],
+    "echtdaten_declared": "0",
+    "catalog_version": "goae_official_snapshot_2026-07-25",
+    "claimed_total_eur": "32.16",
+    "recomputed_total_eur": "32.16",
+    "comparable_claimed_eur": "32.16",
+    "arithmetic_delta_eur": "0.00",
+    "unpriceable_claimed_eur": "0.00",
+    "confirmed_fine_eur": "0.00",
+    "confirmed_wrong_eur": "0.00",
+    "unconfirmed_eur": "32.16",
+    "coverage_ratio": 0.0,
+    "finding_types": [
+      "advisory_rules_present"
+    ],
+    "findings": [
+      {
+        "type": "advisory_rules_present",
+        "severity": "warning",
+        "positionsnr": null,
+        "ziffer": null,
+        "rule_id": "",
+        "legal_basis": ""
+      }
+    ],
+    "positions": [
+      {
+        "positionsnr": "1",
+        "ziffer": "1",
+        "punkte": 80,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "10.72",
+        "recomputed_amount_eur": "10.72",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "unconfirmed",
+        "blocked_by": null,
+        "verified_rule_ids": [],
+        "cited_rule_ids": []
+      },
+      {
+        "positionsnr": "1",
+        "ziffer": "1",
+        "punkte": 80,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "10.72",
+        "recomputed_amount_eur": "10.72",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "unconfirmed",
+        "blocked_by": null,
+        "verified_rule_ids": [],
+        "cited_rule_ids": []
+      },
+      {
+        "positionsnr": "1",
+        "ziffer": "1",
+        "punkte": 80,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "10.72",
+        "recomputed_amount_eur": "10.72",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "unconfirmed",
+        "blocked_by": null,
+        "verified_rule_ids": [],
+        "cited_rule_ids": []
+      }
+    ]
+  }
+}

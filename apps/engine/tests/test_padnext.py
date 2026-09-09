@@ -1602,3 +1602,208 @@ def test_breaking_both_ceilings_reports_the_chapter_hoechstsatz(pipeline):
     over = [f for f in report.findings if f.type == "padnext_factor_above_maximum"]
     assert len(over) == 1
     assert "3.5" in over[0].message and "Höchstsatz" in over[0].message
+
+
+# ==========================================================================================
+# the duplicate-Ziffer check, scoped to one billing case
+# ==========================================================================================
+
+
+def _one_line_invoices(pipeline, ziffer: str, count: int) -> object:
+    """`count` invoices, each a separate patient billed `ziffer` exactly once."""
+    return PadnextDelivery(
+        nachrichtentyp="ADL",
+        version="02.12",
+        echtdaten=False,
+        source_name="synthetic_duplicates_padx.xml",
+        invoices=[
+            PadnextInvoice(
+                invoice_id=f"INV-{index:04d}",
+                cases=[
+                    PadnextCase(
+                        behandlungsart="0",
+                        positions=[
+                            PadnextPosition(
+                                positionsnr="1",
+                                go="GOÄ",
+                                ziffer=ziffer,
+                                anzahl=1,
+                                faktor=Decimal("2.3"),
+                                gesamtbetrag=Decimal("10.72"),
+                            )
+                        ],
+                    )
+                ],
+            )
+            for index in range(1, count + 1)
+        ],
+    )
+
+
+def _audit(pipeline, delivery):
+    return audit_delivery(
+        delivery,
+        catalog=pipeline.catalog,
+        rules=pipeline.rules,
+        souffle_run=pipeline.souffle.run,
+    )
+
+
+def test_twenty_patients_billed_the_same_ziffer_once_produce_no_duplicate_warning(pipeline):
+    """The T2 defect this scoping fixes, at the size a billing centre actually delivers at.
+
+    The check ran over `delivery.positions()` — every invoice flattened into one list — so this
+    delivery produced nineteen warnings reading "GOÄ 1 kommt mehrfach vor (Positionen 1 und 1)".
+    Every one was false and every one was unattributable, because `positionsnr` is scoped to an
+    `<abrechnungsfall>` and all twenty lines are numbered 1.
+    """
+    report = _audit(pipeline, _one_line_invoices(pipeline, "1", 20))
+
+    duplicates = [f for f in report.findings if f.type == "padnext_duplicate_ziffer"]
+    assert duplicates == [], f"{len(duplicates)} spurious duplicate warning(s)"
+    assert len(report.positions) == 20
+
+
+def test_a_ziffer_twice_on_one_billing_case_is_reported_once_and_names_the_invoice(pipeline):
+    """The check still fires where the rule evaluation really did fold a line away.
+
+    Scoping it was not a way of silencing it: within one `<abrechnungsfall>` the fact base holds
+    one `billable(z)` per Ziffer, the second line is genuinely not looked at, and a reader is
+    entitled to know. The message now carries the `rechnungs_id`, so the warning can be acted on
+    in a delivery that has more than one invoice in it.
+    """
+    delivery = _one_line_invoices(pipeline, "1", 2)
+    repeat = delivery.invoices[0].cases[0].positions[0].model_copy(update={"positionsnr": "2"})
+    delivery.invoices[0].cases[0].positions.append(repeat)
+
+    report = _audit(pipeline, delivery)
+
+    duplicates = [f for f in report.findings if f.type == "padnext_duplicate_ziffer"]
+    assert len(duplicates) == 1, duplicates
+    finding = duplicates[0]
+    assert finding.rechnungs_id == "INV-0001"
+    assert finding.abrechnungsfall_id == "1"
+    assert finding.positionsnr == "2", "attributed to the repeat, not to the line that was judged"
+    assert "in Rechnung INV-0001 mehrfach vor" in finding.message, finding.message
+    assert "Positionen 1 und 2" in finding.message, finding.message
+
+
+def test_the_same_ziffer_on_two_cases_of_one_invoice_is_not_a_duplicate(pipeline):
+    """The boundary is the `<abrechnungsfall>`, not the `<rechnung>`.
+
+    One invoice can carry several billing cases — several patients, or several treatment episodes —
+    and each is ground in its own Soufflé run. Nothing is folded across them, so there is nothing
+    to warn about, exactly as for two separate invoices.
+    """
+    delivery = _one_line_invoices(pipeline, "1", 1)
+    second = delivery.invoices[0].cases[0].model_copy(deep=True)
+    delivery.invoices[0].cases.append(second)
+
+    report = _audit(pipeline, delivery)
+
+    assert [f for f in report.findings if f.type == "padnext_duplicate_ziffer"] == []
+    assert [p.abrechnungsfall_id for p in report.positions] == ["1", "2"]
+
+
+def test_every_audited_row_carries_the_invoice_it_was_billed_on(pipeline):
+    report = _audit(pipeline, _one_line_invoices(pipeline, "1", 3))
+
+    assert [p.rechnungs_id for p in report.positions] == ["INV-0001", "INV-0002", "INV-0003"]
+    assert {p.abrechnungsfall_id for p in report.positions} == {"1"}
+
+
+def test_the_invoice_attribution_does_not_move_the_receipt(pipeline, payload_bytes):
+    """`rechnungs_id` is a label copied off the input, so it is projected out of the hash.
+
+    Asserted by construction rather than against a pinned prefix: the hash is recomputed here with
+    the field cleared, and the two must agree. `tests/test_golden_cases.py` pins case A's actual
+    prefix, which is the other half of this — that one would catch a *silent* projection of
+    something that should have counted.
+    """
+    delivery, _ = read_delivery(payload_bytes, source_name=PAYLOAD_NAME)
+    with_ids = _audit(pipeline, delivery)
+
+    stripped, _ = read_delivery(payload_bytes, source_name=PAYLOAD_NAME)
+    for invoice in stripped.invoices:
+        invoice.invoice_id = ""
+    without_ids = _audit(pipeline, stripped)
+
+    assert with_ids.receipt_hash == without_ids.receipt_hash
+    assert with_ids.positions[0].rechnungs_id, "the field has to be populated, or this proves none"
+
+
+# ==========================================================================================
+# percentage surcharges: unmodelled, not unknown
+# ==========================================================================================
+
+
+def _surcharge_delivery(ziffer: str) -> PadnextDelivery:
+    return PadnextDelivery(
+        nachrichtentyp="ADL",
+        version="02.12",
+        echtdaten=False,
+        source_name="synthetic_surcharge_padx.xml",
+        invoices=[
+            PadnextInvoice(
+                invoice_id="INV-ZUSCHLAG",
+                cases=[
+                    PadnextCase(
+                        behandlungsart="0",
+                        positions=[
+                            PadnextPosition(
+                                positionsnr="1",
+                                go="GOÄ",
+                                ziffer=ziffer,
+                                anzahl=1,
+                                einzelbetrag=Decimal("46.63"),
+                                gesamtbetrag=Decimal("46.63"),
+                            )
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+
+
+@pytest.mark.parametrize("ziffer", ["441", "5298"])
+def test_a_percentage_surcharge_is_not_reported_as_an_unknown_ziffer(pipeline, ziffer):
+    """§ 5 GOÄ gives these two no Punktzahl, so their absence from the catalog is not a gap in it.
+
+    The old verdict said "ist im Katalog … nicht enthalten" at severity `error`, which reads as an
+    accusation that the delivery names a Ziffer no GOÄ edition holds. No edition holds a Punktzahl
+    for a percentage Zuschlag; the limit is that this engine does not check surcharges.
+    """
+    report = _audit(pipeline, _surcharge_delivery(ziffer))
+
+    row = report.positions[0]
+    assert row.verdict == "surcharge_not_modelled"
+    assert row.bucket == "unconfirmed"
+    assert "prozentualer Zuschlag" in row.reason
+    assert "prozentualer Zuschlag" in row.bucket_reason
+
+    types = {f.type for f in report.findings}
+    assert "padnext_unknown_ziffer" not in types
+    finding = next(f for f in report.findings if f.type == "padnext_surcharge_not_modelled")
+    assert finding.severity == "info", "nothing here is a defect in the invoice"
+    assert finding.rechnungs_id == "INV-ZUSCHLAG"
+    assert finding.legal_basis == "§ 5 GOÄ"
+
+
+def test_a_surcharge_does_not_move_a_euro_out_of_unconfirmed(pipeline):
+    """The three-bucket model is untouched: a surcharge is no more judged than an unknown Ziffer."""
+    report = _audit(pipeline, _surcharge_delivery("441"))
+
+    assert report.unconfirmed_eur == Decimal("46.63")
+    assert report.confirmed_wrong_eur == Decimal("0.00")
+    assert report.confirmed_fine_eur == Decimal("0.00")
+    assert report.unpriceable_claimed_eur == Decimal("46.63")
+
+
+def test_a_ziffer_that_really_is_absent_is_still_an_unknown_ziffer(pipeline):
+    """The split must not swallow the case it was split out of."""
+    report = _audit(pipeline, _surcharge_delivery("999999"))
+
+    assert report.positions[0].verdict == "unknown_ziffer"
+    assert "padnext_unknown_ziffer" in {f.type for f in report.findings}
+

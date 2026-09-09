@@ -64,6 +64,13 @@ CATALOGS_DIR = DATA_DIR / "catalogs"
 CATALOG_FILENAME = "goae.official.json"
 OVERRIDES_FILENAME = "overrides.json"
 
+#: The importer's residue file, optional beside the two above: every row of the official source it
+#: did not turn into a Ziffer, each with the reason. The loader reads exactly one thing out of it —
+#: the rows the importer marked `typ: prozent_zuschlag` — so the audit can tell a percentage
+#: Zuschlag apart from a Ziffer that is genuinely absent. Absent for the synthetic temporal
+#: fixtures, which is why the read is optional.
+UNPARSED_ROWS_FILENAME = "unparsed_rows.json"
+
 #: The catalog used when a caller names none.
 #:
 #: `goae_current` is the real, official 2192-position snapshot, and it is deliberately the default:

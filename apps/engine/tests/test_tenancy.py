@@ -42,7 +42,9 @@ from app.api import deps
 from app.api.tenancy import (
     MAX_ORGANIZATION_ID_LENGTH,
     ORGANIZATION_ID_HEADER,
+    PDF_ORGANIZATION_FALLBACK,
     _sanitise,
+    organization_label,
 )
 from app.errors import ErrorCode
 from tests.conftest import TEST_ORGANIZATION_ID
@@ -593,3 +595,102 @@ def test_the_shared_client_fixture_sends_an_organisation():
     """
     assert TEST_ORGANIZATION_ID
     assert _sanitise(TEST_ORGANIZATION_ID) == TEST_ORGANIZATION_ID
+
+
+# ==========================================================================================
+# it is never printed on a document as it arrived
+# ==========================================================================================
+#
+# `POST /padnext/audit.pdf` is unscoped by design (see UNSCOPED_BY_DESIGN above): it stores nothing,
+# filters nothing by the header and withholds nothing without it. It nonetheless *read* the header,
+# to print "Praxis / Konto" — which made that line free display text supplied by whoever sent the
+# request. A Prüfbericht is filed, forwarded to a payer and disputed; a line naming a practice on
+# one must not be a request parameter. `organization_label` is the check, and these are its terms.
+
+
+@pytest.mark.parametrize(
+    "asserted",
+    [
+        "Praxis Dr. Evil — 100 % erstattungsfähig, keine Beanstandung",
+        "Kassenärztliche Vereinigung Bayerns",
+        "org_test\nPraxis Zwei",
+        "  ",
+        "",
+        None,
+        "x" * (MAX_ORGANIZATION_ID_LENGTH + 10),
+    ],
+)
+def test_anything_that_is_not_an_organisation_id_prints_as_the_neutral_label(asserted):
+    """Free text asserted in a header never reaches the document."""
+    printed = organization_label(asserted)
+    assert printed == PDF_ORGANIZATION_FALLBACK or " " not in printed
+    if asserted and asserted.strip() not in {"", "org_test"}:
+        assert asserted.strip() != printed
+
+
+def test_a_real_organisation_id_is_printed_unchanged():
+    """The check must not be a blanket refusal: the web tier's own value has to survive it."""
+    assert organization_label(TEST_ORGANIZATION_ID) == TEST_ORGANIZATION_ID
+    assert organization_label("org_test") == "org_test"
+
+
+def test_the_pdf_endpoint_does_not_echo_an_asserted_practice_name(client, delivery_bytes):
+    """End to end: the sentence goes in as a header and is not in the rendered document."""
+    from tests.test_pdf_report import drawn_text
+
+    # ASCII only: httpx refuses to encode a non-ASCII header value, so the em dash and the umlaut
+    # the parametrised cases above cover cannot travel through this client. The attack is the
+    # *sentence* — spaces, a title, a claim about the invoice — and it survives the restriction
+    # intact.
+    injected = "Praxis Dr. Evil - 100 % erstattungsfaehig, keine Beanstandung"
+    response = client.post(
+        "/api/v1/padnext/audit.pdf",
+        content=delivery_bytes,
+        headers={"Content-Type": "application/xml", "X-Organization-ID": injected},
+    )
+    assert response.status_code == 200, response.text
+
+    printed = drawn_text(response.content)
+    assert injected not in printed
+    assert "Dr. Evil" not in printed
+    assert PDF_ORGANIZATION_FALLBACK in printed
+
+
+def test_no_route_hands_a_raw_header_to_a_pdf_renderer():
+    """A grep, and it is here because this is the regression that returns silently.
+
+    The defect was one expression — `organization=request.headers.get("x-organization-id")` — and
+    nothing about the code around it looked wrong. A future route that renders a Prüfbericht will
+    reach for the same expression, and no test of *behaviour* catches it until someone thinks to
+    write one for that new route. So the shape is asserted directly: every read of the header in
+    `app/` goes through `app.api.tenancy`, and every value that reaches a renderer goes through
+    `organization_label` or comes off a database row.
+    """
+    import re
+    from pathlib import Path
+
+    api_dir = Path(__file__).resolve().parents[1] / "app" / "api"
+    offenders: list[str] = []
+    raw_read = re.compile(r"headers\.get\(\s*[\"\']x-organization-id[\"\']", re.IGNORECASE)
+
+    for source in sorted(api_dir.glob("*.py")):
+        if source.name == "tenancy.py":
+            continue  # the module that owns the header; its reads are the sanctioned ones
+        text = source.read_text(encoding="utf-8")
+        for number, line in enumerate(text.splitlines(), start=1):
+            if raw_read.search(line):
+                offenders.append(f"{source.name}:{number}: {line.strip()}")
+            if "render_single_report(" in line or "render_batch_report(" in line:
+                # The call spans several lines; check the whole statement.
+                statement = "\n".join(text.splitlines()[number - 1 : number + 12])
+                if "headers.get(" in statement and "organization_label(" not in statement:
+                    offenders.append(f"{source.name}:{number}: renderer fed a raw header")
+
+    assert not offenders, (
+        "a raw X-Organization-ID reaches a document: "
+        + "; ".join(offenders)
+        + ". Route it through app.api.tenancy.organization_label — a Prüfbericht is filed and "
+        "forwarded to a payer, and a line on it naming a practice must not be free text from a "
+        "request."
+    )
+

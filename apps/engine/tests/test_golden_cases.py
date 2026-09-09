@@ -80,7 +80,7 @@ def test_expectations_are_not_stale():
     leaving a golden file that describes a fee schedule nobody bills under any more.
     """
     stale = []
-    for case in (*oracle.CASES, *oracle.BUG_CASES):
+    for case in (*oracle.CASES, *oracle.BUG_CASES, *oracle.REGRESSION_CASES):
         committed = json.loads((GOLDEN_DIR / case / "expected.json").read_text(encoding="utf-8"))
         if committed != oracle.build(case):
             stale.append(case)
@@ -380,3 +380,158 @@ def test_case_g_an_exclusion_across_two_service_dates_is_advisory_not_confirmed_
     assert blocked["bucket"] == "unconfirmed"
     assert winner["bucket"] == "confirmed_fine"
     assert Decimal(report["confirmed_wrong_eur"]) == Decimal("0.00")
+
+
+# ==========================================================================================
+# case H and case I — the two T2 defects from the pilot-readiness audit
+# ==========================================================================================
+#
+# Both are oracle-derived, unlike case F and case G above: neither needs the per-case fact base
+# that the oracle's generic walker cannot express. Case H turns on how the *duplicate* check is
+# scoped, which `oracle.py` now states for itself off the delivery's `<abrechnungsfall>` nesting,
+# and case I on a fact read straight out of `data/catalogs/goae_current/unparsed_rows.json`. So
+# `test_expectations_are_not_stale` covers them, and a catalog or rules change moves their
+# expectations with everything else's.
+
+
+def test_case_h_one_ziffer_per_patient_is_not_a_duplicate(client):
+    """Three invoices, three patients, GOÄ 1 once each — and zero duplicate warnings.
+
+    `audit_delivery` ran its duplicate check over `delivery.positions()`, the whole delivery
+    flattened, so this produced two findings reading "GOÄ 1 kommt mehrfach vor (Positionen 1 und
+    1)" and a real twenty-invoice ADL delivery produced nineteen. The check is now scoped to the
+    `<abrechnungsfall>`, which is the unit the fact base is actually built from — a Ziffer is only
+    folded away, and therefore only worth warning about, within one Soufflé run.
+    """
+    case = "case_h_cross_invoice_duplicates"
+    expected = _expected(case)
+    response = _audit(client, case)
+    assert response.status_code == expected["http_status"], response.text
+    report = response.json()
+    assert_report_matches(report, expected["report"])
+
+    duplicates = [f for f in report["findings"] if f["type"] == "padnext_duplicate_ziffer"]
+    assert duplicates == [], (
+        f"three patients billing GOÄ 1 once each is not a duplicate; got {duplicates}"
+    )
+    assert len(report["positions"]) == 3
+    for position in report["positions"]:
+        assert position["verdict"] == "chargeable", position
+        assert position["bucket"] == "unconfirmed", position
+    assert Decimal(report["confirmed_wrong_eur"]) == Decimal("0.00")
+
+
+def test_a_ziffer_repeated_on_one_billing_case_is_still_reported_and_names_its_invoice(client):
+    """The other half of case H, and the half that keeps the fix from being a deletion.
+
+    Case C bills GOÄ 440 twice across two invoices and now correctly says nothing. A genuine repeat
+    — one Ziffer twice on ONE `<abrechnungsfall>` — must still be reported, because the rule check
+    really did fold the second line away, and the message must name the invoice so a billing centre
+    can open it.
+    """
+    delivery = _delivery("case_h_cross_invoice_duplicates")
+    doubled = delivery.replace(
+        b'<positionen posanzahl="1">\n        <goziffer positionsnr="1" go="GO\xc3\x84" ziffer="1">',
+        b'<positionen posanzahl="2">\n        <goziffer positionsnr="1" go="GO\xc3\x84" ziffer="1">',
+        1,
+    )
+    assert doubled != delivery, "the fixture changed shape; this rewrite no longer applies"
+    # Repeat the whole first <goziffer> block inside the first billing case, renumbered.
+    block_start = doubled.index(b'<goziffer positionsnr="1"')
+    block_end = doubled.index(b"</goziffer>", block_start) + len(b"</goziffer>")
+    block = doubled[block_start:block_end]
+    doubled = (
+        doubled[:block_end]
+        + b"\n        "
+        + block.replace(b'positionsnr="1"', b'positionsnr="2"', 1)
+        + doubled[block_end:]
+    )
+
+    minted = client.post("/api/v1/settings/api-keys", json={"name": "golden-h-repeat"})
+    response = client.post(
+        "/api/v1/audit/single",
+        content=doubled,
+        headers={
+            "X-API-Key": minted.json()["token"],
+            "Content-Type": "application/xml",
+            "x-padnext-filename": "case_h_repeat_padx.xml",
+        },
+    )
+    assert response.status_code == 200, response.text
+    report = response.json()
+
+    duplicates = [f for f in report["findings"] if f["type"] == "padnext_duplicate_ziffer"]
+    assert len(duplicates) == 1, f"exactly the one real repeat, got {duplicates}"
+    finding = duplicates[0]
+    assert finding["rechnungs_id"] == "GOLDEN-H-0001"
+    assert "GOLDEN-H-0001" in finding["message"], finding["message"]
+    assert "Positionen 1 und 2" in finding["message"], finding["message"]
+
+
+def test_case_i_a_percentage_surcharge_is_unmodelled_not_unknown(client):
+    """GOÄ 441 beside its base service: `surcharge_not_modelled`, and nothing blaming the export.
+
+    § 5 GOÄ states Nummer 441 as a percentage of another Ziffer's einfacher Gebührensatz, so it has
+    no Punktzahl in any edition and the importer recorded it as residue rather than dropping it
+    (`data/catalogs/goae_current/unparsed_rows.json`, `typ: prozent_zuschlag`). Reporting it as
+    `unknown_ziffer` told a billing centre their delivery was coded against a GOÄ version this
+    engine does not hold — a defect in their file — when the gap is ours. The money does not move:
+    a surcharge is no more judged than an unknown Ziffer is, and both are `unconfirmed`.
+    """
+    case = "case_i_percentage_surcharges"
+    expected = _expected(case)
+    response = _audit(client, case)
+    assert response.status_code == expected["http_status"], response.text
+    report = response.json()
+    assert_report_matches(report, expected["report"])
+
+    surcharge = next(p for p in report["positions"] if p["ziffer"] == "441")
+    assert surcharge["verdict"] == "surcharge_not_modelled"
+    assert surcharge["bucket"] == "unconfirmed", "the three buckets do not move for this"
+    assert "prozentualer Zuschlag" in surcharge["bucket_reason"], surcharge["bucket_reason"]
+
+    assert not [f for f in report["findings"] if f["type"] == "padnext_unknown_ziffer"], (
+        "a percentage Zuschlag must not be reported as a Ziffer we do not hold"
+    )
+    finding = next(
+        f for f in report["findings"] if f["type"] == "padnext_surcharge_not_modelled"
+    )
+    assert finding["severity"] == "info", "there is nothing here for the practice to correct"
+    assert "Zuschl\u00e4ge werden derzeit" in finding["message"] or (
+        "Zuschläge werden derzeit" in finding["message"]
+    ), finding["message"]
+    assert not any("GOÄ-Version" in f["message"] for f in report["findings"])
+
+    # The base service beside it is untouched: a surcharge on an invoice says nothing about the
+    # rest of it.
+    base = next(p for p in report["positions"] if p["ziffer"] == "2440")
+    assert base["verdict"] == "chargeable"
+    assert Decimal(report["confirmed_wrong_eur"]) == Decimal("0.00")
+
+
+def test_every_audited_position_names_the_invoice_it_was_billed_on(client):
+    """The attribution a billing centre files by, asserted on a delivery that has three of them."""
+    report = _audit(client, "case_h_cross_invoice_duplicates").json()
+    assert [p["rechnungs_id"] for p in report["positions"]] == [
+        "GOLDEN-H-0001",
+        "GOLDEN-H-0002",
+        "GOLDEN-H-0003",
+    ]
+    assert {p["abrechnungsfall_id"] for p in report["positions"]} == {"1"}
+
+
+def test_carrying_the_invoice_id_did_not_move_the_receipt(client):
+    """Case A's receipt canary, restated as the property this change had to preserve.
+
+    `rechnungs_id` and `abrechnungsfall_id` are labels copied off the delivery onto the report —
+    the same relabelling `invoice_ids` already was — so `audit_delivery` projects them out before
+    hashing (`RECEIPT_EXCLUDED_POSITION_FIELDS`). Had it not, every receipt ever issued would have
+    moved for a change that decides nothing.
+    """
+    expected = _expected("case_a_known_answer")
+    report = _audit(client, "case_a_known_answer").json()
+    assert report["receipt_hash"].startswith(expected["receipt_hash_prefix"])
+    assert report["positions"][0]["rechnungs_id"] == "2024-0847", (
+        "the field has to actually be populated, or this asserts nothing"
+    )
+

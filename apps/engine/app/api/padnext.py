@@ -60,7 +60,7 @@ from starlette.concurrency import run_in_threadpool
 from app.api.deps import batches, pipeline
 from app.api.identity import RequestActor
 from app.api.quota import apply as apply_quota, check_and_refuse, optional_quota
-from app.api.tenancy import RequestOrganization
+from app.api.tenancy import ORGANIZATION_ID_HEADER, RequestOrganization, organization_label
 from app.core.observability import record_invoices
 from app.errors import EmptyRequestBody, UnknownZifferError
 from app.padnext import audit_delivery, validate_bytes
@@ -307,7 +307,13 @@ def padnext_audit_pdf(
     report = _audit_bytes(body, source_name=request.headers.get("x-padnext-filename", ""))
     document = render_single_report(
         report,
-        organization=request.headers.get("x-organization-id") or None,
+        # Never `request.headers.get(...)` straight into the document. The header is asserted by a
+        # proxy and this endpoint neither stores nor filters anything by it, so it was free display
+        # text printed under "Praxis / Konto" — a Prüfbericht that names a practice, forgeable by
+        # anyone who could set a header. `organization_label` keeps it only if it has the shape of
+        # a Better Auth organisation id and prints a neutral label otherwise, including for the
+        # anonymous demo path, which sends no header at all. See `app.api.tenancy`.
+        organization=organization_label(request.headers.get(ORGANIZATION_ID_HEADER)),
         generated_at=datetime.now(timezone.utc),
     )
     log.info(
@@ -379,19 +385,30 @@ def refuse_catalog_mismatch(delivery, catalog) -> None:
         # Nothing to say: a delivery that charges only other fee schedules is out of scope, and
         # `audit_delivery` already reports that per position.
         return
-    unknown = [p.ziffer for p in goae if catalog.get(p.ziffer) is None]
-    if len(unknown) < len(goae):
+
+    # A percentage Zuschlag is absent from the catalog and is **not** unknown, so it must not count
+    # towards this refusal. § 5 GOÄ states Nummer 441 and 5298 as a percentage of another Ziffer's
+    # einfacher Gebührensatz and gives them no Punktzahl, so no edition of the fee schedule holds
+    # one — which makes "die Lieferung wurde vermutlich gegen eine andere Fassung der GOÄ kodiert"
+    # a false sentence about a correctly coded file. A delivery of nothing but Zuschläge (a
+    # correction file listing only the surcharges of an earlier invoice is exactly that) was
+    # refused 422 and told to check its GOÄ edition. It now gets a report, and the report says what
+    # is true: these are surcharges, and this engine does not check them. See the
+    # `surcharge_not_modelled` verdict in `app/schemas/padnext.py`.
+    priceable = [p for p in goae if not catalog.is_percentage_surcharge(p.ziffer)]
+    unknown = [p.ziffer for p in priceable if catalog.get(p.ziffer) is None]
+    if not unknown or len(unknown) < len(priceable):
         return
 
     raise UnknownZifferError(
-        f"Keine der {len(goae)} GOÄ-Positionen dieser Lieferung ist im geladenen Katalog "
+        f"Keine der {len(priceable)} GOÄ-Positionen dieser Lieferung ist im geladenen Katalog "
         f"{catalog.catalog_version} enthalten. Das ist kein Abdeckungsproblem, sondern ein "
         "Katalogkonflikt: die Lieferung wurde vermutlich gegen eine andere Fassung der GOÄ "
         "kodiert. Es wird kein Bericht erstellt, weil er zu jeder Position 'nicht beurteilbar' "
         "sagen würde.",
         unknown_ziffern=unknown,
         catalog_version=catalog.catalog_version,
-        details={"goae_position_count": len(goae)},
+        details={"goae_position_count": len(priceable)},
     )
 
 
@@ -667,7 +684,12 @@ async def padnext_batch_report_pdf(
             },
         ) from None
 
-    document = render_batch_report(job, organization_id=organization)
+    # `organization` here comes from `RequestOrganization`, which is the tenant this batch was
+    # actually filtered by — so a value that reaches this line has already selected rows. It still
+    # goes through the same label check before it is printed: the filter accepts any non-empty
+    # string, and what is printed on a document a payer reads is a separate question from what is
+    # safe to compare a database column against.
+    document = render_batch_report(job, organization_id=organization_label(organization))
     return Response(
         content=document,
         media_type="application/pdf",

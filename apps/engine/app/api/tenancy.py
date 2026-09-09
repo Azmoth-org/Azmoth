@@ -39,6 +39,7 @@ between two of our own tiers, not part of the published API.
 
 from __future__ import annotations
 
+import re
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -70,6 +71,47 @@ def _sanitise(raw: str | None) -> str:
         return ""
     cleaned = "".join(character for character in raw if character.isprintable()).strip()
     return cleaned[:MAX_ORGANIZATION_ID_LENGTH]
+
+
+#: What is printed as "Praxis / Konto" when the request named no practice, or named something that
+#: is not an organisation id. A neutral label rather than a blank, because a Prüfbericht with an
+#: empty account line reads as a document whose account field was lost.
+PDF_ORGANIZATION_FALLBACK = "Azmoth Pilot"
+
+#: The shape of a Better Auth organisation id: an opaque, generated identifier. Nothing in it is
+#: chosen by a person, which is why it can be pinned this tightly — `org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J`
+#: passes, `org_test` passes, `Dr. Müller — 100 % Rabatt, bezahlt` does not, and neither does
+#: anything carrying a newline, a PDF operator or a right-to-left override.
+_ORGANIZATION_ID_SHAPE = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z")
+
+
+def organization_label(raw: str | None) -> str:
+    """The organisation to print on a Prüfbericht — never the header as it arrived.
+
+    `X-Organization-ID` is asserted by a proxy, not proven (see the module docstring), and
+    `/padnext/audit.pdf` needs no organisation at all: it stores nothing, filters nothing and
+    withholds nothing. So the header reached that endpoint as pure display text and was printed
+    verbatim under "Praxis / Konto", which made a document that *looks* issued to a named practice
+    forgeable by anyone who could reach the engine and set a header. A Prüfbericht is filed, sent on
+    to a payer and disputed; a line on it that names a practice must not be free text from a
+    request.
+
+    The engine cannot ask whether an organisation exists — `organization` is Better Auth's table in
+    the web tier's half of the schema, and this module's docstring is explicit that querying it from
+    here would couple the engine to a migrator it does not control. So the check is on the *shape*
+    of the value rather than on its existence, which is what actually closes the hole: an opaque
+    generated id cannot carry a sentence, and a sentence is the whole of the attack. Anything that
+    is not one — including the anonymous demo path, which sends no header at all — prints
+    `PDF_ORGANIZATION_FALLBACK`.
+
+    What this deliberately does **not** do is refuse the request. The label is cosmetic; the audit
+    and every euro on it are identical either way, and answering `403` to a malformed display value
+    would turn a cosmetic defect into an outage for a caller whose report is otherwise correct.
+    """
+    candidate = _sanitise(raw)
+    if candidate and _ORGANIZATION_ID_SHAPE.fullmatch(candidate):
+        return candidate
+    return PDF_ORGANIZATION_FALLBACK
 
 
 def require_organization(request: Request) -> str:
@@ -133,7 +175,9 @@ RequestOrganization = Annotated[str, Depends(require_organization)]
 __all__ = [
     "MAX_ORGANIZATION_ID_LENGTH",
     "ORGANIZATION_ID_HEADER",
+    "PDF_ORGANIZATION_FALLBACK",
     "RequestOrganization",
     "optional_organization",
+    "organization_label",
     "require_organization",
 ]

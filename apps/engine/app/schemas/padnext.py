@@ -163,6 +163,23 @@ class PadnextFinding(BaseModel):
     severity: Literal["info", "warning", "error"] = "warning"
     message: str
     positionsnr: str | None = None
+    #: `<rechnung @id>` of the invoice this finding was raised against, or `""` for a finding about
+    #: the delivery as a whole (the schema warnings, the rule-coverage note, the collapsed
+    #: `punktwert` finding).
+    #:
+    #: Load-bearing rather than decorative, and for the same reason `positionsnr` alone was never
+    #: enough: PADnext scopes `positionsnr` to an `<abrechnungsfall>`, so "Position 1" names one
+    #: line per invoice and a delivery of forty invoices has forty of them. A billing centre reading
+    #: a Prüfbericht has to be able to open the invoice a finding is about, and the invoice id is
+    #: the only handle that exists once patient identity has been left unparsed.
+    rechnungs_id: str = ""
+    #: Which `<abrechnungsfall>` inside that invoice, 1-based, as a string — `""` when the finding
+    #: is not about one. PADnext gives the element no id of its own that is not patient identity
+    #: (`behandelter/@aisid` is exactly that and is deliberately never parsed), so this is the
+    #: position of the case in document order and nothing more. It disambiguates the rare invoice
+    #: that carries several billing cases; it is not an identifier anyone outside this delivery
+    #: could resolve.
+    abrechnungsfall_id: str = ""
     ziffer: str | None = None
     legal_basis: str = ""
     rule_id: str = ""
@@ -176,14 +193,35 @@ class PadnextAuditedPosition(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     positionsnr: str
+    #: The `<rechnung @id>` and the 1-based `<abrechnungsfall>` ordinal this line was billed on.
+    #: See `PadnextFinding.rechnungs_id` for why a `positionsnr` on its own cannot identify a
+    #: position in a multi-invoice delivery. Both are echoes of what the delivery already stated,
+    #: which is why `audit_delivery` keeps them out of the receipt projection — see the comment at
+    #: the `receipt_hash` call.
+    rechnungs_id: str = ""
+    abrechnungsfall_id: str = ""
     ziffer: str
     go: str
     is_analog: bool = False
     in_catalog: bool = False
     official_text: str = ""
     #: What the *suppression rules* concluded: chargeable = kept, blocked = a rule removed it,
-    #: out_of_scope = not GOÄ, unknown_ziffer = not in the catalog.
-    verdict: Literal["chargeable", "blocked", "out_of_scope", "unknown_ziffer"] = "chargeable"
+    #: out_of_scope = not GOÄ, unknown_ziffer = not in the catalog, surcharge_not_modelled = a
+    #: percentage Zuschlag, which the catalog cannot price and no rule here checks.
+    #:
+    #: `surcharge_not_modelled` is split out of `unknown_ziffer` deliberately, and the split is the
+    #: difference between two sentences the engine used to conflate. A Zuschlag under Nummer 441 or
+    #: 5298 is not missing from the catalog by accident: § 5 GOÄ defines it as a percentage of
+    #: another Ziffer's fee ("… v. H. des einfachen Gebührensatzes"), so the law gives it no
+    #: Punktzahl and there is nothing for an importer to have dropped. Reporting it as
+    #: `unknown_ziffer` told a billing centre their delivery was coded against a fee schedule this
+    #: engine does not hold — a defect in their export — when the truth is that this engine does not
+    #: model surcharges. Both land in `unconfirmed`; only one of them is honest about whose gap it
+    #: is. See `data/catalogs/goae_current/unparsed_rows.json`, whose importer already recorded the
+    #: reason, and `app.catalog.Catalog.is_percentage_surcharge`, which reads it back.
+    verdict: Literal[
+        "chargeable", "blocked", "out_of_scope", "unknown_ziffer", "surcharge_not_modelled"
+    ] = "chargeable"
     #: Narrower than `verdict == "chargeable"`: also false when anything else about the line is
     #: wrong — an illegal factor, a missing § 12 Abs. 3 reason, an amount that does not recompute.
     #: A line can survive every suppression rule and still not be billable *as claimed*, and it is

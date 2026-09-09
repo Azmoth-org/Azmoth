@@ -1,6 +1,6 @@
 # Golden cases
 
-Five PADnext deliveries whose answers were worked out from the fee schedule, plus two reproducers
+Five PADnext deliveries whose answers were worked out from the fee schedule, plus four reproducers
 for fixed defects. The runbook is [`docs/api/E2E_GOLDEN.md`](../../../../docs/api/E2E_GOLDEN.md);
 this file is the map.
 
@@ -14,13 +14,18 @@ case_e_echtdaten_gate/             case A with no @echtdaten → 422, then anony
 bug_positionsnr_collision/         a regular case now — findings keyed by id(row), not positionsnr
 case_f_cross_patient_boundary/     excl_auto_34_4 must not cross an <abrechnungsfall> boundary
 case_g_cross_date_same_patient/    excl_auto_34_4 across two service dates is advisory, not wrong
+case_h_cross_invoice_duplicates/   3 patients billed GOÄ 1 once each → zero duplicate warnings
+case_i_percentage_surcharges/      GOÄ 441 → surcharge_not_modelled, not unknown_ziffer
 ```
 
 `case_f_cross_patient_boundary/` and `case_g_cross_date_same_patient/`, like
 `bug_positionsnr_collision/`, have a hand-computed `expected.json` rather than one `oracle.py`
 derived — see the comment above their tests in
 [`tests/test_golden_cases.py`](../test_golden_cases.py) for why the oracle's generic per-delivery
-walker cannot be the source of truth for either.
+walker cannot be the source of truth for either. `case_h` and `case_i` are oracle-derived
+(`oracle.REGRESSION_CASES`): neither needs a per-case *fact base*, only a per-case duplicate check —
+which `oracle.py` now states for itself off the delivery's `<abrechnungsfall>` nesting — and a
+`typ: prozent_zuschlag` marker read straight out of `data/`.
 
 Each directory is a `delivery_padx.xml` + `expected.json` pair. Two runners read them and must never
 disagree:
