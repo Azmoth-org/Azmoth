@@ -166,7 +166,7 @@ and the engine still cannot call it correct.** `coverage_ratio` is `0.0` and tha
 answer, not a bug.
 
 `receipt_hash` is asserted twice over: equality of two runs is the property, and the prefix
-`f5663388ff1e681e` is a canary that says *which* engine the 78.81 € belongs to. If the prefix moves,
+`f7edf9fc95d95429` is a canary that says *which* engine the 78.81 € belongs to. If the prefix moves,
 something in the catalog, the rule tables, the logic, the solver, the policy or the response shape
 changed — [`services/receipt.py`](../../apps/engine/app/services/receipt.py) is explicit that a
 receipt is comparable within an engine version and not across one. Read that file before editing the
@@ -371,6 +371,67 @@ The old `xfail` was **strict**, so the fix is what made
 `test_findings_are_attributed_per_delivery_and_not_per_positionsnr` start passing — at which point,
 per that test's own rule, the marker came off rather than the test starting to fail for passing
 unexpectedly.
+
+---
+
+## 5b. FIXED — a suppression rule fired across a patient/invoice boundary, and across service dates
+
+**Status:** fixed. `tests/golden/case_f_cross_patient_boundary/` and
+`tests/golden/case_g_cross_date_same_patient/` are regular cases now.
+**Reproducers:**
+[`case_f_cross_patient_boundary/`](../../apps/engine/tests/golden/case_f_cross_patient_boundary/) ·
+`test_case_f_an_exclusion_does_not_cross_a_patient_boundary`,
+[`case_g_cross_date_same_patient/`](../../apps/engine/tests/golden/case_g_cross_date_same_patient/) ·
+`test_case_g_an_exclusion_across_two_service_dates_is_advisory_not_confirmed_wrong`.
+**Found by:** auditing a multi-invoice ADL delivery and noticing a verified exclusion convict a
+Ziffer that never shared an `<abrechnungsfall>` with the Ziffer that supposedly excluded it.
+
+`PadnextDelivery.positions()` flattens every invoice and every billing case into one list, and
+`audit_delivery` used to ground that whole list in a single Soufflé run. `logic/datalog/goae_rules.dl`
+has no dimension for patient, invoice or date — every relation is keyed by Ziffer alone — so a
+verified exclusion fired the moment both of its Ziffern appeared *anywhere* in the delivery, whatever
+invoice, case or date each was actually claimed on. Two distinct bugs came out of the one root cause:
+
+* **Case F, the patient/invoice boundary.** Patient A's invoice charges GOÄ 34; patient B's, on a
+  separate `<abrechnungsfall>`, charges GOÄ 4. `excl_auto_34_4` (GOÄ 4 not chargeable beside GOÄ 34)
+  fired against patient B regardless, and GOÄ 4 was reported `blocked` → `confirmed_wrong` — a
+  refund exposure invented from a service patient B never claimed. A real ADL delivery is many
+  `<abrechnungsfall>` elements; the false positives scale with every pair of invoices, not with the
+  delivery, so the error count grows quadratically with delivery size.
+* **Case G, the service date.** One patient, one `<abrechnungsfall>`, GOÄ 34 and GOÄ 4 claimed 5.5
+  months apart. "Neben" (alongside) in the GOÄ Anmerkung is a clinical term — the two services
+  rendered at the same encounter — not an invoice-level one, and the rules engine matched on Ziffer
+  alone with no notion of when either was claimed.
+
+**The fix, in two parts:**
+
+1. `audit_delivery` now runs Soufflé once per `<abrechnungsfall>` instead of once per delivery — see
+   `_audit_group` and the comment above it in
+   [`audit.py`](../../apps/engine/app/padnext/audit.py). Every Ziffer-keyed relation
+   (`billable`, `rules_bearing_on`, `mutual_exclusion_survivors`, …) is now grounded per billing
+   case, so a rule can no longer see two patients' claims at once. The `<abrechnungsfall>` was
+   chosen over the `<rechnung>` it sits inside because it is PADnext's own unit for one patient's
+   case, and this codebase never parses enough patient identity to know whether two
+   `<abrechnungsfall>` elements in two different invoices are the same patient — grouping any wider
+   than the case itself would have to guess.
+2. `logic/datalog/goae_rules.dl` LAYER 3 now carries a `datum(Z, Date)` fact — fed from
+   `ClinicalAct.service_date` via `app/solvers/souffle_facts.py`, empty for every caller that does
+   not track service dates — and derives `blocked_exclusion_cross_date` instead of
+   `blocked_exclusion` once it knows the two Ziffern were rendered on different dates.
+   `app/padnext/audit.py` reads that off `BlockedCode.cross_date` and routes the match to
+   `unconfirmed` rather than `confirmed_wrong`: the invoice alone does not prove the exclusion does
+   NOT apply, only that this engine cannot say it does. This replaced an interim Python-side
+   workaround in `classify_position` that inferred the same thing from `PadnextAuditedPosition.datum`
+   after the fact — the solver states it directly now, so the workaround was removed.
+
+Neither fix changes the three-bucket model or weakens the echtdaten gate; both only change which
+positions a verified rule is credited against. Case F's two positions land in `unconfirmed` rather
+than `confirmed_fine`, and that is not a loose end: `rules_bearing_on` credits a verified rule to an
+invoice only when *every* Ziffer it names is claimed there (the same rule case A's positions are
+`unconfirmed` under, and case B's are `confirmed_fine` under, once it is scoped correctly per case) —
+a lone GOÄ 34 with no GOÄ 4 on its own `<abrechnungsfall>` was never actually tested against this
+exclusion, so crediting it would overclaim coverage the same way the original bug overclaimed a
+defect.
 
 ---
 

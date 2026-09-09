@@ -241,10 +241,15 @@ class SouffleEngine:
         )
 
         blocked: list[BlockedCode] = []
-        for reason, relation in (
-            ("less_specific", "blocked_less_specific"),
-            ("zielleistung", "blocked_zielleistung"),
-            ("exclusion", "blocked_exclusion"),
+        for reason, relation, cross_date in (
+            ("less_specific", "blocked_less_specific", False),
+            ("zielleistung", "blocked_zielleistung", False),
+            ("exclusion", "blocked_exclusion", False),
+            # Same LAYER 3 match, but `datum` shows the two Ziffern were rendered on different
+            # service dates — see the comment on `blocked_exclusion_cross_date` in
+            # goae_rules.dl. Reported under the same `reason` so a caller that does not read
+            # `cross_date` sees exactly what it always did.
+            ("exclusion", "blocked_exclusion_cross_date", True),
         ):
             for row in read_relation(out_dir, relation):
                 ziffer, by = row[0], row[1]
@@ -260,6 +265,7 @@ class SouffleEngine:
                         rule_id=rule_id,
                         legal_basis=rule.legal_basis if rule else "",
                         explanation=BLOCK_EXPLANATIONS[reason].format(z=ziffer, by=by),
+                        cross_date=cross_date,
                     )
                 )
 

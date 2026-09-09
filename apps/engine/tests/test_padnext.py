@@ -1083,12 +1083,18 @@ def _synthetic_delivery():
     )
 
 
-def _synthetic_souffle_run():
+def _synthetic_souffle_run(*, cross_date: bool = False):
     """Stands in for Soufflé, so the test states the rule outcome instead of depending on a binary.
 
     It returns what the real engine returns for this input: 8100 and 8300 survive, 8200 is removed
     by the verified exclusion, and the block names the rule that did it — which is what
     `classify_position` looks up to decide whether the suppression rests on a verified basis.
+
+    `cross_date=True` stands in for `blocked_exclusion_cross_date` in `logic/datalog/goae_rules.dl`
+    firing instead of `blocked_exclusion` — i.e. the real solver, given `datum` facts for both
+    Ziffern, concluded they were rendered on different service dates. `BlockedCode.cross_date` is
+    what `audit_delivery` reads to route the block into `unconfirmed` instead of `confirmed_wrong`;
+    see `test_a_verified_exclusion_across_different_service_dates_is_unconfirmed_not_wrong`.
     """
     from app.schemas.facts import BlockedCode, RulesResult
 
@@ -1103,6 +1109,7 @@ def _synthetic_souffle_run():
                     rule_id="excl_synthetic_verified",
                     legal_basis="Synthetische Leistungslegende",
                     explanation="GOÄ 8200 ist neben GOÄ 8100 nicht berechnungsfähig.",
+                    cross_date=cross_date,
                 )
             ],
         )
@@ -1249,10 +1256,12 @@ def test_a_verified_exclusion_across_different_service_dates_is_unconfirmed_not_
 ):
     """"Neben" (alongside) in a GOÄ exclusion is a clinical term — the two services performed at
     once — not an invoice-level one. Two positions on the same invoice, 8100 and 8200, claimed
-    5.5 months apart: the rule that excludes 8200 whenever 8100 is charged still fires, because the
-    solver matches on Ziffer alone and does not see the date at all. Until the fact base carries
-    `datum`, a match that spans two different service dates must not be reported as `confirmed_wrong`
-    — that is a claim the engine cannot actually support.
+    5.5 months apart: the solver now carries `datum` for both (see `logic/datalog/goae_rules.dl`
+    LAYER 3) and reports the match via `blocked_exclusion_cross_date` rather than
+    `blocked_exclusion` — simulated here through `BlockedCode.cross_date`, since this test injects
+    a stub rather than running real Soufflé (`test_golden_cases.py::case_g_cross_date_same_patient`
+    is the end-to-end version, over the real engine). A cross-date match must not be reported as
+    `confirmed_wrong` — that is a claim the engine cannot actually support.
     """
 
     def goziffer(nr: str, ziffer: str, amount: str, datum: str) -> PadnextPosition:
@@ -1292,7 +1301,7 @@ def test_a_verified_exclusion_across_different_service_dates_is_unconfirmed_not_
         delivery,
         catalog=_synthetic_catalog(tmp_path),
         rules=_synthetic_rules(),
-        souffle_run=_synthetic_souffle_run(),
+        souffle_run=_synthetic_souffle_run(cross_date=True),
         settings=settings,
     )
 

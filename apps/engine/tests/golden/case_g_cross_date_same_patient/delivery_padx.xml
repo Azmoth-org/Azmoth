@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Golden case G: the P0 temporal bug, fixed at the solver instead of worked around in Python.
+
+     One invoice, one `<abrechnungsfall>` — one patient. GOÄ 34 on 2026-01-05, GOÄ 4 on 2026-06-20,
+     5.5 months later.
+
+     excl_auto_34_4 (data/rules/exclusions.csv, verified=true, direction=one_way): GOÄ 4 is not
+     chargeable "neben" (alongside) GOÄ 34. "Alongside" is a clinical term — the two services
+     rendered at the same encounter — not an invoice-level one, and before this fix the rules
+     engine matched on Ziffer alone with no date dimension at all, so two positions five months
+     apart were treated exactly like two positions on the same afternoon.
+
+     `logic/datalog/goae_rules.dl` LAYER 3 now carries `datum(Z, Date)` and derives
+     `blocked_exclusion_cross_date` instead of `blocked_exclusion` when the two Ziffern are known
+     to have been rendered on different dates. `app/padnext/audit.py` reads that off
+     `BlockedCode.cross_date` and routes the position to `unconfirmed` rather than
+     `confirmed_wrong`: the invoice alone does not prove the exclusion does NOT apply, only that
+     this engine cannot say it does — a human still has to look at it.
+
+     Grouping (case F) does not fix this one: both positions are already in the same, single
+     `<abrechnungsfall>`, so this is specifically the date dimension at work, not the patient
+     boundary.
+
+     Synthetic data throughout: echtdaten="0". -->
+<rechnungen anzahl="1" echtdaten="0"
+            xmlns="http://padinfo.de/ns/pad"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://padinfo.de/ns/pad http://www.padinfo.de/ns/pad/padx_adl_v2.13.xsd">
+  <nachrichtentyp version="02.13">ADL</nachrichtentyp>
+  <rechnungsersteller>
+    <name>Testpraxis Golden G</name>
+    <kundennr>123456</kundennr>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <iknr>912345678</iknr>
+  </rechnungsersteller>
+  <leistungserbringer id="01">
+    <anrede>Herr</anrede>
+    <titel>Dr. med.</titel>
+    <vorname>Test</vorname>
+    <name>Arzt</name>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <lanr>123456789</lanr>
+  </leistungserbringer>
+  <rechnung id="GOLDEN-G-0001" aisrechnungsnr="GOLDEN-G-0001">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Herr</anrede>
+        <vorname>Test</vorname>
+        <name>Testperson</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Testweg</strasse>
+            <hausnr>2</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="T-000001">
+        <anrede>Herr</anrede>
+        <vorname>Test</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Herr</anrede>
+        <vorname>Test</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+      </versicherter>
+      <positionen posanzahl="2">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="34">
+          <datum>2026-01-05</datum>
+          <anzahl>1</anzahl>
+          <text>Erörterung der Auswirkungen einer Krankheit auf die Lebensgestaltung</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>300</punktzahl>
+          <gesamtbetrag>40.22</gesamtbetrag>
+        </goziffer>
+        <goziffer positionsnr="2" go="GOÄ" ziffer="4">
+          <datum>2026-06-20</datum>
+          <anzahl>1</anzahl>
+          <text>Erhebung der Fremdanamnese über einen Kranken</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>220</punktzahl>
+          <gesamtbetrag>29.49</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

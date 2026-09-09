@@ -79,6 +79,13 @@
 .decl minderung_exempt(z: symbol)
 .input minderung_exempt
 
+// datum(Z, Date): Z was actually rendered on Date (YYYY-MM-DD). A Ziffer can carry more than one
+// row when it was claimed more than once at different dates — see LAYER 3 below, which treats
+// any shared date as "alongside". Absent entirely for a Ziffer whose date is not tracked by the
+// caller, which is the common case outside PADnext audit and must not change what LAYER 3 decides.
+.decl datum(z: symbol, date: symbol)
+.input datum
+
 // ============================================================================================
 // LAYER 0 — what was proposed, and whether it is usable at all
 // ============================================================================================
@@ -140,6 +147,26 @@ surviving_zielleistung(Z) :- surviving_specific(Z), !blocked_zielleistung(Z, _, 
 // ============================================================================================
 // Only ONE-WAY exclusions are decided here: A excludes B while B does not exclude A, so B
 // definitely loses and no choice is involved.
+//
+// "Neben" (alongside) in a GOÄ exclusion is a clinical term — the two services rendered at the
+// same encounter — not a bookkeeping one, so the same-Ziffer match below is additionally split on
+// `datum`. `known_date`/`same_service_date` are plain, non-recursive joins over the base `datum`
+// facts, so negating them in `cross_service_date` (and that in turn in `blocked_exclusion`) stays
+// a single stratum below LAYER 3 — no cycle through `blocked_exclusion` itself.
+
+.decl known_date(z: symbol)
+known_date(Z) :- datum(Z, _).
+
+// Any date the two Ziffern share counts as "alongside" — the conservative reading for a Ziffer
+// claimed more than once at different dates (see the comment on `.decl datum` above).
+.decl same_service_date(a: symbol, b: symbol)
+same_service_date(A, B) :- datum(A, D), datum(B, D).
+
+// `True` only when BOTH sides have a known date and none of them coincide. One side's date being
+// unknown is not evidence of anything, so it must not read as "different dates" — that would
+// turn a caller that never tracks dates at all into one where every exclusion looks cross-date.
+.decl cross_service_date(a: symbol, b: symbol)
+cross_service_date(A, B) :- known_date(A), known_date(B), !same_service_date(A, B).
 
 .decl blocked_exclusion(z: symbol, blocked_by: symbol, rule_id: symbol)
 blocked_exclusion(B, A, RuleId) :-
@@ -147,11 +174,28 @@ blocked_exclusion(B, A, RuleId) :-
     surviving_zielleistung(B),
     exclusion(RuleId, A, B, 0),
     !exclusion(_, B, A, _),
-    A != B.
+    A != B,
+    !cross_service_date(A, B).
 .output blocked_exclusion
 
+// The same match, but the two Ziffern are known to have been rendered on different dates. Kept
+// out of `blocked_exclusion` — and out of `billable` below, via `surviving_exclusion` — because a
+// human still has to look at it: the invoice alone does not say the exclusion definitely does NOT
+// apply, only that this engine cannot say it does. `app/padnext/audit.py` reads this into the
+// advisory (`unconfirmed`) bucket rather than `confirmed_wrong`.
+.decl blocked_exclusion_cross_date(z: symbol, blocked_by: symbol, rule_id: symbol)
+blocked_exclusion_cross_date(B, A, RuleId) :-
+    surviving_zielleistung(A),
+    surviving_zielleistung(B),
+    exclusion(RuleId, A, B, 0),
+    !exclusion(_, B, A, _),
+    A != B,
+    cross_service_date(A, B).
+.output blocked_exclusion_cross_date
+
 .decl surviving_exclusion(z: symbol)
-surviving_exclusion(Z) :- surviving_zielleistung(Z), !blocked_exclusion(Z, _, _).
+surviving_exclusion(Z) :-
+    surviving_zielleistung(Z), !blocked_exclusion(Z, _, _), !blocked_exclusion_cross_date(Z, _, _).
 
 // A blocker that is itself blocked must not suppress a third position. Rather than assume the
 // rule set never contains such a chain, the engine reports it, so the need for another stratum
@@ -253,7 +297,7 @@ proof(Z, "not_zielleistung_component", "not_a_component_of_another_charged_servi
     chargeable(Z), !blocked_zielleistung(Z, _, _).
 
 proof(Z, "not_excluded", "no_one_way_exclusion_violated", "") :-
-    chargeable(Z), !blocked_exclusion(Z, _, _).
+    chargeable(Z), !blocked_exclusion(Z, _, _), !blocked_exclusion_cross_date(Z, _, _).
 
 proof(Z, "no_unresolved_conflict", "no_mutually_exclusive_competitor", "") :-
     billable(Z), !in_conflict(Z).
@@ -261,6 +305,7 @@ proof(Z, "no_unresolved_conflict", "no_mutually_exclusive_competitor", "") :-
 proof(Z, "blocked_less_specific", W, RuleId) :- blocked_less_specific(Z, W, RuleId).
 proof(Z, "blocked_zielleistung", P, RuleId) :- blocked_zielleistung(Z, P, RuleId).
 proof(Z, "blocked_exclusion", A, RuleId) :- blocked_exclusion(Z, A, RuleId).
+proof(Z, "blocked_exclusion_cross_date", A, RuleId) :- blocked_exclusion_cross_date(Z, A, RuleId).
 
 proof(Z, "conflict_pending_arbitration", B, RuleId) :- conflict(Z, B, RuleId).
 proof(Z, "conflict_pending_arbitration", A, RuleId) :- conflict(A, Z, RuleId).

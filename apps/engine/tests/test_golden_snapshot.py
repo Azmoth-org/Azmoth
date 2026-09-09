@@ -63,6 +63,11 @@ FIELDS_ADDED_SINCE_POC = {
     # is the numerator of `verified_share`, and a client should not have to re-derive it by summing
     # four other fields and hoping it picked the same four.
     "/audit_trail/rule_summary/enforced_rules",
+    # The PADnext cross-invoice/cross-date audit fix: `datum` is now in the Datalog fact base
+    # (`logic/datalog/goae_rules.dl` LAYER 3), so a `blocked_exclusion` match the solver knows
+    # spans two different service dates is reported as such. `False` for every POC case, which
+    # never carried a service date at all — see `app/schemas/facts.py::BlockedCode.cross_date`.
+    "/coding/blocked_codes/cross_date",
 }
 
 

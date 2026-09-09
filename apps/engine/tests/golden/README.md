@@ -1,18 +1,26 @@
 # Golden cases
 
-Five PADnext deliveries whose answers were worked out from the fee schedule, plus one reproducer for
-an open defect. The runbook is [`docs/api/E2E_GOLDEN.md`](../../../../docs/api/E2E_GOLDEN.md); this
-file is the map.
+Five PADnext deliveries whose answers were worked out from the fee schedule, plus two reproducers
+for fixed defects. The runbook is [`docs/api/E2E_GOLDEN.md`](../../../../docs/api/E2E_GOLDEN.md);
+this file is the map.
 
 ```
-oracle.py                        the expectations, computed from data/ — imports nothing from app/
-case_a_known_answer/             5 positions, 78.81 €, nothing wrong and nothing confirmed
-case_b_verified_exclusion/       excl_auto_34_4 fires; GOÄ 4 blocked, GOÄ 34 untouched
-case_c_verified_factor_cap/      cap_auto_440 fires at 2.3; the same Ziffer at exactly 1.0 survives
-case_d_arithmetic_mismatch/      case A with one gesamtbetrag +10.00 €
-case_e_echtdaten_gate/           case A with no @echtdaten → 422, then anonymised → case A
-bug_positionsnr_collision/       NOT a golden case — a strict xfail; see the runbook §5
+oracle.py                          the expectations, computed from data/ — imports nothing from app/
+case_a_known_answer/               5 positions, 78.81 €, nothing wrong and nothing confirmed
+case_b_verified_exclusion/         excl_auto_34_4 fires; GOÄ 4 blocked, GOÄ 34 untouched
+case_c_verified_factor_cap/        cap_auto_440 fires at 2.3; the same Ziffer at exactly 1.0 survives
+case_d_arithmetic_mismatch/        case A with one gesamtbetrag +10.00 €
+case_e_echtdaten_gate/             case A with no @echtdaten → 422, then anonymised → case A
+bug_positionsnr_collision/         a regular case now — findings keyed by id(row), not positionsnr
+case_f_cross_patient_boundary/     excl_auto_34_4 must not cross an <abrechnungsfall> boundary
+case_g_cross_date_same_patient/    excl_auto_34_4 across two service dates is advisory, not wrong
 ```
+
+`case_f_cross_patient_boundary/` and `case_g_cross_date_same_patient/`, like
+`bug_positionsnr_collision/`, have a hand-computed `expected.json` rather than one `oracle.py`
+derived — see the comment above their tests in
+[`tests/test_golden_cases.py`](../test_golden_cases.py) for why the oracle's generic per-delivery
+walker cannot be the source of truth for either.
 
 Each directory is a `delivery_padx.xml` + `expected.json` pair. Two runners read them and must never
 disagree:
