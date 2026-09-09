@@ -1,9 +1,9 @@
-import { ArrowUpRightIcon } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
 import { Logo } from "@workspace/ui/components/logo";
 
-import { getAppUrl, getSiteUrl } from "@/lib/site";
+import { getCalComUrl, getSiteUrl } from "@/lib/site";
 
 /**
  * The chrome Fumadocs draws around every page: the navbar title and the links beside it.
@@ -12,7 +12,7 @@ import { getAppUrl, getSiteUrl } from "@/lib/site";
  * other layouts (the 404 shell, and a marketing-style `HomeLayout` if this site ever grows one)
  * take the same object. One export means those cannot drift into two different navbars.
  *
- * A function rather than a constant: `getSiteUrl()` and `getAppUrl()` read the environment, and
+ * A function rather than a constant: `getSiteUrl()` and `getCalComUrl()` read the environment, and
  * a module-level constant would freeze whatever was set when the module first evaluated.
  */
 export function baseOptions(): BaseLayoutProps {
@@ -45,10 +45,10 @@ export function baseOptions(): BaseLayoutProps {
       },
       {
         type: "button",
-        text: "Anmelden",
-        url: `${getAppUrl()}/login`,
+        text: "Termin buchen",
+        url: getCalComUrl(),
         external: true,
-        icon: <ArrowUpRightIcon />,
+        icon: <CalendarIcon />,
       },
     ],
   };

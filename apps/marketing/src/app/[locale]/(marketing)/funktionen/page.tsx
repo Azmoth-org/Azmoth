@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { useTranslations } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { ArrowRightIcon, CheckIcon } from "lucide-react";
+import { CalendarIcon, CheckIcon } from "lucide-react";
 
 import {Card, CardContent, CardHeader} from "@workspace/ui/components/card";
 
@@ -86,7 +86,7 @@ function FeatureCta() {
         <SectionHeading title={t("titel")} subtitle={t("text")} />
         <ButtonLink external href={getProductLinks().signup} size="lg">
           {t("primaer")}
-          <ArrowRightIcon data-icon="inline-end" />
+          <CalendarIcon data-icon="inline-end" />
         </ButtonLink>
       </div>
     </Section>

@@ -1,7 +1,6 @@
 "use client"
 
 import { ArrowRightIcon, Loader2Icon, PlayIcon } from "lucide-react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -12,6 +11,8 @@ import {
 } from "@workspace/ui/components/alert"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
+
+import { getCalComUrl } from "@/lib/site"
 
 /**
  * »Mit Beispieldaten testen« — runs the public audit, then opens the report.
@@ -79,13 +80,15 @@ export function StartDemoButton() {
             </>
           )}
         </Button>
-        <Link
-          href="/signup"
+        <a
+          href={getCalComUrl()}
+          target="_blank"
+          rel="noopener noreferrer"
           className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
         >
           Mit eigenen Daten prüfen (Pilot-Zugang anfordern)
           <ArrowRightIcon aria-hidden />
-        </Link>
+        </a>
       </div>
 
       <p className="text-xs text-muted-foreground">

@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import {
   ArrowRightIcon,
   BuildingIcon,
+  CalendarIcon,
   CheckIcon,
   CircleAlertIcon,
   CircleCheckIcon,
@@ -235,11 +236,9 @@ function Hero() {
         </div>
 
         {/*
-          The two tracks, in the order a stranger can actually use them. Primary is the
-          demo, which needs no account and takes no upload; secondary is the gated pilot.
-          A "kostenlos testen" button aimed at `signup` would send most visitors to a form
-          that refuses them — `SIGNUP_ALLOWLIST` gates it — which is a worse first
-          impression than not offering it.
+          One CTA, not two: `demo` and `signup` both resolve to the same Cal.com link while
+          there is no partner pipeline and no hosted app (see `getProductLinks()`), so a second
+          button here would just be the first one's text in a different shape.
         */}
         <div
           className="azm-enter mt-2 w-full sm:w-auto"
@@ -248,16 +247,7 @@ function Hero() {
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <ButtonLink external href={links.demo} size="lg">
               {t("ctaPrimaer")}
-              <ArrowRightIcon data-icon="inline-end" />
-            </ButtonLink>
-            <ButtonLink
-              external
-              href={links.signup}
-              size="lg"
-              variant="outline"
-              className="azm-glass"
-            >
-              {t("ctaSekundaer")}
+              <CalendarIcon data-icon="inline-end" />
             </ButtonLink>
           </div>
         </div>
@@ -454,7 +444,7 @@ function Buckets() {
                   */}
                   {index === 1 ? (
                     <code className="azm-tnum mt-4 inline-block rounded-md bg-azm-wrong/10 px-2 py-1 text-xs font-medium text-azm-wrong">
-                      § 4 Abs. 2a GOÄ
+                      GOÄ Anmerkung zu Nummer 4
                     </code>
                   ) : null}
                 </div>
@@ -672,9 +662,6 @@ function Pilot() {
                 {t("cta")}
                 <ArrowRightIcon data-icon="inline-end" />
               </ButtonLink>
-              <ButtonLink external href={links.demo} size="lg" variant="outline">
-                {t("ctaSekundaer")}
-              </ButtonLink>
             </div>
           </Reveal>
         </div>
@@ -798,7 +785,7 @@ function ClosingCta() {
             <div className="flex flex-col justify-center gap-3 sm:flex-row">
               <ButtonLink external href={links.demo} size="lg">
                 {t("primaer")}
-                <ArrowRightIcon data-icon="inline-end" />
+                <CalendarIcon data-icon="inline-end" />
               </ButtonLink>
               <ButtonLink href={routes.kontakt} size="lg" variant="outline">
                 {t("sekundaer")}

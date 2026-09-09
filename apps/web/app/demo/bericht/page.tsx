@@ -18,6 +18,7 @@ import { PositionsTable } from "@/components/padnext/positions-table"
 import { ReportProvenance } from "@/components/padnext/report-provenance"
 import { callPublicEngine } from "@/lib/engine"
 import { isAuditReportShape } from "@/lib/padnext/types"
+import { getCalComUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Demo-Prüfbericht",
@@ -129,10 +130,15 @@ export default async function DemoReportPage() {
           werden. Der Zugang ist derzeit auf freigeschaltete Pilot-Teilnehmer
           beschränkt.
         </p>
-        <Link href="/signup" className={cn(buttonVariants(), "mt-4")}>
+        <a
+          href={getCalComUrl()}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(buttonVariants(), "mt-4")}
+        >
           Mit eigenen Daten prüfen (Pilot-Zugang anfordern)
           <ArrowRightIcon aria-hidden />
-        </Link>
+        </a>
       </section>
     </>
   )

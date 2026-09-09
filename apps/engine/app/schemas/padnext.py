@@ -192,6 +192,10 @@ class PadnextAuditedPosition(BaseModel):
     reason: str = ""
     blocked_by: str | None = None
     proof: list[str] = Field(default_factory=list)
+    #: The claimed `<datum>` this position was billed on, exactly as the delivery states it, or
+    #: `None` when the delivery carried no such date. Used only to tell a same-date exclusion
+    #: apart from one that spans two different service dates — see `classify_position`.
+    datum: str | None = None
 
     claimed_faktor: Dec | None = None
     claimed_amount_eur: Dec | None = None

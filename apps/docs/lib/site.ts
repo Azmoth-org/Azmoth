@@ -39,6 +39,11 @@ export function getAppUrl(): string {
   );
 }
 
+/** Where the navbar's "Anmelden" button sends a visitor to book a call instead. */
+export function getCalComUrl(): string {
+  return process.env.NEXT_PUBLIC_CAL_COM_URL ?? "https://cal.com/azmoth";
+}
+
 export function absoluteUrl(path = "/"): string {
   return new URL(path, getDocsUrl()).toString();
 }

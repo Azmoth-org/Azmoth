@@ -1244,6 +1244,71 @@ def test_an_unverified_rule_downgrades_a_position_from_fine_to_unconfirmed(tmp_p
     assert report.claimed_total_eur == Decimal("350.00")
 
 
+def test_a_verified_exclusion_across_different_service_dates_is_unconfirmed_not_wrong(
+    tmp_path, settings
+):
+    """"Neben" (alongside) in a GOÄ exclusion is a clinical term — the two services performed at
+    once — not an invoice-level one. Two positions on the same invoice, 8100 and 8200, claimed
+    5.5 months apart: the rule that excludes 8200 whenever 8100 is charged still fires, because the
+    solver matches on Ziffer alone and does not see the date at all. Until the fact base carries
+    `datum`, a match that spans two different service dates must not be reported as `confirmed_wrong`
+    — that is a claim the engine cannot actually support.
+    """
+
+    def goziffer(nr: str, ziffer: str, amount: str, datum: str) -> PadnextPosition:
+        return PadnextPosition(
+            positionsnr=nr,
+            go="GOÄ",
+            ziffer=ziffer,
+            anzahl=1,
+            faktor=Decimal("2.0"),
+            gesamtbetrag=Decimal(amount),
+            datum=datum,
+            text=f"Synthetische Position {nr}",
+        )
+
+    delivery = PadnextDelivery(
+        nachrichtentyp="ADL",
+        version="02.12",
+        echtdaten=False,
+        source_name="synthetic_temporal_padx.xml",
+        invoices=[
+            PadnextInvoice(
+                invoice_id="SYNTH-TEMPORAL-1",
+                cases=[
+                    PadnextCase(
+                        behandlungsart="0",
+                        positions=[
+                            goziffer("D", "8100", "100.00", "2026-01-15"),
+                            goziffer("E", "8200", "50.00", "2026-07-01"),  # 5.5 months later
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+
+    report = audit_delivery(
+        delivery,
+        catalog=_synthetic_catalog(tmp_path),
+        rules=_synthetic_rules(),
+        souffle_run=_synthetic_souffle_run(),
+        settings=settings,
+    )
+
+    blocked_row = position(report, "E")
+    assert blocked_row.verdict == "blocked"
+    assert blocked_row.blocked_by == "8100"
+    assert blocked_row.bucket == "unconfirmed"
+    assert blocked_row.bucket != "confirmed_wrong"
+    assert "unterschiedlichen Leistungsdaten" in blocked_row.bucket_reason
+
+    survivor_row = position(report, "D")
+    assert survivor_row.bucket != "confirmed_wrong"
+
+    assert report.confirmed_wrong_eur == Decimal("0.00")
+
+
 def test_a_second_case_reusing_position_numbers_does_not_inherit_the_first_case_verdict(
     tmp_path, settings
 ):

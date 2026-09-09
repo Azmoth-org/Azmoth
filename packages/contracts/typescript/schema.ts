@@ -3061,6 +3061,8 @@ export interface components {
             claimed_amount_eur?: string | null;
             /** Claimed Faktor */
             claimed_faktor?: string | null;
+            /** Datum */
+            datum?: string | null;
             /** Factor Within Band */
             factor_within_band?: boolean | null;
             /** Go */

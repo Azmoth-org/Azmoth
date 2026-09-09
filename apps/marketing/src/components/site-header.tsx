@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { BookOpenIcon, LayersIcon, ScaleIcon, TerminalIcon } from "lucide-react";
+import { BookOpenIcon, CalendarIcon, LayersIcon, ScaleIcon, TerminalIcon } from "lucide-react";
 
 import { Logo } from "@workspace/ui/components/logo";
 import {
@@ -51,12 +51,13 @@ import { routes, siteConfig } from "@/lib/site";
  * into the browser bundle at build time.
  */
 export function SiteHeader({
-  login,
-  demo,
+  bookingUrl,
   docs,
 }: {
-  login: string;
-  demo: string;
+  /** The one booking CTA. `login` and `demo` used to be separate destinations; both resolve to
+   * the same Cal.com link now (see `getProductLinks()`), so two buttons that did the same thing
+   * collapsed into one. */
+  bookingUrl: string;
   /** `docs.azmoth.com` — the orientation material, its own Next application. */
   docs: string;
 }) {
@@ -225,11 +226,9 @@ export function SiteHeader({
         <NavItems items={items} />
 
         <div className="relative z-10 flex shrink-0 items-center gap-2">
-          <ButtonLink external href={login} variant="ghost" size="sm">
+          <ButtonLink external href={bookingUrl} size="sm">
             {t("anmelden")}
-          </ButtonLink>
-          <ButtonLink external href={demo} size="sm">
-            {t("testen")}
+            <CalendarIcon data-icon="inline-end" />
           </ButtonLink>
         </div>
       </NavBody>
@@ -267,11 +266,9 @@ export function SiteHeader({
             </a>
           </nav>
           <div className="mt-3 flex flex-col gap-2 border-t border-azm-hairline pt-3">
-            <ButtonLink external href={login} variant="outline">
+            <ButtonLink external href={bookingUrl}>
               {t("anmelden")}
-            </ButtonLink>
-            <ButtonLink external href={demo}>
-              {t("testen")}
+              <CalendarIcon data-icon="inline-end" />
             </ButtonLink>
           </div>
         </MobileNavMenu>

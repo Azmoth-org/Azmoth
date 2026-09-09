@@ -129,17 +129,16 @@ export function Metrics() {
       </RevealGroup>
 
       {/*
-        The share figures, as one line under the tiles rather than as two more tiles.
+        The one share figure worth stating on its own line under the tiles.
 
-        "96 %" and "858 von 894" are the same claim said twice — `engine-facts.ts` computes the
-        percentage from the counts for exactly that reason — so giving each its own tile would be
-        six tiles carrying three facts. Here they read as the arithmetic on the numbers above,
-        which is what they are.
+        Only the catalog share — "358 von 2.192" said as a percentage — belongs here. The rules
+        share (858 von 894, as a percentage) is a share of Azmoth's own rule table, not of the
+        GOÄ, and printing it beside the catalog figure invited a reader to conflate the two; the
+        honest coverage claim this page can make is `katalogAnteil` alone.
       */}
       <Reveal delay={0.1} className="mt-8">
         <p className="azm-tnum mx-auto max-w-2xl text-center text-sm leading-relaxed text-azm-ink-mute">
           {t("anteile", {
-            regelnAnteil: engineFacts.regelnAnteil,
             katalogAnteil: engineFacts.katalogAnteil,
           })}
         </p>
