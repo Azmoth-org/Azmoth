@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Golden case F: the P0 cross-patient/cross-invoice boundary bug, fixed.
+
+     Two invoices, two different `<abrechnungsfall>` — two different patients. Invoice 1 charges
+     GOÄ 34 alone; invoice 2 charges GOÄ 4 alone. Nothing else is on either invoice.
+
+     excl_auto_34_4 (data/rules/exclusions.csv, verified=true, direction=one_way): if GOÄ 34 is
+     charged, GOÄ 4 is not chargeable beside it. Before the fix, `audit_delivery` flattened every
+     invoice's positions into one Ziffer-keyed fact set before grounding the rules engine, so this
+     rule fired the moment GOÄ 34 and GOÄ 4 both appeared *anywhere* in the delivery — even though
+     they belong to two different patients who never claimed both. Invoice 2's GOÄ 4 was reported
+     `blocked` by GOÄ 34 and moved to `confirmed_wrong`, which is wrong under any reading of the
+     GOÄ: two patients cannot render a service "alongside" each other.
+
+     After the fix, `audit_delivery` runs Soufflé once per `<abrechnungsfall>`. Neither invoice's
+     own fact set ever contains both Ziffern, so the exclusion cannot fire on either side — GOÄ 34
+     and GOÄ 4 are each `chargeable`, and `confirmed_wrong_eur` is 0.00.
+
+     `verified_rule_ids` is empty on both positions rather than `["excl_auto_34_4"]`. That is not a
+     regression: `rules_bearing_on` credits a verified rule to an invoice only when *every* Ziffer
+     it names is claimed there (see `test_case_a_every_position_is_chargeable_and_unconfirmed` for
+     the same rule applied to case A) — a lone GOÄ 34 with no GOÄ 4 on the same abrechnungsfall was
+     never actually tested against this exclusion, so crediting it would overclaim coverage the same
+     way the original bug overclaimed a defect. Both positions land in `unconfirmed`, honestly:
+     nothing confirms them wrong, and nothing verified confirms them clean either.
+
+     Synthetic data throughout: echtdaten="0". -->
+<rechnungen anzahl="2" echtdaten="0"
+            xmlns="http://padinfo.de/ns/pad"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://padinfo.de/ns/pad http://www.padinfo.de/ns/pad/padx_adl_v2.13.xsd">
+  <nachrichtentyp version="02.13">ADL</nachrichtentyp>
+  <rechnungsersteller>
+    <name>Testpraxis Golden F</name>
+    <kundennr>123456</kundennr>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <iknr>912345678</iknr>
+  </rechnungsersteller>
+  <leistungserbringer id="01">
+    <anrede>Herr</anrede>
+    <titel>Dr. med.</titel>
+    <vorname>Test</vorname>
+    <name>Arzt</name>
+    <anschrift>
+      <hausadresse>
+        <plz>80331</plz>
+        <ort>München</ort>
+        <strasse>Teststraße</strasse>
+        <hausnr>1</hausnr>
+      </hausadresse>
+    </anschrift>
+    <lanr>123456789</lanr>
+  </leistungserbringer>
+  <rechnung id="GOLDEN-F-0001" aisrechnungsnr="GOLDEN-F-0001">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Herr</anrede>
+        <vorname>Erste</vorname>
+        <name>Testperson</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Testweg</strasse>
+            <hausnr>2</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="T-000001">
+        <anrede>Herr</anrede>
+        <vorname>Erste</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Herr</anrede>
+        <vorname>Erste</vorname>
+        <name>Testperson</name>
+        <gebdatum>1980-01-01</gebdatum>
+        <geschlecht>m</geschlecht>
+      </versicherter>
+      <positionen posanzahl="1">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="34">
+          <datum>2026-09-01</datum>
+          <anzahl>1</anzahl>
+          <text>Erörterung der Auswirkungen einer Krankheit auf die Lebensgestaltung</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>300</punktzahl>
+          <gesamtbetrag>40.22</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+  <rechnung id="GOLDEN-F-0002" aisrechnungsnr="GOLDEN-F-0002">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Frau</anrede>
+        <vorname>Zweite</vorname>
+        <name>Testperson</name>
+        <anschrift>
+          <hausadresse>
+            <plz>80333</plz>
+            <ort>München</ort>
+            <strasse>Testweg</strasse>
+            <hausnr>3</hausnr>
+          </hausadresse>
+        </anschrift>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <leistungserbringerid>01</leistungserbringerid>
+      <behandelter aisid="T-000002">
+        <anrede>Frau</anrede>
+        <vorname>Zweite</vorname>
+        <name>Testperson</name>
+        <gebdatum>1985-05-05</gebdatum>
+        <geschlecht>w</geschlecht>
+        <staat>D</staat>
+      </behandelter>
+      <versicherter>
+        <anrede>Frau</anrede>
+        <vorname>Zweite</vorname>
+        <name>Testperson</name>
+        <gebdatum>1985-05-05</gebdatum>
+        <geschlecht>w</geschlecht>
+      </versicherter>
+      <positionen posanzahl="1">
+        <goziffer positionsnr="1" go="GOÄ" ziffer="4">
+          <datum>2026-09-03</datum>
+          <anzahl>1</anzahl>
+          <text>Erhebung der Fremdanamnese über einen Kranken</text>
+          <faktor>2.3</faktor>
+          <punktwert>0.0582873</punktwert>
+          <punktzahl>220</punktzahl>
+          <gesamtbetrag>29.49</gesamtbetrag>
+        </goziffer>
+      </positionen>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

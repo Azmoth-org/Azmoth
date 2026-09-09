@@ -24,6 +24,14 @@ class ClinicalAct(BaseModel):
     organ: str | None = None
     description: str = ""
     confidence: Dec = Decimal("1.0")
+    #: The Leistungsdatum this act was actually rendered on, `YYYY-MM-DD`, or `None` when unknown.
+    #:
+    #: Feeds `datum` in `logic/datalog/goae_rules.dl` via `app/solvers/souffle_facts.py`, so a
+    #: "neben" (alongside) exclusion can be restricted to services rendered on the same date
+    #: instead of matching on Ziffer alone regardless of when either was claimed. `None` for every
+    #: caller that does not track dates — the callsite the rule was written for, a single
+    #: clinical encounter, has no use for it and the relation stays empty either way.
+    service_date: str | None = None
 
 
 class CodeCandidate(BaseModel):
@@ -68,6 +76,13 @@ class BlockedCode(BaseModel):
     legal_basis: str = ""
     explanation: str = ""
     reconciled_with_final_invoice: bool = True
+
+    #: `True` when this exclusion matched two claimed Ziffern known — from `datum` — to have been
+    #: rendered on different service dates. "Neben" (alongside) is a clinical term, the two
+    #: services performed at once, and `False`/default covers both a proven same-date match and
+    #: the common case where at least one side's date is unknown, which is not evidence either
+    #: way. Only ever `True` for `reason="exclusion"`; the other reasons have no date dimension.
+    cross_date: bool = False
 
     #: Why this position is not on the invoice, as Datalog derived it.
     #:

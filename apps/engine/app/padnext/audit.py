@@ -36,6 +36,7 @@ from __future__ import annotations
 import os
 import time
 from collections.abc import Sequence
+from dataclasses import dataclass, field
 from decimal import Decimal
 
 from app.bridge.entity_to_ziffer import BridgeResult
@@ -371,20 +372,27 @@ def derive_setting(
     return setting, source
 
 
-def build_audit_input(
-    delivery: PadnextDelivery, setting: Setting
+def _build_group_audit_input(
+    positions: Sequence[PadnextPosition], setting: Setting
 ) -> tuple[ClinicalExtraction, BridgeResult, dict[str, Decimal], dict[str, PadnextPosition]]:
-    """Turn claimed positions into the shape the rules engine already consumes.
+    """Turn one `<abrechnungsfall>`'s claimed positions into the shape the rules engine consumes.
 
     One synthetic act per claimed position, so a `begruendung` on a position can be bound to it as
-    a § 12 Abs. 3 justification through the bridge's existing entity addressing.
+    a § 12 Abs. 3 justification through the bridge's existing entity addressing. `service_date` is
+    carried onto the act too, so `logic/datalog/goae_rules.dl` can restrict "neben" (alongside) to
+    same-date services — see `app/solvers/souffle_facts.py`.
+
+    Takes the positions of a single billing case, not a whole delivery — see `_audit_group` for
+    why grounding more than one patient's claims in one bridge is the bug this module exists to
+    fix. `act_id` numbering restarts at 1 for every call, which is safe: an act id only has to be
+    unique within the one Soufflé run this bridge feeds.
     """
     bridge = BridgeResult()
     justifications: list[JustificationFactor] = []
     proposed_factors: dict[str, Decimal] = {}
     by_ziffer: dict[str, PadnextPosition] = {}
 
-    for index, position in enumerate(delivery.positions(), start=1):
+    for index, position in enumerate(positions, start=1):
         if not position.is_goae:
             continue
         act_id = _act_id(position, index)
@@ -396,6 +404,7 @@ def build_audit_input(
                 entity_type=f"padnext_position_{position.ziffer}",
                 description=position.text or f"PADnext Position {position.positionsnr}",
                 confidence=Decimal("1"),
+                service_date=position.datum,
             )
         )
         bridge.candidates.append(
@@ -428,6 +437,19 @@ def build_audit_input(
         notes="Synthetisiert aus einer PADnext-Lieferung zur Prüfung. Keine Patientendaten.",
     )
     return extraction, bridge, proposed_factors, by_ziffer
+
+
+def build_audit_input(
+    delivery: PadnextDelivery, setting: Setting
+) -> tuple[ClinicalExtraction, BridgeResult, dict[str, Decimal], dict[str, PadnextPosition]]:
+    """Turn a WHOLE delivery's claimed positions into one bridge.
+
+    A thin wrapper over `_build_group_audit_input`, kept for callers (and tests) that want one
+    bridge over an entire delivery regardless of how many `<abrechnungsfall>` it holds.
+    `audit_delivery` itself does not call this any more: see `_audit_group` for why grounding a
+    multi-patient delivery in one bridge is exactly the bug this module was rewritten to fix.
+    """
+    return _build_group_audit_input(delivery.positions(), setting)
 
 
 def _recompute(
@@ -635,13 +657,13 @@ def classify_position(
     `None` when nothing suppressed it, or when the solver simply failed to confirm it and there is
     no rule to point at.
 
-    `cross_date_match` is `True` when this position and whatever blocked it are known to have been
-    claimed on different service dates, `False` when they are known to share one, and `None` when
-    either side's `datum` is missing and nothing can be said. "Neben" (alongside) in a GOÄ exclusion
-    is a clinical term — the two services performed at once — not an invoice-level one, and an
-    exclusion rule today matches on Ziffer alone, across the whole delivery, however far apart the
-    two claimed dates actually are. Until datum is in the fact base, cross-date matches are
-    advisory, not confirmed wrong.
+    `cross_date_match` is `True` when the solver knows this position and whatever blocked it were
+    rendered on different service dates — `blocked_exclusion_cross_date` in
+    `logic/datalog/goae_rules.dl`, read off `BlockedCode.cross_date` — and `None` otherwise: either
+    nothing suppressed this position, or the suppression was a proven same-date match, or either
+    side's `datum` was missing and the solver could not say. "Neben" (alongside) in a GOÄ exclusion
+    is a clinical term — the two services performed at once — not an invoice-level one, so a
+    cross-date match is advisory, not confirmed wrong.
 
     The order of the tests is the argument. Proof that a position is wrong comes first and is not
     softened by advisory noise. Everything that follows is a reason we *cannot* speak, and only a
@@ -725,6 +747,482 @@ def classify_position(
     )
 
 
+# ------------------------------------------------------------------------------------------
+# per-abrechnungsfall grouping — the fix for rules firing across patient/invoice boundaries
+# ------------------------------------------------------------------------------------------
+#
+# `PadnextDelivery.positions()` flattens every invoice and every billing case into one list, and
+# for a long time `audit_delivery` ground the whole thing in a single Soufflé run. The rules
+# engine is keyed by Ziffer alone — `billable(z)`, `blocked_exclusion(z, blocked_by, rule_id)` —
+# with no dimension for patient, invoice or case, so a verified exclusion like `excl_auto_34_4`
+# fired the moment GOÄ 34 and GOÄ 4 both appeared *anywhere* in the batch, whether or not they
+# belonged to the same patient. A real ADL delivery carries hundreds of invoices; the false
+# positives scale quadratically with delivery size.
+#
+# The fix is to never build a fact base wider than the law's own unit of suppression. A GOÄ
+# exclusion is a statement about one patient's encounter, and PADnext's own unit for that is the
+# `<abrechnungsfall>` — not the `<rechnung>` it sits inside, which is the practice's own invoice
+# grouping and may or may not track the clinical one. So `audit_delivery` now runs `_audit_group`
+# once per `<abrechnungsfall>` and adds the results up, and `blocking_rule_id` and friends do not
+# need to change: they were already keyed by `id(row)` for the positionsnr-collision fix, and a
+# row's identity does not care which group produced it.
+
+
+@dataclass
+class _GroupOutcome:
+    """One `_audit_group` call's contribution to the report — one `<abrechnungsfall>`'s worth.
+
+    Kept as its own type, rather than threading a dozen running totals through `_audit_group`'s
+    signature, so `audit_delivery` can sum a list of these instead.
+    """
+
+    audited: list[PadnextAuditedPosition] = field(default_factory=list)
+    findings: list[PadnextFinding] = field(default_factory=list)
+    claimed_total: Decimal = Decimal("0.00")
+    recomputed_total: Decimal = Decimal("0.00")
+    comparable_claimed: Decimal = Decimal("0.00")
+    unpriceable_claimed: Decimal = Decimal("0.00")
+    defensible_total: Decimal = Decimal("0.00")
+    bucket_totals: dict[PositionBucket, Decimal] = field(
+        default_factory=lambda: {
+            "confirmed_fine": Decimal("0.00"),
+            "confirmed_wrong": Decimal("0.00"),
+            "unconfirmed": Decimal("0.00"),
+        }
+    )
+    #: Wrong `<punktwert>` values seen in this group, keyed by the value written, each with the
+    #: `positionsnr`s that carried it. `punktwert` is a fee-schedule constant rather than a
+    #: per-patient fact, so `audit_delivery` merges these across every group and reports each
+    #: distinct value once, delivery-wide — see the comment where it does.
+    punktwert_offenders: dict[Decimal, list[str]] = field(default_factory=dict)
+
+
+def _audit_group(
+    positions: Sequence[PadnextPosition],
+    *,
+    setting: Setting,
+    catalog: Catalog,
+    rules: RuleStore,
+    souffle_run,
+) -> _GroupOutcome:
+    """Audit one `<abrechnungsfall>` in isolation: one Soufflé run, one set of verdicts.
+
+    This is the whole fix. Everything below is the same per-position reasoning
+    `audit_delivery` always did — verdict, factor band, arithmetic, bucket — just run over one
+    billing case's positions instead of a whole delivery's, so `billable` and `blocked_exclusion`
+    can never mix two patients' Ziffern. `audit_delivery` calls this once per case and adds the
+    `_GroupOutcome`s up; nothing here decides money across groups.
+    """
+    outcome = _GroupOutcome()
+    goae = [p for p in positions if p.is_goae]
+
+    extraction, bridge, proposed_factors, _ = _build_group_audit_input(positions, setting)
+    rules_result = (
+        souffle_run(extraction, bridge, proposed_factors=proposed_factors) if goae else None
+    )
+
+    billable: set[str] = set(rules_result.billable) if rules_result else set()
+    blocked_by_ziffer = {b.ziffer: b for b in (rules_result.blocked if rules_result else [])}
+    conflicts = list(rules_result.conflicts) if rules_result else []
+    proof_by_ziffer: dict[str, list[str]] = {}
+    for step in rules_result.proof if rules_result else []:
+        proof_by_ziffer.setdefault(step.ziffer, []).append(step.rule)
+    needs_justification = set(rules_result.factor_needs_justification if rules_result else [])
+    factor_invalid = set(rules_result.factor_invalid if rules_result else [])
+
+    # The engine reports some of the same defects, but keyed only by Ziffer. Where we re-report one
+    # per position with the position number and the recomputation, the engine's copy is strictly
+    # less useful — drop it rather than show a reviewer the same defect twice under two names.
+    # `position_of_ziffer` is scoped to this group's own positions for the same reason everything
+    # else here is: a Ziffer shared with another patient's case must not borrow that case's
+    # positionsnr.
+    position_of_ziffer = {p.ziffer: p.positionsnr for p in goae}
+    for warning in rules_result.warnings if rules_result else []:
+        if warning.type in ENGINE_WARNINGS_REPORTED_PER_POSITION:
+            continue
+        outcome.findings.append(
+            _as_finding(warning, positionsnr=position_of_ziffer.get(warning.ziffer or ""))
+        )
+
+    #: Rule id of whatever suppressed a position, keyed by `id()` of the audited row — see
+    #: `blocking_rule_id`'s original comment in `audit_delivery` for why object identity and not
+    #: `positionsnr`. Local to this group; ids stay distinct across groups because the rows do.
+    blocking_rule_id: dict[int, str] = {}
+    errors_per_row: dict[int, int] = {}
+    verified_defects_per_row: dict[int, set[str]] = {}
+
+    def _record_position_findings(row: PadnextAuditedPosition, findings_from: int) -> None:
+        """Fold every finding raised for `row` in this iteration into the two maps above."""
+        for finding in outcome.findings[findings_from:]:
+            if finding.severity == "error":
+                errors_per_row[id(row)] = errors_per_row.get(id(row), 0) + 1
+            if finding.type in VERIFIED_DEFECT_FINDINGS:
+                verified_defects_per_row.setdefault(id(row), set()).add(finding.type)
+
+    for position in positions:
+        entry = catalog.get(position.ziffer)
+        findings_before_position = len(outcome.findings)
+        row = PadnextAuditedPosition(
+            positionsnr=position.positionsnr,
+            ziffer=position.ziffer,
+            go=position.go,
+            is_analog=position.is_analog,
+            in_catalog=entry is not None,
+            official_text=entry.official_text if entry else "",
+            claimed_faktor=position.faktor,
+            claimed_amount_eur=position.gesamtbetrag,
+            punkte=entry.punkte if entry else None,
+            datum=position.datum,
+        )
+
+        if position.gesamtbetrag is not None:
+            outcome.claimed_total += position.gesamtbetrag
+
+        if not position.is_goae:
+            row.verdict = "out_of_scope"
+            row.reason = (
+                f"Gebührenordnung '{position.go}' wird von diesem Proof of Concept nicht geprüft."
+            )
+            outcome.findings.append(
+                PadnextFinding(
+                    type="padnext_fee_schedule_out_of_scope",
+                    severity="info",
+                    positionsnr=position.positionsnr,
+                    ziffer=position.ziffer,
+                    message=row.reason,
+                )
+            )
+            outcome.unpriceable_claimed += position.gesamtbetrag or Decimal("0.00")
+            _record_position_findings(row, findings_before_position)
+            outcome.audited.append(row)
+            continue
+
+        if entry is None:
+            row.verdict = "unknown_ziffer"
+            row.reason = (
+                f"GOÄ {position.ziffer} ist im Katalog {catalog.catalog_version} nicht enthalten."
+            )
+            outcome.findings.append(
+                PadnextFinding(
+                    type="padnext_unknown_ziffer",
+                    severity="error",
+                    positionsnr=position.positionsnr,
+                    ziffer=position.ziffer,
+                    message=row.reason,
+                )
+            )
+            outcome.unpriceable_claimed += position.gesamtbetrag or Decimal("0.00")
+            _record_position_findings(row, findings_before_position)
+            outcome.audited.append(row)
+            continue
+
+        if not entry.is_active:
+            outcome.findings.append(
+                PadnextFinding(
+                    type="padnext_inactive_ziffer",
+                    severity="error",
+                    positionsnr=position.positionsnr,
+                    ziffer=position.ziffer,
+                    message=f"GOÄ {position.ziffer} ist im Katalog als '{entry.status}' geführt.",
+                )
+            )
+
+        blocked = blocked_by_ziffer.get(position.ziffer)
+        # A Conflict is an unordered pair (ziffer_a, ziffer_b) the rules refused to decide between.
+        in_conflict = next(
+            (c for c in conflicts if position.ziffer in (c.ziffer_a, c.ziffer_b)), None
+        )
+
+        if blocked is not None:
+            row.verdict = "blocked"
+            row.reason = blocked.explanation or blocked.detail or blocked.reason
+            row.blocked_by = blocked.blocked_by
+            row.legal_basis = blocked.legal_basis
+            blocking_rule_id[id(row)] = blocked.rule_id
+            outcome.findings.append(
+                PadnextFinding(
+                    type=f"padnext_blocked_{blocked.reason}",
+                    severity="error",
+                    positionsnr=position.positionsnr,
+                    ziffer=position.ziffer,
+                    message=(
+                        f"GOÄ {position.ziffer} ist neben "
+                        f"{'GOÄ ' + blocked.blocked_by if blocked.blocked_by else 'einer anderen Position'}"
+                        f" nicht berechnungsfähig: {row.reason}"
+                    ),
+                    legal_basis=blocked.legal_basis,
+                    rule_id=blocked.rule_id,
+                )
+            )
+        elif position.ziffer in billable:
+            row.verdict = "chargeable"
+            row.proof = sorted(proof_by_ziffer.get(position.ziffer, []))
+        elif in_conflict is not None:
+            other = (
+                in_conflict.ziffer_b
+                if in_conflict.ziffer_a == position.ziffer
+                else in_conflict.ziffer_a
+            )
+            row.verdict = "blocked"
+            row.blocked_by = other
+            blocking_rule_id[id(row)] = in_conflict.rule_id
+            row.reason = (
+                f"GOÄ {position.ziffer} und GOÄ {other} schließen sich gegenseitig aus. Die "
+                "Rechnung enthält beide; nur eine davon ist berechnungsfähig."
+            )
+            outcome.findings.append(
+                PadnextFinding(
+                    type="padnext_mutual_exclusion",
+                    severity="error",
+                    positionsnr=position.positionsnr,
+                    ziffer=position.ziffer,
+                    message=row.reason,
+                    legal_basis=in_conflict.legal_basis or "Leistungslegende GOÄ",
+                    rule_id=in_conflict.rule_id,
+                )
+            )
+        else:
+            row.verdict = "blocked"
+            row.reason = (
+                "Die Regelprüfung hat diese Ziffer nicht als berechnungsfähig bestätigt. "
+                "Es liegt keine spezifischere Begründung vor."
+            )
+            outcome.findings.append(
+                PadnextFinding(
+                    type="padnext_not_confirmed",
+                    severity="warning",
+                    positionsnr=position.positionsnr,
+                    ziffer=position.ziffer,
+                    message=row.reason,
+                )
+            )
+
+        # -- factor band, § 5 / § 12 Abs. 3 ------------------------------------------------
+        band = catalog.factor_band(position.ziffer)
+        if position.faktor is not None:
+            row.factor_within_band = position.faktor <= band.max
+            row.legal_basis = row.legal_basis or band.legal_basis
+
+            # § 12 Abs. 3 attaches to *every* factor above the Schwellenwert, and it does not stop
+            # attaching when the factor also breaks the § 5 Höchstsatz — a line charged at 4.0 needs
+            # a written reason and is illegal, not one instead of the other. Recorded before the
+            # branch below because these two flags used to live inside the `elif`, where the cap
+            # check short-circuited them and a 4.0 factor reported `justification_required: false`.
+            # The *finding* below stays in the `elif`: a reviewer should see one error per line, and
+            # "the factor is above the legal maximum" is the one that decides what happens next.
+            if position.faktor > band.threshold:
+                row.justification_required = True
+                row.justification_present = bool(position.begruendung)
+
+            # Two different ceilings end up in `factor_invalid`, and they are not interchangeable:
+            # `invalid_factor` is the § 5 chapter band (3.5 in Abschnitt B), `invalid_factor_cap` is
+            # a Leistungslegende cap from an Anmerkung ("nur mit dem einfachen Gebührensatz" → 1.0).
+            # Reporting `band.max` for both produced a sentence that was simply untrue — GOÄ 52 at
+            # 2.3 breaks its 1.0 cap and was reported as "Faktor 2.3 überschreitet den Höchstsatz
+            # 3.5". That was unreachable while no factor cap was enforced; it stopped being
+            # unreachable the moment the caps in `factor_caps.csv` were verified.
+            cap = rules.factor_cap(position.ziffer)
+            over_band = position.faktor > band.max
+            over_cap = cap is not None and position.faktor > cap.max_factor
+            if over_band or over_cap or position.ziffer in factor_invalid:
+                # The band is the stricter statement about the fee schedule as a whole, so it wins
+                # when both are broken; otherwise report whichever ceiling was actually exceeded.
+                if over_band or not over_cap:
+                    limit, basis, rule_id = band.max, band.legal_basis or "§ 5 Abs. 1 GOÄ", ""
+                    message = (
+                        f"Faktor {position.faktor} überschreitet den Höchstsatz {limit} "
+                        f"für GOÄ {position.ziffer}."
+                    )
+                else:
+                    limit, basis, rule_id = cap.max_factor, cap.legal_basis, cap.rule_id
+                    message = (
+                        f"Faktor {position.faktor} überschreitet den in der Leistungslegende "
+                        f"festgelegten Höchstwert {limit} für GOÄ {position.ziffer}."
+                    )
+                outcome.findings.append(
+                    PadnextFinding(
+                        type="padnext_factor_above_maximum",
+                        severity="error",
+                        positionsnr=position.positionsnr,
+                        ziffer=position.ziffer,
+                        message=message,
+                        legal_basis=basis or "§ 5 Abs. 1 GOÄ",
+                        rule_id=rule_id,
+                        claimed=str(position.faktor),
+                        recomputed=f"max {limit}",
+                    )
+                )
+            elif position.faktor > band.threshold:
+                if not position.begruendung:
+                    outcome.findings.append(
+                        PadnextFinding(
+                            type="padnext_justification_missing",
+                            severity="error",
+                            positionsnr=position.positionsnr,
+                            ziffer=position.ziffer,
+                            message=(
+                                f"Faktor {position.faktor} liegt über dem Schwellenwert "
+                                f"{band.threshold}. § 12 Abs. 3 GOÄ verlangt eine schriftliche "
+                                "Begründung; das Feld 'begruendung' ist leer."
+                            ),
+                            legal_basis="§ 12 Abs. 3 GOÄ",
+                            claimed=str(position.faktor),
+                        )
+                    )
+        elif position.einzelbetrag is None:
+            outcome.findings.append(
+                PadnextFinding(
+                    type="padnext_no_faktor_or_einzelbetrag",
+                    severity="error",
+                    positionsnr=position.positionsnr,
+                    ziffer=position.ziffer,
+                    message=(
+                        "Position gibt weder faktor noch einzelbetrag an; der Betrag kann nicht "
+                        "nachgerechnet werden."
+                    ),
+                )
+            )
+
+        if position.ziffer in needs_justification and not position.begruendung:
+            row.justification_required = True
+
+        # -- money -------------------------------------------------------------------------
+        recomputed, _ = _recompute(position, catalog, setting)
+        if recomputed is None:
+            outcome.unpriceable_claimed += position.gesamtbetrag or Decimal("0.00")
+        else:
+            row.recomputed_amount_eur = recomputed
+            outcome.recomputed_total += recomputed
+            if position.gesamtbetrag is not None:
+                outcome.comparable_claimed += position.gesamtbetrag
+                delta = position.gesamtbetrag - recomputed
+                row.amount_delta_eur = delta
+                if delta != 0:
+                    outcome.findings.append(
+                        PadnextFinding(
+                            type="padnext_amount_mismatch",
+                            severity="error",
+                            positionsnr=position.positionsnr,
+                            ziffer=position.ziffer,
+                            message=(
+                                f"gesamtbetrag {position.gesamtbetrag} € weicht von der "
+                                f"Nachrechnung {recomputed} € ab ({delta:+} €). Grundlage: "
+                                f"{entry.punkte} Punkte × Faktor {position.faktor} × "
+                                f"{catalog.punktwert_cent} ct."
+                            ),
+                            legal_basis="§ 5 Abs. 1 GOÄ",
+                            claimed=f"{position.gesamtbetrag} €",
+                            recomputed=f"{recomputed} €",
+                        )
+                    )
+
+        if position.punktzahl is not None and position.punktzahl != entry.punkte:
+            outcome.findings.append(
+                PadnextFinding(
+                    type="padnext_punktzahl_mismatch",
+                    severity="warning",
+                    positionsnr=position.positionsnr,
+                    ziffer=position.ziffer,
+                    message=(
+                        f"punktzahl {position.punktzahl} weicht von der Katalog-Punktzahl "
+                        f"{entry.punkte} für GOÄ {position.ziffer} ab."
+                    ),
+                    claimed=str(position.punktzahl),
+                    recomputed=str(entry.punkte),
+                )
+            )
+
+        # Converted before comparing, and collected rather than reported — see `punktwert_matches`
+        # and `punktwert_offenders` for the two separate bugs that made this three lines longer.
+        if position.punktwert is not None and not punktwert_matches(
+            position.punktwert, catalog.punktwert_cent
+        ):
+            outcome.punktwert_offenders.setdefault(position.punktwert, []).append(
+                position.positionsnr
+            )
+
+        if position.is_analog:
+            outcome.findings.append(
+                PadnextFinding(
+                    type="padnext_analog_needs_review",
+                    severity="warning",
+                    positionsnr=position.positionsnr,
+                    ziffer=position.ziffer,
+                    message=(
+                        f"Position ist als Analogansatz zu GOÄ {position.analog_for} deklariert. "
+                        "Ob die Gleichwertigkeit medizinisch trägt, ist eine ärztliche "
+                        "Entscheidung und wird hier nicht geprüft."
+                    ),
+                    legal_basis="§ 6 Abs. 2 GOÄ",
+                )
+            )
+
+        _record_position_findings(row, findings_before_position)
+        outcome.audited.append(row)
+
+    # A line is billable as claimed only if the rules kept it AND nothing else about it is wrong.
+    # `errors_per_row` was filled in above, inline in the position loop, keyed by `id(row)` rather
+    # than by `positionsnr` — see the comment where it is declared. Reading it back here, after the
+    # loop, is still deliberate: an error finding can be raised about a position after its verdict
+    # is set (an illegal factor, an amount that does not recompute), and a single-pass version
+    # silently counted those euros as defensible.
+    for row in outcome.audited:
+        row.accepted_as_claimed = row.verdict == "chargeable" and not errors_per_row.get(id(row))
+        if row.accepted_as_claimed and row.recomputed_amount_eur is not None:
+            outcome.defensible_total += row.recomputed_amount_eur
+
+    # -- the three honest buckets, scoped to this group's own claimed Ziffern ---------------
+    #
+    # Claimed euros, not recomputed ones, so the three add up to `claimed_total` exactly. Every
+    # position contributes to exactly one bucket; a position with no `gesamtbetrag` contributes
+    # nothing to any of them, and nothing to `claimed_total` either, so the identity still holds.
+    #
+    # `rules_bearing_on` is computed from THIS group's claimed Ziffern, not the whole delivery's —
+    # crediting a rule against a Ziffer patient B never claimed just because patient A did is the
+    # same cross-boundary bug this function exists to fix, just in the coverage accounting instead
+    # of the verdict.
+    verified_by_ziffer, advisory_by_ziffer = rules_bearing_on(rules, {p.ziffer for p in goae})
+
+    #: One survivor per mutual-exclusion cluster, so a cluster costs the invoice its cheaper
+    #: members and not the whole cluster. See `mutual_exclusion_survivors`. Computed from this
+    #: group's own rows and conflicts, so a cluster can never span two patients.
+    survivors = mutual_exclusion_survivors(outcome.audited, conflicts)
+
+    for row in outcome.audited:
+        # Out-of-scope positions carry a Ziffer from another fee schedule, whose numbers collide
+        # with GOÄ ones — GOZ 2020 is not GOÄ 2020. Looking up rules for them would attribute GOÄ
+        # rules to a dental position, so they get no rules and fall through to `unconfirmed`.
+        if row.verdict != "out_of_scope":
+            row.verified_rule_ids = verified_by_ziffer.get(row.ziffer, [])
+            row.advisory_rule_ids = advisory_by_ziffer.get(row.ziffer, [])
+
+        blocked_rule = blocking_rule_id.get(id(row))
+        rule = rules.rule_by_id(blocked_rule) if blocked_rule else None
+        # Under the default `warn` policy an unverified rule never reaches the enforcement path, so
+        # anything that actually blocked is verified. Under `block` it can be unverified, and then
+        # the suppression is real but the basis is not — `None` keeps it out of `confirmed_wrong`.
+        blocking_rule_verified = rule.verified if rule is not None else None
+
+        # Whether the exclusion that blocked this position matched two Ziffern the solver knows
+        # were rendered on different service dates — `blocked_exclusion_cross_date` in
+        # goae_rules.dl, read straight off `BlockedCode.cross_date`. `None` when nothing from
+        # `blocked_by_ziffer` suppressed this row at all (a mutual conflict, or no block), which
+        # keeps this out of scope for both — the solver draws no cross-date conclusion there.
+        blocked = blocked_by_ziffer.get(row.ziffer)
+        cross_date_match = blocked.cross_date if blocked is not None else None
+
+        row.bucket, row.bucket_reason = classify_position(
+            row,
+            verified_defects=verified_defects_per_row.get(id(row), set()),
+            blocking_rule_verified=blocking_rule_verified,
+            mutual_exclusion_survivor=id(row) in survivors,
+            cross_date_match=cross_date_match,
+        )
+        outcome.bucket_totals[row.bucket] += row.claimed_amount_eur or Decimal("0.00")
+
+    return outcome
+
+
 def audit_delivery(
     delivery: PadnextDelivery,
     *,
@@ -805,19 +1303,9 @@ def audit_delivery(
         )
 
     setting, setting_source = derive_setting(delivery, findings)
-    extraction, bridge, proposed_factors, _ = build_audit_input(delivery, setting)
 
     claimed = delivery.positions()
     goae = [p for p in claimed if p.is_goae]
-
-    #: Every distinct `datum` a Ziffer was claimed on, across the whole delivery. Empty for a
-    #: Ziffer that never carried a `<datum>` at all. Read at classification time to tell a
-    #: same-date exclusion apart from one whose two positions were never billed together — see
-    #: `classify_position`.
-    datum_by_ziffer: dict[str, set[str]] = {}
-    for position in goae:
-        if position.datum:
-            datum_by_ziffer.setdefault(position.ziffer, set()).add(position.datum)
 
     seen: dict[str, str] = {}
     for position in goae:
@@ -838,393 +1326,62 @@ def audit_delivery(
         else:
             seen[position.ziffer] = position.positionsnr
 
+    # ── one Soufflé run per `<abrechnungsfall>`, never one over the whole delivery ─────────────
+    #
+    # See the comment above `_GroupOutcome` for why. `groups` walks invoices then cases in
+    # document order, which is exactly `delivery.positions()`'s own nesting, so concatenating the
+    # groups' audited rows below reproduces `claimed`'s order — the receipt hash (built from both
+    # lists further down) does not move because of how this loop is shaped.
+    groups: list[list[PadnextPosition]] = [
+        case.positions for inv in delivery.invoices for case in inv.cases
+    ]
+
     engine_started = time.perf_counter()
-    rules_result = souffle_run(extraction, bridge, proposed_factors=proposed_factors) if goae else None
-    solve_time_ms = round((time.perf_counter() - engine_started) * 1000, 2) if goae else 0.0
-
-    billable: set[str] = set(rules_result.billable) if rules_result else set()
-    blocked_by_ziffer = {b.ziffer: b for b in (rules_result.blocked if rules_result else [])}
-    conflicts = list(rules_result.conflicts) if rules_result else []
-    proof_by_ziffer: dict[str, list[str]] = {}
-    for step in rules_result.proof if rules_result else []:
-        proof_by_ziffer.setdefault(step.ziffer, []).append(step.rule)
-    needs_justification = set(rules_result.factor_needs_justification if rules_result else [])
-    factor_invalid = set(rules_result.factor_invalid if rules_result else [])
-
-    # The engine reports some of the same defects, but keyed only by Ziffer. Where we re-report one
-    # per position with the position number and the recomputation, the engine's copy is strictly
-    # less useful — drop it rather than show a reviewer the same defect twice under two names.
-    position_of_ziffer = {p.ziffer: p.positionsnr for p in goae}
-    for warning in rules_result.warnings if rules_result else []:
-        if warning.type in ENGINE_WARNINGS_REPORTED_PER_POSITION:
-            continue
-        findings.append(
-            _as_finding(warning, positionsnr=position_of_ziffer.get(warning.ziffer or ""))
+    group_outcomes = [
+        _audit_group(
+            group_positions,
+            setting=setting,
+            catalog=catalog,
+            rules=rules,
+            souffle_run=souffle_run,
         )
+        for group_positions in groups
+    ]
+    solve_time_ms = round((time.perf_counter() - engine_started) * 1000, 2)
 
-    audited: list[PadnextAuditedPosition] = []
-    claimed_total = Decimal("0.00")
-    recomputed_total = Decimal("0.00")
-    comparable_claimed = Decimal("0.00")
-    unpriceable_claimed = Decimal("0.00")
-    #: Rule id of whatever suppressed a position, keyed by `id()` of the audited row.
-    #:
-    #: Keyed by object identity rather than by `positionsnr`, which is only unique *within* an
-    #: `abrechnungsfall` — a delivery with two cases can carry two positions numbered "1", and
-    #: keying on that would let one case's verified exclusion push the other case's position into
-    #: `confirmed_wrong`. The rows outlive this dict, so their ids are stable and distinct.
-    #:
-    #: Absent when nothing suppressed the position, and absent when the solver merely failed to
-    #: confirm the Ziffer — that case has no rule to name, which is exactly what keeps it out of
-    #: `confirmed_wrong`.
-    blocking_rule_id: dict[int, str] = {}
+    audited: list[PadnextAuditedPosition] = [
+        row for outcome in group_outcomes for row in outcome.audited
+    ]
+    for outcome in group_outcomes:
+        findings.extend(outcome.findings)
 
-    #: Positions whose `<punktwert>` matches neither spelling of the legal figure, keyed by the
-    #: value they wrote. Accumulated instead of reported, and emitted as ONE finding per distinct
-    #: value after the loop.
-    #:
-    #: `punktwert` is a property of the fee schedule, not of a position: an export writes the same
-    #: figure on every line, so a wrong one is wrong on every line. Reported per position it
-    #: produced N copies of a single sentence — five on a five-position invoice, forty-seven on a
-    #: real one — which is not five problems described five times but one problem, described in a
-    #: way that buries every other finding on the report. `punktzahl` is deliberately NOT collapsed
-    #: the same way: that value is per-Ziffer and each mismatch is a different claim about a
-    #: different service, so those really are N findings.
+    claimed_total = sum((o.claimed_total for o in group_outcomes), Decimal("0.00"))
+    recomputed_total = sum((o.recomputed_total for o in group_outcomes), Decimal("0.00"))
+    comparable_claimed = sum((o.comparable_claimed for o in group_outcomes), Decimal("0.00"))
+    unpriceable_claimed = sum((o.unpriceable_claimed for o in group_outcomes), Decimal("0.00"))
+    defensible_total = sum((o.defensible_total for o in group_outcomes), Decimal("0.00"))
+
+    bucket_totals: dict[PositionBucket, Decimal] = {
+        "confirmed_fine": Decimal("0.00"),
+        "confirmed_wrong": Decimal("0.00"),
+        "unconfirmed": Decimal("0.00"),
+    }
+    for outcome in group_outcomes:
+        for bucket, amount in outcome.bucket_totals.items():
+            bucket_totals[bucket] += amount
+
+    # ── the collapsed punktwert finding, delivery-wide ────────────────────────────────────────
+    #
+    # `punktwert` is a property of the fee schedule, not of a patient's case, so — unlike
+    # everything above — the offenders are merged across every group and reported ONCE per
+    # distinct wrong value, carrying every affected `positionsnr` across the whole delivery. A
+    # per-position copy of this finding would be the same sentence N times; see the field's own
+    # comment on `_GroupOutcome` for the rest of that reasoning.
     punktwert_offenders: dict[Decimal, list[str]] = {}
+    for outcome in group_outcomes:
+        for value, affected in outcome.punktwert_offenders.items():
+            punktwert_offenders.setdefault(value, []).extend(affected)
 
-    # `errors_per_row` / `verified_defects_per_row`, below: a `PadnextFinding` names its position
-    # only by `positionsnr`, and that number is scoped by the PADnext spec to one `<abrechnungsfall>`
-    # (an invoice's case) — it is not unique across a delivery. A delivery with two invoices can
-    # legally carry two positions both numbered "1" (see `tests/golden/bug_positionsnr_collision/`),
-    # and aggregating by the bare string would let a factor-cap breach on invoice 1's position "1"
-    # convict the compliant position "1" on invoice 2, moving correctly-billed money into
-    # `confirmed_wrong_eur`. So this is keyed by `id(row)` instead — same fix, and the same reason,
-    # as `blocking_rule_id` above.
-    errors_per_row: dict[int, int] = {}
-    verified_defects_per_row: dict[int, set[str]] = {}
-
-    def _record_position_findings(row: PadnextAuditedPosition, findings_from: int) -> None:
-        """Fold every finding raised for `row` in this iteration into the two maps above.
-
-        `findings_from` is `len(findings)` as it stood before this position was processed, so
-        `findings[findings_from:]` is exactly the slice this position's checks appended — never a
-        finding belonging to another position, whatever `positionsnr` it carries.
-        """
-        for finding in findings[findings_from:]:
-            if finding.severity == "error":
-                errors_per_row[id(row)] = errors_per_row.get(id(row), 0) + 1
-            if finding.type in VERIFIED_DEFECT_FINDINGS:
-                verified_defects_per_row.setdefault(id(row), set()).add(finding.type)
-
-    for position in claimed:
-        entry = catalog.get(position.ziffer)
-        findings_before_position = len(findings)
-        row = PadnextAuditedPosition(
-            positionsnr=position.positionsnr,
-            ziffer=position.ziffer,
-            go=position.go,
-            is_analog=position.is_analog,
-            in_catalog=entry is not None,
-            official_text=entry.official_text if entry else "",
-            claimed_faktor=position.faktor,
-            claimed_amount_eur=position.gesamtbetrag,
-            punkte=entry.punkte if entry else None,
-            datum=position.datum,
-        )
-
-        if position.gesamtbetrag is not None:
-            claimed_total += position.gesamtbetrag
-
-        if not position.is_goae:
-            row.verdict = "out_of_scope"
-            row.reason = (
-                f"Gebührenordnung '{position.go}' wird von diesem Proof of Concept nicht geprüft."
-            )
-            findings.append(
-                PadnextFinding(
-                    type="padnext_fee_schedule_out_of_scope",
-                    severity="info",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=row.reason,
-                )
-            )
-            unpriceable_claimed += position.gesamtbetrag or Decimal("0.00")
-            _record_position_findings(row, findings_before_position)
-            audited.append(row)
-            continue
-
-        if entry is None:
-            row.verdict = "unknown_ziffer"
-            row.reason = f"GOÄ {position.ziffer} ist im Katalog {catalog.catalog_version} nicht enthalten."
-            findings.append(
-                PadnextFinding(
-                    type="padnext_unknown_ziffer",
-                    severity="error",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=row.reason,
-                )
-            )
-            unpriceable_claimed += position.gesamtbetrag or Decimal("0.00")
-            _record_position_findings(row, findings_before_position)
-            audited.append(row)
-            continue
-
-        if not entry.is_active:
-            findings.append(
-                PadnextFinding(
-                    type="padnext_inactive_ziffer",
-                    severity="error",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=f"GOÄ {position.ziffer} ist im Katalog als '{entry.status}' geführt.",
-                )
-            )
-
-        blocked = blocked_by_ziffer.get(position.ziffer)
-        # A Conflict is an unordered pair (ziffer_a, ziffer_b) the rules refused to decide between.
-        in_conflict = next(
-            (c for c in conflicts if position.ziffer in (c.ziffer_a, c.ziffer_b)), None
-        )
-
-        if blocked is not None:
-            row.verdict = "blocked"
-            row.reason = blocked.explanation or blocked.detail or blocked.reason
-            row.blocked_by = blocked.blocked_by
-            row.legal_basis = blocked.legal_basis
-            blocking_rule_id[id(row)] = blocked.rule_id
-            findings.append(
-                PadnextFinding(
-                    type=f"padnext_blocked_{blocked.reason}",
-                    severity="error",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=(
-                        f"GOÄ {position.ziffer} ist neben "
-                        f"{'GOÄ ' + blocked.blocked_by if blocked.blocked_by else 'einer anderen Position'}"
-                        f" nicht berechnungsfähig: {row.reason}"
-                    ),
-                    legal_basis=blocked.legal_basis,
-                    rule_id=blocked.rule_id,
-                )
-            )
-        elif position.ziffer in billable:
-            row.verdict = "chargeable"
-            row.proof = sorted(proof_by_ziffer.get(position.ziffer, []))
-        elif in_conflict is not None:
-            other = (
-                in_conflict.ziffer_b
-                if in_conflict.ziffer_a == position.ziffer
-                else in_conflict.ziffer_a
-            )
-            row.verdict = "blocked"
-            row.blocked_by = other
-            blocking_rule_id[id(row)] = in_conflict.rule_id
-            row.reason = (
-                f"GOÄ {position.ziffer} und GOÄ {other} schließen sich gegenseitig aus. Die "
-                "Rechnung enthält beide; nur eine davon ist berechnungsfähig."
-            )
-            findings.append(
-                PadnextFinding(
-                    type="padnext_mutual_exclusion",
-                    severity="error",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=row.reason,
-                    legal_basis=in_conflict.legal_basis or "Leistungslegende GOÄ",
-                    rule_id=in_conflict.rule_id,
-                )
-            )
-        else:
-            row.verdict = "blocked"
-            row.reason = (
-                "Die Regelprüfung hat diese Ziffer nicht als berechnungsfähig bestätigt. "
-                "Es liegt keine spezifischere Begründung vor."
-            )
-            findings.append(
-                PadnextFinding(
-                    type="padnext_not_confirmed",
-                    severity="warning",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=row.reason,
-                )
-            )
-
-        # -- factor band, § 5 / § 12 Abs. 3 ------------------------------------------------
-        band = catalog.factor_band(position.ziffer)
-        if position.faktor is not None:
-            row.factor_within_band = position.faktor <= band.max
-            row.legal_basis = row.legal_basis or band.legal_basis
-
-            # § 12 Abs. 3 attaches to *every* factor above the Schwellenwert, and it does not stop
-            # attaching when the factor also breaks the § 5 Höchstsatz — a line charged at 4.0 needs
-            # a written reason and is illegal, not one instead of the other. Recorded before the
-            # branch below because these two flags used to live inside the `elif`, where the cap
-            # check short-circuited them and a 4.0 factor reported `justification_required: false`.
-            # The *finding* below stays in the `elif`: a reviewer should see one error per line, and
-            # "the factor is above the legal maximum" is the one that decides what happens next.
-            if position.faktor > band.threshold:
-                row.justification_required = True
-                row.justification_present = bool(position.begruendung)
-
-            # Two different ceilings end up in `factor_invalid`, and they are not interchangeable:
-            # `invalid_factor` is the § 5 chapter band (3.5 in Abschnitt B), `invalid_factor_cap` is
-            # a Leistungslegende cap from an Anmerkung ("nur mit dem einfachen Gebührensatz" → 1.0).
-            # Reporting `band.max` for both produced a sentence that was simply untrue — GOÄ 52 at
-            # 2.3 breaks its 1.0 cap and was reported as "Faktor 2.3 überschreitet den Höchstsatz
-            # 3.5". That was unreachable while no factor cap was enforced; it stopped being
-            # unreachable the moment the caps in `factor_caps.csv` were verified.
-            cap = rules.factor_cap(position.ziffer)
-            over_band = position.faktor > band.max
-            over_cap = cap is not None and position.faktor > cap.max_factor
-            if over_band or over_cap or position.ziffer in factor_invalid:
-                # The band is the stricter statement about the fee schedule as a whole, so it wins
-                # when both are broken; otherwise report whichever ceiling was actually exceeded.
-                if over_band or not over_cap:
-                    limit, basis, rule_id = band.max, band.legal_basis or "§ 5 Abs. 1 GOÄ", ""
-                    message = (
-                        f"Faktor {position.faktor} überschreitet den Höchstsatz {limit} "
-                        f"für GOÄ {position.ziffer}."
-                    )
-                else:
-                    limit, basis, rule_id = cap.max_factor, cap.legal_basis, cap.rule_id
-                    message = (
-                        f"Faktor {position.faktor} überschreitet den in der Leistungslegende "
-                        f"festgelegten Höchstwert {limit} für GOÄ {position.ziffer}."
-                    )
-                findings.append(
-                    PadnextFinding(
-                        type="padnext_factor_above_maximum",
-                        severity="error",
-                        positionsnr=position.positionsnr,
-                        ziffer=position.ziffer,
-                        message=message,
-                        legal_basis=basis or "§ 5 Abs. 1 GOÄ",
-                        rule_id=rule_id,
-                        claimed=str(position.faktor),
-                        recomputed=f"max {limit}",
-                    )
-                )
-            elif position.faktor > band.threshold:
-                if not position.begruendung:
-                    findings.append(
-                        PadnextFinding(
-                            type="padnext_justification_missing",
-                            severity="error",
-                            positionsnr=position.positionsnr,
-                            ziffer=position.ziffer,
-                            message=(
-                                f"Faktor {position.faktor} liegt über dem Schwellenwert "
-                                f"{band.threshold}. § 12 Abs. 3 GOÄ verlangt eine schriftliche "
-                                "Begründung; das Feld 'begruendung' ist leer."
-                            ),
-                            legal_basis="§ 12 Abs. 3 GOÄ",
-                            claimed=str(position.faktor),
-                        )
-                    )
-        elif position.einzelbetrag is None:
-            findings.append(
-                PadnextFinding(
-                    type="padnext_no_faktor_or_einzelbetrag",
-                    severity="error",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=(
-                        "Position gibt weder faktor noch einzelbetrag an; der Betrag kann nicht "
-                        "nachgerechnet werden."
-                    ),
-                )
-            )
-
-        if position.ziffer in needs_justification and not position.begruendung:
-            row.justification_required = True
-
-        # -- money -------------------------------------------------------------------------
-        recomputed, _ = _recompute(position, catalog, setting)
-        if recomputed is None:
-            unpriceable_claimed += position.gesamtbetrag or Decimal("0.00")
-        else:
-            row.recomputed_amount_eur = recomputed
-            recomputed_total += recomputed
-            if position.gesamtbetrag is not None:
-                comparable_claimed += position.gesamtbetrag
-                delta = position.gesamtbetrag - recomputed
-                row.amount_delta_eur = delta
-                if delta != 0:
-                    findings.append(
-                        PadnextFinding(
-                            type="padnext_amount_mismatch",
-                            severity="error",
-                            positionsnr=position.positionsnr,
-                            ziffer=position.ziffer,
-                            message=(
-                                f"gesamtbetrag {position.gesamtbetrag} € weicht von der "
-                                f"Nachrechnung {recomputed} € ab ({delta:+} €). Grundlage: "
-                                f"{entry.punkte} Punkte × Faktor {position.faktor} × "
-                                f"{catalog.punktwert_cent} ct."
-                            ),
-                            legal_basis="§ 5 Abs. 1 GOÄ",
-                            claimed=f"{position.gesamtbetrag} €",
-                            recomputed=f"{recomputed} €",
-                        )
-                    )
-
-        if position.punktzahl is not None and position.punktzahl != entry.punkte:
-            findings.append(
-                PadnextFinding(
-                    type="padnext_punktzahl_mismatch",
-                    severity="warning",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=(
-                        f"punktzahl {position.punktzahl} weicht von der Katalog-Punktzahl "
-                        f"{entry.punkte} für GOÄ {position.ziffer} ab."
-                    ),
-                    claimed=str(position.punktzahl),
-                    recomputed=str(entry.punkte),
-                )
-            )
-
-        # Converted before comparing, and collected rather than reported — see `punktwert_matches`
-        # and `punktwert_offenders` for the two separate bugs that made this three lines longer.
-        if position.punktwert is not None and not punktwert_matches(
-            position.punktwert, catalog.punktwert_cent
-        ):
-            punktwert_offenders.setdefault(position.punktwert, []).append(
-                position.positionsnr
-            )
-
-        if position.is_analog:
-            findings.append(
-                PadnextFinding(
-                    type="padnext_analog_needs_review",
-                    severity="warning",
-                    positionsnr=position.positionsnr,
-                    ziffer=position.ziffer,
-                    message=(
-                        f"Position ist als Analogansatz zu GOÄ {position.analog_for} deklariert. "
-                        "Ob die Gleichwertigkeit medizinisch trägt, ist eine ärztliche "
-                        "Entscheidung und wird hier nicht geprüft."
-                    ),
-                    legal_basis="§ 6 Abs. 2 GOÄ",
-                )
-            )
-
-        _record_position_findings(row, findings_before_position)
-        audited.append(row)
-
-    # ── the collapsed punktwert finding ───────────────────────────────────────────────────────
-    #
-    # One finding per distinct wrong value, carrying the positions it was written on, instead of
-    # one per position. Emitted here rather than inside the loop because the sentence is about the
-    # delivery's fee-schedule constant, and a per-position copy of it is the same sentence N times.
-    #
-    # `positionsnr` is left unset on purpose: the field names *one* position, and this finding is
-    # about several. Naming the first of them would make the other forty-six invisible to a reader
-    # who filters by position, which is worse than a finding that honestly belongs to the invoice.
-    # The list goes in the message, where it can say how many there are.
     for value, affected in punktwert_offenders.items():
         where = (
             f"Betroffen: alle {len(affected)} Positionen."
@@ -1243,71 +1400,6 @@ def audit_delivery(
                 recomputed=_plain((catalog.punktwert_cent / CENT_PER_EURO).normalize()),
             )
         )
-
-    # A line is billable as claimed only if the rules kept it AND nothing else about it is wrong.
-    # `errors_per_row` / `verified_defects_per_row` were filled in above, inline in the position
-    # loop, keyed by `id(row)` rather than by `positionsnr` — see the comment where they are
-    # declared. Reading them back here, after the loop, is still deliberate: an error finding can be
-    # raised about a position after its verdict is set (an illegal factor, an amount that does not
-    # recompute), and a single-pass version silently counted those euros as defensible.
-    defensible_total = Decimal("0.00")
-    for row in audited:
-        row.accepted_as_claimed = row.verdict == "chargeable" and not errors_per_row.get(id(row))
-        if row.accepted_as_claimed and row.recomputed_amount_eur is not None:
-            defensible_total += row.recomputed_amount_eur
-
-    # -- the three honest buckets ----------------------------------------------------------
-    #
-    # Claimed euros, not recomputed ones, so the three add up to `claimed_total` exactly and the
-    # reconciliation check on the report can be an equality rather than an estimate. Every position
-    # contributes to exactly one bucket; a position with no `gesamtbetrag` contributes nothing to
-    # any of them, and nothing to `claimed_total` either, so the identity still holds.
-    verified_by_ziffer, advisory_by_ziffer = rules_bearing_on(
-        rules, {p.ziffer for p in goae}
-    )
-
-    bucket_totals: dict[PositionBucket, Decimal] = {
-        "confirmed_fine": Decimal("0.00"),
-        "confirmed_wrong": Decimal("0.00"),
-        "unconfirmed": Decimal("0.00"),
-    }
-    #: One survivor per mutual-exclusion cluster, so a cluster costs the invoice its cheaper
-    #: members and not the whole cluster. See `mutual_exclusion_survivors`.
-    survivors = mutual_exclusion_survivors(audited, conflicts)
-
-    for row in audited:
-        # Out-of-scope positions carry a Ziffer from another fee schedule, whose numbers collide
-        # with GOÄ ones — GOZ 2020 is not GOÄ 2020. Looking up rules for them would attribute GOÄ
-        # rules to a dental position, so they get no rules and fall through to `unconfirmed`.
-        if row.verdict != "out_of_scope":
-            row.verified_rule_ids = verified_by_ziffer.get(row.ziffer, [])
-            row.advisory_rule_ids = advisory_by_ziffer.get(row.ziffer, [])
-
-        blocked_rule = blocking_rule_id.get(id(row))
-        rule = rules.rule_by_id(blocked_rule) if blocked_rule else None
-        # Under the default `warn` policy an unverified rule never reaches the enforcement path, so
-        # anything that actually blocked is verified. Under `block` it can be unverified, and then
-        # the suppression is real but the basis is not — `None` keeps it out of `confirmed_wrong`.
-        blocking_rule_verified = rule.verified if rule is not None else None
-
-        # Whether this position and whatever blocked it are known to have been claimed on
-        # different service dates. `None` — not just "no", "unknown" — when either side's `datum`
-        # is missing, so a delivery that never states dates at all behaves exactly as it did
-        # before this field existed. Only a *known* mismatch downgrades the finding — see
-        # `classify_position`.
-        blocking_dates = datum_by_ziffer.get(row.blocked_by) if row.blocked_by else None
-        cross_date_match = (
-            row.datum not in blocking_dates if row.datum and blocking_dates else None
-        )
-
-        row.bucket, row.bucket_reason = classify_position(
-            row,
-            verified_defects=verified_defects_per_row.get(id(row), set()),
-            blocking_rule_verified=blocking_rule_verified,
-            mutual_exclusion_survivor=id(row) in survivors,
-            cross_date_match=cross_date_match,
-        )
-        bucket_totals[row.bucket] += row.claimed_amount_eur or Decimal("0.00")
 
     judged = bucket_totals["confirmed_fine"] + bucket_totals["confirmed_wrong"]
     # An invoice claiming nothing was not "0 % audited" in any meaningful sense, but reporting 1.0

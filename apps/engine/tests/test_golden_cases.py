@@ -317,3 +317,66 @@ def test_findings_are_attributed_per_delivery_and_not_per_positionsnr(client):
     response = _audit(client, case)
     assert response.status_code == expected["http_status"], response.text
     assert_report_matches(response.json(), expected["report"])
+
+
+# ==========================================================================================
+# case F and case G — the cross-invoice / cross-date boundary fix
+# ==========================================================================================
+#
+# Both are hand-computed, like `bug_positionsnr_collision` above, rather than derived through
+# `oracle.build()`: the oracle's generic per-delivery walker credits and blocks rules over the
+# delivery's *whole* claimed-Ziffer set, which is exactly the flat-fact-base bug these two cases
+# exist to catch — teaching the oracle to group by `<abrechnungsfall>` and to reason about `datum`
+# would just be a second copy of `app/padnext/audit.py`'s own fix, and an oracle that agreed with
+# the engine by construction could never catch a regression in it. `expected.json` here was instead
+# checked by hand against `data/rules/exclusions.csv` and `logic/datalog/goae_rules.dl`, and against
+# a live run of the fixed engine — see docs/api/E2E_GOLDEN.md §5b for the reasoning, in particular
+# for why case F's two positions land in `unconfirmed` rather than `confirmed_fine`.
+
+
+def test_case_f_an_exclusion_does_not_cross_a_patient_boundary(client):
+    """GOÄ 34 on one invoice, GOÄ 4 on a different invoice's `<abrechnungsfall>` — two patients.
+
+    Before the fix, `audit_delivery` ground every invoice's positions in one Ziffer-keyed Soufflé
+    run, so `excl_auto_34_4` fired the moment both Ziffern appeared anywhere in the delivery and
+    convicted invoice 2's GOÄ 4 as `confirmed_wrong`, on the strength of a service invoice 2 never
+    claimed. Soufflé now runs once per `<abrechnungsfall>`, so the two invoices' fact bases never
+    mix and the exclusion cannot fire on either side.
+    """
+    case = "case_f_cross_patient_boundary"
+    expected = _expected(case)
+    response = _audit(client, case)
+    assert response.status_code == expected["http_status"], response.text
+    report = response.json()
+    assert_report_matches(report, expected["report"])
+
+    for position in report["positions"]:
+        assert position["verdict"] == "chargeable", position["positionsnr"]
+        assert position["bucket"] != "confirmed_wrong", position["positionsnr"]
+    assert Decimal(report["confirmed_wrong_eur"]) == Decimal("0.00")
+
+
+def test_case_g_an_exclusion_across_two_service_dates_is_advisory_not_confirmed_wrong(client):
+    """Same patient, same `<abrechnungsfall>`, GOÄ 34 and GOÄ 4 claimed 5.5 months apart.
+
+    Grouping (case F) does not touch this one — both positions are already in one billing case.
+    `logic/datalog/goae_rules.dl` LAYER 3 now carries `datum` and derives
+    `blocked_exclusion_cross_date` instead of `blocked_exclusion` once it can see the two dates
+    differ, and `app/padnext/audit.py` reads that off `BlockedCode.cross_date` to route GOÄ 4 to
+    `unconfirmed` rather than `confirmed_wrong` — "neben" (alongside) is a clinical term, and
+    services five months apart were not rendered alongside each other.
+    """
+    case = "case_g_cross_date_same_patient"
+    expected = _expected(case)
+    response = _audit(client, case)
+    assert response.status_code == expected["http_status"], response.text
+    report = response.json()
+    assert_report_matches(report, expected["report"])
+
+    blocked = next(p for p in report["positions"] if p["ziffer"] == "4")
+    winner = next(p for p in report["positions"] if p["ziffer"] == "34")
+    assert blocked["verdict"] == "blocked"
+    assert blocked["blocked_by"] == "34"
+    assert blocked["bucket"] == "unconfirmed"
+    assert winner["bucket"] == "confirmed_fine"
+    assert Decimal(report["confirmed_wrong_eur"]) == Decimal("0.00")

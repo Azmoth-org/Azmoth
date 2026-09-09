@@ -1954,6 +1954,11 @@ export interface components {
             /** Blocked By */
             blocked_by?: string | null;
             /**
+             * Cross Date
+             * @default false
+             */
+            cross_date: boolean;
+            /**
              * Detail
              * @default
              */

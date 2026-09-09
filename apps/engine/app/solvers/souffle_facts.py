@@ -38,6 +38,7 @@ INPUT_RELATIONS: dict[str, int] = {
     "patient_setting": 1,
     "minderung_rate": 2,
     "minderung_exempt": 1,
+    "datum": 2,
 }
 
 _UNSAFE = re.compile(r"[\t\r\n]+")
@@ -115,6 +116,16 @@ def build_fact_rows(
 
     setting = extraction.patient.setting
 
+    # `datum(Z, Date)` — LAYER 3 of goae_rules.dl reads this to restrict "neben" (alongside) to
+    # same-date services. Derived from `ClinicalAct.service_date` via the act each candidate
+    # names; a caller that never sets `service_date` (every one but the PADnext audit today)
+    # produces no rows at all, so the relation stays empty and LAYER 3 behaves exactly as it did
+    # before this fact existed.
+    act_dates = {a.act_id: a.service_date for a in bridge.acts if a.service_date}
+    datum_rows = sorted(
+        {(c.ziffer, act_dates[c.act_id]) for c in bridge.candidates if c.act_id in act_dates}
+    )
+
     return {
         "ziffer": ziffer_rows,
         "exclusion": [
@@ -161,6 +172,7 @@ def build_fact_rows(
         "minderung_exempt": [
             (ziffer,) for ziffer in sorted(relevant) if catalog.minderung_exempt(ziffer)
         ],
+        "datum": datum_rows,
     }
 
 

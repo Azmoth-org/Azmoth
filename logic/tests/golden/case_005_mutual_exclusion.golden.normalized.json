@@ -8,7 +8,7 @@
     "extraction_mode": "manual",
     "extraction_model": "manual",
     "llm_saw_goae_catalog": false,
-    "logic_version": "b2255897148306c8790408a156f5e9e2ee558919ec2504e96d32401dd03c2eff",
+    "logic_version": "3426704f58391e20325bebe1dbb9cf1803a2a0a05e0565c61409d9586d626de1",
     "optimizer": "clingo",
     "optimizer_version": "5.8.0",
     "per_code": [
