@@ -1,7 +1,7 @@
 {
   "audit_trail": {
     "base_factor_policy": "schwellenwert",
-    "catalog_sha256": "244b403386d39052115ff5853e8b1e0b65714082241fdc03babdb283def9e845",
+    "catalog_sha256": "4130ef11598204d39557116a61ce2a75dfd941db5d351725bfcfa8f79ca04368",
     "catalog_source": "https://www.gesetze-im-internet.de/go__1982/xml.zip",
     "catalog_version": "goae_official_snapshot_2026-07-25",
     "extraction_confidence_avg": "0.9542",
