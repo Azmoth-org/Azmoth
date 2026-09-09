@@ -2833,6 +2833,11 @@
         "additionalProperties": false,
         "description": "A claimed position, with our verdict on it.",
         "properties": {
+          "abrechnungsfall_id": {
+            "default": "",
+            "title": "Abrechnungsfall Id",
+            "type": "string"
+          },
           "accepted_as_claimed": {
             "default": false,
             "title": "Accepted As Claimed",
@@ -2987,6 +2992,11 @@
             "title": "Reason",
             "type": "string"
           },
+          "rechnungs_id": {
+            "default": "",
+            "title": "Rechnungs Id",
+            "type": "string"
+          },
           "recomputed_amount_eur": {
             "anyOf": [
               {
@@ -3004,7 +3014,8 @@
               "chargeable",
               "blocked",
               "out_of_scope",
-              "unknown_ziffer"
+              "unknown_ziffer",
+              "surcharge_not_modelled"
             ],
             "title": "Verdict",
             "type": "string"
@@ -3033,6 +3044,11 @@
         "additionalProperties": false,
         "description": "Something the audit noticed. Every non-chargeable position produces at least one.",
         "properties": {
+          "abrechnungsfall_id": {
+            "default": "",
+            "title": "Abrechnungsfall Id",
+            "type": "string"
+          },
           "claimed": {
             "anyOf": [
               {
@@ -3063,6 +3079,11 @@
               }
             ],
             "title": "Positionsnr"
+          },
+          "rechnungs_id": {
+            "default": "",
+            "title": "Rechnungs Id",
+            "type": "string"
           },
           "recomputed": {
             "anyOf": [

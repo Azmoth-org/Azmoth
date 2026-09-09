@@ -219,9 +219,11 @@ Two things about this fixture are load-bearing and would silently break the case
   440 wholesale.
 * **The at-cap line is numbered `2`, not `1`.** See §5.
 
-A `padnext_duplicate_ziffer` warning is expected and correct: the rule evaluation is Ziffer-keyed, so
-it cannot see the second line, and a reader is entitled to know the check was coarser than the
-invoice. It is a `warning`, so it moves no euro into `confirmed_wrong`.
+**A `padnext_duplicate_ziffer` warning is no longer expected here, and the change is §5c.** The two
+GOÄ 440 lines sit on two separate `<rechnung>` elements and therefore on two separate
+`<abrechnungsfall>` elements, which since §5b are two separate Soufflé runs. Nothing is folded away
+between them, so there is nothing for the warning to report. The check is now scoped to the billing
+case, where it still fires and still means what it says.
 
 ### Case D — arithmetic mismatch
 
@@ -432,6 +434,103 @@ invoice only when *every* Ziffer it names is claimed there (the same rule case A
 a lone GOÄ 34 with no GOÄ 4 on its own `<abrechnungsfall>` was never actually tested against this
 exclusion, so crediting it would overclaim coverage the same way the original bug overclaimed a
 defect.
+
+---
+
+## 5c. FIXED — two T2 defects a bureau meets on its second delivery
+
+**Status:** fixed. `tests/golden/case_h_cross_invoice_duplicates/` and
+`tests/golden/case_i_percentage_surcharges/` are regular cases.
+**Reproducers:**
+[`case_h_cross_invoice_duplicates/`](../../apps/engine/tests/golden/case_h_cross_invoice_duplicates/)
+· `test_case_h_one_ziffer_per_patient_is_not_a_duplicate`,
+[`case_i_percentage_surcharges/`](../../apps/engine/tests/golden/case_i_percentage_surcharges/) ·
+`test_case_i_a_percentage_surcharge_is_unmodelled_not_unknown`.
+**Found by:** a pilot-readiness audit. Neither blocks a first pilot call; both are what a billing
+bureau meets the moment it sends a delivery with more than one invoice in it.
+
+### The duplicate-Ziffer check was scoped to the delivery, not to the billing case
+
+`audit_delivery` ran its duplicate check over `delivery.positions()` — every invoice flattened into
+one list — while the *fact base* it describes has been one `<abrechnungsfall>` since §5b. So a
+twenty-invoice delivery in which each patient is billed GOÄ 1 exactly once produced **nineteen**
+warnings reading `GOÄ 1 kommt mehrfach vor (Positionen 1 und 1)`. Every one was false: two patients
+billing the same Ziffer is what a normal day looks like, and nothing was folded away. Every one was
+also unattributable, because `positionsnr` is unique per case and all twenty lines are numbered 1.
+
+The check now runs inside `_audit_group`, over one billing case's own Ziffern, and the message names
+the invoice:
+
+    GOÄ 1 kommt in Rechnung INV-0001 mehrfach vor (Positionen 1 und 2). Die Regelprüfung betrachtet
+    eine Ziffer nur einmal; Mengenregeln sind nicht modelliert.
+
+`<abrechnungsfall>` rather than `<rechnung>` for the same reason §5b chose it: what is folded to one
+fact is a *case's* Ziffer, so what is worth warning about is a case's repeat. No euro moves — the
+finding was always a `warning` — and case C and `bug_positionsnr_collision` each lost the one
+spurious warning they carried, which is visible in their `expected.json` diffs and in nothing else.
+
+### A percentage Zuschlag was reported as an unknown Ziffer
+
+§ 5 GOÄ states Nummer 441 (Laser) and Nummer 5298 (digitale Radiographie) as a percentage of another
+Ziffer's einfacher Gebührensatz — "… v. H. des einfachen Gebührensatzes" — so the law gives them no
+Punktzahl and `scripts/import_goae.py` has always recorded them as residue rather than dropping
+them. The audit nonetheless answered `unknown_ziffer`, severity `error`, with the message *"ist im
+Katalog … nicht enthalten"* — which a billing centre reads, correctly, as "your delivery is coded
+against a GOÄ version we do not hold". That is a defect in their export, and it was not true. The
+gap is ours: this engine does not check surcharges.
+
+The importer now marks those rows `typ: prozent_zuschlag` in
+`data/catalogs/goae_current/unparsed_rows.json`, `app.catalog.Catalog` reads them back
+(`is_percentage_surcharge`), and the audit routes them to a new verdict:
+
+| | before | after |
+|---|---|---|
+| `verdict` | `unknown_ziffer` | `surcharge_not_modelled` |
+| finding | `padnext_unknown_ziffer`, `error` | `padnext_surcharge_not_modelled`, `info` |
+| bucket | `unconfirmed` | `unconfirmed` — **unchanged** |
+| message | "ist im Katalog … nicht enthalten" | "ist ein prozentualer Zuschlag. Zuschläge werden derzeit von der Engine nicht auf Plausibilität geprüft (unbestätigt)." |
+
+The three-bucket model does not move: a surcharge is no more judged than an unknown Ziffer is. What
+changes is whose gap the report names, and that is the whole of it. `unknown_ziffer` still exists and
+still fires for a Ziffer that really is absent — `test_a_ziffer_that_really_is_absent_is_still_an_
+unknown_ziffer` is the assertion that the split did not swallow the case it was split out of.
+
+The marker deliberately lives in `unparsed_rows.json` rather than in `goae.official.json`:
+`catalog_sha256` is hashed into every receipt, so adding a non-priceable annotation to the catalog
+file would have moved every receipt ever issued for a change that prices nothing. A surcharge changes
+a *verdict*, and verdicts are inside the hashed output already.
+
+### The Prüfbericht could not say which invoice a finding was about
+
+The same delivery shape made the printed report unusable for its actual purpose. § 2 grouped
+positions by bucket alone, so a six-invoice delivery printed six identical rows reading `GOÄ 4 ·
+29,49 €` under one heading, with no invoice id anywhere and every line numbered "Position 1". § 2 is
+now grouped by `<rechnung>` first and by bucket within it, the table carries a `Pos.` column, and the
+Befunde list names the address a correction is made at:
+
+    Rechnung GOLDEN-I-0001 — 2 Positionen                                          153,88 €
+      Nicht beurteilbar — 2 Positionen                                             153,88 €
+      Pos.  Ziffer  Leistung nach GOÄ                     Faktor  Abgerechnet  Nachgerechnet
+      1     2440    Operative Entfernung eines Naevus…       2,3     107,25 €       107,25 €
+      2     441     Zuschlag für die Anwendung eines L…       —       46,63 €             —
+
+`PadnextAuditedPosition` and `PadnextFinding` carry `rechnungs_id` and `abrechnungsfall_id` to make
+that printable. Both are **projected out of the receipt** (`RECEIPT_EXCLUDED_POSITION_FIELDS` in
+`audit.py`): they are labels copied off the delivery, exactly as `invoice_ids` already was, and
+hashing them would have reissued every receipt for a relabelling. `case_a_known_answer`'s pinned
+prefix is unchanged, which is the evidence.
+
+### And it echoed `X-Organization-ID` into the document
+
+`POST /padnext/audit.pdf` is unscoped by design — it stores nothing and filters nothing by the
+header — but it *read* the header to print "Praxis / Konto". That made a line naming a practice, on
+a document that is filed and forwarded to a payer, into free text supplied by whoever sent the
+request. `app.api.tenancy.organization_label` now keeps the value only if it has the shape of a
+Better Auth organisation id and prints `Azmoth Pilot` otherwise, including for the anonymous demo
+path. It does not refuse the request: the label is cosmetic, and answering `403` to a malformed
+display value would turn a cosmetic defect into an outage. The engine still does not ask whether the
+organisation *exists* — that table belongs to the web tier, as `tenancy.py` has always said — so the
+check is on shape, which is what closes the hole: an opaque generated id cannot carry a sentence.
 
 ---
 
