@@ -1023,6 +1023,11 @@
             ],
             "title": "Blocked By"
           },
+          "cross_date": {
+            "default": false,
+            "title": "Cross Date",
+            "type": "boolean"
+          },
           "detail": {
             "default": "",
             "title": "Detail",
