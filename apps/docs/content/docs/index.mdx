@@ -67,16 +67,14 @@ curl -X POST https://api.azmoth.com/api/v1/audit/single \
 
 ```json title="Auszug aus der Antwort"
 {
-  "job_id": "job_7Kd2…",
-  "totals": {
-    "confirmed": "1284.60",
-    "wrong": "212.40",
-    "unconfirmed": "96.00"
-  },
-  "rule_coverage_detail": {
-    "catalog_positions": 2847,
-    "positions_with_enforced_rule": 1032
-  }
+  "claimed_total_eur":  "1593.00",
+  "confirmed_fine_eur": "1284.60",
+  "confirmed_wrong_eur": "212.40",
+  "unconfirmed_eur":      "96.00",
+  "coverage_ratio": 0.9397,
+  "receipt_hash": "bd8abb06ef7f0a4b…",
+  "positions": [ /* … */ ],
+  "findings":  [ /* … */ ]
 }
 ```
 
@@ -90,8 +88,23 @@ curl -X POST https://api.azmoth.com/api/v1/audit/single \
 <Cards>
   <Card
     title="Partner-API"
-    description="Authentifizierung, Endpunkte, Fehlercodes und Idempotenz."
+    description="Authentifizierung, Endpunkte und was der Vertrag nicht ist."
     href="/api/partner-api"
+  />
+  <Card
+    title="Stapelverarbeitung"
+    description="Viele Lieferungen als ZIP, asynchron geprüft."
+    href="/api/batch-processing"
+  />
+  <Card
+    title="Rate Limits & Kontingent"
+    description="Zwei verschiedene 429, und weshalb sie unterschiedlich zu behandeln sind."
+    href="/api/rate-limits"
+  />
+  <Card
+    title="Fehlercodes"
+    description="Der vollständige Katalog, mit HTTP-Status und Handlungsempfehlung."
+    href="/api/errors"
   />
   <Card
     title="Interaktive Referenz"

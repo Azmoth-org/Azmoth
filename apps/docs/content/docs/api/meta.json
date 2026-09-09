@@ -1,5 +1,5 @@
 {
   "title": "API",
   "description": "Die kommerzielle Schnittstelle: PADnext hinein, JSON heraus.",
-  "pages": ["partner-api"]
+  "pages": ["partner-api", "batch-processing", "rate-limits", "errors", "idempotency"]
 }

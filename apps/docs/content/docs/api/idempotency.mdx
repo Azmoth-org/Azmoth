@@ -1,0 +1,88 @@
+---
+title: Idempotenz
+description: Was bei einer wiederholten Anfrage tatsächlich passiert — es gibt keinen Idempotency-Key.
+icon: RefreshCcw
+---
+
+<Callout type="warn" title="Es gibt keinen Idempotency-Key-Header">
+  Diese API kennt keinen `Idempotency-Key`-Header und keinen serverseitigen Dedup-Mechanismus für
+  `POST /api/v1/audit/single` oder `POST /api/v1/audit/bulk`. Was unten steht, ist eine ehrliche
+  Beschreibung dessen, was eine Wiederholung tatsächlich bewirkt — nicht die Ankündigung eines
+  Mechanismus, der (noch) nicht existiert.
+</Callout>
+
+## `POST /api/v1/audit/single`: sicher zu wiederholen, aber nicht kostenlos
+
+Die Prüfung selbst ist **deterministisch und ohne Nebenwirkung auf die Daten** — dieselbe
+Lieferung, gegen dieselbe Katalog- und Regelfassung geprüft, ergibt byteidentische Verdikte und
+denselben `receipt_hash`. Es gibt keine Zeile, die eine zweite Ausführung „verdoppeln" könnte; ein
+Prüfbericht ist read-only relativ zur Rechnung, die er beschreibt.
+
+Was sich bei einer Wiederholung **doch** ändert:
+
+- **Das Kontingent.** Eine Lieferung wird gezählt, sobald ihre Prüfung durchlief — vor der Antwort,
+  nicht danach. Bricht die Verbindung zwischen Server und Client ab, nachdem der Server die
+  Prüfung abgeschlossen, aber bevor die Antwort ankam, hat der Server bereits gezählt. Eine erneute
+  Anfrage mit denselben Bytes wird ein zweites Mal gezählt — es gibt keine Möglichkeit für die
+  Engine, „das war dieselbe Lieferung" zu erkennen, ohne einen Dedup-Schlüssel, den es nicht gibt.
+- **Das Ratenlimit.** Jede Anfrage zählt gegen das Fenster, unabhängig davon, ob sie dieselbe
+  Lieferung betrifft wie die vorherige.
+
+**Was das für eine Integration bedeutet:** Wiederholen Sie eine Anfrage, die einen Netzwerkfehler
+oder ein `503` ergeben hat, ohne Bedenken — nichts Falsches wird gespeichert. Wiederholen Sie eine
+Anfrage, bei der Sie unsicher sind, ob sie bereits durchlief (Timeout ohne Antwort), mit Bedacht:
+im schlimmsten Fall zahlt die Praxis für zwei Prüfungen derselben Rechnung, keine für einen
+fehlerhaften Datensatz. Der `receipt_hash` zweier Antworten für dieselbe Lieferung ist identisch —
+das ist der Weg, im Nachhinein zu erkennen, dass zwei Aufrufe dieselbe Prüfung waren.
+
+## `POST /api/v1/audit/bulk`: über den `job_id` nachvollziehbar
+
+Der Bulk-Endpunkt hat kein Dedup, aber ein besseres Werkzeug gegen Doppelverarbeitung als der
+Einzelendpunkt: Bevor Sie einen unsicheren Upload wiederholen, fragen Sie
+`GET /api/v1/audit/bulk?created_after=…` ab. Ein Archiv, das bereits als Auftrag angenommen wurde,
+erscheint dort mit seinem `batch_id` und `file_count` — und ein zweiter Upload derselben ZIP-Datei
+erzeugt einen zweiten, unabhängigen Auftrag, keinen Fehler.
+
+Das Muster für eine Integration, die einen Upload nicht doppelt einreichen will:
+
+<Steps>
+  <Step>
+    ### Vor dem (erneuten) Hochladen prüfen
+
+    `GET /api/v1/audit/bulk` mit einem `created_after`, der kurz vor dem letzten bekannten Versuch
+    liegt. Ein Treffer mit demselben `file_count` und einer plausiblen Uploadzeit ist wahrscheinlich
+    derselbe Auftrag.
+  </Step>
+  <Step>
+    ### Nur bei echtem Zweifel erneut hochladen
+
+    Ein `503 UPLOAD_STORAGE_UNAVAILABLE` bedeutet ausdrücklich: **der Auftrag wurde nicht
+    angenommen**, es existiert keine Zeile. Dieser Fall ist immer sicher zu wiederholen.
+  </Step>
+</Steps>
+
+## Was tatsächlich für Idempotenz sorgt
+
+- **`DELETE /api/v1/settings/api-keys/{key_id}`** ist ausdrücklich idempotent: ein bereits
+  widerrufener Schlüssel bleibt widerrufen, mit dem ursprünglichen Zeitpunkt.
+- **`POST /api/v1/audit/{job_id}/pdf`** ist lesend und idempotent — derselbe abgeschlossene Auftrag
+  erzeugt bei jedem Aufruf byteidentische Ausgabe, weil sich das Dokument am Abschlusszeitpunkt des
+  Auftrags datiert und nicht an der Uhrzeit des Renderns.
+- **`receipt_hash`** auf jedem Prüfbericht ist eine SHA-256-Summe über Katalog, Regelstand,
+  Logikprogramme, Solver-Versionen und die eingereichte Lieferung. Zwei Antworten mit demselben
+  `receipt_hash` sind, per Konstruktion, dieselbe Prüfung derselben Daten unter derselben Engine —
+  das ist das Werkzeug, mit dem Sie nachträglich verifizieren, ob zwei Aufrufe redundant waren,
+  auch ohne einen vorab gesendeten Dedup-Schlüssel.
+
+<Cards>
+  <Card
+    title="Fehlercodes"
+    description="Welche Fehler retryable sind, und mit welcher Wartezeit."
+    href="/api/errors"
+  />
+  <Card
+    title="Stapelverarbeitung"
+    description="Auftragsstatus abfragen, statt zu raten, ob ein Upload bereits angenommen wurde."
+    href="/api/batch-processing"
+  />
+</Cards>

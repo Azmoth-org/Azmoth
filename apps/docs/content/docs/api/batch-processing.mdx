@@ -1,0 +1,168 @@
+---
+title: Stapelverarbeitung
+description: Viele PADnext-Lieferungen auf einmal, im Hintergrund geprüft.
+icon: Layers
+---
+
+Eine Datei auf einmal beantwortet „ist diese Rechnung vertretbar?". Ein Jahr an Dateien beantwortet
+eine andere, wertvollere Frage — „rechnet diese Praxis systematisch falsch ab, und wo?" — und dafür
+ist die Stapelverarbeitung da. An der Prüfung selbst ändert sich nichts: jede Datei durchläuft
+genau dieselbe Prüfung wie [`POST /api/v1/audit/single`](/api/partner-api), die Stapelschicht
+entscheidet nur, was anschliessend mit den Berichten geschieht.
+
+## `POST /api/v1/audit/bulk` — viele Lieferungen, im Hintergrund
+
+**Eingabe.** Ein Feld `file` als `multipart/form-data`, ein ZIP-Archiv. Jedes `*.xml`- oder
+`*.padx`-Element in beliebiger Tiefe wird geprüft; alles andere im Archiv — eine `README.txt`, ein
+Exportprotokoll, `__MACOSX/`, `*.auf`-Auftragsdateien — wird übersprungen statt abgelehnt.
+
+```bash
+curl -X POST https://api.azmoth.com/api/v1/audit/bulk \
+  -H "X-API-Key: $AZMOTH_API_KEY" \
+  -F "file=@august_2026.zip"
+```
+
+**Antwort.** Sofort `202`, bevor auch nur eine Lieferung geprüft wurde:
+
+```json
+{
+  "batch_id": "batch_4d980fa1c7b32e05",
+  "status": "PENDING",
+  "file_count": 128,
+  "created_at": "2026-08-30T09:14:22Z"
+}
+```
+
+`batch_id` ist die `job_id`, mit der Sie abfragen. `file_count` ist bereits exakt — das Archiv wird
+vor der Antwort geöffnet und geprüft, damit ein unbrauchbares Archiv ein `400` beim Hochladen ist
+und kein Auftrag, der erst nach dreissig Sekunden scheitert.
+
+**Grenzen.** 50 MB pro Archiv, 256 MiB entpackt, höchstens 500 Lieferungen, höchstens 10 Uploads
+pro Stunde und Schlüssel.
+
+### Auf das Ergebnis warten: `GET /api/v1/audit/bulk/{job_id}`
+
+Es gibt kein Webhook — fragen Sie ab.
+
+```bash
+curl https://api.azmoth.com/api/v1/audit/bulk/batch_4d980fa1c7b32e05 \
+  -H "X-API-Key: $AZMOTH_API_KEY"
+```
+
+| `status` | Bedeutung |
+|---|---|
+| `PENDING` | Eingereiht; noch keine Lieferung geprüft. |
+| `PROCESSING` | Ein Worker bearbeitet den Auftrag. `processed_file_count` / `file_count` ist der Fortschritt. |
+| `COMPLETED` | Jede Lieferung hat ein Verdikt. `aggregate_summary` und jeder `files[].report` sind befüllt. |
+| `FAILED` | Der **Auftrag selbst** ist gescheitert — siehe `error_message`. Eine einzelne unlesbare Lieferung ist das **nicht**: das ist ein `FAILED`-Eintrag in `files`, der Rest des Archivs wird trotzdem geprüft. |
+
+Während der Auftrag läuft, trägt `files[].report` `null`: ein Poll im Zwei-Sekunden-Takt über
+hundert Dateien darf nicht bei jedem Tick hundert vollständige Berichte übertragen. Sobald `status`
+`COMPLETED` ist, trägt jeder Eintrag genau den `PadnextAuditReport`, den
+[`POST /api/v1/audit/single`](/api/partner-api) für dieselben Bytes geliefert hätte, und
+`aggregate_summary` die Gesamtauswertung mit derselben Drei-Wege-Aufteilung und derselben Identität.
+
+Die Feldnamen und die Struktur unten entsprechen exakt `BatchAuditJob` /
+`BatchAggregateSummary` im Code (`app/schemas/batch.py`); die Beträge sind zur Veranschaulichung
+gewählt und keine Aufzeichnung eines echten Laufs — anders als der Einzelprüfungs-Bericht auf der
+vorigen Seite, der aus der mitgelieferten, testverifizierten Beispiellieferung stammt.
+
+```jsonc
+{
+  "batch_id": "batch_4d980fa1c7b32e05",
+  "status": "COMPLETED",
+  "created_at": "2026-08-30T09:14:22Z",
+  "completed_at": "2026-08-30T09:16:47Z",
+
+  "file_count": 128,
+  "processed_file_count": 128,
+  "completed_file_count": 126,
+  "failed_file_count": 2,
+
+  "aggregate_summary": {
+    "file_count": 128,
+    "completed_file_count": 126,
+    "failed_file_count": 2,
+
+    "position_count": 1042,
+    "confirmed_fine_positions": 611,
+    "confirmed_wrong_positions": 89,
+    "unconfirmed_positions": 342,
+
+    "claimed_total_eur": "28470.55",
+    "confirmed_fine_eur": "16204.10",
+    "confirmed_wrong_eur": "3812.05",
+    "unconfirmed_eur": "8454.40",
+    "coverage_ratio": 0.7031
+  },
+
+  "files": [
+    {
+      "filename": "00004711_20260726_ADL_000001_padx.xml",
+      "status": "COMPLETED",
+      "report": { "...": "vollständiger PadnextAuditReport, siehe /api/partner-api" }
+    },
+    {
+      "filename": "00004712_20260726_ADL_000002_padx.xml",
+      "status": "FAILED",
+      "error_message": "Nicht wohlgeformtes XML in Zeile 214."
+    }
+  ]
+}
+```
+
+`files` ist nach `confirmed_wrong_eur` absteigend sortiert — das Riskanteste zuerst. Das übernimmt
+die Engine, weil die Beträge exakte Dezimal-Strings sind, die ein Client nicht zurück in Zahlen
+parsen darf, um sie zu sortieren.
+
+**Die drei Beträge summieren sich wie beim Einzelbericht:**
+
+```
+confirmed_fine_eur + confirmed_wrong_eur + unconfirmed_eur == claimed_total_eur
+```
+
+Fehlgeschlagene Dateien tragen **nichts** zu diesen Summen bei — eine Datei, die nicht gelesen
+werden konnte, ist kein Beweis für irgendetwas — und werden separat in `failed_file_count`
+gezählt, damit ein für sich genommen gespeicherter `aggregate_summary` weiterhin sagt, wofür er
+steht.
+
+### Die eigenen Aufträge: `GET /api/v1/audit/bulk`
+
+Neueste zuerst, mit der Gesamtauswertung, aber ohne die Einzelberichte — sonst wäre eine Liste von
+fünfzig Aufträgen, von denen jeder seine vollständigen Berichte trüge, megabyteweise JSON für eine
+Tabelle. Unterstützt `status`, `created_after`, `limit` (höchstens 100) und `offset`; `total` wird
+unter den Filtern neu gezählt.
+
+```bash
+curl "https://api.azmoth.com/api/v1/audit/bulk?status=COMPLETED&limit=20" \
+  -H "X-API-Key: $AZMOTH_API_KEY"
+```
+
+### Haltbarkeit
+
+Das Archiv wird **vor** der `202`-Antwort auf die Platte geschrieben — ein `202` ist damit ein
+Versprechen, dass die Arbeit geschieht, nicht dass ein Prozess, der die Bytes gerade im Speicher
+hält, es auch schafft, sie zu Ende zu bringen. Ein Neustart mitten im Auftrag setzt ihn fort statt
+ihn zu verlieren, und bereits geprüfte Lieferungen werden nicht erneut geprüft. Das Archiv wird
+gelöscht, sobald der Auftrag einen Endzustand erreicht: ab dann wird es nicht mehr gebraucht, und
+eine PADnext-Lieferung ist Abrechnungsdaten über identifizierbare Behandlungen.
+
+## Zeitüberschreitung
+
+Es gibt keine feste Auftragslaufzeit-Obergrenze, gegen die ein Client abbrechen müsste — pollen Sie
+weiter. Was begrenzt ist, ist die einzelne Lieferung: läuft der Solver für eine Datei in den
+Timeout, wird genau diese Datei als `FAILED` markiert (siehe [Fehlercodes](/api/errors),
+`SOLVER_TIMEOUT`), und der Rest des Archivs wird unbeeinflusst weiter geprüft.
+
+<Cards>
+  <Card
+    title="Partner-API-Übersicht"
+    description="Authentifizierung und die synchrone Einzelprüfung."
+    href="/api/partner-api"
+  />
+  <Card
+    title="Rate Limits & Kontingent"
+    description="10 Bulk-Uploads pro Stunde und Schlüssel, und was ein Kontingent davon unterscheidet."
+    href="/api/rate-limits"
+  />
+</Cards>

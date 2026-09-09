@@ -1,0 +1,137 @@
+---
+title: Rate Limits & Kontingent
+description: Zwei verschiedene 429 — und weshalb sie unterschiedlich behandelt werden müssen.
+icon: Gauge
+---
+
+Zwei Budgets begrenzen eine Integration, beide beantworten `429`, und sie bedeuten Gegensätzliches.
+Wer beide gleich behandelt, retryt ein Kontingent-Limit mit demselben Backoff wie ein Ratenlimit —
+und dreht dann wochenlang im Kreis.
+
+## Rate Limits
+
+Pro **Schlüssel**, nicht pro Praxis. Eine Integration, die zwei Schlüssel nutzt, sorgt dafür, dass
+eine Endlosschleife im einen das Budget des anderen nicht mitverbraucht — und die Antwort auf „warum
+werden wir gedrosselt" ist eine `key_id`, die beide Seiten nachschlagen können.
+
+| Endpunkt | Budget | Fenster |
+|---|---|---|
+| `POST /api/v1/audit/single` | 100 Anfragen | pro Minute |
+| `POST /api/v1/audit/bulk` | 10 Anfragen | pro Stunde |
+
+Das Bulk-Budget ist um zwei Grössenordnungen enger, weil ein einziger Aufruf 500 Lieferungen und
+500 Solver-Läufe bedeuten kann — begrenzt wird die angenommene Arbeit, nicht die Anzahl der
+Anfragen.
+
+Jede **erfolgreiche** Antwort trägt bereits:
+
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 4
+X-RateLimit-Reset: 37
+```
+
+Lesen Sie sie und drosseln Sie sich selbst, bevor Sie abgelehnt werden — genau dafür sind sie da.
+`X-RateLimit-Reset` ist die Anzahl Sekunden, bis das aktuelle Zeitfenster tatsächlich abläuft, nicht
+ein Vorgabewert.
+
+### `RATE_LIMIT_EXCEEDED` — Budget für dieses Fenster verbraucht
+
+```json
+{
+  "error_code": "RATE_LIMIT_EXCEEDED",
+  "message": "Ratenlimit erreicht: 100 Anfragen pro Minute für diesen API-Schlüssel. Wiederholen Sie die Anfrage in 37 Sekunden. — Rate limit exceeded: 100 requests per 60s for this API key.",
+  "details": { "limit": 100, "window_seconds": 60, "bucket": "single", "key_id": "ab12cd34ef56" },
+  "retry_after": 37,
+  "error": "rate_limit_exceeded",
+  "status": 429
+}
+```
+
+`Retry-After` steht zusätzlich als HTTP-Header. Warten Sie diese Zeit ab und wiederholen Sie —
+höchstens ein- oder zweimal; die Engine hat ihre eigenen Wiederholungsversuche bereits vor dieser
+Antwort verbraucht.
+
+<Callout type="info" title="Nur ein Prozess zählt mit">
+  Das Fenster wird im Arbeitsspeicher eines einzelnen Engine-Prozesses gehalten. Unter mehreren
+  Workern oder Containern zählt jeder sein eigenes Fenster, das effektive Limit vervielfacht sich
+  entsprechend. Das ist ein Deployment-Detail, keine Zusage — verlassen Sie sich auf die
+  `X-RateLimit-*`-Header Ihrer eigenen Antworten, nicht auf die Zahl in dieser Tabelle als
+  Millisekunden-genaue Garantie.
+</Callout>
+
+## Kontingent
+
+Das Ratenlimit schützt den **Dienst** — einen Pool von Soufflé-Subprozessen vor einem Client in
+einer Endlosschleife. Das **Kontingent** — wie viele Rechnungen der Tarif pro Abrechnungszeitraum
+umfasst — schützt die Rechnung, und ist ein anderer Ablehnungsgrund:
+
+| | `RATE_LIMIT_EXCEEDED` | `QUOTA_EXCEEDED` |
+|---|---|---|
+| HTTP | `429` | `429` |
+| Gezählt pro | Schlüssel | Organisation |
+| Einheit | Anfragen | **geprüfte Rechnungen** |
+| Endet durch | eine Minute warten | den Ablauf des Abrechnungszeitraums, oder Tarifwechsel |
+| `Retry-After` | Sekunden | Tage |
+
+**Behandeln Sie `QUOTA_EXCEEDED` nicht wie ein Ratenlimit.** Der `Retry-After`-Wert ist ehrlich —
+die Sekunden bis der Zeitraum abläuft — und eine Backoff-Schleife darauf läuft wochenlang. Verzweigen
+Sie auf `error_code`, nicht auf den HTTP-Status.
+
+```json
+{
+  "error_code": "QUOTA_EXCEEDED",
+  "message": "Das Kontingent dieses Abrechnungszeitraums ist erschöpft: 2500 von 2500 Rechnungen im Tarif Pro verbraucht, angefragt wurden 12 weitere. Der Zeitraum endet in 6 Tag(en). — The billing period's invoice quota is exhausted (2500/2500 on plan pro); 12 more were requested.",
+  "details": {
+    "quota": 2500,
+    "used": 2500,
+    "requested": 12,
+    "plan_code": "pro",
+    "subscription_tier": "PRO",
+    "period_end": "2026-09-01T00:00:00Z",
+    "allow_overage": false
+  },
+  "retry_after": 518400,
+  "error": "quota_exceeded",
+  "status": 429
+}
+```
+
+Ein Tarif mit `allow_overage: true` wird an dieser Stelle nie abgelehnt — die Prüfung läuft, und die
+Mehrnutzung wird abgerechnet.
+
+Ein Bulk-Upload wird **als Ganzes** geprüft: ein Archiv mit 300 Lieferungen bei nur 40 verbleibenden
+Rechnungen im Zeitraum wird vollständig abgelehnt statt teilweise geprüft — ein Auftrag, der bei
+Datei 180 abbricht, ist ein Auftrag, den jemand von Hand nachvollziehen muss.
+
+Erfolgreiche Prüfantworten tragen zusätzlich, aus demselben Grund wie das Ratenlimit:
+
+```http
+X-Quota-Limit: 2500
+X-Quota-Remaining: 88
+X-Quota-Reset: 518400
+```
+
+<Callout type="warn" title="/api/v1/billing/usage ist heute nicht über api.azmoth.com erreichbar">
+  Die Engine selbst beantwortet `GET /api/v1/billing/usage` sowohl mit einem API-Key als auch mit
+  einer Sitzung — der Endpunkt existiert und akzeptiert einen Schlüssel. Der öffentliche
+  Reverse-Proxy vor `api.azmoth.com` lässt aber ausschliesslich `/api/v1/audit/*`, `/health`,
+  `/api/v1/health`, `/openapi.json` und `/docs*` durch — siehe die Positivliste am Anfang der
+  [Partner-API-Seite](/api/partner-api). `/api/v1/billing/*` gehört nicht dazu. Verbrauch und verbleibendes Kontingent lesen Sie heute also über die
+  `X-Quota-*`-Header auf Ihren eigenen Prüfantworten, oder in der Weboberfläche unter
+  *Einstellungen → Verbrauch*. Wenn Ihre Integration einen eigenen Endpunkt dafür braucht, sprechen
+  Sie uns an.
+</Callout>
+
+<Cards>
+  <Card
+    title="Fehlercodes"
+    description="Der vollständige Katalog, mit HTTP-Status und Handlungsempfehlung."
+    href="/api/errors"
+  />
+  <Card
+    title="Stapelverarbeitung"
+    description="Wie eine Bulk-Prüfung gegen ihr eigenes, engeres Budget läuft."
+    href="/api/batch-processing"
+  />
+</Cards>

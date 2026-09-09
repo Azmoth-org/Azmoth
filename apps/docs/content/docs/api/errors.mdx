@@ -1,0 +1,155 @@
+---
+title: Fehlercodes
+description: Jede Nicht-2xx-Antwort dieser API, was sie auslöst, und was ein Client tun sollte.
+icon: TriangleAlert
+---
+
+Der vollständige Katalog liegt im Code als `apps/engine/app/errors.py` — `ErrorCode` ist das Enum,
+und ein Test schlägt fehl, sobald ein Wert darin keine Zeile in der zugehörigen Tabelle im
+Repository (`docs/errors.md`) hat. Ein neuer Code kann nicht undokumentiert ausgeliefert werden.
+
+## Die Hülle
+
+Jeder Fehlerkörper, von jedem Endpunkt, hat dieselbe Form:
+
+```json
+{
+  "error_code": "PADNEXT_SCHEMA_VIOLATION",
+  "message": "Die Lieferung entspricht nicht dem PADnext-ADL-Schema: 2 Verstösse… — The payload does not conform to the PADnext ADL schema: 2 violations…",
+  "details": { "violation_count": 2, "violations": [{ "line": 12, "column": 8, "path": "…" }] },
+  "retry_after": null,
+  "error": "padnext_schema_violation",
+  "status": 422,
+  "detail": { "…dieselben vier Felder…" }
+}
+```
+
+- **`error_code`** — SCREAMING_SNAKE, stabil, eine der Zeilen unten. Darauf verzweigen.
+- **`message`** — menschenlesbar, Deutsch für die Praxis, Englisch für die Integratorin. Nicht
+  parsen.
+- **`details`** — ein Objekt, dessen Schlüssel vom Code abhängen. Pro Zeile dokumentiert.
+- **`retry_after`** — Sekunden, `null` bei jedem deterministischen Fehler. Ist er gesetzt, steht
+  derselbe Wert auch als `Retry-After`-Header.
+- **`error`** und **`detail`** — ältere Schreibweisen, für Clients, die vor dieser Antwortform
+  entstanden sind. `error` ist `error_code` klein geschrieben; `detail` spiegelt den ganzen Körper.
+  Neuer Code sollte die oberste Ebene lesen.
+
+## Alle Probleme einer PADnext-Lieferung in einer Ablehnung
+
+Ein reales Export hat meist mehr als eine Sache falsch, und mit der ersten zu antworten kostet eine
+Rundreise pro Fehler. Darum validiert der Reader in einem Durchgang, und die 4xx-Antwort trägt
+**alle** gefundenen Probleme unter `details`, neben den codespezifischen Feldern aus der Tabelle:
+
+```json
+{
+  "error_code": "PADNEXT_SCHEMA_VIOLATION",
+  "details": {
+    "violations": [{ "line": 57, "path": "…" }],
+    "status": "validation_failed",
+    "error_count": 2,
+    "warning_count": 3,
+    "errors": [
+      {
+        "code": "echtdaten_undeclared",
+        "field": "echtdaten",
+        "line": 39,
+        "severity": "error",
+        "blocking": true,
+        "message_de": "…",
+        "message_en": "…",
+        "why_en": "…",
+        "fix_en": "…",
+        "command": "python3 scripts/anonymize_padnext.py …"
+      }
+    ],
+    "warnings": [{ "code": "unsupported_version", "blocking": false }],
+    "parsed_preview": { "invoice_count": 3, "position_count": 47 }
+  }
+}
+```
+
+`error_code`, HTTP-Status und `message` bleiben die des grundlegendsten Problems — bestehendes
+Verzweigen funktioniert unverändert weiter. Drei Dinge, bevor Sie die Liste rendern:
+
+- Gruppieren Sie nach **`blocking`**, färben Sie nach **`severity`** — unterschiedliche Fragen. Eine
+  beanspruchte Position, die nicht prüfbar ist, ist `severity: "error"` mit `blocking: false`, denn
+  eine Lieferung deswegen abzulehnen würde ausgerechnet die Rechnung ablehnen, die am meisten Prüfung
+  verdient.
+- **`error_count` ist die echte Summe, `errors` ist bei 100 gedeckelt.** `errors_omitted` sagt, wie
+  viele nicht hineinpassten.
+- `message_de` / `fix` sind immer befüllt. `message_en` / `fix_en` können leer sein — manche Befunde
+  existieren nur auf Deutsch.
+
+`parsed_preview` beschreibt die Datei, liest sie aber nicht — kein Betrag darin wurde geprüft.
+
+## Der Katalog
+
+Die Fehlercodes, die dieser Vertrag (`/api/v1/audit/*`) tatsächlich erzeugen kann:
+
+| Code | HTTP | Auslöser | Was zu tun ist |
+|---|---:|---|---|
+| `UNSUPPORTED_INPUT_FORMAT` | 400 | Der Body ist kein PADnext — meist ein PDF oder ein JSON-Wrapper. Entschieden anhand der führenden Bytes, nie anhand des Dateinamens. `details.detected` nennt, wonach es aussah. | Senden Sie die PADnext-Lieferung selbst — eine `*_padx.xml` oder einen `.padx`-Container — an `/audit/single`, oder ein ZIP daraus an `/audit/bulk`. |
+| `EMPTY_REQUEST_BODY` | 400 | Ein Endpunkt, der einen Body erwartet, hat keinen erhalten. | Senden Sie die Datei im Body oder im Feld `file`. Nicht unverändert wiederholen. |
+| `INVALID_XML` | 400 | Nicht wohlgeformtes XML. `details.line` / `details.column` zeigen die Stelle. | Dokument an der Stelle korrigieren und erneut senden. Ein DOCTYPE wird grundsätzlich abgelehnt. |
+| `UNSUPPORTED_FILE_EXTENSION` | 400 | Der Dateiname endet auf etwas, das dieser Endpunkt nicht annimmt, oder trägt eine ausführbare Endung. `details.rejected_extension`, `details.accepted`. | Datei unter ihrer echten Endung senden: `.xml` / `.padx` bei einer Lieferung, `.zip` beim Bulk-Archiv. |
+| `INVALID_FILENAME` | 400 | Der Dateiname ist unbrauchbar: fehlt, ist länger als 255 Zeichen, oder enthält einen Pfadtrenner. | Nur den blossen Dateinamen senden, keinen Pfad. |
+| `EMPTY_FILE` | 400 | Ein multipart-Teil hatte einen Dateinamen und null Bytes. | Client-Zusammenbau des multipart-Requests korrigieren. |
+| `ARCHIVE_UNREADABLE` | 400 | Das ZIP liess sich nicht öffnen, oder ein Element verlässt die Archivwurzel. | Archiv neu erstellen. Vor dem Anlegen eines Auftrags abgelehnt — es gibt nichts abzufragen. |
+| `ARCHIVE_HAS_NO_DELIVERIES` | 400 | Ein lesbares ZIP ohne `*.xml` / `*.padx`-Element — meist ein Ordner mit gedruckten Rechnungen als PDF. | Die PADnext-Exporte zippen, nicht die gedruckten Rechnungen. |
+| `API_KEY_REQUIRED` | 401 | Kein `X-API-Key`-Header. | Schlüssel senden. Erzeugt wird er in der Weboberfläche — siehe [Authentifizierung](/api/partner-api#authentifizierung). |
+| `API_KEY_INVALID` | 401 | Unbekannt, falsches Geheimnis oder widerrufen — alle drei antworten absichtlich identisch. | Mit der Schlüsselliste in der Weboberfläche prüfen, ob er noch aktiv ist; bei Widerruf einen neuen erzeugen. |
+| `AUDIT_JOB_NOT_FOUND` | 404 | Kein solcher Auftrag **für diesen Schlüssel**. Ein Auftrag einer anderen Praxis antwortet identisch — sonst liesse sich erraten, welche IDs existieren. `details.job_id`. | ID prüfen, oder eigene Aufträge mit `GET /api/v1/audit/bulk` auflisten. |
+| `AUDIT_JOB_NOT_COMPLETED` | 409 | Ein PDF wurde angefragt, bevor der Auftrag `COMPLETED` ist. `details.current_status`. | Mit `GET /api/v1/audit/bulk/{job_id}` pollen, bis `COMPLETED`. |
+| `REQUEST_TOO_LARGE` | 413 | Die Lieferung überschreitet das Limit des jeweiligen Pfads: 5 MiB bei `/audit/single`, 50 MB bei `/audit/bulk`. `details.declared_bytes`, `details.max_bytes`. | Aufteilen, oder für viele Dateien `/audit/bulk` nutzen. |
+| `ARCHIVE_TOO_LARGE` | 413 | Mehr als 500 Lieferungen, oder entpackt über 256 MiB. `details.limit`, `details.observed`. | Upload aufteilen. |
+| `PADNEXT_SCHEMA_VIOLATION` | 422 | Kein ADL-Dokument, das diese Engine prüfen kann. `details.violations[]` mit Zeile, Spalte und Pfad. | Export gegen `padx_adl_v2.12` korrigieren. Um eine zu 99 % konforme Datei trotzdem zu prüfen: das Deployment kann `PADNEXT_SCHEMA_POLICY=warn` setzen — siehe [Partner-API](/api/partner-api). |
+| `UNKNOWN_ZIFFER` | 422 | **Jede** GOÄ-Position der Lieferung fehlt im geladenen Katalog. `details.unknown_ziffern`, `details.catalog_version`. | Fast immer die falsche Katalogfassung, kein Tippfehler. Eine Lieferung mit nur *einzelnen* unbekannten Positionen ist **kein** Fehler — diese werden geprüft und als `unconfirmed` gezählt. |
+| `REAL_DATA_REFUSED` | 422 | Die Lieferung erklärt `auftrag/@echtdaten="1"` — Produktivdaten — und dieses Deployment verarbeitet ausschliesslich synthetische Daten. | Testdaten verwenden. Produktivdaten erfordern eine Rechtsgrundlage; keine über die API erwerbbare Berechtigung. |
+| `ECHTDATEN_UNDECLARED` | 422 | Die Lieferung erklärt nicht, ob sie Produktivdaten enthält — `@echtdaten` fehlt, ist leer, oder ein von der Spezifikation nicht definierter Wert. | `scripts/anonymize_padnext.py` ausführen und dessen Ausgabe hochladen, oder den Export so korrigieren, dass er `echtdaten="0"` ausgibt. |
+| `RATE_LIMIT_EXCEEDED` | 429 · `Retry-After` | Das Budget des Schlüssels für dieses Zeitfenster ist verbraucht. `details.limit`, `details.window_seconds`, `details.bucket`, `details.key_id`. | `Retry-After` abwarten und wiederholen. Siehe [Rate Limits](/api/rate-limits). |
+| `QUOTA_EXCEEDED` | 429 · `Retry-After` | Die Praxis hat das Kontingent des Abrechnungszeitraums verbraucht, und der Tarif erlaubt keine Überschreitung. `details.quota`, `details.used`, `details.requested`, `details.plan_code`. | Tarif upgraden, oder auf den Ablauf des Zeitraums warten. **Nicht** wie ein Ratenlimit behandeln — siehe [Rate Limits](/api/rate-limits). |
+| `RULES_ENGINE_UNAVAILABLE` | 503 · `Retry-After: 5` | Soufflé liess sich nicht ausführen. | Einmal nach der Wartezeit wiederholen. Hält es an, ist das ein Problem des Deployments. |
+| `UPLOAD_STORAGE_UNAVAILABLE` | 503 · `Retry-After: 30` | Das Archiv liess sich nicht speichern — **der Auftrag wurde nicht angenommen**. | Wiederholen. |
+| `INTERNAL_ERROR` | 500 | Eine Ausnahme, die niemand in diesem Code benannt hat. | Ein Fehler in der Engine. Der Antwortkörper trägt absichtlich nur den Ausnahmetyp. |
+
+<Callout type="info" title="Zwei weitere Codes, die dieselbe Hülle nutzen">
+  `SOLVER_TIMEOUT` (504) und `SOLVER_FAILED` / `ENGINE_VALIDATION_DISAGREEMENT` (beide 500) können
+  theoretisch auch hier auftreten — sie beschreiben einen Defekt der Engine, nicht der Anfrage, und
+  sind entsprechend selten. Der vollständige Katalog inklusive der Codes, die nur die
+  Weboberfläche betreffen, steht in `docs/errors.md` im Repository.
+</Callout>
+
+## Ein Teilergebnis ist ein 200, kein 504
+
+`SOLVER_TIMEOUT` feuert ausschliesslich, wenn die Zeitgrenze **ohne jedes Modell** abläuft. Dieser
+Fall darf niemals als Rechnung ausgeliefert werden: ein leeres Ergebnis ist von „nichts ist
+abrechenbar" nicht zu unterscheiden, und das ist eine andere, gefährlichere Aussage. Ein Solve, der
+abgebrochen wird, aber bereits ein Modell gefunden hat, liefert **`200`** mit `solver_timed_out:
+true` und einer Warnung, dass Optimalität nicht bewiesen wurde — jede harte Nebenbedingung gilt
+trotzdem uneingeschränkt.
+
+## Was wiederholt wird, und was bewusst nicht
+
+| Vorgang | Wiederholt | Warum |
+|---|---|---|
+| Datenbankverbindung abgebrochen | ja, bis zu 3× | Ein Failover trennt den Socket; ein neuer Versuch bekommt eine frische Verbindung. |
+| Soufflé-Prozess startet nicht (`OSError`) | ja, bis zu 3× | `ENOMEM`, volle Prozesstabelle — Zustände, die sich von selbst lösen. |
+| Soufflé beendet mit Fehlercode | nein | Das Programm lief und hat die Eingabe abgelehnt. Deterministisch. |
+| Clingo-Solve | nein | In-Process und deterministisch. Ein wiederholter Timeout ist ein doppelt bezahlter Timeout. |
+| Jede 4xx-Antwort | nein | Die Anfrage ist falsch. Wiederholen ist Last ohne Aussicht auf eine andere Antwort. |
+
+**Halten Sie sich an `Retry-After` und wiederholen Sie höchstens ein- oder zweimal.** Die Engine hat
+ihre eigenen Versuche bereits verbraucht, bevor die 503 oder 429 Sie erreicht.
+
+<Cards>
+  <Card
+    title="Partner-API-Übersicht"
+    description="Authentifizierung, die Einzelprüfung und was der Vertrag nicht ist."
+    href="/api/partner-api"
+  />
+  <Card
+    title="Idempotenz"
+    description="Was bei einer wiederholten Anfrage tatsächlich passiert."
+    href="/api/idempotency"
+  />
+</Cards>

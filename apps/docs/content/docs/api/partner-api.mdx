@@ -4,19 +4,34 @@ description: PADnext hinein, JSON heraus, authentifiziert über einen API-Key.
 icon: Plug
 ---
 
-<Callout type="info" title="Diese Seite wird noch übertragen">
-  Der vollständige Vertrag liegt derzeit als `docs/api/PARTNER_API.md` im Repository und wird
-  hierher übernommen. Bis dahin gilt für alles, was unten nicht steht: das OpenAPI-Schema der
-  laufenden Engine ist die verbindliche Fassung.
-</Callout>
+Die kommerzielle Schnittstelle, für eine Entwicklerin bei einem PVS-Hersteller oder einer
+Abrechnungsstelle geschrieben, die das gegen den eigenen Export zum Laufen bringen muss.
 
-Alles auf dieser Seite liegt unter `/api/v1/audit/*` und `/api/v1/settings/api-keys`. Die
-übrigen Endpunkte der Engine (`/solve`, `/proposals`, `/padnext/*`) gehören der Azmoth-Web­an­wen­dung,
-sind nicht Teil dieses Vertrags und können sich mit dem Frontend ändern, das sie benutzt.
+Verbindlich ist immer das OpenAPI-Schema, das die laufende Engine selbst ausliefert
+(`GET /openapi.json`, interaktiv unter `/docs`) — es beschreibt damit garantiert genau die
+Fassung, die gerade läuft. Diese Seite ist die Prosafassung desselben Vertrags.
+
+<Callout type="warn" title="Was tatsächlich öffentlich erreichbar ist">
+  `api.azmoth.com` ist eine Positivliste, keine Weiterleitung auf die ganze Engine — der
+  Reverse-Proxy vor der Engine lässt nur benannte Pfade durch, alles andere antwortet `404`. Von
+  aussen erreichbar sind ausschliesslich:
+
+  - `/api/v1/audit/*` — dieser Vertrag
+  - `/health` und `/api/v1/health` — Liveness, siehe unten
+  - `/openapi.json` und `/docs*` — das Schema und seine interaktive Oberfläche
+
+  Alle anderen Pfade der Engine (`/api/v1/solve`, `/api/v1/proposals/*`, `/api/v1/padnext/*`,
+  `/api/v1/settings/*`, `/api/v1/rules/*`, `/api/v1/billing/*`, `/api/v1/demo/*`) gehören der
+  Azmoth-Weboberfläche. Sie beantworten von `api.azmoth.com` aus **404, nicht 403** — eine `403`
+  würde bestätigen, dass ein Pfad existiert, und genau das soll niemand von aussen erfragen können.
+  Das gilt insbesondere für `/api/v1/settings/api-keys`: der Endpunkt existiert in der Engine,
+  handelt aber über die Sitzung der Weboberfläche und ist von `api.azmoth.com` aus nicht
+  erreichbar. Siehe [„Einen Schlüssel erzeugen"](#einen-schlüssel-erzeugen) unten.
+</Callout>
 
 ## Authentifizierung
 
-Jede Anfrage trägt den Schlüssel im Header:
+Jede Anfrage trägt den Schlüssel in einem Header:
 
 ```http
 X-API-Key: azm_live_ab12cd34ef56_9f4c…
@@ -24,55 +39,253 @@ X-API-Key: azm_live_ab12cd34ef56_9f4c…
 
 **Der Schlüssel bestimmt, wessen Daten die Anfrage sieht.** Es gibt keinen Header, keinen
 Query-Parameter und kein Body-Feld, mit dem eine Aufruferin eine Organisation benennen könnte —
-der Mandant ergibt sich aus der gespeicherten Schlüsselzeile. Ein Job, der mit einem Schlüssel
-erzeugt wurde, ist für jeden anderen Schlüssel unsichtbar; die Abfrage antwortet mit `404`
-statt `403`, damit ein Schlüssel nicht dazu taugt, fremde Vorgänge aufzuspüren.
+der Mandant ergibt sich ausschliesslich aus der gespeicherten Schlüsselzeile. Ein Auftrag, der mit
+einem Schlüssel erzeugt wurde, ist für jeden anderen Schlüssel unsichtbar; die Abfrage antwortet
+mit `404` statt `403`, damit ein Schlüssel nicht dazu taugt, fremde Vorgänge aufzuspüren.
 
-### Schlüsselverwaltung
+### Einen Schlüssel erzeugen
 
-| Methode | Pfad | Wirkung |
-|---|---|---|
-| `POST` | `/api/v1/settings/api-keys` | Schlüssel erzeugen. Zweimal aufgerufen ergibt **zwei gültige Schlüssel** — so wird rotiert: erzeugen, ausrollen, widerrufen. |
-| `GET` | `/api/v1/settings/api-keys` | Die Schlüssel dieser Praxis, neueste zuerst, ohne Geheimnis. Widerrufene bleiben in der Liste und tragen `revoked_at`. |
-| `DELETE` | `/api/v1/settings/api-keys/{key_id}` | Widerrufen. Idempotent. Die Zeile bleibt erhalten — „dieser Schlüssel war von März bis Juli gültig" ist eine Frage, die ein Abrechnungsstreit stellt. |
+Schlüssel werden **in der Azmoth-Weboberfläche** erzeugt, von einem angemeldeten Mitglied der
+Praxis, unter *Einstellungen*. Das ist keine Einschränkung, sondern die einzig mögliche Reihenfolge:
+ein erster Schlüssel kann niemandem ausgestellt werden, der sich mit einem Schlüssel ausweisen
+müsste, den er noch nicht hat. Darum liegt `POST /api/v1/settings/api-keys` hinter der
+Better-Auth-Sitzung der Weboberfläche (`app.azmoth.com`) und nicht hinter `api.azmoth.com` — es
+ist Teil der Engine, aber kein Endpunkt, gegen den ein Partner direkt integriert.
 
-<Callout type="warn" title="Das Token wird genau einmal angezeigt">
-  Gespeichert wird nur sein SHA-256-Hash, niemand kann es Ihnen erneut zeigen. Legen Sie es
-  sofort in Ihren Secret Store. Ist es verloren, erzeugen Sie ein neues und widerrufen das alte.
-</Callout>
-
-## Prüfung
-
-```bash title="Eine Lieferung synchron prüfen"
-curl -X POST https://api.azmoth.com/api/v1/audit/single \
-  -H "X-API-Key: $AZMOTH_API_KEY" \
-  -F "file=@lieferung.xml"
+```json title="Antwort der Weboberfläche beim Erzeugen eines Schlüssels"
+{
+  "token": "azm_live_ab12cd34ef56_9f4c…",
+  "key_id": "ab12cd34ef56",
+  "name": "PVS-Export nächtlich",
+  "organization_id": "org7Kd2…",
+  "created_at": "2026-08-30T09:14:22Z",
+  "created_by": "usr_9f1…",
+  "last_used_at": null,
+  "revoked_at": null
+}
 ```
 
-## Was eine Integration früh wissen sollte
+<Callout type="warn" title="Das Token wird genau einmal angezeigt">
+  Gespeichert wird ausschliesslich sein SHA-256-Hash — niemand, auch wir nicht, kann es Ihnen
+  danach erneut zeigen. Legen Sie es sofort in Ihren Secret-Store. Ist es verloren, erzeugen Sie
+  einen neuen Schlüssel und widerrufen den alten.
+</Callout>
 
-- **Eurobeträge sind Dezimal-Strings**, niemals JSON-Zahlen. Wer sie in ein IEEE-Double liest,
-  verliert Cent.
-- **Regel- und Abdeckungszahlen sind kein Vertragsbestandteil.** Lesen Sie sie zur Laufzeit aus
-  `rule_coverage_detail` auf Ihren eigenen Antworten, statt sie fest zu verdrahten.
-- **Jobs sind mandantengebunden.** Siehe oben: `404` statt `403`.
+`key_id` ist die öffentliche Hälfte: sie erscheint in Logs, das Ratenlimit zählt gegen sie, und sie
+ist es, was Sie zum Widerrufen angeben. Sie authentifiziert nichts für sich allein.
 
-## Der verbindliche Vertrag
+| Verwaltung (in der Weboberfläche, sitzungsauthentifiziert) | Wirkung |
+|---|---|
+| Schlüssel erzeugen | Zweimal aufgerufen ergibt **zwei gültige Schlüssel** — so wird rotiert: erzeugen, ausrollen, alten widerrufen. |
+| Schlüssel auflisten | Die Schlüssel dieser Praxis, neueste zuerst, ohne das Geheimnis. Widerrufene bleiben in der Liste und tragen `revoked_at`. |
+| Schlüssel widerrufen | Idempotent — ein bereits widerrufener Schlüssel bleibt widerrufen, mit dem ursprünglichen Zeitpunkt. Die Zeile bleibt erhalten, denn „dieser Schlüssel war von März bis Juli gültig" ist eine Frage, die ein Abrechnungsstreit stellt. |
 
-Fehlercodes, Rate Limits, Stapelverarbeitung und Idempotenz stehen im OpenAPI-Schema, das die
-Engine selbst ausliefert — es beschreibt damit immer genau die Fassung, die gerade läuft.
+`last_used_at` ist auf etwa eine Minute genau — die Spalte wird bewusst nicht bei jeder Anfrage
+geschrieben, sie beantwortet „benutzt das noch jemand", und das ist eine Frage über Tage, nicht
+über Sekunden.
+
+## `POST /api/v1/audit/single` — eine Lieferung, synchron
+
+**Eingabe.** Die PADnext-Lieferung selbst: eine `*_padx.xml`-Datei oder ein `.padx`-Container. Als
+`multipart/form-data` im Feld `file`, oder als roher Request-Body.
+
+<Tabs items={["Roher Body", "multipart/form-data"]}>
+  <Tab value="Roher Body">
+    ```bash
+    curl -X POST https://api.azmoth.com/api/v1/audit/single \
+      -H "X-API-Key: $AZMOTH_API_KEY" \
+      -H "Content-Type: application/xml" \
+      --data-binary @lieferung.xml
+    ```
+  </Tab>
+  <Tab value="multipart/form-data">
+    ```bash
+    curl -X POST https://api.azmoth.com/api/v1/audit/single \
+      -H "X-API-Key: $AZMOTH_API_KEY" \
+      -F "file=@lieferung.xml"
+    ```
+  </Tab>
+</Tabs>
+
+**Antwort.** `200` mit dem vollständigen Prüfbericht. Unten die reale Antwort für die im Repository
+mitgelieferte Beispiellieferung mit neun Fehlern
+(`logic/tests/cases/padnext/00004711_20260726_ADL_000001_padx.xml`), gekürzt nur, wo eine Liste
+sich über Seiten ziehen würde:
+
+```jsonc
+{
+  "source_name": "00004711_20260726_ADL_000001_padx.xml",
+  "positions": [ /* 9 Einträge: Verdikt, Begründung, Beweis, beanspruchter und neu berechneter Betrag */ ],
+  "findings":  [ /* 11 Einträge, je mit Rechtsgrundlage und der Regel-ID, die den Befund erzeugt hat */ ],
+
+  "claimed_total_eur":   "251.54",
+  "confirmed_fine_eur":   "24.25",
+  "confirmed_wrong_eur":  "88.49",
+  "unconfirmed_eur":     "138.80",
+  "coverage_ratio": 0.4482,
+
+  "receipt_hash": "bd8abb06ef7f0a4b…",
+  "catalog_version": "goae_official_snapshot_2026-07-25",
+  "rules_version": "…",
+  "logic_version": "…",
+  "enforced_rule_count": 858,
+  "advisory_rule_count": 9,
+  "rule_coverage_detail": {
+    "policy_for_unverified_rules": "warn",
+    "enforced_rule_count": 858,
+    "advisory_rule_count": 9,
+    "unverified_rule_count": 9,
+    "analog_candidate_count": 0,
+    "suppressed_unverified_rule_count": 9,
+    "review_verified_rule_count": 0,
+    "rejected_rule_count": 0,
+    "total_constraint_rule_count": 867,
+    "verified_share": "858/867"
+  },
+
+  "schema_policy": "strict",
+  "schema_warnings": []
+}
+```
+
+<Callout type="warn" title="Eurobeträge sind Dezimal-Strings">
+  Niemals JSON-Zahlen. Wer sie in ein IEEE-Double liest, verliert Cent — und Cent sind genau das,
+  worüber eine Rechnungsprüfung streitet. `coverage_ratio` ist die Ausnahme: eine reine
+  Anzeige-Ratio, niemals Geld, deshalb ein Float.
+</Callout>
+
+### `200` gilt auch für eine fehlerhafte Rechnung
+
+Der HTTP-Status beschreibt den API-Aufruf, nicht die Rechnung: ein Bericht mit neun Befunden ist
+eine erfolgreiche Prüfung. Nicht-2xx bedeutet ausschliesslich, dass **gar kein** Bericht erstellt
+werden konnte — der Body war kein PADnext, die Lieferung war gegen eine andere Gebührenordnung
+kodiert, die Regel-Engine war nicht erreichbar. Eine Integration, die Befunde als Fehler
+behandelt, wiederholt eine Anfrage, die bereits funktioniert hat.
+
+### Die drei Beträge sind niemals eine Summe
+
+```
+confirmed_fine_eur + confirmed_wrong_eur + unconfirmed_eur == claimed_total_eur
+```
+
+- **`confirmed_wrong_eur`** ist der einzige Betrag, der als Risikoexposition dargestellt werden
+  darf — und auch dann kein festgestellter Erstattungsbetrag: Ein sich gegenseitig ausschliessendes
+  Paar landet mit **beiden** Zeilen hier, weil die Engine nicht rät, welche die Praxis behalten
+  wollte. Lesen Sie ihn als „Euro, die so wie beansprucht nicht abrechenbar sind".
+- **`unconfirmed_eur` ist kein Befund gegen die Praxis.** Es ist die Grenze der Regelabdeckung
+  dieser Engine — die meisten Ausschlussregeln wurden automatisiert aus dem GOÄ-Text extrahiert und
+  werden erst durchgesetzt, nachdem eine Abrechnungsexpertin sie verifiziert hat. In der Fläche ist
+  dieser Betrag meist der grösste der drei.
+
+Sie zusammenzuzählen ergibt eine „€X im Risiko"-Schlagzeile, die eine falsche Aussage über jemandes
+Abrechnung trifft. Bauen Sie diese Zahl nicht. `coverage_ratio` ist die ehrliche Schlagzeile: sie
+sagt, wie viel der Rechnung geprüft wurde, nicht wie viel davon falsch ist.
+
+**Grenzen.** 5 MiB pro Lieferung, 100 Anfragen pro Minute pro Schlüssel — siehe
+[Rate Limits](/api/rate-limits).
+
+### `schema_warnings` — wenn ein nicht konformes Dokument trotzdem geprüft wird
+
+Bevor eine einzige Position gelesen wird, prüft die Engine die *Rahmenstruktur* der Lieferung gegen
+ihre Teilmenge des PADneXt-v2.12-Schemas: Wurzelelement, Namensraum, Nachrichtentyp, die Zähler
+`anzahl` / `posanzahl`, `behandlungsart`, und ob ein `abrechnungsfall` überhaupt Positionen
+enthält. Was ein Verstoss kostet, ist eine Deployment-Einstellung
+(`PADNEXT_SCHEMA_POLICY`), und zwei Felder auf jedem Bericht sagen, welche Variante galt:
+
+| `schema_policy` | Eine Lieferung mit fehlerhafter Rahmenstruktur | `schema_warnings` |
+|---|---|---|
+| `strict` *(Standard)* | `422 PADNEXT_SCHEMA_VIOLATION`; es entsteht kein Bericht | immer `[]` |
+| `warn` | wird geprüft; jeder Verstoss ist zusätzlich ein Befund | ein String je Verstoss |
+| `off` | wird geprüft; das Schema wird nie herangezogen | immer `[]` |
+
+```jsonc
+{
+  "schema_policy": "warn",
+  "schema_warnings": [
+    "Die Lieferung verstößt gegen das PADnext-Schema (line 10 at rechnungen/rechnung/abrechnungsfall/positionen): Element 'positionen', attribute 'posanzahl': 'drei' is not a valid value of the atomic type 'xs:nonNegativeInteger'."
+  ]
+}
+```
+
+**Lesen Sie beide Felder, nie nur eines.** `schema_warnings: []` bedeutet unter `strict`, dass die
+Lieferung konform war; unter `off` bedeutet es, dass niemand gefragt hat. Nur `schema_policy`
+unterscheidet die beiden Fälle.
+
+## `POST /api/v1/audit/{job_id}/pdf` — der druckbare Prüfbericht
+
+`200` mit `application/pdf`, benannt `{job_id}_pruefbericht.pdf`. Nur für einen abgeschlossenen
+Auftrag — ein laufender ergäbe `409`, denn ein Zwischenstand auf Papier ist eine Zahl, die drei
+Wochen später ohne erkennbaren Zeitpunkt aus einem Ordner gezogen wird.
+
+Enthält die drei Beträge, die Prüfabdeckung, jede Lieferung einzeln (nach Risiko sortiert) und die
+Prüfgrundlage — Katalogfassung, Katalog-Hash, Regel- und Logikstand. Der Hinweis, dass
+„unbestätigt" kein Befund gegen die Praxis ist, steht als Absatz neben der Zahl, denn ein PDF
+überlebt den Bildschirm, von dem es kam.
+
+Lesend und idempotent: derselbe Auftrag erzeugt bei jedem Aufruf byteidentische Ausgabe.
+
+## Liveness
+
+Zwei Endpunkte, für zwei verschiedene Fragen, beide öffentlich unter `api.azmoth.com`:
 
 <Cards>
+  <Card
+    title="GET /health"
+    description="Die billige Sonde: 200, wenn der Prozess antwortet und eine SELECT 1 gegen Postgres gelingt; 503 sonst. Dafür gemacht, alle paar Sekunden abgefragt zu werden."
+  />
+  <Card
+    title="GET /api/v1/health"
+    description="Die diagnostische Sonde: reicht ein Testprogramm durch Soufflé und durch Clingo, meldet Katalogfassung und die aktuellen Regelzahlen. Kostet einen Subprozess-Start — nicht zum engmaschigen Poll gedacht."
+  />
+</Cards>
+
+Keiner der beiden verlangt einen Mandanten oder verrät praxisspezifische Daten — beides ist, was
+ein Betriebsmonitor abfragt, nicht was eine Integration gegen ihre eigenen Daten nutzt.
+
+## Was diese API nicht ist
+
+**Kein Abrechnungssystem.** Der Bericht prüft eine Rechnung, die jemand anders erstellt hat. Keine
+Position wird verändert, nichts wird irgendwo eingereicht, und die Praxis bleibt für das
+verantwortlich, was sie abrechnet.
+
+**Die Regelabdeckung ist unvollständig, und die Antwort sagt das.** `enforced_rule_count` ist, was
+eine Position unterdrücken kann; `advisory_rule_count` ist, was nur warnt. Fast jede Regel ist
+heute durchgesetzt, und trotzdem kommt diese Engine beim mitgelieferten Beispiel nur auf 44,8 %
+beurteilbaren Betrag — die Grenze ist die **Katalogreichweite**, nicht das Vertrauen in die Regeln.
+Eine Ziffer, die keine Regel erwähnt, kann nicht beurteilt werden, wie gründlich das Regelwerk auch
+verifiziert wurde. Diese drei Zahlen als Prüfquote zu zitieren würde überzeichnen, was Sie kaufen.
+
+**Nur synthetische Daten, sofern das Deployment nichts anderes erlaubt.** Eine Lieferung mit
+`auftrag/@echtdaten="1"` wird mit `ECHTDATEN_UNDECLARED` bzw. `REAL_DATA_REFUSED` abgelehnt — siehe
+[Fehlercodes](/api/errors). Produktivdaten zu aktivieren erfordert eine Rechtsgrundlage und die
+Massnahmen aus `docs/compliance/PRIVATE_DATA_WARNING.md`; es ist keine Berechtigung, die sich per
+Anfrage erwerben lässt.
+
+<Cards>
+  <Card
+    title="Stapelverarbeitung"
+    description="Viele Lieferungen als ZIP, asynchron geprüft."
+    href="/api/batch-processing"
+  />
+  <Card
+    title="Fehlercodes"
+    description="Der vollständige Katalog, mit HTTP-Status und Handlungsempfehlung."
+    href="/api/errors"
+  />
+  <Card
+    title="Rate Limits & Kontingent"
+    description="Was pro Minute, pro Stunde und pro Abrechnungszeitraum erlaubt ist."
+    href="/api/rate-limits"
+  />
+  <Card
+    title="Idempotenz"
+    description="Was bei einer wiederholten Anfrage tatsächlich passiert."
+    href="/api/idempotency"
+  />
   <Card
     title="Interaktive Referenz"
     description="Swagger UI auf dem API-Host."
     href="https://api.azmoth.com/docs"
-    external
-  />
-  <Card
-    title="OpenAPI-Schema (JSON)"
-    description="Maschinenlesbar, für die Client-Generierung."
-    href="https://api.azmoth.com/openapi.json"
     external
   />
 </Cards>
