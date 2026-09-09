@@ -47,6 +47,26 @@ in an append-only audit log, and re-deciding a decided proposal is refused with 
 - [`apps/engine/tests/README.md`](apps/engine/tests/README.md) — which tests are golden, which pin
   determinism, which pin the legal posture
 
+## Running the tests
+
+Every test surface in the repository, in dependency order, with one verdict:
+
+```bash
+pnpm test                    # or: ./scripts/test-all.sh
+pnpm test --fast             # checks + engine tests, no builds. The pre-commit loop.
+./scripts/test-all.sh --help
+```
+
+Four phases — fast checks, engine tests, the three Next.js builds, and the end-to-end partner API
+proof — and the run stops at the first one that fails. Phase 4 needs a stack answering on `:8000`
+and `:3000` and skips with a reason when there isn't one, so nothing here requires Docker. Each
+check's full output lands in `logs/test-all-<timestamp>/`.
+
+The script defines no checks of its own; it calls the commands that already own them, so it cannot
+drift from CI. What it adds is the order, the parallelism, the logs and the exit code —
+[`TEST_RUNNER.md`](TEST_RUNNER.md) has the phase-by-phase detail, what runs in parallel and why,
+what CI covers that a laptop cannot, and the troubleshooting.
+
 ## Getting started
 
 ### The whole application, one command
