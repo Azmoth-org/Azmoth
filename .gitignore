@@ -109,3 +109,7 @@ data/uploads/
 # holds — approvals, audit events, API key hashes — so a `git add -A` that swept one into a commit
 # would put a practice's records in a repository, permanently and irrevocably.
 backups/
+
+# Output of scripts/test-all.sh. One directory and one transcript per run, so a failing run can be
+# read after the terminal has scrolled — and so nobody commits a 40 MB pytest log.
+/logs/
