@@ -2899,6 +2899,17 @@
             ],
             "title": "Claimed Faktor"
           },
+          "datum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datum"
+          },
           "factor_within_band": {
             "anyOf": [
               {
