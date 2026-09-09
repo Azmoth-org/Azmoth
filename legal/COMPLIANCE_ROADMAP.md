@@ -11,12 +11,13 @@ Verarbeitung personenbezogener Daten.**
 | Betreiber | Azmoth, Bureau 5, Centre Aziza, 1. Etage, Av. de l'Indépendance, Menzel Bourguiba 7050, Tunesien |
 | Verantwortlich gesamt | Oussama Khadraoui |
 | Kontakt | contact@azmoth.com, +216 50 745 682 |
-| Version | 0.2 |
+| Version | 0.3 |
 | Stand | 2026-09-06 |
 | Nächste Fortschreibung | 07.12.2026 |
 
 **Version 0.1** — Ersterstellung, 2026-09-06.
 **Version 0.2** — 07.09.2026 — Platzhalter ergänzt.
+**Version 0.3** — 09.09.2026 — Datenentscheidung (synthetisch statt anonymisiert) aufgenommen; Pilotvereinbarung ergänzt.
 
 ---
 
@@ -184,6 +185,47 @@ Damit dieser Fahrplan als Zusagenliste taugt, benennt er, was zum Stand 2026-09-
 
 ---
 
+## Entscheidung: synthetische Testdaten statt anonymisierter Echtdaten
+
+**Beschlossen am 09.09.2026. Verantwortlich: Oussama Khadraoui.**
+
+Bis zu dieser Entscheidung sagten die Marketing-Website und die Vertragsunterlagen
+Verschiedenes. Die Website warb mit „Testen Sie Azmoth mit Ihren eigenen (anonymisierten)
+Daten" und einem mitgelieferten Anonymisierungsskript; die AVV-Anlage und dieser Fahrplan
+gingen von einem Pilotbetrieb **ausschließlich mit synthetischen Testdaten** aus. Beides
+zugleich ist nicht haltbar: Ein Pilotpartner, der die Website liest, bereitet echte
+Lieferungen vor, die die Anwendung anschließend abweist.
+
+**Gewählt ist die synthetische Variante.** Der Pilot verarbeitet ausschließlich maschinell
+erzeugte PADnext-Testlieferungen. Alle Aussagen auf der Website, in der
+Datenschutzerklärung und in `legal/PILOT_VEREINBARUNG.md` sind darauf vereinheitlicht.
+
+Gründe:
+
+- **Die Anonymisierung hält rechtlich nicht, was der Name verspricht.** Wie im Abschnitt
+  „Was ausdrücklich nicht behauptet wird" festgehalten: Freie Textfelder werden fachlich
+  benötigt und bleiben erhalten. Ein derart pseudonymisierter Datensatz bleibt
+  personenbezogen — damit wäre der Pilot eine Verarbeitung nach Art. 9 DSGVO und ohne
+  Auftragsverarbeitungsvertrag unzulässig.
+- **Der Auftragsverarbeitungsvertrag ist nicht abgeschlossen** (Zusage 1, Zieltermin
+  30.06.2027). Ohne ihn ist die anonymisierte Variante nicht nur riskant, sondern nicht
+  verfügbar.
+- **Die technische Sperre setzt bereits die synthetische Variante durch.** Die Anwendung
+  weist Lieferungen ab, die sich als Echtdaten ausweisen oder dazu keine Angabe machen.
+  Die Website beschrieb also ohnehin ein Verhalten, das es nicht gibt.
+- **Ohne personenbezogene Daten entfallen die Blocker für den ersten Pilotanruf**: kein
+  AVV, keine Datenschutz-Folgenabschätzung, keine Bewertung nach § 203 StGB und kein
+  EU-Vertreter nach Art. 27 DSGVO. Das ist der Unterschied zwischen einem Piloten, der
+  jetzt starten kann, und einem, der auf drei offene Zusagen wartet.
+
+**Was das für den Echtbetrieb bedeutet.** Die anonymisierte Variante ist nicht verworfen,
+sondern vertagt. Sie wird zusammen mit dem Auftragsverarbeitungsvertrag freigegeben — nicht
+davor. Das mitgelieferte Werkzeug ist bis dahin ein **Generator für synthetische
+Testlieferungen**, kein Anonymisierungsskript für Produktionsdaten; die Umbenennung ist Teil
+dieser Entscheidung und in der Website-Kopie vollzogen.
+
+---
+
 ## Fortschreibung
 
 Dieser Fahrplan wird **vierteljährlich** fortgeschrieben und zusätzlich immer dann, wenn eine der
@@ -194,5 +236,5 @@ Nächste Fortschreibung: **07.12.2026**. Verantwortlich: Oussama Khadraoui, cont
 
 ---
 
-*Stand: 2026-09-06, Version 0.2. Grundlage ist der Quellstand des Repositorys zum selben Datum.
+*Stand: 2026-09-09, Version 0.3. Grundlage ist der Quellstand des Repositorys zum selben Datum.
 Dieses Dokument ist ein Entwurf und ersetzt keine anwaltliche Prüfung.*

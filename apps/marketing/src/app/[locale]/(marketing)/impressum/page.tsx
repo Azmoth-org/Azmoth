@@ -62,9 +62,22 @@ function ImpressumContent() {
     <Section className="pt-16 lg:pt-24">
       <SectionHeading title={t("titel")} subtitle={t("untertitel")} align="start" as="h1" />
 
+      {/*
+        Two different banners, and only one of them is temporary.
+
+        `platzhalterHinweis` is the draft warning — it appears only while a field is still
+        unfilled, and disappears on its own with the last placeholder (see `lib/legal.ts`).
+
+        `pilotHinweis` is not a draft warning. The details below are real and complete, but
+        they describe a pilot that processes synthetic test data only; the Art. 28 agreement
+        that real patient data would require is not in place yet. That stays on the page for
+        as long as it is true, which is why it is rendered unconditionally rather than hung
+        off the placeholder check.
+      */}
       {hasPlaceholder(abschnitte) ? (
         <PlaceholderNotice className="mt-8 max-w-3xl" text={t("platzhalterHinweis")} />
       ) : null}
+      <PlaceholderNotice className="mt-8 max-w-3xl" text={t("pilotHinweis")} />
 
       <div className="mt-10 flex max-w-3xl flex-col gap-8">
         {abschnitte.map((abschnitt) => (

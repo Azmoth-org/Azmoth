@@ -26,7 +26,7 @@
       "ueberUns": "Warum ein Regelwerk und kein Sprachmodell.",
       "faq": "Antworten zu Regelwerk, Freigabe und Datenhaltung.",
       "kontakt": "Fragen zur Einführung? Es antwortet ein Mensch.",
-      "integration": "REST-API, OpenAPI-Schema und Sandbox — der Weg in Ihre PVS-Software."
+      "integration": "REST-API, OpenAPI-Schema und technische Dokumentation."
     },
     "integration": "Integration & API"
   },
@@ -168,11 +168,11 @@
         },
         {
           "titel": "B2B-API",
-          "text": "REST-API mit asynchroner Stapelverarbeitung und API-Key je Mandant. Nahtlose Integration in Ihre PVS-Software, OpenAPI-Schema inklusive."
+          "text": "REST-API mit asynchroner Stapelverarbeitung und API-Key je Mandant. OpenAPI-Schema nach Registrierung verfügbar."
         },
         {
-          "titel": "DSGVO-konform",
-          "text": "Hosting in Deutschland (Azure Germany West Central). Keine Weitergabe von Patientendaten an Dritte. AVV verfügbar."
+          "titel": "DSGVO-konform für synthetische Testdaten",
+          "text": "Im Pilotbetrieb werden keine personenbezogenen Daten verarbeitet. Hosting: AWS eu-central-1 (Frankfurt) für die Engine, Vercel (EU) für diese Website. AVV-Entwurf vorhanden, wird vor Echtbetrieb abgeschlossen."
         }
       ]
     },
@@ -183,17 +183,17 @@
       "karten": [
         {
           "titel": "Abrechnungsstellen",
-          "text": "Reduzieren Sie Ihre manuelle Prüfzeit erheblich und finden Sie Fehler, die menschliche Prüfer übersehen — insbesondere Ausschlüsse und Zielleistungen über mehrere Positionen hinweg.",
+          "text": "Prüfen Sie jede Position jeder Lieferung gegen dasselbe Regelwerk — insbesondere Ausschlüsse und Zielleistungen über mehrere Positionen hinweg, die bei manueller Durchsicht am ehesten durchrutschen.",
           "cta": "Pilot-Zugang anfordern"
         },
         {
           "titel": "PVS-Hersteller",
-          "text": "Integrieren Sie Azmoth als GOÄ-Prüfmodul in Ihre Software. REST-API, Sandbox-Zugang, OpenAPI-Schema und technische Dokumentation.",
+          "text": "Integrieren Sie Azmoth als GOÄ-Prüfmodul in Ihre Software. REST-API, OpenAPI-Schema und technische Dokumentation.",
           "cta": "Zur API-Dokumentation"
         },
         {
           "titel": "Ärzte / MVZ",
-          "text": "Prüfen Sie Ihre Abrechnungen vor dem Versand. Vermeiden Sie Rückfragen von Erstattungsstellen und Privatpatienten — und beantworten Sie die, die dennoch kommen, ohne den Fall zu rekonstruieren.",
+          "text": "Prüfen Sie Ihre Abrechnungen vor dem Versand — und beantworten Sie Rückfragen von Erstattungsstellen und Privatpatienten, ohne den Fall zu rekonstruieren.",
           "cta": "Demo vereinbaren"
         }
       ]
@@ -201,21 +201,21 @@
     "pilot": {
       "eyebrow": "Pilotprogramm",
       "titel": "Werden Sie Pilot-Partner",
-      "text": "Wir suchen fortschrittliche Abrechnungsstellen für einen kostenlosen Piloten. Testen Sie Azmoth mit Ihren eigenen (anonymisierten) Daten. Keine Verpflichtung. Kein Risiko.",
+      "text": "Wir suchen fortschrittliche Abrechnungsstellen für einen kostenlosen Piloten. Testen Sie Azmoth mit synthetischen Testdaten. Keine Verpflichtung. Kein Risiko.",
       "punkte": [
         "Kostenlos für die ersten zehn Partner",
-        "Anonymisierungsskript inklusive (DSGVO-konform)",
+        "Generator für synthetische PADnext-Testlieferungen inklusive",
         "Persönliche Einweisung und Support",
         "Ihr Feedback formt die Produkt-Roadmap"
       ],
       "cta": "Pilot-Zugang anfordern",
-      "hinweis": "Der Pilotbetrieb verarbeitet ausschließlich anonymisierte Lieferungen. Das Anonymisierungsskript läuft bei Ihnen, bevor eine Datei unser Haus erreicht.",
-      "hinweisKatalog": "Hinweis für den Pilotbetrieb: Azmoth prüft Abrechnungen anhand des aktuellen GOÄ-Katalogs. Für die höchste Genauigkeit bitten wir Sie, im Pilot ausschließlich Rechnungen der letzten 6–12 Monate einzureichen."
+      "hinweis": "Der Pilotbetrieb verarbeitet ausschließlich synthetische Testdaten. Eine Lieferung, die sich als Echtdaten ausweist, wird von der Anwendung abgewiesen — ebenso eine, die dazu keine Angabe macht.",
+      "hinweisKatalog": "Hinweis für den Pilotbetrieb: Azmoth prüft gegen den aktuellen GOÄ-Katalog. Bilden Sie Ihre synthetischen Testlieferungen daher an Behandlungsfällen der letzten 6–12 Monate nach."
     },
     "api": {
       "eyebrow": "Für Entwickler",
-      "titel": "Entwickler? Integration in 60 Sekunden.",
-      "text": "Unsere B2B-API ist dokumentiert, getestet und produktionsreif: PADnext hinein, JSON heraus, authentifiziert über einen API-Key. Das maschinenlesbare OpenAPI-Schema und eine interaktive Referenz sind ohne Konto abrufbar.",
+      "titel": "Entwickler? API-Dokumentation verfügbar.",
+      "text": "Unsere B2B-API ist dokumentiert und getestet: PADnext hinein, JSON heraus, authentifiziert über einen API-Key. Derzeit im Pilotbetrieb mit synthetischen Testdaten. Das maschinenlesbare OpenAPI-Schema und eine interaktive Referenz sind nach Registrierung verfügbar.",
       "cta": "API-Dokumentation ansehen",
       "ctaSekundaer": "Interaktive Referenz",
       "snippetLabel": "Eine Rechnung synchron prüfen",
@@ -305,23 +305,23 @@
     },
     "sicherheit": {
       "eyebrow": "Sicherheit & Compliance",
-      "titel": "Wo die Daten liegen, steht im Vertrag",
-      "untertitel": "Vier Angaben, die Ihre Datenschutzbeauftragte prüfen kann, bevor das Gespräch beginnt.",
+      "titel": "Wo die Daten liegen — und was noch aussteht",
+      "untertitel": "Vier Angaben, die Ihre Datenschutzbeauftragte prüfen kann, bevor das Gespräch beginnt — mit dem Stand, den sie heute haben.",
       "aws": {
-        "titel": "Anwendung: AWS",
-        "text": "Region eu-central-1, Frankfurt am Main"
+        "titel": "Engine: AWS eu-central-1",
+        "text": "Frankfurt am Main — vorgesehene Region, noch nicht öffentlich bereitgestellt"
       },
       "neon": {
         "titel": "Datenbank: Neon",
-        "text": "Postgres auf aws-eu-central-1, Frankfurt am Main"
+        "text": "Postgres auf aws-eu-central-1, Frankfurt am Main — mit der Engine"
       },
       "dsgvo": {
         "titel": "AVV & TOM",
-        "text": "Beide Dokumente liegen vor und werden Vertragsbestandteil."
+        "text": "AVV-Entwurf und TOM liegen vor; Abschluss vor Echtbetrieb"
       },
-      "pilot": {
-        "titel": "Pilot ohne Klardaten",
-        "text": "Nur anonymisierte Lieferungen — das Skript läuft bei Ihnen."
+      "website": {
+        "titel": "Website: Vercel (EU)",
+        "text": "Diese Website wird über europäische Standorte von Vercel ausgeliefert"
       },
       "cta": "Datenschutzerklärung lesen"
     }
@@ -361,9 +361,8 @@
         "titel": "Betrieb",
         "punkte": [
           "Getrennte Datenhaltung je Praxis",
-          "Rollen für Ärztinnen, Ärzte und Abrechnungskräfte",
           "Zwei-Schritt-Einrichtung ohne Migrationsprojekt",
-          "Betrieb in Deutschland"
+          "Betrieb der Engine in Frankfurt am Main (AWS eu-central-1), sobald bereitgestellt"
         ]
       }
     ],
@@ -379,7 +378,7 @@
     "absaetze": [
       "Die Privatliquidation nach GOÄ scheitert selten am guten Willen. Sie scheitert daran, dass eine korrekte Rechnung Regelwissen voraussetzt, das über Ausschlüsse, Analogansätze und mehrere Fassungen der Gebührenordnung verteilt ist — und dass eine Rückfrage der Erstattungsstelle Monate später kommt, wenn niemand mehr weiß, warum eine Ziffer angesetzt wurde.",
       "Azmoth beantwortet genau diese Frage. Der Kern ist ein deterministisches Regelwerk: Dieselbe Dokumentation ergibt dieselbe Rechnung, und zu jeder Position steht die Regel dabei, aus der sie folgt. Ein Sprachmodell hätte das nicht leisten können — es hätte plausibel geklungen und wäre bei der zweiten Anfrage anders ausgefallen.",
-      "Die Entscheidung bleibt bei Ihnen. Azmoth schlägt vor, prüft und begründet; freigegeben wird von einem Menschen. Was wir liefern, ist die Vorarbeit — vollständig, überprüfbar und in Sekunden statt in einer Stunde."
+      "Die Entscheidung bleibt bei Ihnen. Azmoth schlägt vor, prüft und begründet; freigegeben wird von einem Menschen. Was wir liefern, ist die Vorarbeit — vollständig und überprüfbar."
     ]
   },
   "faq": {
@@ -400,15 +399,15 @@
       },
       {
         "q": "Wird gegen die aktuelle oder die damals gültige Gebührenordnung geprüft?",
-        "a": "Im Pilotbetrieb gegen den aktuellen GOÄ-Katalog. Die Engine ist auf mehrere Katalogstände ausgelegt und jeder Prüfbericht nennt die Fassung, gegen die er gerechnet wurde — historische Fassungen sind jedoch noch nicht hinterlegt. Deshalb bitten wir Sie, im Pilot Rechnungen der letzten 6–12 Monate einzureichen. Ältere Abrechnungen werden weiterhin vollständig geprüft; der Bericht weist dann ausdrücklich darauf hin, dass historische Regelabweichungen nicht erkannt werden können."
+        "a": "Im Pilotbetrieb gegen den aktuellen GOÄ-Katalog. Die Engine ist auf mehrere Katalogstände ausgelegt und jeder Prüfbericht nennt die Fassung, gegen die er gerechnet wurde — historische Fassungen sind jedoch noch nicht hinterlegt. Bilden Sie Ihre synthetischen Testlieferungen deshalb an Behandlungsfällen der letzten 6–12 Monate nach. Ältere Fälle werden weiterhin vollständig geprüft; der Bericht weist dann ausdrücklich darauf hin, dass historische Regelabweichungen nicht erkannt werden können."
       },
       {
-        "q": "Welche Rechnungen soll ich für den Piloten einreichen?",
-        "a": "Rechnungen mit einem Leistungsdatum aus den letzten 6–12 Monaten. Das ist der Zeitraum, für den der geladene GOÄ-Katalog die maßgebliche Fassung ist. Ältere Lieferungen weisen wir nicht ab — sie werden geprüft und der Bericht kennzeichnet sie gesondert."
+        "q": "Welche Daten reiche ich für den Piloten ein?",
+        "a": "Ausschließlich synthetische Testlieferungen — keine echten Patienten- oder Abrechnungsdaten. Den Generator dafür stellen wir bereit. Eine Lieferung, die sich als Echtdaten ausweist oder dazu keine Angabe macht, wird von der Anwendung abgewiesen. Orientieren Sie die Fälle an Leistungsdaten der letzten 6–12 Monate: das ist der Zeitraum, für den der geladene GOÄ-Katalog die maßgebliche Fassung ist."
       },
       {
         "q": "Können bestehende Rechnungen geprüft werden?",
-        "a": "Ja. Bestehende Rechnungen und PADnext-Lieferungen laufen durch dieselben Regeln wie eine Neukodierung. PADnext-Daten werden vor der Verarbeitung gegen das ADL-Schema validiert; fehlerhafte Lieferungen werden mit Angabe der betroffenen Zeile abgewiesen."
+        "a": "Ja. Bestehende Rechnungen und PADnext-Lieferungen laufen durch dieselben Regeln wie eine Neukodierung; im Pilotbetrieb allerdings nur als synthetische Nachbildung. PADnext-Daten werden vor der Verarbeitung gegen das ADL-Schema validiert; fehlerhafte Lieferungen werden mit Angabe der betroffenen Zeile abgewiesen."
       },
       {
         "q": "Wie sind die Daten mehrerer Praxen getrennt?",
@@ -426,7 +425,7 @@
     "emailLabel": "E-Mail",
     "emailHinweis": "Antwort in der Regel innerhalb eines Werktags.",
     "pilotTitel": "Pilot-Zugang anfordern",
-    "pilotText": "Schreiben Sie uns kurz, welche Software Sie einsetzen und mit welchem Volumen Sie arbeiten. Wir melden uns mit einem Termin und dem Anonymisierungsskript.",
+    "pilotText": "Schreiben Sie uns kurz, welche Software Sie einsetzen und mit welchem Volumen Sie arbeiten. Wir melden uns mit einem Termin und dem Generator für synthetische Testlieferungen.",
     "pilotCta": "Pilot-Zugang anfordern"
   },
   "nichtGefunden": {
@@ -451,9 +450,8 @@
   },
   "vertrauen": {
     "bandTitel": "Entwickelt für höchste Compliance-Anforderungen",
-    "madeInGermany": "Made in Germany",
-    "dsgvo": "DSGVO-konform",
-    "keinePatientendaten": "Keine Patienten-Daten im Pilot",
+    "dsgvo": "DSGVO-konform für synthetische Testdaten (keine Verarbeitung personenbezogener Daten)",
+    "keinePatientendaten": "Nur synthetische Testdaten im Pilot",
     "deterministisch": "Deterministisch – keine KI-Halluzinationen"
   },
   "impressum": {
@@ -464,43 +462,52 @@
       {
         "titel": "Diensteanbieter",
         "zeilen": [
-          "[BITTE ERGÄNZEN] (Firmierung inkl. Rechtsform)",
-          "[BITTE ERGÄNZEN] (Straße und Hausnummer)",
-          "[BITTE ERGÄNZEN] (PLZ und Ort)",
-          "Deutschland"
+          "Azmoth",
+          "Bureau 5, Centre Aziza, 1. Etage",
+          "Av. de l'Indépendance",
+          "Menzel Bourguiba 7050",
+          "Tunesien"
         ]
       },
       {
         "titel": "Vertreten durch",
         "zeilen": [
-          "[BITTE ERGÄNZEN] (Geschäftsführung / vertretungsberechtigte Person)"
+          "Oussama Khadraoui"
         ]
       },
       {
         "titel": "Kontakt",
         "zeilen": [
           "E-Mail: {email}",
-          "Telefon: [BITTE ERGÄNZEN]"
+          "Telefon: +216 50 745 682"
         ]
       },
       {
         "titel": "Registereintrag",
         "zeilen": [
-          "Registergericht: [BITTE ERGÄNZEN]",
-          "Registernummer: [BITTE ERGÄNZEN]"
+          "Kein Eintrag im deutschen Handelsregister.",
+          "Azmoth hat keine Niederlassung in Deutschland; eine Eintragung in ein deutsches Register besteht daher nicht."
         ]
       },
       {
         "titel": "Umsatzsteuer-Identifikationsnummer",
         "zeilen": [
-          "USt-IdNr. gemäß § 27 a UStG: [BITTE ERGÄNZEN]"
+          "Umsatzsteuer-Identifikationsnummer: entfällt"
         ]
       },
       {
         "titel": "Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV",
         "zeilen": [
-          "[BITTE ERGÄNZEN] (Name)",
-          "[BITTE ERGÄNZEN] (Anschrift, sofern abweichend)"
+          "Oussama Khadraoui",
+          "Anschrift wie unter „Diensteanbieter“"
+        ]
+      },
+      {
+        "titel": "Vertreter in der Union nach Art. 27 DSGVO",
+        "zeilen": [
+          "Ein Vertreter in der Union ist derzeit nicht benannt.",
+          "Im Pilotbetrieb verarbeitet Azmoth ausschließlich synthetische Testdaten; eine Verarbeitung personenbezogener Daten findet nicht statt, sodass die Benennungspflicht nach Art. 27 Abs. 1 DSGVO nicht ausgelöst wird.",
+          "Vor der ersten Verarbeitung personenbezogener Daten wird ein Vertreter in der Union benannt und an dieser Stelle mit Namen und Anschrift eingetragen."
         ]
       },
       {
@@ -517,49 +524,56 @@
           "Azmoth ist ein Prüfwerkzeug und ersetzt weder ärztliche noch rechtliche Beratung. Die Verantwortung für eine abgerechnete Position verbleibt bei der abrechnenden Stelle."
         ]
       }
-    ]
+    ],
+    "pilotHinweis": "Dieses Impressum gilt für den Pilotbetrieb mit synthetischen Testdaten. Für den Echtbetrieb mit Patientendaten wird vorab ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO abgeschlossen."
   },
   "datenschutz": {
     "titel": "Datenschutzerklärung",
     "untertitel": "Information gemäß Art. 13 und 14 DSGVO zur Verarbeitung personenbezogener Daten auf dieser Website und im Pilotbetrieb.",
     "platzhalterHinweis": "Diese Seite enthält noch Platzhalter und ist ein Entwurf. Vor der Veröffentlichung sind alle mit „[BITTE ERGÄNZEN]“ markierten Angaben zu ergänzen und der Text ist anwaltlich zu prüfen — insbesondere die Abschnitte zu Auftragsverarbeitung und Hosting.",
-    "stand": "Stand: [BITTE ERGÄNZEN] (Datum der letzten Aktualisierung)",
+    "stand": "Stand: 9. September 2026",
     "abschnitte": [
       {
         "titel": "1. Verantwortlicher",
         "absaetze": [
           "Verantwortlich für die Datenverarbeitung auf dieser Website im Sinne von Art. 4 Nr. 7 DSGVO ist:",
-          "[BITTE ERGÄNZEN] (Firmierung, Anschrift — identisch mit den Angaben im Impressum)",
-          "E-Mail: {email}"
+          "Azmoth, Bureau 5, Centre Aziza, 1. Etage, Av. de l'Indépendance, Menzel Bourguiba 7050, Tunesien — vertreten durch Oussama Khadraoui.",
+          "E-Mail: {email}",
+          "Telefon: +216 50 745 682"
         ]
       },
       {
         "titel": "2. Datenschutzbeauftragter",
         "absaetze": [
-          "[BITTE ERGÄNZEN] — Name und Kontaktdaten des oder der Datenschutzbeauftragten, sofern nach Art. 37 DSGVO bzw. § 38 BDSG eine Bestellpflicht besteht. Besteht keine Bestellpflicht, ist dieser Abschnitt vor der Veröffentlichung ersatzlos zu streichen."
+          "Eine Pflicht zur Bestellung eines Datenschutzbeauftragten nach Art. 37 DSGVO bzw. § 38 BDSG besteht derzeit nicht: Azmoth beschäftigt nicht die dafür maßgebliche Zahl von Personen und verarbeitet im Pilotbetrieb keine personenbezogenen Daten.",
+          "Ansprechpartner für alle Fragen zum Datenschutz ist Oussama Khadraoui, erreichbar unter {email}.",
+          "Entsteht eine Bestellpflicht — insbesondere mit Aufnahme des Echtbetriebs mit Patientendaten — wird ein Datenschutzbeauftragter bestellt und an dieser Stelle benannt."
         ]
       },
       {
         "titel": "3. Aufruf dieser Website (Server-Logs)",
         "absaetze": [
           "Beim Aufruf dieser Website verarbeitet unser Hoster technisch notwendige Zugriffsdaten: IP-Adresse, Datum und Uhrzeit der Anfrage, aufgerufene Adresse, übertragene Datenmenge, Referrer und User-Agent.",
-          "Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt im sicheren und störungsfreien Betrieb der Website. Die Daten werden nach [BITTE ERGÄNZEN] Tagen gelöscht."
+          "Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt im sicheren und störungsfreien Betrieb der Website. Zugriffsprotokolle werden nach 30 Tagen gelöscht.",
+          "Nachweisprotokolle der Anwendung (Nachweis darüber, wer wann welchen Vorgang ausgelöst hat) werden nach 90 Tagen gelöscht."
         ]
       },
       {
         "titel": "4. Hosting",
         "absaetze": [
-          "Diese Website und die Anwendung werden in Deutschland betrieben (Microsoft Azure, Region Germany West Central). Mit dem Hoster besteht ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO.",
-          "Hoster und Vertragsdatum: [BITTE ERGÄNZEN]"
+          "Diese Website wird von der Vercel Inc., 340 S Lemon Ave #4133, Walnut, CA 91789, USA, ausgeliefert. Die Auslieferung erfolgt über europäische Standorte des Anbieters; der Unternehmenssitz liegt in den Vereinigten Staaten.",
+          "Die Prüf-Engine wird — sobald sie öffentlich erreichbar ist — bei Amazon Web Services in der Region eu-central-1 (Frankfurt am Main) betrieben, die verwaltete Datenbank bei der Neon, LLC auf aws-eu-central-1 (Frankfurt am Main). Zum Stand dieser Erklärung ist die Engine nicht öffentlich erreichbar.",
+          "Mit den eingesetzten Anbietern bestehen die von diesen bereitgestellten Verträge zur Auftragsverarbeitung nach Art. 28 DSGVO. Ein gegengezeichneter Auftragsverarbeitungsvertrag mit einem Verantwortlichen besteht derzeit nicht und wird vor der ersten Verarbeitung personenbezogener Daten geschlossen.",
+          "Übermittlungen an Anbieter mit Sitz in den Vereinigten Staaten werden auf die Standardvertragsklauseln bzw. das EU-US Data Privacy Framework gestützt. Personenbezogene Daten aus dem Pilotbetrieb erreichen diese Anbieter nicht — der Pilotbetrieb verarbeitet ausschließlich synthetische Testdaten."
         ]
       },
       {
         "titel": "5. Reichweitenmessung",
         "absaetze": [
           "Diese Website setzt keine Cookies zu Analysezwecken und speichert keine Kennung auf Ihrem Endgerät. Ein Einwilligungsdialog erscheint daher nicht — es gibt nichts, wofür um Erlaubnis zu bitten wäre.",
-          "Sofern eine Reichweitenmessung aktiviert ist, erfolgt sie ausschließlich cookielos und ohne Speicherung oder Auslesen von Informationen auf Ihrem Endgerät (§ 25 Abs. 1 TDDDG greift daher nicht). Erhoben werden aggregierte Seitenaufrufe ohne Personenbezug; Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO mit unserem berechtigten Interesse an einer bedarfsgerechten Gestaltung dieser Website.",
-          "Google Analytics wird nicht eingesetzt. Es findet keine Übermittlung von Nutzungsdaten in Drittländer statt.",
-          "Eingesetztes Werkzeug, Betreiber und Hosting-Ort, sofern aktiviert: [BITTE ERGÄNZEN]"
+          "Zum Stand dieser Erklärung ist keine Reichweitenmessung aktiviert. Es werden keine Nutzungsdaten erhoben.",
+          "Wird eine Reichweitenmessung aktiviert, erfolgt sie ausschließlich cookielos und ohne Speicherung oder Auslesen von Informationen auf Ihrem Endgerät (§ 25 Abs. 1 TDDDG greift daher nicht). Erhoben werden aggregierte Seitenaufrufe ohne Personenbezug; Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO mit unserem berechtigten Interesse an einer bedarfsgerechten Gestaltung dieser Website. Eingesetzt würde Plausible oder Umami; diese Erklärung wird vor der Aktivierung um Betreiber und Hosting-Ort ergänzt.",
+          "Google Analytics wird nicht eingesetzt."
         ]
       },
       {
@@ -572,9 +586,10 @@
       {
         "titel": "7. Daten im Pilotbetrieb",
         "absaetze": [
-          "Im Pilotbetrieb verarbeitet Azmoth ausschließlich anonymisierte Abrechnungslieferungen. Das dafür bereitgestellte Anonymisierungsskript läuft bei Ihnen, bevor eine Datei uns erreicht; Namen, Geburtsdaten, Anschriften und Versichertennummern verlassen Ihr Haus nicht.",
+          "Im Pilotbetrieb verarbeitet Azmoth ausschließlich synthetische Testdaten. Das sind maschinell erzeugte PADnext-Lieferungen, die keiner realen Person zuzuordnen sind — es werden keine personenbezogenen Daten verarbeitet.",
+          "Eine Lieferung, die sich als Echtdaten ausweist, wird von der Anwendung abgewiesen; ebenso eine Lieferung, die dazu keine oder eine nicht definierte Angabe macht. Die Sperre ist die Voreinstellung.",
           "Verarbeiten Sie später echte Abrechnungsdaten mit Azmoth, sind Sie datenschutzrechtlich Verantwortlicher und wir Auftragsverarbeiter. Grundlage ist dann ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO, den wir Ihnen vor Beginn der Verarbeitung zur Verfügung stellen.",
-          "Abrechnungsdaten aus einer ärztlichen Behandlung sind Gesundheitsdaten im Sinne von Art. 9 DSGVO. Ihre Verarbeitung ohne die vertragliche Grundlage nach Art. 28 DSGVO ist ausgeschlossen — die Anwendung weist entsprechende Lieferungen im Pilotbetrieb technisch ab."
+          "Abrechnungsdaten aus einer ärztlichen Behandlung sind Gesundheitsdaten im Sinne von Art. 9 DSGVO. Ihre Verarbeitung ohne die vertragliche Grundlage nach Art. 28 DSGVO ist ausgeschlossen."
         ]
       },
       {
@@ -582,9 +597,11 @@
         "absaetze": [
           "Sie haben das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) sowie Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21 DSGVO).",
           "Eine erteilte Einwilligung können Sie jederzeit mit Wirkung für die Zukunft widerrufen (Art. 7 Abs. 3 DSGVO).",
-          "Sie haben zudem das Recht auf Beschwerde bei einer Aufsichtsbehörde (Art. 77 DSGVO). Zuständig ist die Aufsichtsbehörde des Bundeslandes unseres Sitzes: [BITTE ERGÄNZEN]."
+          "Sie haben zudem das Recht auf Beschwerde bei einer Aufsichtsbehörde (Art. 77 DSGVO). Sie können sich an die Aufsichtsbehörde Ihres gewöhnlichen Aufenthaltsorts oder Ihres Arbeitsplatzes wenden.",
+          "Azmoth hat seinen Sitz außerhalb der Europäischen Union und derzeit keine Niederlassung in der Union; eine federführende Aufsichtsbehörde ist deshalb noch nicht bestimmt. Die für uns zuständige Aufsichtsbehörde wird mit Benennung des EU-Vertreters ergänzt."
         ]
       }
-    ]
+    ],
+    "pilotHinweis": "Diese Datenschutzerklärung gilt für den Pilotbetrieb mit synthetischen Testdaten. Für den Echtbetrieb mit Patientendaten wird vorab ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO abgeschlossen."
   }
 }

@@ -62,9 +62,11 @@ function DatenschutzContent() {
     <Section className="pt-16 lg:pt-24">
       <SectionHeading title={t("titel")} subtitle={t("untertitel")} align="start" as="h1" />
 
+      {/* Draft warning vs. pilot-scope banner — see the Impressum page for why these differ. */}
       {hasPlaceholder(abschnitte) ? (
         <PlaceholderNotice className="mt-8 max-w-3xl" text={t("platzhalterHinweis")} />
       ) : null}
+      <PlaceholderNotice className="mt-8 max-w-3xl" text={t("pilotHinweis")} />
 
       <p className="mt-6 text-sm text-muted-foreground">{t("stand")}</p>
 

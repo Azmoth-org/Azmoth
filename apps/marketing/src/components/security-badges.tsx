@@ -1,46 +1,59 @@
 import { useTranslations } from "next-intl";
-import { DatabaseIcon, LockIcon, ScrollTextIcon, ServerIcon } from "lucide-react";
+import { DatabaseIcon, GlobeIcon, ScrollTextIcon, ServerIcon } from "lucide-react";
 
 import { RevealGroup, RevealItem } from "@/components/reveal";
 
 /**
- * Hosting and compliance as four checkable facts.
+ * Hosting and compliance as four checkable facts — including the ones that are not
+ * finished yet.
  *
- * Every claim here is sourced from `legal/AVV_Anlage.md` rather than written for the page:
+ * Every claim here is sourced from `legal/AVV_Anlage.md` and `legal/COMPLIANCE_ROADMAP.md`
+ * rather than written for the page:
  *
- * - **AWS `eu-central-1`, Frankfurt am Main** — the AVV names the region for the application tier.
- * - **Neon, Frankfurt am Main** — the managed Postgres, on `aws-eu-central-1`, per the same annex.
- * - **AVV & TOM** — both documents exist in `legal/` and are the ones a Datenschutzbeauftragte
- *   asks for; this is not a claim about a certification nobody holds.
- * - **No patient data in the pilot** — the constraint the pilot programme already states, and the
- *   only one of the four that is a *promise* rather than an infrastructure fact.
+ * - **AWS `eu-central-1`, Frankfurt am Main** — the region the AVV names for the
+ *   application tier, marked as the *intended* region because the engine is not publicly
+ *   deployed yet.
+ * - **Neon, Frankfurt am Main** — the managed Postgres, on `aws-eu-central-1`, per the same
+ *   annex, and reaching the public internet on the same schedule as the engine.
+ * - **AVV & TOM** — both documents exist in `legal/`, both are drafts, and neither is a
+ *   signed contract. The tile says so.
+ * - **Vercel (EU)** — the one host that is actually serving something today: this site.
  *
  * ## What is deliberately not claimed
  *
- * The badges say where the data sits, not that the supply chain terminates in Germany, because the
- * AVV is explicit that it does not: Neon, LLC is a Databricks subsidiary and leans on the Data
- * Privacy Framework for transfers. "Frankfurt-hosted" is true and is what the badge says.
- * "Deutsches Unternehmen, deutsche Server, keine US-Berührung" would be the version that sells
- * better and contradicts this company's own contract annex — and the reader most likely to notice
- * is precisely the compliance officer whose sign-off the deal needs.
+ * These tiles used to be written in the present tense — "Anwendung: AWS", "Beide Dokumente
+ * liegen vor und werden Vertragsbestandteil" — which described a deployment and a contract
+ * that do not exist. The audience for this section is a Datenschutzbeauftragte doing
+ * exactly one thing: checking whether the vendor's public claims survive a question. A
+ * present-tense region for an engine that answers no requests is the claim that fails that
+ * check fastest, and it fails it in the meeting where the deal is decided.
+ *
+ * The badges still say where the data will sit, not that the supply chain terminates in
+ * Germany, because the AVV is explicit that it does not: Neon, LLC is a Databricks
+ * subsidiary and leans on the Data Privacy Framework for transfers, and Vercel Inc. is a US
+ * company. "Frankfurt-hosted" is true of the data at rest and is what the badge says.
+ * "Deutsches Unternehmen, deutsche Server, keine US-Berührung" would be the version that
+ * sells better and contradicts this company's own contract annex — and the reader most
+ * likely to notice is precisely the compliance officer whose sign-off the deal needs.
  *
  * No ISO 27001, no BSI, no SOC 2, no TÜV mark either. A trust row is the easiest place on a
- * website to imply a certification through a logo without ever writing a sentence that is false,
- * and it is also the place where doing so is discovered fastest.
+ * website to imply a certification through a logo without ever writing a sentence that is
+ * false, and it is also the place where doing so is discovered fastest.
  *
  * ## Why word marks rather than vendor logos
  *
- * The brief asked for logo tiles. AWS and Neon both restrict their marks to customers following
- * their brand guidelines, and using them next to "DSGVO-konform" edges toward implying an
- * endorsement of the compliance claim rather than merely naming the host. Set in the site's own
- * type beside a neutral icon, they read as infrastructure disclosure, which is what they are.
+ * The brief asked for logo tiles. AWS, Neon and Vercel all restrict their marks to
+ * customers following their brand guidelines, and using them next to a data-protection
+ * claim edges toward implying an endorsement of that claim rather than merely naming the
+ * host. Set in the site's own type beside a neutral icon, they read as infrastructure
+ * disclosure, which is what they are.
  */
 
 const BADGES = [
   { key: "aws", icon: ServerIcon },
   { key: "neon", icon: DatabaseIcon },
   { key: "dsgvo", icon: ScrollTextIcon },
-  { key: "pilot", icon: LockIcon },
+  { key: "website", icon: GlobeIcon },
 ] as const;
 
 export function SecurityBadges() {
