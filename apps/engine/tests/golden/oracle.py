@@ -88,7 +88,7 @@ BUG_CASES = ("bug_positionsnr_collision",)
 #: additionally asserts two runs agree with each other. A move here means the catalog, the rule
 #: tables, the logic, the solver, the policy or the response shape changed; `app/services/receipt.py`
 #: documents which of those are expected to move it.
-CASE_A_RECEIPT_PREFIX = "f7edf9fc95d95429"
+CASE_A_RECEIPT_PREFIX = "a11b95a38a06640c"
 
 
 # ------------------------------------------------------------------------------------------

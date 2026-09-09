@@ -1,15 +1,15 @@
 {
- "generated_at": "2026-07-25T14:20:01+00:00",
+ "generated_at": "2026-09-09T01:29:19+00:00",
  "catalog_version": "goae_official_snapshot_2026-07-25",
  "coverage": {
-  "ziffern_parsed": 2192,
-  "unparsed_rows": 256,
-  "annotations_captured": 447,
+  "ziffern_parsed": 2343,
+  "unparsed_rows": 75,
+  "annotations_captured": 418,
   "exclusion_rules_auto": 837,
   "exclusion_rules_mutual": 102,
   "zielleistung_rules_auto": 0,
   "factor_cap_rules_auto": 22,
-  "rules_needing_review": 187,
+  "rules_needing_review": 172,
   "duplicates": 1,
   "validation_problems": 0,
   "rule_coverage": "partial",
@@ -31,7 +31,7 @@
    "owner_ziffer": "3",
    "kind": "unrecognised_billing_restriction",
    "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Die Leistung nach Nummer 3 (Dauer mindestens 10 Minuten) ist nur berechnungsfähig als einzige Leistung oder im Zusammenhang mit einer Untersuchung nach Nummer 5, 6, 7, 8, 800 oder 801."
+   "quote": "Die Leistung nach Nummer 3 (Dauer mindestens 10 Minuten) ist nur berechnungsfähig als einzige Leistung oder im Zusammenhang mit einer Untersuchung nach Nummer 5, 6, 7, 8, 800 oder 801. Eine mehr als einmalige Berechnung im Behandlungsfall bedarf einer besonderen Begründung."
   },
   {
    "owner_ziffer": "4",
@@ -97,7 +97,7 @@
    "owner_ziffer": "26",
    "kind": "unrecognised_billing_restriction",
    "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Lebensjahr je Kalenderjahr höchstens einmal berechnungsfähig."
+   "quote": "Die Leistung nach Nummer 26 ist ab dem vollendeten 2. Lebensjahr je Kalenderjahr höchstens einmal berechnungsfähig."
   },
   {
    "owner_ziffer": "27",
@@ -187,7 +187,7 @@
    "owner_ziffer": "60",
    "kind": "unrecognised_billing_restriction",
    "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Sie ist nicht berechnungsfähig für routinemäßige Besprechungen (z.B."
+   "quote": "Sie ist nicht berechnungsfähig für routinemäßige Besprechungen (z.B. Röntgenbesprechung, Klinik- oder Abteilungskonferenz, Team- oder Mitarbeiterbesprechung, Patientenübergabe)."
   },
   {
    "owner_ziffer": "61",
@@ -889,78 +889,6 @@
    "owner_ziffer": "",
    "kind": "quantity_or_time_restriction_not_modelled",
    "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
-   "quote": "Allgemeine Bestimmungen 1.Als Behandlungsfall gilt für die Behandlung derselben Erkrankung der Zeitraum eines Monats nach der jeweils ersten Inanspruchnahme des Arztes.2.Die Leistungen nach den Nummern 1 und/oder 5 sind neben Leistungen nach den Abschnitten C bis O im Behandlungsfall nur einmal berechnungsfähig.3.Die Leistungen nach den Nummern 1, 3, 5, 6, 7 und/oder 8 können an demselben Tag nur dann mehr als einmal berechnet werden, wenn dies durch die Beschaffenheit des Krankheitsfalls geboten war."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Allgemeine Bestimmungen 1.Die Gebühren für Laboratoriumsuntersuchungen des Abschnitts M umfassen die Eingangsbegutachtung des Probenmaterials, die Probenvorbereitung, die Durchführung der Untersuchung (einschließlich der erforderlichen Qualitätssicherungsmaßnahmen) sowie die Erstellung des daraus resultierenden ärztlichen Befunds.Mit den Gebühren für die berechnungsfähigen Leistungen sind außer den Kosten - mit Ausnahme der Versand- und Portokosten sowie der Kosten für Pharmaka im Zusammenhang mit Funktionstesten - auch die Beurteilung, die obligatorische Befunddokumentation, die Befundmitteilung sowie der einfache Befundbericht abgegolten."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "quantity_or_time_restriction_not_modelled",
-   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
-   "quote": "Die Verwendung radioaktiven Materials kann nicht gesondert berechnet werden.Kosten für den Versand des Untersuchungsmaterials und die Übermittlung des Untersuchungsergebnisses innerhalb einer Laborgemeinschaft sind nicht berechnungsfähig.2.Stehen dem Arzt für die Erbringung bestimmter Laboruntersuchungen mehrere in ihrer klinischen Aussagefähigkeit und analytischen Qualität gleichwertige Verfahren zur Verfügung, so kann er nur das niedriger bewertete Verfahren abrechnen.3.Bei Weiterversand von Untersuchungsmaterial durch einen Arzt an einen anderen Arzt wegen der Durchführung von Laboruntersuchungen der Abschnitte M III und/oder M IV hat die Rechnungsstellung durch den Arzt zu erfolgen, der die Laborleistung selbst erbracht hat.4.Mehrmalige Blutentnahmen an einem Kalendertag (z.B. im Zusammenhang mit Funktionsprüfungen) sind entsprechend mehrfach berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Anstelle der Blutentnahme kann die intravenöse Einbringung von Testsubstanzen berechnet werden, wenn beide Leistungen bei liegender Kanüle nacheinander erbracht werden.Entnahmen aus liegender Kanüle oder liegendem Katheter sind nicht gesondert berechnungsfähig.5.Die rechnerische Ermittlung von Ergebnissen aus einzelnen Meßgrößen ist nicht berechnungsfähig (z.B."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "quantity_or_time_restriction_not_modelled",
-   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
-   "quote": "Blut einschließlich seiner Bestandteile Serum, Plasma und Blutzellen), das an einem Kalendertag gewonnen wurde, auch wenn dieses an mehreren Tagen untersucht wurde.Sind aus medizinischen Gründen an einem Kalendertag mehrere Untersuchungen einer Meßgröße aus einer Materialart zu verschiedenen Tageszeiten erforderlich, so können diese entsprechend mehrfach berechnet werden."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Wird eine Untersuchung mittels Ligandenassay, die obligatorisch eine Doppelbestimmung beinhaltet, als Einfachbestimmung durchgeführt, so dürfen nur zwei Drittel der Gebühr berechnet werden.10.Sofern nicht gesondert gekennzeichnet, handelt es sich bei den aufgeführten Untersuchungen um quantitative oder semiquantitative Bestimmungen.11.Laboratoriumsuntersuchungen der Abschnitte M I, M II und M III (mit Ausnahme der Leistungen nach den Nummern 3980 bis 4014) im Rahmen einer Intensivbehandlung nach Nummer 435 sind nur nach Nummer 437 berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Allgemeine Bestimmungen 1.Mit den Gebühren sind alle Kosten (auch für Dokumentation und Aufbewahrung der Datenträger) abgegolten.2.Die Leistungen für Strahlendiagnostik mit Ausnahme der Durchleuchtung(en) (Nummer 5295) sind nur bei Bilddokumentation auf einem Röntgenfilm oder einem anderen Langzeitdatenträger berechnungsfähig.3.Die Befundmitteilung oder der einfache Befundbericht mit Angaben zu Befund(en) und zur Diagnose ist Bestandteil der Leistungen und nicht gesondert berechnungsfähig.4.Die Beurteilung von Röntgenaufnahmen (auch Fremdaufnahmen) als selbständige Leistung ist nicht berechnungsfähig.5.Die nach dem Strahlenschutzgesetz und den auf dessen Grundlage erlassenen Rechtsverordnungen notwendige ärztliche Überprüfung der Indikation und des Untersuchungsumfangs ist auch im Überweisungsfall Bestandteil der Leistungen des Abschnitts O und mit den Gebühren abgegolten.6.Die Leistungen nach den Nummern 5011, 5021, 5031, 5101, 5106, 5121, 5201, 5267, 5295, 5302, 5305, 5308, 5311, 5318, 5331, 5339, 5376 und 5731 dürfen unabhängig von der Anzahl der Ebenen, Projektionen, Durchleuchtungen bzw."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "quantity_or_time_restriction_not_modelled",
-   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
-   "quote": "Serien insgesamt jeweils nur einmal berechnet werden.7.Die Kosten für Kontrastmittel auf Bariumbasis und etwaige Zusatzmittel für die Doppelkontrastuntersuchung sind in den abrechnungsfähigen Leistungen enthalten."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "quantity_or_time_restriction_not_modelled",
-   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
-   "quote": "Wiederholungsuntersuchungen, die nicht ausdrücklich aufgeführt sind, sind nur mit besonderer Begründung und wie die jeweilige Basisleistung berechnungsfähig.2.Ergänzungsleistungen nach den Nummern 5480 bis 5485 sind je Basisleistung oder zulässiger Wiederholungsuntersuchung nur einmal berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Die Leistungen nach den Nummern 5473, 5480, 5481 und 5483 sind nur mit Angabe der Indikation berechnungsfähig.3.Die Befunddokumentation, die Aufbewahrung der Datenträger sowie die Befundmitteilung oder der einfache Befundbericht mit Angaben zu Befund(en) und zur Diagnose sind Bestandteil der Leistungen und nicht gesondert berechnungsfähig.4.Die Materialkosten für das Radiopharmazeutikum (Nuklid, Markierungs- oder Testbestecke) sind gesondert berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Kosten für Beschaffung, Aufbereitung, Lagerung und Entsorgung der zur Untersuchung notwendigen Substanzen, die mit ihrer Anwendung verbraucht sind, sind nicht gesondert berechnungsfähig.5.Die Einbringung von zur Diagnostik erforderlichen Stoffen in den Körper - mit Ausnahme der Einbringung durch Herzkatheter, Arterienkatheter, Subokzipitalpunktion oder Lumbalpunktion - sowie die gegebenenfalls erforderlichen Entnahmen von Blut oder Urin sind mit den Gebühren abgegolten, soweit zu den einzelnen Leistungen dieses Abschnitts nichts anderes bestimmt ist.6.Die Einbringung von zur Therapie erforderlichen radioaktiven Stoffen in den Körper - mit Ausnahme der intraartikulären, intralymphatischen, endoskopischen oder operativen Einbringungen des Strahlungsträgers oder von Radionukliden - ist mit den Gebühren abgegolten, soweit zu den einzelnen Leistungen dieses Abschnitts nichts anderes bestimmt ist.7.Rechnungsbestimmungena)Der Arzt darf nur die für den Patienten verbrauchte Menge an radioaktiven Stoffen berechnen.b)Bei der Berechnung von Leistungen nach Abschnitt O II sind die Untersuchungs- und Behandlungsdaten der jeweils eingebrachten Stoffe sowie die Art der ausgeführten Maßnahmen in der Rechnung anzugeben, sofern nicht durch die Leistungsbeschreibung eine eindeutige Definition gegeben ist."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "die nach den Vorschriften des Gebührenverzeichnisses als gesondert berechnungsfähig ausgewiesenen Kosten."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "quantity_or_time_restriction_not_modelled",
-   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
    "quote": "Die Leistungen nach den Nummern 1 und/oder 5 sind neben Leistungen nach den Abschnitten C bis O im Behandlungsfall nur einmal berechnungsfähig."
   },
   {
@@ -980,48 +908,6 @@
    "kind": "unrecognised_billing_restriction",
    "reason": "sentence constrains billing but matched no known pattern",
    "quote": "Terminvereinbarungen sind nicht berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Neben den Leistungen nach den Nummern 100 und 101 sind Zuschläge nach den Buchstaben F bis H berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Erforderliche Nachbeobachtungen am Tag der Impfung oder Testung sind in den Leistungsansätzen enthalten und nicht gesondert berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Neben den Leistungen nach den Nummern 376 bis 378 sind die Leistungen nach den Nummern 1 und 2 und die gegebenenfalls erforderliche Eintragung in den Impfpaß nicht berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "quantity_or_time_restriction_not_modelled",
-   "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
-   "quote": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Leistungen nach den Nummern 410 bis 418 sind nicht nebeneinander berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Die Leistungen nach den Nummern 448 und 449 sind im Zusammenhang mit derselben Operation nur von einem der an dem Eingriff beteiligten Ärzte und nur entweder neben den Leistungen nach den Nummern 442 bis 445 oder den Leistungen nach den Nummern 446 bis 447 berechnungsfähig."
-  },
-  {
-   "owner_ziffer": "",
-   "kind": "unrecognised_billing_restriction",
-   "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Die Zuschläge nach den Nummern 442 bis 449 sind nicht berechnungsfähig, wenn der Patient an demselben Tag wegen derselben Erkrankung in stationäre Krankenhausbehandlung aufgenommen wird; das gilt nicht, wenn die stationäre Behandlung wegen unvorhersehbarer Komplikationen während oder nach der ambulanten Operation notwendig und entsprechend begründet wird."
   },
   {
    "owner_ziffer": "",
@@ -1051,7 +937,7 @@
    "owner_ziffer": "",
    "kind": "unrecognised_billing_restriction",
    "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Die rechnerische Ermittlung von Ergebnissen aus einzelnen Meßgrößen ist nicht berechnungsfähig (z.B."
+   "quote": "Die rechnerische Ermittlung von Ergebnissen aus einzelnen Meßgrößen ist nicht berechnungsfähig (z.B. Clearance-Berechnungen, mittlerer korpuskulärer Hämoglobingehalt)."
   },
   {
    "owner_ziffer": "",
@@ -1127,27 +1013,51 @@
   },
   {
    "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "die nach den Vorschriften des Gebührenverzeichnisses als gesondert berechnungsfähig ausgewiesenen Kosten."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben den Leistungen nach den Nummern 100 und 101 sind Zuschläge nach den Buchstaben F bis H berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Erforderliche Nachbeobachtungen am Tag der Impfung oder Testung sind in den Leistungsansätzen enthalten und nicht gesondert berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
+   "kind": "unrecognised_billing_restriction",
+   "reason": "sentence constrains billing but matched no known pattern",
+   "quote": "Neben den Leistungen nach den Nummern 376 bis 378 sind die Leistungen nach den Nummern 1 und 2 und die gegebenenfalls erforderliche Eintragung in den Impfpaß nicht berechnungsfähig."
+  },
+  {
+   "owner_ziffer": "",
    "kind": "quantity_or_time_restriction_not_modelled",
    "reason": "restricts how often a service may be charged; the engine models no quantity or time dimension yet",
-   "quote": "Auf Verlangen ist die mehr als zweimalige Berechnung einer Visite an demselben Tag zu begründen.Anstelle oder neben der Visite im Krankenhaus sind die Leistungen nach den Nummern 1, 3, 4, 5, 6, 7, 8 und/oder 15 nicht berechnungsfähig."
+   "quote": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig."
   },
   {
    "owner_ziffer": "",
    "kind": "unrecognised_billing_restriction",
    "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Die Gebühren für Laboratoriumsuntersuchungen des Abschnitts M umfassen die Eingangsbegutachtung des Probenmaterials, die Probenvorbereitung, die Durchführung der Untersuchung (einschließlich der erforderlichen Qualitätssicherungsmaßnahmen) sowie die Erstellung des daraus resultierenden ärztlichen Befunds.Mit den Gebühren für die berechnungsfähigen Leistungen sind außer den Kosten - mit Ausnahme der Versand- und Portokosten sowie der Kosten für Pharmaka im Zusammenhang mit Funktionstesten - auch die Beurteilung, die obligatorische Befunddokumentation, die Befundmitteilung sowie der einfache Befundbericht abgegolten."
+   "quote": "Leistungen nach den Nummern 410 bis 418 sind nicht nebeneinander berechnungsfähig."
   },
   {
    "owner_ziffer": "",
    "kind": "unrecognised_billing_restriction",
    "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Die Verwendung radioaktiven Materials kann nicht gesondert berechnet werden.Kosten für den Versand des Untersuchungsmaterials und die Übermittlung des Untersuchungsergebnisses innerhalb einer Laborgemeinschaft sind nicht berechnungsfähig."
+   "quote": "Die Leistungen nach den Nummern 448 und 449 sind im Zusammenhang mit derselben Operation nur von einem der an dem Eingriff beteiligten Ärzte und nur entweder neben den Leistungen nach den Nummern 442 bis 445 oder den Leistungen nach den Nummern 446 bis 447 berechnungsfähig."
   },
   {
    "owner_ziffer": "",
    "kind": "unrecognised_billing_restriction",
    "reason": "sentence constrains billing but matched no known pattern",
-   "quote": "Anstelle der Blutentnahme kann die intravenöse Einbringung von Testsubstanzen berechnet werden, wenn beide Leistungen bei liegender Kanüle nacheinander erbracht werden.Entnahmen aus liegender Kanüle oder liegendem Katheter sind nicht gesondert berechnungsfähig."
+   "quote": "Die Zuschläge nach den Nummern 442 bis 449 sind nicht berechnungsfähig, wenn der Patient an demselben Tag wegen derselben Erkrankung in stationäre Krankenhausbehandlung aufgenommen wird; das gilt nicht, wenn die stationäre Behandlung wegen unvorhersehbarer Komplikationen während oder nach der ambulanten Operation notwendig und entsprechend begründet wird."
   }
  ]
 }
