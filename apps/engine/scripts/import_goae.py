@@ -130,6 +130,33 @@ def normalize_ziffer(raw: str) -> str:
 #: The Abschnitte of the Gebührenverzeichnis, in the order the law prints them.
 ABSCHNITT_SEQUENCE = "ABCDEFGHIJKLMNOP"
 
+#: A Zuschlag defined as a percentage of another Ziffer's fee ("... beträgt 25 v.H. des
+#: einfachen Gebührensatzes ...") rather than a fixed Punktzahl. Nummer 441 and 5298 are the
+#: two of these among the rows that otherwise look like "Ziffer with no Punktzahl" — there is
+#: nothing to recover because the law never gives them one.
+PERCENTAGE_ZUSCHLAG_RE = re.compile(r"\bv\.\s?H\.\s+des\s+einfachen\s+Gebührensatzes", re.IGNORECASE)
+
+
+def _row_cells(row: ET.Element) -> tuple[list[str], list[str]]:
+    """Return ``(raw_cells, non_empty_cells)`` for one <row>."""
+    raw_cells = [cell_text(c) for c in row.findall("entry")]
+    return raw_cells, [c for c in raw_cells if c]
+
+
+def _peek_cells(rows: list[ET.Element], index: int) -> list[str] | None:
+    """The non-empty cells of ``rows[index]``, or ``None`` if that row does not exist."""
+    if index < 0 or index >= len(rows):
+        return None
+    return _row_cells(rows[index])[1]
+
+
+def _extract_punkte_and_text(cells: list[str]) -> tuple[str | None, str]:
+    """Pull a Punktzahl and the longest service-text cell out of a fee-row's cells."""
+    punkte = next((c for c in cells if PUNKTE_RE.match(c)), None)
+    text_cells = [c for c in cells if not PUNKTE_RE.match(c) and not re.match(r"^[\d.,]+$", c)]
+    text = max(text_cells, key=len) if text_cells else ""
+    return punkte, text
+
 
 class SectionIndex:
     """Maps a Ziffer to its Abschnitt, using the ranges in the official Übersicht."""
@@ -620,33 +647,89 @@ def import_official(xml_path: Path, source_meta: dict) -> dict:
             continue
 
         current: str | None = None
-        for row_index, row in enumerate(rows):  # noqa: B007
-            raw_cells = [cell_text(c) for c in row.findall("entry")]
-            cells = [c for c in raw_cells if c]
+        #: The Ziffer-less row printed just above a "Katalog" marker, e.g. "Untersuchung
+        #: folgender Meßgrößen ..., je Meßgröße" at 70 Punkte. Every Ziffer listed under that
+        #: marker is a named example of the group and bills at the group's own Punktzahl — the
+        #: individual example rows never carry a Punktzahl of their own in the source. Cleared
+        #: as soon as a Ziffer with its own Punktzahl ends the catalog block.
+        active_group: dict[str, object] | None = None
+        row_index = 0
+        while row_index < len(rows):
+            raw_cells, cells = _row_cells(rows[row_index])
             if not cells:
+                row_index += 1
                 continue  # a purely decorative spacer row
 
             head = cells[0]
 
+            # -- "Katalog": a structural marker introducing the group's examples, not content.
+            if cells == ["Katalog"]:
+                row_index += 1
+                continue
+
+            is_ziffer_row = bool(ZIFFER_RE.match(head)) and not RANGE_RE.search(head)
+
+            # -- a group header: no Ziffer of its own, but the very next row is "Katalog" and
+            # this row carries the Punktzahl every example underneath it will share.
+            if not is_ziffer_row and _peek_cells(rows, row_index + 1) == ["Katalog"]:
+                group_punkte, group_text = _extract_punkte_and_text(cells)
+                if group_punkte is not None:
+                    active_group = {"text": group_text, "punkte": int(group_punkte)}
+                    row_index += 1
+                    continue
+
             # -- a Ziffer row -----------------------------------------------------------
-            if ZIFFER_RE.match(head) and not RANGE_RE.search(head):
-                punkte = next((c for c in cells[1:] if PUNKTE_RE.match(c)), None)
-                text_cells = [
-                    c for c in cells[1:] if not PUNKTE_RE.match(c) and not re.match(r"^[\d.,]+$", c)
-                ]
-                official_text = max(text_cells, key=len) if text_cells else ""
+            if is_ziffer_row:
+                punkte, official_text = _extract_punkte_and_text(cells[1:])
+                inherited_from: str | None = None
+                consumed_next = False
+
+                if punkte is None and active_group is not None:
+                    # A Katalog example: its own row never carries a Punktzahl, so it takes
+                    # the group header's.
+                    punkte = str(active_group["punkte"])
+                    inherited_from = str(active_group["text"])
+                elif punkte is None:
+                    # A long official_text that the source wrapped onto a second physical row,
+                    # carrying the Punktzahl this Ziffer never printed on its own line (e.g.
+                    # "K 1 ... bis zum vollendeten" / "4. Lebensjahr  120  13,68"). Only treated
+                    # as a continuation when that next row is not itself the header of the
+                    # *following* Katalog block, which would mean it belongs to a different
+                    # Ziffer entirely.
+                    next_cells = _peek_cells(rows, row_index + 1)
+                    if (
+                        next_cells
+                        and next_cells != ["Katalog"]
+                        and _peek_cells(rows, row_index + 2) != ["Katalog"]
+                    ):
+                        next_punkte, next_text = _extract_punkte_and_text(next_cells)
+                        if next_punkte is not None:
+                            official_text = normalize_text(f"{official_text} {next_text}")
+                            punkte = next_punkte
+                            consumed_next = True
 
                 if punkte is None or not official_text:
+                    reason = "row starts with a Ziffer but has no Punktzahl"
+                    if punkte is None:
+                        following = _peek_cells(rows, row_index + 1)
+                        following_text = following[0] if following else ""
+                        if PERCENTAGE_ZUSCHLAG_RE.search(following_text):
+                            reason = (
+                                "Zuschlag defined as a percentage of another Ziffer's fee "
+                                "(see the following row), not a fixed Punktzahl — nothing to "
+                                "recover"
+                            )
+                    else:
+                        reason = "row starts with a Ziffer but has no service text"
                     unparsed.append(
                         {
                             "table": table_index,
                             "row": row_index,
                             "cells": raw_cells,
-                            "reason": "row starts with a Ziffer but has no Punktzahl"
-                            if punkte is None
-                            else "row starts with a Ziffer but has no service text",
+                            "reason": reason,
                         }
                     )
+                    row_index += 1
                     continue
 
                 ziffer = normalize_ziffer(head)
@@ -666,11 +749,19 @@ def import_official(xml_path: Path, source_meta: dict) -> dict:
                          "duplicate": official_text[:80], "table": table_index, "row": row_index}
                     )
                     current = ziffer
+                    row_index += 2 if consumed_next else 1
                     continue
 
                 # A legend split across table rows leaves a fragment behind ("jeweils in zwei
                 # Ebenen"). Flagged rather than shipped as if it were the full legend.
                 truncated = official_text[:1].islower() or len(official_text) < 12
+
+                item_annotations = []
+                if inherited_from:
+                    item_annotations.append(
+                        f"Punktzahl übernommen von der Sammelposition „{inherited_from}“ "
+                        f"({active_group['punkte']} Punkte) im Katalog dieser Meßgrößen/Leistungen."
+                    )
 
                 ziffern[ziffer] = {
                     "ziffer": ziffer,
@@ -684,11 +775,15 @@ def import_official(xml_path: Path, source_meta: dict) -> dict:
                     "rule_coverage": "partial",
                     "text_quality": "possibly_truncated" if truncated else "ok",
                     "minderung_exempt": ziffer in MINDERUNG_EXEMPT_ZIFFERN,
-                    "annotations": [],
+                    "annotations": item_annotations,
                 }
                 if re.match(r"^\d", ziffer) and letter:
                     last_section = (letter, section_title)
                 current = ziffer
+                if not inherited_from:
+                    # A self-priced Ziffer ends whatever catalog block was open.
+                    active_group = None
+                row_index += 2 if consumed_next else 1
                 continue
 
             # -- an annotation row belonging to the Ziffer above it ----------------------
@@ -707,6 +802,7 @@ def import_official(xml_path: Path, source_meta: dict) -> dict:
                         else "row too short to classify",
                     }
                 )
+            row_index += 1
 
     # -- validation --------------------------------------------------------------------
     problems: list[dict] = []

@@ -115,14 +115,14 @@
   }
  },
  "coverage": {
-  "ziffern_parsed": 2192,
-  "unparsed_rows": 256,
-  "annotations_captured": 447,
+  "ziffern_parsed": 2343,
+  "unparsed_rows": 75,
+  "annotations_captured": 418,
   "exclusion_rules_auto": 837,
   "exclusion_rules_mutual": 102,
   "zielleistung_rules_auto": 0,
   "factor_cap_rules_auto": 22,
-  "rules_needing_review": 187,
+  "rules_needing_review": 172,
   "duplicates": 1,
   "validation_problems": 0,
   "rule_coverage": "partial",
@@ -24093,8 +24093,54 @@
    "rule_coverage": "partial",
    "text_quality": "possibly_truncated",
    "minderung_exempt": false,
+   "annotations": []
+  },
+  {
+   "ziffer": "3504",
+   "official_text": "Erythrozyten",
+   "punkte": 60,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
    "annotations": [
-    "Mikroskopische Einzelbestimmung, je Meßgröße"
+    "Punktzahl übernommen von der Sammelposition „Mikroskopische Einzelbestimmung, je Meßgröße“ (60 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3505",
+   "official_text": "Leukozyten",
+   "punkte": 60,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Mikroskopische Einzelbestimmung, je Meßgröße“ (60 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3506",
+   "official_text": "Thrombozyten",
+   "punkte": 60,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Mikroskopische Einzelbestimmung, je Meßgröße“ (60 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -24153,9 +24199,231 @@
    "minderung_exempt": false,
    "annotations": [
     "Können mehrere Meßgrößen durch Verwendung eines Mehrfachreagenzträgers erfaßt werden, so ist die Leistung nach Nummer 3511 auch dann nur einmal berechnungsfähig, wenn mehrere Einfachreagenzträger verwandt wurden.",
-    "Bei mehrfacher Berechnung der Leistung nach Nummer 3511 ist die Art der Untersuchung in der Rechnung anzugeben.",
-    "Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße",
-    "Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße"
+    "Bei mehrfacher Berechnung der Leistung nach Nummer 3511 ist die Art der Untersuchung in der Rechnung anzugeben."
+   ]
+  },
+  {
+   "ziffer": "3512",
+   "official_text": "Alpha-Amylase",
+   "punkte": 70,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (70 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3513",
+   "official_text": "Gamma-Glutamyltranspeptidase (Gamma-Glutamyltransferase, Gamma-T)",
+   "punkte": 70,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (70 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3514",
+   "official_text": "Glukose",
+   "punkte": 70,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (70 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3515",
+   "official_text": "Glutamatoxalazetattransaminase (GOT, Aspartataminotransferase, ASAT, AST)",
+   "punkte": 70,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (70 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3516",
+   "official_text": "Glutamatpyruvattransaminase (GPT, Alaninaminotransferase, ALAT, ALT)",
+   "punkte": 70,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (70 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3517",
+   "official_text": "Hämoglobin",
+   "punkte": 70,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (70 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3518",
+   "official_text": "Harnsäure",
+   "punkte": 70,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (70 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3519",
+   "official_text": "Kalium",
+   "punkte": 70,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (70 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3520",
+   "official_text": "Kreatinin",
+   "punkte": 70,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (70 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3521",
+   "official_text": "Lipase",
+   "punkte": 70,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (70 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3523",
+   "official_text": "Antistreptolysin (ASL)",
+   "punkte": 100,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (100 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3524",
+   "official_text": "C-reaktives Protein (CRP)",
+   "punkte": 100,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (100 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3525",
+   "official_text": "Mononukleosetest",
+   "punkte": 100,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (100 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "3526",
+   "official_text": "Rheumafaktor (RF)",
+   "punkte": 100,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung folgender Meßgrößen unabhängig vom Meßverfahren, je Meßgröße“ (100 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -26885,11 +27153,615 @@
    "rule_coverage": "partial",
    "text_quality": "ok",
    "minderung_exempt": false,
+   "annotations": []
+  },
+  {
+   "ziffer": "4141",
+   "official_text": "Vitamin A",
+   "punkte": 360,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
    "annotations": [
-    "Untersuchung von Vitaminen mittels Hochdruckflüssigkeitschromatographie",
-    "Untersuchung von Vitaminen mittels Hochdruckflüssigkeitschromatographie",
-    "18. Arzneimittelkonzentrationen, exogene Gifte, Drogen",
-    "Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -"
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von Vitaminen mittels Hochdruckflüssigkeitschromatographie“ (360 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4142",
+   "official_text": "Vitamin E",
+   "punkte": 360,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von Vitaminen mittels Hochdruckflüssigkeitschromatographie“ (360 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4144",
+   "official_text": "25-Hydroxy-Vitamin D (25-OH-D, D(tief)2)",
+   "punkte": 570,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von Vitaminen mittels Hochdruckflüssigkeitschromatographie“ (570 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4145",
+   "official_text": "Vitamin B1",
+   "punkte": 570,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von Vitaminen mittels Hochdruckflüssigkeitschromatographie“ (570 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4146",
+   "official_text": "Vitamin B6",
+   "punkte": 570,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von Vitaminen mittels Hochdruckflüssigkeitschromatographie“ (570 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4147",
+   "official_text": "Vitamin K",
+   "punkte": 570,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von Vitaminen mittels Hochdruckflüssigkeitschromatographie“ (570 Punkte) im Katalog dieser Meßgrößen/Leistungen.",
+    "18. Arzneimittelkonzentrationen, exogene Gifte, Drogen"
+   ]
+  },
+  {
+   "ziffer": "4150",
+   "official_text": "Amikacin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4151",
+   "official_text": "Amphetamin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4152",
+   "official_text": "Azetaminophen",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4153",
+   "official_text": "Barbiturate",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4154",
+   "official_text": "Benzodiazepine",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4155",
+   "official_text": "Cannabinoide",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4156",
+   "official_text": "Carbamazepin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4157",
+   "official_text": "Chinidin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4158",
+   "official_text": "Cocainmetabolite",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4160",
+   "official_text": "Desipramin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4161",
+   "official_text": "Digitoxin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4162",
+   "official_text": "Digoxin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4163",
+   "official_text": "Disopyramid",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4164",
+   "official_text": "Ethosuximid",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4165",
+   "official_text": "Flecainid",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4166",
+   "official_text": "Gentamicin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4167",
+   "official_text": "Lidocain",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4168",
+   "official_text": "Methadon",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4169",
+   "official_text": "Methotrexat",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4170",
+   "official_text": "N-Azetylprocainamid",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4171",
+   "official_text": "Netilmicin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4172",
+   "official_text": "Opiate",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4173",
+   "official_text": "Phenobarbital",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4174",
+   "official_text": "Phenytoin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4175",
+   "official_text": "Primidon",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4176",
+   "official_text": "Propaphenon",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4177",
+   "official_text": "Salizylat",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4178",
+   "official_text": "Streptomycin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4179",
+   "official_text": "Theophyllin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4180",
+   "official_text": "Tobramicin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4181",
+   "official_text": "Valproinsäure",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4182",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Parameter sind in der Rechnung anzugeben.",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -26904,12 +27776,342 @@
    "rule_coverage": "partial",
    "text_quality": "ok",
    "minderung_exempt": false,
+   "annotations": []
+  },
+  {
+   "ziffer": "4186",
+   "official_text": "Amitryptilin",
+   "punkte": 700,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
    "annotations": [
-    "Untersuchung mittels Ligandenassay - einschließlich vorhergehender Säulentrennung, gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -",
-    "Untersuchung mittels Atomabsorption, flammenlos",
-    "Untersuchung mittels Hochdruckflüssigkeitschromatographie, je Untersuchung",
-    "Untersuchung mittels Hochdruckflüssigkeitschromatographie, je Untersuchung",
-    "Untersuchung mittels Gaschromatographie, je Untersuchung"
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - einschließlich vorhergehender Säulentrennung, gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (700 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4187",
+   "official_text": "Imipramin",
+   "punkte": 700,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - einschließlich vorhergehender Säulentrennung, gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (700 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4188",
+   "official_text": "Nortriptylin",
+   "punkte": 700,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Ligandenassay - einschließlich vorhergehender Säulentrennung, gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -“ (700 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4190",
+   "official_text": "Aluminium",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Atomabsorption, flammenlos“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4191",
+   "official_text": "Arsen",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Atomabsorption, flammenlos“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4192",
+   "official_text": "Blei",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Atomabsorption, flammenlos“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4193",
+   "official_text": "Cadmium",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Atomabsorption, flammenlos“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4194",
+   "official_text": "Chrom",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Atomabsorption, flammenlos“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4195",
+   "official_text": "Gold",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Atomabsorption, flammenlos“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4196",
+   "official_text": "Quecksilber",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Atomabsorption, flammenlos“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4197",
+   "official_text": "Thallium",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Atomabsorption, flammenlos“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4198",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Parameter sind in der Rechnung anzugeben.",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Atomabsorption, flammenlos“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4199",
+   "official_text": "Amiodarone",
+   "punkte": 360,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Hochdruckflüssigkeitschromatographie, je Untersuchung“ (360 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4200",
+   "official_text": "Antiepileptika (Ethosuximid und/oder Phenobarbital und/oder Phenytoin und/oder Primidon)",
+   "punkte": 360,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Hochdruckflüssigkeitschromatographie, je Untersuchung“ (360 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4201",
+   "official_text": "Chinidin",
+   "punkte": 360,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Hochdruckflüssigkeitschromatographie, je Untersuchung“ (360 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4202",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Parameter sind in der Rechnung anzugeben.",
+   "punkte": 360,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Hochdruckflüssigkeitschromatographie, je Untersuchung“ (360 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4203",
+   "official_text": "Antibiotika",
+   "punkte": 450,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Hochdruckflüssigkeitschromatographie, je Untersuchung“ (450 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4204",
+   "official_text": "Antimykotika",
+   "punkte": 450,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Hochdruckflüssigkeitschromatographie, je Untersuchung“ (450 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4206",
+   "official_text": "Valproinsäure",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Gaschromatographie, je Untersuchung“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4207",
+   "official_text": "Ethanol",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Gaschromatographie, je Untersuchung“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4208",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Parameter sind in der Rechnung anzugeben.",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung mittels Gaschromatographie, je Untersuchung“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -27231,8 +28433,71 @@
    "text_quality": "ok",
    "minderung_exempt": false,
    "annotations": [
-    "Eine mehr als viermalige Berechnung der Leistung nach Nummer 4551 bei Untersuchungen aus demselben Untersuchungsmaterial ist nicht zulässig.",
-    "Lichtmikroskopische Untersuchung angezüchteter Bakterien - einschließlich Anfärbung -, qualitativ, je Untersuchung"
+    "Eine mehr als viermalige Berechnung der Leistung nach Nummer 4551 bei Untersuchungen aus demselben Untersuchungsmaterial ist nicht zulässig."
+   ]
+  },
+  {
+   "ziffer": "4553",
+   "official_text": "Gramfärbung (Bakterienkulturausstrich)",
+   "punkte": 60,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung angezüchteter Bakterien - einschließlich Anfärbung -, qualitativ, je Untersuchung“ (60 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4554",
+   "official_text": "Neisser-Färbung (Bakterienkulturausstrich)",
+   "punkte": 60,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung angezüchteter Bakterien - einschließlich Anfärbung -, qualitativ, je Untersuchung“ (60 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4555",
+   "official_text": "Ziehl-Neelsen-Färbung (Bakterienkulturausstrich)",
+   "punkte": 60,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung angezüchteter Bakterien - einschließlich Anfärbung -, qualitativ, je Untersuchung“ (60 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4556",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die durchgeführten Färbungen sind in der Rechnung anzugeben.",
+   "punkte": 60,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung angezüchteter Bakterien - einschließlich Anfärbung -, qualitativ, je Untersuchung“ (60 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -27247,9 +28512,118 @@
    "rule_coverage": "partial",
    "text_quality": "ok",
    "minderung_exempt": false,
+   "annotations": []
+  },
+  {
+   "ziffer": "4561",
+   "official_text": "Beta-hämolysierende Streptokokken",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
    "annotations": [
-    "Untersuchung zum Nachweis von Bakterienantigenen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, qualitativ, je Untersuchung",
-    "Untersuchung von angezüchteten Bakterien über Metabolitprofil mittels Gaschromatographie, je Untersuchung"
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterienantigenen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, qualitativ, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4562",
+   "official_text": "Enteropathogene Escherichia coli-Stämme",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterienantigenen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, qualitativ, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4563",
+   "official_text": "Legionellen",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterienantigenen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, qualitativ, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4564",
+   "official_text": "Neisseria meningitidis",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterienantigenen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, qualitativ, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4565",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Keime sind in der Rechnung anzugeben.",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterienantigenen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, qualitativ, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4567",
+   "official_text": "Anaerobier",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von angezüchteten Bakterien über Metabolitprofil mittels Gaschromatographie, je Untersuchung“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4568",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Keime sind in der Rechnung anzugeben.",
+   "punkte": 410,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von angezüchteten Bakterien über Metabolitprofil mittels Gaschromatographie, je Untersuchung“ (410 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -27278,9 +28652,166 @@
    "rule_coverage": "partial",
    "text_quality": "ok",
    "minderung_exempt": false,
+   "annotations": []
+  },
+  {
+   "ziffer": "4572",
+   "official_text": "Beta-hämolysierende Streptokokken",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
    "annotations": [
-    "Untersuchung von angezüchteten Bakterien mittels Agglutination (bis zu höchstens 15 Antiseren je Keim), je Antiserum",
-    "Untersuchung durch Phagentypisierung von angezüchteten Bakterien (Bacteriocine oder ähnliche Methoden), je Untersuchung"
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von angezüchteten Bakterien mittels Agglutination (bis zu höchstens 15 Antiseren je Keim), je Antiserum“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4573",
+   "official_text": "Escherichia coli",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von angezüchteten Bakterien mittels Agglutination (bis zu höchstens 15 Antiseren je Keim), je Antiserum“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4574",
+   "official_text": "Salmonellen",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von angezüchteten Bakterien mittels Agglutination (bis zu höchstens 15 Antiseren je Keim), je Antiserum“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4575",
+   "official_text": "Shigellen",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von angezüchteten Bakterien mittels Agglutination (bis zu höchstens 15 Antiseren je Keim), je Antiserum“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4576",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Keime sind in der Rechnung anzugeben.",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung von angezüchteten Bakterien mittels Agglutination (bis zu höchstens 15 Antiseren je Keim), je Antiserum“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4578",
+   "official_text": "Brucellen",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung durch Phagentypisierung von angezüchteten Bakterien (Bacteriocine oder ähnliche Methoden), je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4579",
+   "official_text": "Pseudomonaden",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung durch Phagentypisierung von angezüchteten Bakterien (Bacteriocine oder ähnliche Methoden), je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4580",
+   "official_text": "Staphylokokken",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung durch Phagentypisierung von angezüchteten Bakterien (Bacteriocine oder ähnliche Methoden), je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4581",
+   "official_text": "Salmonellen",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung durch Phagentypisierung von angezüchteten Bakterien (Bacteriocine oder ähnliche Methoden), je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4582",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Keime sind in der Rechnung anzugeben.",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung durch Phagentypisierung von angezüchteten Bakterien (Bacteriocine oder ähnliche Methoden), je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -27309,9 +28840,150 @@
    "rule_coverage": "partial",
    "text_quality": "ok",
    "minderung_exempt": false,
+   "annotations": []
+  },
+  {
+   "ziffer": "4590",
+   "official_text": "Clostridium difficile, tetani oder botulinum",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
    "annotations": [
-    "Untersuchung zum Nachweis von Bakterientoxinen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, je Untersuchung",
-    "Untersuchung zum Nachweis von Bakterienantigenen oder -toxinen durch Präzipitation im Agargel mittels Antitoxinen, je Untersuchung"
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterientoxinen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4591",
+   "official_text": "Enteropathogene Escherichia coli-Stämme",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterientoxinen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4592",
+   "official_text": "Staphylococcus aureus",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterientoxinen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4593",
+   "official_text": "Vibrionen",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterientoxinen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4594",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Keime sind in der Rechnung anzugeben.",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterientoxinen mittels Ligandenassay (z.B. Enzym-, Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4596",
+   "official_text": "Clostridium botulinum",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterienantigenen oder -toxinen durch Präzipitation im Agargel mittels Antitoxinen, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4597",
+   "official_text": "Corynebacterium diphtheriae",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterienantigenen oder -toxinen durch Präzipitation im Agargel mittels Antitoxinen, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4598",
+   "official_text": "Staphylokokkentoxin",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterienantigenen oder -toxinen durch Präzipitation im Agargel mittels Antitoxinen, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4599",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Keime sind in der Rechnung anzugeben.",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Bakterienantigenen oder -toxinen durch Präzipitation im Agargel mittels Antitoxinen, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -27448,9 +29120,71 @@
    "minderung_exempt": false,
    "annotations": [
     "2. Untersuchungen zum Nachweis und zur Charakterisierung von Viren",
-    "a. Untersuchungen im Nativmaterial",
-    "Nachweis von viralen Antigenen im Nativmaterial mittels Agglutinationsreaktion (z.B. Latex-Agglutination), je Untersuchung",
-    "Lichtmikroskopische Untersuchung im Nativmaterial zum Nachweis von Einschluß- oder Elementarkörperchen aus Zellmaterial - einschließlich Anfärbung -, qualitativ, je Untersuchung"
+    "a. Untersuchungen im Nativmaterial"
+   ]
+  },
+  {
+   "ziffer": "4630",
+   "official_text": "Rota-Viren",
+   "punkte": 60,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Nachweis von viralen Antigenen im Nativmaterial mittels Agglutinationsreaktion (z.B. Latex-Agglutination), je Untersuchung“ (60 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4631",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Viren sind in der Rechnung anzugeben.",
+   "punkte": 60,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Nachweis von viralen Antigenen im Nativmaterial mittels Agglutinationsreaktion (z.B. Latex-Agglutination), je Untersuchung“ (60 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4633",
+   "official_text": "Herpes simplex Viren",
+   "punkte": 80,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung im Nativmaterial zum Nachweis von Einschluß- oder Elementarkörperchen aus Zellmaterial - einschließlich Anfärbung -, qualitativ, je Untersuchung“ (80 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4634",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Viren sind in der Rechnung anzugeben.",
+   "punkte": 80,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung im Nativmaterial zum Nachweis von Einschluß- oder Elementarkörperchen aus Zellmaterial - einschließlich Anfärbung -, qualitativ, je Untersuchung“ (80 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -27479,8 +29213,150 @@
    "rule_coverage": "partial",
    "text_quality": "ok",
    "minderung_exempt": false,
+   "annotations": []
+  },
+  {
+   "ziffer": "4640",
+   "official_text": "Adeno-Viren",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
    "annotations": [
-    "Ligandenassay (z.B. Enzym- oder Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen im Nativmaterial, je Untersuchung"
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen im Nativmaterial, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4641",
+   "official_text": "Hepatitis A-Viren",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen im Nativmaterial, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4642",
+   "official_text": "Hepatitis B-Viren (HBe-Antigen)",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen im Nativmaterial, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4643",
+   "official_text": "Hepatitis B-Viren (HBs-Antigen)",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen im Nativmaterial, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4644",
+   "official_text": "Influenza-Viren",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen im Nativmaterial, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4645",
+   "official_text": "Parainfluenza-Viren",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen im Nativmaterial, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4646",
+   "official_text": "Rota-Viren",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen im Nativmaterial, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4647",
+   "official_text": "Respiratory syncytial virus",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen im Nativmaterial, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4648",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Viren sind in der Rechnung anzugeben.",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) -gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen im Nativmaterial, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -27581,11 +29457,168 @@
    "rule_coverage": "partial",
    "text_quality": "ok",
    "minderung_exempt": false,
+   "annotations": []
+  },
+  {
+   "ziffer": "4675",
+   "official_text": "Adeno-Viren",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
    "annotations": [
-    "Ligandenassay (z.B. Enzym- oder Radioimmunoassay) - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen angezüchteter Viren, je Untersuchung",
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen angezüchteter Viren, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4676",
+   "official_text": "Influenza-Viren",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen angezüchteter Viren, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4677",
+   "official_text": "Parainfluenza-Viren",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen angezüchteter Viren, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4678",
+   "official_text": "Rota-Viren",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen angezüchteter Viren, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4679",
+   "official_text": "Respiratory syncytial virus",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen angezüchteter Viren, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4680",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Viren sind in der Rechnung anzugeben.",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Ligandenassay (z.B. Enzym- oder Radioimmunoassay) - gegebenenfalls einschließlich Doppelbestimmung und aktueller Bezugskurve -, zum Nachweis von viralen Antigenen angezüchteter Viren, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen.",
     "3. Untersuchungen zum Nachweis und zur Charakterisierung von Pilzen",
-    "a. Untersuchungen im Nativmaterial",
-    "Untersuchungen zum Nachweis von Pilzantigenen mittels Agglutination, je Antiserum"
+    "a. Untersuchungen im Nativmaterial"
+   ]
+  },
+  {
+   "ziffer": "4705",
+   "official_text": "Aspergillus",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchungen zum Nachweis von Pilzantigenen mittels Agglutination, je Antiserum“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4706",
+   "official_text": "Candida",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchungen zum Nachweis von Pilzantigenen mittels Agglutination, je Antiserum“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4707",
+   "official_text": "Kryptokokkus neoformans",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchungen zum Nachweis von Pilzantigenen mittels Agglutination, je Antiserum“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4708",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Pilze sind in der Rechnung anzugeben.",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchungen zum Nachweis von Pilzantigenen mittels Agglutination, je Antiserum“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -27793,10 +29826,215 @@
    "minderung_exempt": false,
    "annotations": [
     "4. Untersuchungen zum Nachweis und zur Charakterisierung von Parasiten",
-    "a. Untersuchungen im Nativmaterial oder nach Anreicherung",
-    "Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, qualitativ, je Untersuchung",
-    "Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, nach einfacher Anreicherung (z.B. Sedimentation, Filtration, Kochsalzaufschwemmung), qualitativ, je Untersuchung",
-    "Lichtmikroskopische Untersuchung zum Nachweis von Parasiten - einschließlich aufwendigerer Anfärbung -, qualitativ, je Untersuchung"
+    "a. Untersuchungen im Nativmaterial oder nach Anreicherung"
+   ]
+  },
+  {
+   "ziffer": "4740",
+   "official_text": "Amöben",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, qualitativ, je Untersuchung“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4741",
+   "official_text": "Lamblien",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, qualitativ, je Untersuchung“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4742",
+   "official_text": "Sarcoptes scabiei (Krätzmilbe)",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, qualitativ, je Untersuchung“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4743",
+   "official_text": "Trichomonaden",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, qualitativ, je Untersuchung“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4744",
+   "official_text": "Würmer und deren Bestandteile, Wurmeier",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, qualitativ, je Untersuchung“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4745",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Parasiten sind in der Rechnung anzugeben.",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, qualitativ, je Untersuchung“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4747",
+   "official_text": "Amöben",
+   "punkte": 160,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, nach einfacher Anreicherung (z.B. Sedimentation, Filtration, Kochsalzaufschwemmung), qualitativ, je Untersuchung“ (160 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4748",
+   "official_text": "Lamblien",
+   "punkte": 160,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, nach einfacher Anreicherung (z.B. Sedimentation, Filtration, Kochsalzaufschwemmung), qualitativ, je Untersuchung“ (160 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4749",
+   "official_text": "Trichomonaden",
+   "punkte": 160,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, nach einfacher Anreicherung (z.B. Sedimentation, Filtration, Kochsalzaufschwemmung), qualitativ, je Untersuchung“ (160 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4750",
+   "official_text": "Würmer und deren Bestandteile, Wurmeier",
+   "punkte": 160,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, nach einfacher Anreicherung (z.B. Sedimentation, Filtration, Kochsalzaufschwemmung), qualitativ, je Untersuchung“ (160 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4751",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Parasiten sind in der Rechnung anzugeben.",
+   "punkte": 160,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten, ohne oder mit einfacher Anfärbung (z.B. Lugol- oder Methylenblaufärbung) - gegebenenfalls einschließlich spezieller Beleuchtungsverfahren (z.B. Phasenkontrast) -, nach einfacher Anreicherung (z.B. Sedimentation, Filtration, Kochsalzaufschwemmung), qualitativ, je Untersuchung“ (160 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4753",
+   "official_text": "Giemsafärbung (Blutausstrich) (z.B. Malariaplasmodien)",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten - einschließlich aufwendigerer Anfärbung -, qualitativ, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4754",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Parasiten sind in der Rechnung anzugeben.",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zum Nachweis von Parasiten - einschließlich aufwendigerer Anfärbung -, qualitativ, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -27853,9 +30091,102 @@
    "rule_coverage": "partial",
    "text_quality": "ok",
    "minderung_exempt": false,
+   "annotations": []
+  },
+  {
+   "ziffer": "4760",
+   "official_text": "Amöben",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
    "annotations": [
-    "Untersuchung zum Nachweis von Parasiten durch Züchtung auf Kulturmedien, je Untersuchung",
-    "Lichtmikroskopische Untersuchung zur Identifizierung von Parasiten nach Anzüchtung, je Untersuchung"
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Parasiten durch Züchtung auf Kulturmedien, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4761",
+   "official_text": "Lamblien",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "possibly_truncated",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Parasiten durch Züchtung auf Kulturmedien, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4762",
+   "official_text": "Trichomonaden",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Parasiten durch Züchtung auf Kulturmedien, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4763",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Parasiten sind in der Rechnung anzugeben.",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Untersuchung zum Nachweis von Parasiten durch Züchtung auf Kulturmedien, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4765",
+   "official_text": "Trichomonaden",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zur Identifizierung von Parasiten nach Anzüchtung, je Untersuchung“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4766",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Parasiten sind in der Rechnung anzugeben.",
+   "punkte": 120,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Lichtmikroskopische Untersuchung zur Identifizierung von Parasiten nach Anzüchtung, je Untersuchung“ (120 Punkte) im Katalog dieser Meßgrößen/Leistungen."
    ]
   },
   {
@@ -27871,8 +30202,39 @@
    "text_quality": "ok",
    "minderung_exempt": false,
    "annotations": [
-    "d. Xenodiagnostische Untersuchungen",
-    "Xenodiagnostische Untersuchung zum Nachweis von parasitären Krankheitserregern, je Untersuchung",
+    "d. Xenodiagnostische Untersuchungen"
+   ]
+  },
+  {
+   "ziffer": "4770",
+   "official_text": "Trypanosoma cruzi",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Xenodiagnostische Untersuchung zum Nachweis von parasitären Krankheitserregern, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen."
+   ]
+  },
+  {
+   "ziffer": "4771",
+   "official_text": "Untersuchungen mit ähnlichem methodischem Aufwand Die untersuchten Parasiten sind in der Rechnung anzugeben.",
+   "punkte": 250,
+   "category": "M",
+   "section": "M",
+   "section_title": "Laboratoriumsuntersuchungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
+   "annotations": [
+    "Punktzahl übernommen von der Sammelposition „Xenodiagnostische Untersuchung zum Nachweis von parasitären Krankheitserregern, je Untersuchung“ (250 Punkte) im Katalog dieser Meßgrößen/Leistungen.",
     "5. Untersuchungen zur molekularbiologischen Identifizierung von Bakterien, Viren, Pilzen und Parasiten"
    ]
   },
@@ -31552,6 +33914,20 @@
    "rule_coverage": "partial",
    "text_quality": "ok",
    "minderung_exempt": true,
+   "annotations": []
+  },
+  {
+   "ziffer": "K1",
+   "official_text": "Zuschlag zu Untersuchungen nach Nummer 5, 6, 7 oder 8 bei Kindern bis zum vollendeten 4. Lebensjahr",
+   "punkte": 120,
+   "category": "B",
+   "section": "B",
+   "section_title": "Grundleistungen und allgemeine Leistungen",
+   "status": "active",
+   "provenance": "official",
+   "rule_coverage": "partial",
+   "text_quality": "ok",
+   "minderung_exempt": false,
    "annotations": []
   },
   {
