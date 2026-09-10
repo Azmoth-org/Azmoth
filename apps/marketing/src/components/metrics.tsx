@@ -32,9 +32,10 @@ import {
  *
  * ## The third tile is the point
  *
- * Two of these numbers flatter the product. The third — 358 of 2,192 catalog positions have any
- * enforced rule speaking to them, sixteen percent — does not, and it is rendered at exactly the
- * same size as the other two rather than tucked into a footnote.
+ * Two of these numbers flatter the product. The third — 358 of 2,343 catalog positions have any
+ * enforced rule speaking to them, ~15.3 percent — does not, and it is rendered at exactly the
+ * same size as the other two rather than tucked into a footnote. Stand 2026-09-09, siehe
+ * docs/content/facts.md.
  *
  * That is a deliberate conversion decision, not a fit of conscience. The audience is billing
  * centres and PVS vendors who have been sold "KI-gestützte Abrechnungsoptimierung" before and know
@@ -131,7 +132,7 @@ export function Metrics() {
       {/*
         The one share figure worth stating on its own line under the tiles.
 
-        Only the catalog share — "358 von 2.192" said as a percentage — belongs here. The rules
+        Only the catalog share — "358 von 2.343" said as a percentage — belongs here. The rules
         share (858 von 894, as a percentage) is a share of Azmoth's own rule table, not of the
         GOÄ, and printing it beside the catalog figure invited a reader to conflate the two; the
         honest coverage claim this page can make is `katalogAnteil` alone.

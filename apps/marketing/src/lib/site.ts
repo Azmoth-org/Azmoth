@@ -44,18 +44,16 @@ export function getCalComUrl(): string {
 /**
  * The product entry points every page links to. Server-side only.
  *
- * All three currently resolve to the Cal.com link, not the app. `demo` used to be the one a
- * stranger could actually use — no account, no upload, the real engine on a synthetic delivery —
- * which is why the hero's primary call to action pointed here instead of at `signup`. That
- * reasoning holds again once the app is hosted somewhere other than `getAppUrl()`'s
- * `localhost:3000` fallback; until then, sending a visitor to a login screen or a demo on a
- * machine that is not listening is a worse first impression than a booking page. Swap the three
- * bodies back to `appHref(...)` when that changes — the callers below don't.
+ * `login` points at the hosted app: an existing user signs in there directly. `signup` and `demo`
+ * still resolve to the Cal.com link — there is no self-serve signup or unauthenticated demo yet,
+ * so a stranger goes to a booking page instead of a login screen or a demo on a machine that
+ * cannot serve them. Swap those two bodies to `appHref(...)` once that changes — the callers below
+ * don't.
  */
 export function getProductLinks() {
   const calCom = getCalComUrl();
   return {
-    login: calCom,
+    login: "https://app.azmoth.com",
     signup: calCom,
     demo: calCom,
   };
