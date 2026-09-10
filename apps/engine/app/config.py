@@ -369,6 +369,12 @@ class Settings(BaseSettings):
     rate_limit_single_per_minute: int = Field(default=100, ge=1)
     rate_limit_bulk_per_hour: int = Field(default=10, ge=1)
 
+    #: Reports per organisation on `POST /api/v1/rules/proposals`. Per organisation rather than per
+    #: key or per user, unlike the two above: this endpoint has neither, it is reached through a
+    #: browser session, and the thing worth bounding is one practice's total volume of reports, not
+    #: any one person's clicks within it.
+    rate_limit_rule_proposals_per_hour: int = Field(default=20, ge=1)
+
     #: Turn the limiter off. For the test cases that are not about it, and for a deployment that
     #: has a real gateway in front doing the same job — an in-process counter behind a load
     #: balancer counts one worker's share and nothing more (see `app.api.ratelimit`).

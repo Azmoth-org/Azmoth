@@ -120,7 +120,7 @@ Generate a migration and read it — autogenerate cannot see a rename, and it em
 
 ```bash
 cd apps/engine
-alembic revision --autogenerate -m "what changed"
+./scripts/dev-db.sh revision -m "what changed" --autogenerate
 ```
 
 `tests/test_db_persistence.py::test_the_migration_and_the_models_describe_the_same_schema` fails if

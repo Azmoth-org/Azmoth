@@ -12,6 +12,8 @@ import type {
   ReviewableRule,
   RuleCoverage,
   RuleKind,
+  RuleProposal,
+  RuleProposalRequest,
   RuleReviewQueue,
   RuleReviewRequest,
   RuleReviewResult,
@@ -23,6 +25,8 @@ export type {
   ReviewableRule,
   RuleCoverage,
   RuleKind,
+  RuleProposal,
+  RuleProposalRequest,
   RuleReviewQueue,
   RuleReviewRequest,
   RuleReviewResult,
@@ -39,6 +43,10 @@ export type CoverageResult =
 
 export type ReviewResult =
   | { kind: "reviewed"; result: RuleReviewResult }
+  | { kind: "error"; error: ReviewError }
+
+export type ProposalResult =
+  | { kind: "proposed"; proposal: RuleProposal }
   | { kind: "error"; error: ReviewError }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -209,4 +217,27 @@ export async function submitRuleReview(
     return skew(response.status, parsed.body, "keine bewertete Regel")
   }
   return { kind: "reviewed", result: parsed.body as RuleReviewResult }
+}
+
+/** A pilot reporting that a Ziffer has no rule at all — unrelated to a reviewer's verdict above. */
+export async function submitRuleProposal(
+  payload: RuleProposalRequest
+): Promise<ProposalResult> {
+  let response: Response
+  try {
+    response = await fetch("/api/engine/rules/proposals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+  } catch (cause) {
+    return unreachable(cause)
+  }
+
+  const parsed = await readJson(response)
+  if (!parsed.ok) return { kind: "error", error: parsed.error }
+  if (!isRecord(parsed.body) || typeof parsed.body.ziffer !== "string") {
+    return skew(response.status, parsed.body, "keine bestätigte Meldung")
+  }
+  return { kind: "proposed", proposal: parsed.body as RuleProposal }
 }

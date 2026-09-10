@@ -1,22 +1,28 @@
-Migrations for the engine's two tables (`proposals`, `audit_events`).
+Migrations for the engine's schema — run them from `apps/engine`, which is where `alembic.ini`
+lives, and use `./scripts/dev-db.sh` rather than calling `alembic` yourself:
 
-Run them from `apps/engine`, which is where `alembic.ini` lives:
+    ./scripts/dev-db.sh upgrade head              apply everything, against the Postgres container
+    ./scripts/dev-db.sh current                   what revision that database is at
+    ./scripts/dev-db.sh revision -m "description" a new migration, after editing app/db/models.py
+    ./scripts/dev-db.sh --sqlite upgrade head     the same, against a dedicated ./dev.db instead
 
-    alembic upgrade head        apply everything
-    alembic current             what revision this database is at
-    alembic history --verbose   the full history
-    alembic downgrade -1        undo the last migration
+The database URL is NOT in `alembic.ini`. It comes from `DATABASE_URL` via `app.config.Settings`,
+so these commands act on exactly the database the service would use — and `alembic/env.py` now
+**refuses to run at all** if `DATABASE_URL` is not set, rather than falling back to `Settings`' own
+SQLite default. That default exists so `uvicorn`/`pytest` need no setup; it is exactly the wrong
+one for a migration, which could otherwise land in `./test.db` while the service went on querying
+Postgres. `dev-db.sh` is what sets it correctly and prints the resolved value (password masked) on
+every run. If you call `alembic` directly anyway:
 
-The database URL is NOT in `alembic.ini`. It comes from `DATABASE_URL` via `app.config.Settings`, so
-these commands act on exactly the database the service would use:
-
-    DATABASE_URL=postgresql+asyncpg://azmoth:azmoth@localhost:5432/azmoth alembic upgrade head
+    export DATABASE_URL=postgresql+asyncpg://azmoth:azmoth@localhost:5432/azmoth
+    alembic upgrade head
 
 The container runs `alembic upgrade head` before uvicorn (see the Dockerfile's entrypoint), so a
 deploy migrates itself. Local development does not need any of this: `DATABASE_AUTO_CREATE=true` is
 the default and creates the tables directly — but note that a database built that way has no
 revision stamp, so `alembic upgrade head` against it will try to create tables that already exist.
-Delete the SQLite file, or `alembic stamp head`, before switching a dev database over.
+Delete the SQLite file, or `alembic stamp head`, before switching a dev database over — or use
+`./scripts/dev-db.sh reset`, which never puts you in that position to begin with.
 
 `DATABASE_AUTO_CREATE` only applies to SQLite. `app/db/session.py::init_models` refuses it on a
 Postgres URL in *every* environment, because that is how this went wrong once: see below.
@@ -68,9 +74,10 @@ Three changes came out of it, and `tests/test_migration_recovery.py` holds each 
 migrate through it; and `--diagnose` tells the two repairs apart instead of leaving it to judgement
 during an outage.
 
-To add a migration after changing `app/db/models.py`:
+To add a migration after changing `app/db/models.py` — against Postgres, so autogenerate compares
+against the same dialect production runs, not SQLite's laxer typing:
 
-    alembic revision --autogenerate -m "what changed"
+    ./scripts/dev-db.sh revision -m "what changed" --autogenerate
 
 Then READ the generated file. Autogenerate does not see a rename (it emits a drop plus an add,
 which loses the data), and it cannot know that `audit_events` is append-only — a migration that

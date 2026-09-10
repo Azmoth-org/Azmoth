@@ -506,6 +506,7 @@ def test_the_migration_and_the_models_describe_the_same_schema(tmp_path):
         "batch_jobs",
         "batch_files",
         "rule_reviews",
+        "rule_proposals",
         "doctor_profiles",
         "practices",
         "api_keys",

@@ -38,6 +38,7 @@ from app.services.batch_audit import BatchAuditService
 from app.services.billing import BillingStore
 from app.services.pipeline import Pipeline
 from app.services.proposal_store import ProposalStore
+from app.services.rule_proposals import RuleProposalStore
 from app.services.rule_reviews import RuleReviewStore
 from app.services.usage import UsageMeter, UsageStore
 
@@ -45,6 +46,7 @@ _pipeline: Pipeline | None = None
 _proposals: ProposalStore | None = None
 _batches: BatchAuditService | None = None
 _rule_reviews: RuleReviewStore | None = None
+_rule_proposals: RuleProposalStore | None = None
 _api_keys: ApiKeyStore | None = None
 _usage_meter: UsageMeter | None = None
 _usage_store: UsageStore | None = None
@@ -80,6 +82,13 @@ def rule_reviews() -> RuleReviewStore:
     if _rule_reviews is None:
         _rule_reviews = RuleReviewStore()
     return _rule_reviews
+
+
+def rule_proposals() -> RuleProposalStore:
+    global _rule_proposals
+    if _rule_proposals is None:
+        _rule_proposals = RuleProposalStore()
+    return _rule_proposals
 
 
 def api_keys() -> ApiKeyStore:
@@ -145,12 +154,13 @@ def reset() -> None:
     Does not touch the database: the engine has to be disposed with an `await`, and a sync helper
     that quietly left a connection pool open would leak one per test. Use `reset_async`.
     """
-    global _pipeline, _proposals, _batches, _rule_reviews, _api_keys
+    global _pipeline, _proposals, _batches, _rule_reviews, _rule_proposals, _api_keys
     global _usage_meter, _usage_store, _billing
     _pipeline = None
     _proposals = None
     _batches = None
     _rule_reviews = None
+    _rule_proposals = None
     _api_keys = None
     # Dropped rather than flushed: a test's buffered rows belong to a database that is about to be
     # thrown away, and writing them would be writing into the next test's world.

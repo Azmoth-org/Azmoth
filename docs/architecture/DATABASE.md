@@ -498,34 +498,83 @@ cd apps/engine
 `create_all` is refused under `APP_ENV=production`: a schema that appeared without a migration has
 no rollback, and its migration history claims a revision it is not at.
 
-### Locally, against Postgres
+### Locally, against Postgres or SQLite — `scripts/dev-db.sh`
+
+**This is the interface to use.** `apps/engine/alembic/env.py` refuses to run at all when
+`DATABASE_URL` is not in the environment — see the guard there — because the alternative is worse
+than an error: `app.config.Settings.database_url` has a SQLite default so `uvicorn`/`pytest` need
+no setup, and that same default used to make a bare `alembic upgrade head` silently migrate
+`./test.db` while the service went on querying Postgres and found none of the new tables
+(`relation "…" does not exist`, with nothing naming the actual mistake). `scripts/dev-db.sh` is
+what sets `DATABASE_URL` correctly, and it prints the resolved value (password masked) on every run
+so it is never a guess:
 
 ```bash
-docker compose -f infra/docker/docker-compose.yml up -d postgres
+docker compose -f infra/docker/docker-compose.yml up -d postgres    # once, if it isn't already up
 
+cd apps/engine
+./scripts/dev-db.sh upgrade head              # apply everything, against the Postgres container
+./scripts/dev-db.sh current                   # what revision that database is at
+./scripts/dev-db.sh revision -m "description" # a new migration, after editing app/db/models.py
+./scripts/dev-db.sh reset                     # SQLite only — delete the file, reapply from scratch
+./scripts/dev-db.sh diagnose                  # scripts/migrate.py --diagnose, for a stamp/schema disagreement
+./scripts/dev-db.sh shell                     # a client on the target database
+```
+
+Anything not covered by a shortcut is passed straight through to Alembic (`downgrade -1`,
+`history --verbose`, …). It defaults to the Postgres container `docker compose` brings up —
+`postgresql+asyncpg://azmoth:azmoth@localhost:5432/azmoth`, matching `docker-compose.yml`'s own
+`POSTGRES_USER`/`PASSWORD`/`DB` defaults — or respects an already-exported `DATABASE_URL` (a real
+staging database, a non-default port). `--sqlite` switches to a dedicated `./dev.db` instead, for
+exercising a migration without installing Postgres at all:
+
+```bash
+./scripts/dev-db.sh --sqlite upgrade head
+./scripts/dev-db.sh --sqlite reset
+```
+
+That file is never `./test.db` — sharing one file between `create_all` and Alembic is the *other*
+trap: `./test.db` gets built with no `alembic_version` row the first time `uvicorn`/`pytest` runs,
+and Alembic then tries to create tables that are already there. `uvicorn` and `pytest` are
+unaffected either way; they still default to `./test.db` and in-memory SQLite respectively, and
+`DATABASE_AUTO_CREATE=false` is forced for every command this script runs so it never tries to
+build the schema itself.
+
+### Running Alembic directly
+
+Not recommended — `scripts/dev-db.sh` does the same thing and prints what it resolved to — but
+supported, with `DATABASE_URL` exported first:
+
+```bash
 cd apps/engine
 export DATABASE_URL=postgresql+asyncpg://azmoth:azmoth@localhost:5432/azmoth
 python scripts/migrate.py            # waits for the server, then upgrades to head
 python scripts/migrate.py --check    # report the revision, change nothing; exit 1 if behind
-```
-
-or with Alembic directly — same `DATABASE_URL`, same result:
-
-```bash
-alembic upgrade head        # apply everything
-alembic current             # what revision this database is at
-alembic history --verbose   # the full history
-alembic downgrade -1        # undo the last migration
+alembic upgrade head                 # the same thing, via alembic directly
+alembic current                      # what revision this database is at
 ```
 
 `alembic.ini` deliberately has **no** `sqlalchemy.url`. `alembic/env.py` reads `DATABASE_URL`
 through the same `app.config.Settings` the service uses, so a migration cannot be applied to a
 different database than the one the engine will then talk to — and no connection string, with its
-password, is ever committed.
+password, is ever committed. Omit the `export` and Alembic now refuses outright rather than
+guessing:
+
+```
+RuntimeError: DATABASE_URL is not set. Alembic requires an explicit database URL — it will not
+fall back to the app's own SQLite default, because that default is exactly how a migration ends
+up in the wrong database without anyone noticing.
+...
+```
+
+You should see `Context impl PostgresqlImpl` in the log once it runs; `Context impl SQLiteImpl`
+against a URL you meant to be Postgres means the `export` above resolved to the wrong thing (a
+typo, a stale shell variable) — check it before continuing.
 
 > A database created by `create_all` has no revision stamp, so `alembic upgrade head` against it
 > will try to create tables that already exist. Delete the SQLite file, or `alembic stamp head`,
-> before switching a dev database over.
+> before switching a dev database over — or use `scripts/dev-db.sh`, which never puts you in that
+> position to begin with.
 
 ### In a container
 
@@ -554,8 +603,9 @@ holds approval records — a decision, not a side effect of stopping.
 
 ```bash
 cd apps/engine
-# edit app/db/models.py, then:
-alembic revision --autogenerate -m "what changed"
+# edit app/db/models.py, then, against the Postgres container (autogenerate has to see the real
+# dialect's types — SQLite would happily agree with a change Postgres rejects):
+./scripts/dev-db.sh revision -m "what changed" --autogenerate
 ```
 
 Then **read the generated file**. Three things autogenerate gets wrong or cannot know:

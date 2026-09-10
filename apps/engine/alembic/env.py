@@ -21,6 +21,7 @@ production.
 from __future__ import annotations
 
 import asyncio
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -122,6 +123,40 @@ async def run_migrations_online() -> None:
     finally:
         await engine.dispose()
 
+
+def _require_explicit_database_url() -> None:
+    """Refuse to guess which database this run is for.
+
+    `app.config.Settings.database_url` has a SQLite default (`./test.db`) so that `uvicorn` and
+    `pytest` need no setup — that default is deliberate and this does not change it. It is exactly
+    the wrong default for Alembic, though: a developer running Postgres locally (or, worse, a
+    deploy) who forgets to export `DATABASE_URL` does not get an error, they get a migration that
+    silently lands in `./test.db` while the service goes on querying Postgres and finds none of the
+    new tables — "relation does not exist", with no clue that the wrong database was ever touched.
+
+    So this checks `os.environ` directly, not `get_settings().database_url` — the point is that
+    *nothing was set*, and a value inherited from `Settings`' own default would defeat the check by
+    construction. Every automated caller already exports it explicitly before running Alembic —
+    CI, every `docker-compose*.yml`, the deploy scripts, `scripts/dev-db.sh`, and the test suite's
+    `conftest.py` — so this only ever fires on the case that was silently wrong: a bare `alembic …`
+    with nothing exported.
+    """
+    if "DATABASE_URL" in os.environ:
+        return
+    raise RuntimeError(
+        "DATABASE_URL is not set. Alembic requires an explicit database URL — it will not fall "
+        "back to the app's own SQLite default, because that default is exactly how a migration "
+        "ends up in the wrong database without anyone noticing.\n"
+        "For local dev against the Postgres container:\n"
+        "  export DATABASE_URL='postgresql+asyncpg://azmoth:azmoth@localhost:5432/azmoth'\n"
+        "Or use the script, which sets it for you and prints what it resolved to:\n"
+        "  ./scripts/dev-db.sh upgrade head            # Postgres\n"
+        "  ./scripts/dev-db.sh --sqlite upgrade head   # a dedicated local SQLite file instead\n"
+        "See docs/architecture/DATABASE.md#running-migrations."
+    )
+
+
+_require_explicit_database_url()
 
 if context.is_offline_mode():
     run_migrations_offline()

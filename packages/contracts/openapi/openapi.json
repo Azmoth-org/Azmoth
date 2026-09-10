@@ -4237,6 +4237,84 @@
         "title": "RuleCoverage",
         "type": "object"
       },
+      "RuleProposal": {
+        "additionalProperties": false,
+        "description": "A stored report, echoed back as confirmation of what was recorded.",
+        "properties": {
+          "context": {
+            "title": "Context",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "receipt_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Hash"
+          },
+          "ziffer": {
+            "title": "Ziffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ziffer",
+          "context",
+          "created_at"
+        ],
+        "title": "RuleProposal",
+        "type": "object"
+      },
+      "RuleProposalRequest": {
+        "additionalProperties": false,
+        "description": "One pilot's report that a Ziffer has no rule at all.",
+        "properties": {
+          "context": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Context",
+            "type": "string"
+          },
+          "receipt_hash": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Hash"
+          },
+          "ziffer": {
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Ziffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ziffer",
+          "context"
+        ],
+        "title": "RuleProposalRequest",
+        "type": "object"
+      },
       "RuleReviewQueue": {
         "additionalProperties": false,
         "description": "The rules still awaiting a decision, with enough context to show progress.",
@@ -6640,6 +6718,58 @@
           }
         },
         "summary": "Rule Coverage",
+        "tags": [
+          "rules"
+        ]
+      }
+    },
+    "/api/v1/rules/proposals": {
+      "post": {
+        "description": "Record that a pilot hit a Ziffer this engine has no rule for at all.\n\nThe button on an audit report that opens this dialog is `Regel fehlt? Ziffer melden`. Unlike\nevery other write in this router, nothing here is verified against the catalog or the rule\ntables — a Ziffer that does not exist is itself a data point, and refusing the write would throw\nthe report away over the one thing this endpoint cannot check offline (see `RuleProposalRecord`).\n\nScoped to the caller's organisation and rate-limited per organisation — see\n`app.api.ratelimit.limit_rule_proposal` — because this is a browser-session endpoint with no\nAPI key to count against.",
+        "operationId": "propose_rule_api_v1_rules_proposals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleProposal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "Propose Rule",
         "tags": [
           "rules"
         ]

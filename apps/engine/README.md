@@ -190,20 +190,25 @@ created on first start:
 .venv/bin/python -m pytest                            # in-memory, per test, nothing left behind
 ```
 
-**Against Postgres**, which is what production runs and what `docker compose` brings up:
+**To run a migration**, use `./scripts/dev-db.sh` rather than `alembic` directly — it sets
+`DATABASE_URL` explicitly and prints what it resolved to (password masked), which is exactly the
+step that is easy to skip:
 
 ```bash
-docker compose -f ../../infra/docker/docker-compose.yml up -d postgres
+docker compose -f ../../infra/docker/docker-compose.yml up -d postgres   # once
 
-export DATABASE_URL=postgresql+asyncpg://azmoth:azmoth@localhost:5432/azmoth
-.venv/bin/python scripts/migrate.py           # waits for the server, then upgrades to head
-.venv/bin/python scripts/migrate.py --check   # report the revision; exit 1 if behind
-.venv/bin/alembic upgrade head                # the same thing, via alembic directly
+./scripts/dev-db.sh upgrade head              # apply everything, against the Postgres container
+./scripts/dev-db.sh current                   # what revision that database is at
+./scripts/dev-db.sh --sqlite upgrade head     # a dedicated ./dev.db instead, no Postgres needed
 ```
 
 `alembic.ini` has no `sqlalchemy.url`: `alembic/env.py` reads `DATABASE_URL` through the same
 `Settings` object the service uses, so a migration cannot land in a database the engine will not then
-talk to, and no connection string is ever committed.
+talk to, and no connection string is ever committed. It also now **refuses to run at all** when
+`DATABASE_URL` is not set, rather than silently falling back to `Settings`' own SQLite default —
+that default is right for `uvicorn`/`pytest`, and exactly wrong for a migration, which used to be
+able to land in `./test.db` while the service went on querying Postgres. Full story, and running
+Alembic directly if you have to: [`../../docs/architecture/DATABASE.md`](../../docs/architecture/DATABASE.md#running-migrations).
 
 In a container the image migrates itself — `scripts/docker-entrypoint.sh` runs
 `alembic upgrade head` before uvicorn, whatever `command:` it is given. `docker compose up` is the

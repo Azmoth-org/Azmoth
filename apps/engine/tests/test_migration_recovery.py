@@ -40,6 +40,7 @@ from alembic import command
 from alembic.config import Config
 
 from app.config import ENGINE_DIR, Settings, get_settings
+from app.db.base import Base
 from app.db.session import Database, SchemaNotMigrated, init_models
 
 #: The revision the deployed database was stamped with when the mistake was made.
@@ -47,6 +48,32 @@ BEFORE = "0009_api_usage_logs"
 
 #: The revision that then failed, and the objects it builds.
 BILLING = "0010_subscriptions_and_invoices"
+
+#: The current tip of the migration history. Bump this alongside a new migration file — it is the
+#: one hardcoded assumption in this file that a later revision naturally invalidates.
+HEAD = "0012_rule_proposals"
+
+#: `Base.metadata` as of the incident — `BILLING`'s tables and everything before them. Fixed to this
+#: exact set rather than derived from the live `Base.metadata`, because `_damaged` recreates history
+#: with `CREATE TABLE IF NOT EXISTS` and every table declared in `app/db/models.py` today — including
+#: one added in a migration years after the incident — would otherwise leak into a fixture that is
+#: supposed to be frozen at 2026-08.
+_INCIDENT_ERA_TABLES = frozenset(
+    {
+        "proposals",
+        "audit_events",
+        "batch_jobs",
+        "batch_files",
+        "rule_reviews",
+        "doctor_profiles",
+        "practices",
+        "api_keys",
+        "error_log",
+        "api_usage_logs",
+        "organization_billing",
+        "billing_invoices",
+    }
+)
 
 
 def _config() -> Config:
@@ -81,19 +108,28 @@ class _target:
         get_settings.cache_clear()
 
 
+async def _create_incident_era_tables(database: Database) -> None:
+    """`create_all`, restricted to `_INCIDENT_ERA_TABLES` — see its docstring for why."""
+    tables = [Base.metadata.tables[name] for name in _INCIDENT_ERA_TABLES]
+    async with database.engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all, tables=tables)
+
+
 def _damaged(path: Path) -> None:
     """Rebuild the exact state the deployed database was found in.
 
     Migrate to `0009`, then run `create_all` over it — which is what the laptop did. Not a
     hand-written `CREATE TABLE`: the point is that this state is reachable by an ordinary mistake,
-    and a fixture that forged it by hand could drift from what `create_all` really produces.
+    and a fixture that forged it by hand could drift from what `create_all` really produces. Scoped
+    to `_INCIDENT_ERA_TABLES` rather than the live `Base.metadata` so this fixture stays pinned to
+    the 2026-08 incident regardless of tables added to the schema afterwards.
     """
     with _target(path):
         command.upgrade(_config(), BEFORE)
         database = Database(
             Settings(app_env="development", database_url=f"sqlite+aiosqlite:///{path}")
         )
-        asyncio.run(database.create_all())
+        asyncio.run(_create_incident_era_tables(database))
         asyncio.run(database.dispose())
 
 
@@ -219,7 +255,7 @@ def test_upgrade_head_recovers_a_database_that_create_all_got_to_first(tmp_path)
     with _target(database):
         command.upgrade(_config(), "head")  # raised DuplicateTableError before this fix
 
-    assert _stamp(database) == "0011_retention_purge"
+    assert _stamp(database) == HEAD
     assert "invoices_processed" in _columns(database, "api_usage_logs"), (
         "the whole reason not to stamp: the column 0010 adds must exist afterwards"
     )
@@ -286,7 +322,7 @@ def test_upgrade_is_repeatable_from_the_revision_before_it(tmp_path):
         command.downgrade(_config(), BEFORE)
         command.upgrade(_config(), "head")
 
-    assert _stamp(database) == "0011_retention_purge"
+    assert _stamp(database) == HEAD
 
 
 def test_downgrade_unwinds_a_partial_state_instead_of_dying_in_it(tmp_path):
