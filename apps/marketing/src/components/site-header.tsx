@@ -238,10 +238,12 @@ export function SiteHeader({
 
         <div className="relative z-10 flex shrink-0 items-center gap-2">
           {/*
-            A plain ghost button, not `ButtonLink`'s default styling: this is the quiet exit for a
-            visitor who already has access, and it must not compete with "Pilot" in `NavItems`.
+            The solid `default` variant, not ghost: with the booking button gone, this is the only
+            button-shaped element left in the bar, and it is the one action a returning user is
+            here for — it should read as the header's single call to action, not blend in with the
+            plain-text nav items beside it.
           */}
-          <ButtonLink external href={loginUrl} variant="ghost" size="sm">
+          <ButtonLink external href={loginUrl} size="sm">
             {t("login")}
           </ButtonLink>
         </div>
@@ -280,7 +282,7 @@ export function SiteHeader({
             </a>
           </nav>
           <div className="mt-3 flex flex-col gap-2 border-t border-azm-hairline pt-3">
-            <ButtonLink external href={loginUrl} variant="ghost" onClick={close}>
+            <ButtonLink external href={loginUrl} onClick={close}>
               {t("login")}
             </ButtonLink>
           </div>
