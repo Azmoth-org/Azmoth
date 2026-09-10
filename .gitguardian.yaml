@@ -1,0 +1,11 @@
+# GitGuardian configuration. See https://docs.gitguardian.com/ggshield-docs/reference/yaml
+version: 2
+
+secret:
+  ignored-paths:
+    # False positive only: this file is pure password-*strength-checking* logic (character-class
+    # regexes and a length constant, `MIN_PASSWORD_LENGTH = 12`) — no credential, token, or secret
+    # of any kind is ever stored here. GitGuardian's "Generic Password" detector flags it purely on
+    # the `password: string` parameter names and the `*_PASSWORD*` constant name, not on any actual
+    # secret value. Flagged in PR #71 (finding 37149358); reviewed line by line before excluding.
+    - "apps/web/lib/password-policy.ts"

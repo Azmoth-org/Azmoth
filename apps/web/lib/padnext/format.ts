@@ -171,6 +171,11 @@ export const VERDICT_LABEL: Record<PadnextVerdict, string> = {
   blocked: "durch Regel entfernt",
   out_of_scope: "andere Gebührenordnung",
   unknown_ziffer: "Ziffer nicht im Katalog",
+  // A percentage Zuschlag (e.g. Nummer 441/5298) — in the catalog, priced by law as a share of
+  // another Ziffer's fee rather than its own Punktzahl, so there is nothing here to have missed.
+  // Distinct from `unknown_ziffer` on purpose; see the verdict field's docstring in
+  // apps/engine/app/schemas/padnext.py.
+  surcharge_not_modelled: "Zuschlag nicht abgebildet",
 }
 
 export const SEVERITY_LABEL: Record<"info" | "warning" | "error", string> = {
