@@ -89,6 +89,7 @@ export const siteConfig = {
 export const routes = {
   home: "/",
   funktionen: "/funktionen",
+  pilot: "/pilot",
   ueberUns: "/ueber-uns",
   faq: "/faq",
   kontakt: "/kontakt",
