@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { BookOpenIcon, CalendarIcon, LayersIcon, ScaleIcon, TerminalIcon } from "lucide-react";
+import { BookOpenIcon, LayersIcon, ScaleIcon, TerminalIcon } from "lucide-react";
 
 import { Logo } from "@workspace/ui/components/logo";
 import {
@@ -54,21 +54,10 @@ import { routes, siteConfig } from "@/lib/site";
  * into the browser bundle at build time.
  */
 export function SiteHeader({
-  bookingUrl,
   loginUrl,
   docs,
 }: {
-  /** The one booking CTA. `login` and `demo` used to be separate destinations; both resolve to
-   * the same Cal.com link now (see `getProductLinks()`), so two buttons that did the same thing
-   * collapsed into one. */
-  bookingUrl: string;
-  /**
-   * Where an existing user signs in. The same `getProductLinks().login` value as `bookingUrl`
-   * today — there is no hosted app yet, see `getProductLinks()` — but it is threaded through as
-   * its own prop rather than reusing `bookingUrl` so this link keeps pointing at the product's
-   * actual sign-in destination once that function switches back to `appHref(...)`, with no call
-   * site here to update.
-   */
+  /** Where an existing user signs in — `getProductLinks().login`, the hosted app. */
   loginUrl: string;
   /** `docs.azmoth.com` — the orientation material, its own Next application. */
   docs: string;
@@ -249,16 +238,13 @@ export function SiteHeader({
 
         <div className="relative z-10 flex shrink-0 items-center gap-2">
           {/*
-            A plain ghost button, not `ButtonLink`'s default styling: this is the quiet exit for a
-            visitor who already has access, and it must not compete with "Pilot" in `NavItems` or
-            with the booking button beside it — see the component doc for the hierarchy.
+            The solid `default` variant, not ghost: with the booking button gone, this is the only
+            button-shaped element left in the bar, and it is the one action a returning user is
+            here for — it should read as the header's single call to action, not blend in with the
+            plain-text nav items beside it.
           */}
-          <ButtonLink external href={loginUrl} variant="ghost" size="sm">
+          <ButtonLink external href={loginUrl} size="sm">
             {t("login")}
-          </ButtonLink>
-          <ButtonLink external href={bookingUrl} size="sm">
-            {t("terminBuchen")}
-            <CalendarIcon data-icon="inline-end" />
           </ButtonLink>
         </div>
       </NavBody>
@@ -296,11 +282,7 @@ export function SiteHeader({
             </a>
           </nav>
           <div className="mt-3 flex flex-col gap-2 border-t border-azm-hairline pt-3">
-            <ButtonLink external href={bookingUrl}>
-              {t("terminBuchen")}
-              <CalendarIcon data-icon="inline-end" />
-            </ButtonLink>
-            <ButtonLink external href={loginUrl} variant="ghost" onClick={close}>
+            <ButtonLink external href={loginUrl} onClick={close}>
               {t("login")}
             </ButtonLink>
           </div>

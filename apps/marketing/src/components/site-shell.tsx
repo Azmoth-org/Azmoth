@@ -31,7 +31,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         Zum Inhalt springen
       </a>
 
-      <SiteHeader bookingUrl={links.demo} loginUrl={links.login} docs={docsUrl} />
+      <SiteHeader loginUrl={links.login} docs={docsUrl} />
 
       {/*
         `pt-16` for the header, which is `fixed` rather than `sticky` since the rebuild — see

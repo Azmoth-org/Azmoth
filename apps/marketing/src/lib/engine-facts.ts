@@ -52,7 +52,7 @@ export const ZIFFERN_UNDER_RULE_COUNT = 358;
  */
 export const LATENCY_MS_PER_INVOICE = 80;
 
-/** Share of the GOÄ catalog any enforced rule speaks to — "16 %". The weak spot, stated. */
+/** Share of the GOÄ catalog any enforced rule speaks to — "~15,3 %". The weak spot, stated. */
 export const CATALOG_COVERAGE_SHARE = ZIFFERN_UNDER_RULE_COUNT / CATALOG_ZIFFER_COUNT;
 
 /**
@@ -71,8 +71,8 @@ const dePercent = new Intl.NumberFormat("de-DE", {
 /**
  * The values the message catalogue interpolates, pre-formatted.
  *
- * Percentages are *computed* from the counts, not written down: "16 %" and "358 von
- * 2.192" are the same claim twice, and the failure mode this whole file guards against
+ * Percentages are *computed* from the counts, not written down: "~15,3 %" and "358 von
+ * 2.343" are the same claim twice, and the failure mode this whole file guards against
  * is exactly the version where one of the two gets updated.
  */
 export const engineFacts = {
