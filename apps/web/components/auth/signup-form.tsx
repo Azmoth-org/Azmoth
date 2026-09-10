@@ -20,6 +20,7 @@ import {
   authErrorMessage,
 } from "@/components/auth/auth-messages"
 import { authClient } from "@/lib/auth-client"
+import { slugifyOrganizationName } from "@/lib/organization-slug"
 
 /**
  * The password floor, stated in three places that must not disagree.
@@ -31,22 +32,36 @@ import { authClient } from "@/lib/auth-client"
 const MIN_PASSWORD_LENGTH = 12
 
 /**
- * Create an account.
+ * Create an account — for the organisation running the pilot, not for one named reviewer.
  *
  * The layout is shadcn's `signup-02` form, installed into this app rather than into
  * `@workspace/ui`. See `components/auth/login-form.tsx` for why it lives here, why the fields are
  * uncontrolled, why `router.refresh()` precedes the push, and why a returned `{ error }` and a
  * thrown exception produce different sentences. All four apply identically.
  *
- * Four fields rather than the login screen's two, and the confirmation is the reason this is a
- * separate component rather than a `mode` prop on that one. It is also new with the block: the form
- * this replaced had a single password box, so a typo produced an account nobody could sign in to
- * and no way to find out why.
+ * ## Four fields, and no personal ones
  *
- * The block's own field descriptions are replaced rather than kept. "We'll use this to contact you"
- * is untrue here — nothing mails this address — and "at least 8 characters" would contradict the
- * server. The name's description is the one that earns its place: it explains why a name is asked
- * for at all, which is that it ends up beside every approval in the audit trail.
+ * Email, password, its confirmation, and the organisation's name — nothing else. The pilot persona
+ * is a billing bureau (Abrechnungsstelle) working from synthetic data, not an individual physician,
+ * so there is no LANR, no phone number and no postal address to ask for here: none of it would be
+ * used, and GDPR's data-minimisation principle is the reason not to collect it anyway just because a
+ * form template had a field for it. Whoever needs to be named on a specific delivery still can be —
+ * that belongs to the delivery, not to the account that uploaded it.
+ *
+ * ## The organisation is created here, not later from the sidebar
+ *
+ * Better Auth's `name` field still exists on every user row and is not nullable, so it is set to the
+ * organisation's own name rather than asked for twice — nothing in this application reads a
+ * personal name back out of it. Immediately after `signUp.email` succeeds, `authClient.organization.
+ * create` and `.setActive` run in the same submit, so a reader who has just registered lands on a
+ * dashboard that already knows which organisation it is rather than one reading "Keine
+ * Organisation" until they find the prompt in `organisation-switcher.tsx` that used to be the only
+ * way to get one. That stopgap still exists for a second organisation later; it is no longer the
+ * first one's only door.
+ *
+ * A failure to create the organisation is reported rather than swallowed — the account exists at
+ * that point regardless, and signing in afterwards reaches the same rail's "Organisation anlegen".
+ * That is a worse first run than this form succeeding outright, not a broken one.
  */
 export function SignupForm({
   next,
@@ -72,7 +87,7 @@ export function SignupForm({
     if (pending) return
 
     const form = new FormData(event.currentTarget)
-    const name = String(form.get("name") ?? "").trim()
+    const organizationName = String(form.get("organization") ?? "").trim()
     const email = String(form.get("email") ?? "").trim()
     const password = String(form.get("password") ?? "")
     const confirmation = String(form.get("confirm-password") ?? "")
@@ -94,7 +109,7 @@ export function SignupForm({
     setPending(true)
     try {
       const { error: failure } = await authClient.signUp.email({
-        name,
+        name: organizationName,
         email,
         password,
       })
@@ -103,6 +118,26 @@ export function SignupForm({
         setPending(false)
         return
       }
+
+      // The account exists at this point regardless of what happens below, so a failure here is
+      // reported rather than left to look like the sign-up itself failed — see the module docstring.
+      const { data: organization, error: organizationFailure } =
+        await authClient.organization.create({
+          name: organizationName,
+          slug: slugifyOrganizationName(organizationName),
+        })
+      if (organizationFailure) {
+        setError(authErrorMessage(organizationFailure))
+        setPending(false)
+        return
+      }
+
+      // `create` does not itself make the new organisation the session's active one — the rail
+      // would otherwise still read "Keine Organisation" until something else set it.
+      await authClient.organization.setActive({
+        organizationId: organization.id,
+      })
+
       router.refresh()
       router.push(next)
     } catch {
@@ -130,19 +165,19 @@ export function SignupForm({
         )}
 
         <Field>
-          <FieldLabel htmlFor="name">Name</FieldLabel>
+          <FieldLabel htmlFor="organization">Organisation</FieldLabel>
           <Input
-            id="name"
-            name="name"
+            id="organization"
+            name="organization"
             type="text"
-            autoComplete="name"
+            autoComplete="organization"
             autoFocus
             required
-            placeholder="Dr. med. Maria Muster"
+            placeholder="Abrechnungsstelle Muster"
             disabled={pending}
           />
           <FieldDescription>
-            Erscheint im Prüfprotokoll neben jeder Freigabe.
+            Der Name Ihrer Abrechnungsstelle oder Praxis.
           </FieldDescription>
         </Field>
 

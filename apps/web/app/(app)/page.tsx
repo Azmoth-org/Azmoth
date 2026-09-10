@@ -17,6 +17,7 @@ import {
   METRIC_LABELS,
   MetricsRowSkeleton,
 } from "@/components/dashboard/card-states"
+import { FirstRunSection } from "@/components/dashboard/first-run-cards"
 import { MetricsRow } from "@/components/dashboard/metrics-row"
 import {
   RECENT_BATCHES_TITLE,
@@ -97,6 +98,16 @@ export default function DashboardPage() {
       </header>
 
       <SyntheticDataBanner />
+
+      {/*
+        The first-run greeting: three cards and a dismissible pilot notice, shown only on an
+        organisation that has never had a proposal or a batch. Its own `Suspense` boundary, and a
+        `null` fallback rather than a skeleton — an organisation with any history renders nothing
+        here at all, so a skeleton would flash a shape for a section that is about to disappear.
+      */}
+      <Suspense fallback={null}>
+        <FirstRunSection />
+      </Suspense>
 
       {/*
         The figures first, then the detail. This is the only block on the screen that can be read
