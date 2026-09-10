@@ -15,10 +15,10 @@ import { expect, test } from "@playwright/test"
  * `organization.create` and `.setActive` in the same submit instead of leaving that to the sidebar
  * prompt.
  *
- * `@e2e.azmoth.test`, not `.invalid` — this repository's `SIGNUP_ALLOWLIST` (see `.env` /
- * `.env.example`) admits that domain for exactly this reason: `auth.setup.ts`'s shared account is
- * grandfathered in by already existing, but a spec that must go through the sign-up gate itself
- * needs an address the gate actually admits.
+ * `@e2e.azmoth.test` — the domain this repository documents as admitted for testing (see
+ * `docs/api/E2E_GOLDEN.md` and `auth.setup.ts`, which signs in under the same domain): a spec that
+ * must go through the sign-up gate itself needs an address the gate actually admits, and this is
+ * the one every e2e fixture in this repository agrees on rather than each spec inventing its own.
  */
 test.use({ storageState: { cookies: [], origins: [] } })
 
@@ -95,7 +95,11 @@ test("eine zweite Registrierung mit derselben E-Mail zeigt die Dublettenmeldung 
     .getByRole("button", { name: "Registrieren", exact: true })
     .click()
 
-  const alertBox = page.getByRole("alert")
+  // `[data-slot="alert"]`, not `getByRole("alert")`: the first sign-up above already caused one
+  // client-side navigation, and Next's own route announcer (`#__next-route-announcer__`) also
+  // carries `role="alert"` from that point on — the two coexist, and `getByRole("alert")` is then
+  // ambiguous. The `data-slot` is shadcn's `Alert` marking its own root.
+  const alertBox = page.locator('[data-slot="alert"]')
   await expect(alertBox).toContainText("bereits registriert")
   await expect(
     alertBox.getByRole("link", { name: "Stattdessen anmelden" })
@@ -122,7 +126,10 @@ test("ein Passwort mit zu wenig Zeichenarten wird abgelehnt, bevor irgendetwas a
     .getByRole("button", { name: "Registrieren", exact: true })
     .click()
 
-  await expect(page.getByRole("alert")).toContainText("weitere Zeichenart")
+  // See the `data-slot="alert"` note in the duplicate-email test above.
+  await expect(page.locator('[data-slot="alert"]')).toContainText(
+    "weitere Zeichenart"
+  )
   // Still on the form: the field the browser did not clear is the tell that this was rejected
   // before `signUp.email` was ever called.
   await expect(page.getByLabel("E-Mail")).toHaveValue(email)

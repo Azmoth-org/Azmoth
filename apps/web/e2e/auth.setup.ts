@@ -14,17 +14,22 @@ import { STORAGE_STATE } from "./storage-state"
  *
  * ## The account
  *
- * Created if it is not there, reused if it is. `sign-up` answers `USER_ALREADY_EXISTS` on the second
- * run and that is not a failure — it is the normal case on any machine the suite has run on before.
- * The `.invalid` TLD is reserved by RFC 2606 and can never be a real address, which is the point:
- * this row will sit in a developer's database, and it must be impossible to mistake for a colleague
- * or to accidentally mail.
+ * Created if it is not there, reused if it is. `sign-up` answers `USER_ALREADY_EXISTS_USE_ANOTHER_
+ * EMAIL` on the second run and that is not a failure — it is the normal case on any machine the
+ * suite has run on before.
+ *
+ * `@e2e.azmoth.test` — not a made-up address on a real-looking domain — for two reasons. `.test` is
+ * reserved by RFC 2606 and can never be a real address, which is the point: this row will sit in a
+ * developer's database, and it must be impossible to mistake for a colleague or to accidentally
+ * mail. And it is the one domain this repository actually documents as admitted for testing (see
+ * `docs/api/E2E_GOLDEN.md` and `signup.spec.ts`, which registers fresh accounts under the same
+ * domain) — an environment's `SIGNUP_ALLOWLIST` only has to widen for one test domain, not two.
  *
  * It is a real account with real access, so this is also the reminder that the e2e suite writes to
  * whatever database the app under test is pointed at. That is already true of the proposals the
  * smoke test reads; it is now true of a user row as well.
  */
-const EMAIL = "e2e@azmoth.invalid"
+const EMAIL = "e2e@e2e.azmoth.test"
 const PASSWORD = "e2e-durchlauf-passwort-2026"
 const NAME = "E2E Durchlauf"
 

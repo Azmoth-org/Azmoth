@@ -31,7 +31,10 @@ import { STORAGE_STATE } from "./e2e/storage-state"
  *
  * The web app also needs its accounts database to exist — `pnpm --filter web auth:migrate` once,
  * against whatever `AUTH_DATABASE_URL` points at. The `setup` project creates its own account there
- * on the first run and reuses it afterwards.
+ * on the first run and reuses it afterwards — which needs `SIGNUP_ALLOWLIST` (if the deployment sets
+ * one) to admit `@e2e.azmoth.test`, the domain every e2e fixture in this repository registers under;
+ * see `docs/api/E2E_GOLDEN.md`. Without it, `setup` fails closed and every other project is skipped,
+ * since `chromium` depends on it.
  *
  * The spec fails with a sentence naming the missing engine rather than a locator timeout, so the
  * distinction between "the UI regressed" and "you forgot to start the backend" survives to the

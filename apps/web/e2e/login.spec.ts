@@ -19,7 +19,11 @@ test("eine falsche Anmeldung zeigt die deutsche Meldung statt Better Auths Fehle
   await page.getByLabel("Passwort").fill("ganz-bestimmt-falsch")
   await page.getByRole("button", { name: "Anmelden", exact: true }).click()
 
-  const alertBox = page.getByRole("alert")
+  // `[data-slot="alert"]`, not `getByRole("alert")`: Next's own route announcer
+  // (`#__next-route-announcer__`) also carries `role="alert"`, and once a client-side navigation
+  // has happened on this page both exist at once — the ambiguity is a Playwright strict-mode
+  // violation, not a missing element. The `data-slot` is shadcn's `Alert` marking its own root.
+  const alertBox = page.locator('[data-slot="alert"]')
   await expect(alertBox).toContainText(
     "E-Mail-Adresse oder Passwort ist falsch"
   )
