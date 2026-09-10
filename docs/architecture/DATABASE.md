@@ -525,7 +525,28 @@ password, is ever committed.
 
 > A database created by `create_all` has no revision stamp, so `alembic upgrade head` against it
 > will try to create tables that already exist. Delete the SQLite file, or `alembic stamp head`,
-> before switching a dev database over.
+> before switching a dev database over — or use the script in the next section, which never puts
+> you in that position to begin with.
+
+### Locally, against SQLite via Alembic
+
+For exercising a migration itself — the usual reason to want this without installing Postgres —
+without the trap above, `scripts/dev-db.sh` runs Alembic against its own `./dev.db`, never
+`./test.db`:
+
+```bash
+cd apps/engine
+./scripts/dev-db.sh reset      # delete ./dev.db, run every migration from scratch
+./scripts/dev-db.sh migrate    # run pending migrations
+./scripts/dev-db.sh status     # alembic current
+./scripts/dev-db.sh diagnose   # scripts/migrate.py --diagnose, for a stamp/schema disagreement
+./scripts/dev-db.sh shell      # sqlite3 ./dev.db
+```
+
+It forces `DATABASE_URL=sqlite+aiosqlite:///./dev.db` and `DATABASE_AUTO_CREATE=false` for its own
+commands, regardless of what `.env` says — `./test.db` stays `create_all`'s and is never touched by
+this script, so the two workflows cannot collide. `uvicorn` and `pytest` are unaffected; they still
+default to `./test.db` and in-memory SQLite respectively.
 
 ### In a container
 

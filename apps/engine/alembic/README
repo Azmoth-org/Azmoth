@@ -16,7 +16,9 @@ The container runs `alembic upgrade head` before uvicorn (see the Dockerfile's e
 deploy migrates itself. Local development does not need any of this: `DATABASE_AUTO_CREATE=true` is
 the default and creates the tables directly — but note that a database built that way has no
 revision stamp, so `alembic upgrade head` against it will try to create tables that already exist.
-Delete the SQLite file, or `alembic stamp head`, before switching a dev database over.
+Delete the SQLite file, or `alembic stamp head`, before switching a dev database over — or use
+`./scripts/dev-db.sh {reset,migrate,status,diagnose,shell}`, which runs Alembic against its own
+`./dev.db` so it never collides with `./test.db` in the first place.
 
 `DATABASE_AUTO_CREATE` only applies to SQLite. `app/db/session.py::init_models` refuses it on a
 Postgres URL in *every* environment, because that is how this went wrong once: see below.

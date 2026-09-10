@@ -190,6 +190,11 @@ created on first start:
 .venv/bin/python -m pytest                            # in-memory, per test, nothing left behind
 ```
 
+**To exercise a migration itself** without installing Postgres — and without the "table already
+exists" error that comes from pointing `alembic upgrade head` at the same `./test.db` `create_all`
+already built — use `./scripts/dev-db.sh {reset,migrate,status,diagnose,shell}`, which runs Alembic
+against its own `./dev.db` instead. See [`../../docs/architecture/DATABASE.md`](../../docs/architecture/DATABASE.md#locally-against-sqlite-via-alembic).
+
 **Against Postgres**, which is what production runs and what `docker compose` brings up:
 
 ```bash
