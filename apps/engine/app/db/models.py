@@ -29,9 +29,10 @@ re-running the same files would simply produce another batch. There is nothing h
 log to protect, and no approval boundary to enforce — which is exactly why these two tables are
 plain and `proposals` is not.
 
-And two standalone tables:
+And three standalone tables:
 
     rule_reviews        one row per rule a billing expert has decided about
+    rule_proposals      one row per pilot's report that a Ziffer has no rule at all
     api_keys            one row per credential issued to a practice, stored as a hash
 
 And two that exist so the service can be operated and sold rather than only run:
@@ -72,6 +73,15 @@ in `data/rules/*.csv`, which is versioned source data the API must never write. 
 *overlay* merged onto the CSVs at load time (`RuleStore.with_reviews`), which is what lets a
 reviewer promote a machine-extracted rule to verified without anyone editing a file that git tracks
 and a second approver has to sign off.
+
+`rule_proposals` is a different signal entirely, and it is not to be confused with either table
+above it. A rule review is a verdict on a rule the engine already extracted; `rule_proposals` is the
+opposite direction — a pilot practice hitting a Ziffer the engine has **no** rule for at all, and
+saying so from the audit report. It has nothing to do with `proposals`' billing-draft lifecycle
+either, despite the name collision with `ProposalRecord`: nothing here is DRAFT, APPROVED or
+exported, there is no receipt to protect, and a row is written once and never revisited. It is a
+demand signal — which Ziffern pilots actually need rules for — and the table is intentionally the
+plainest one in this file: no status, no workflow, just who reported what and when.
 
 And two that describe *who is billing*, written by the web tier's onboarding endpoint:
 
@@ -550,6 +560,69 @@ class RuleReviewRecord(Base):
         return f"<RuleReviewRecord {self.rule_id} {self.status}>"
 
 
+class RuleProposalRecord(Base):
+    """One pilot's report that a Ziffer has no rule at all — a demand signal, not a verdict.
+
+    See the module docstring for why this is neither `ProposalRecord` (a billing draft) nor
+    `RuleReviewRecord` (a verdict on a rule that already exists). This table answers a third, prior
+    question: which Ziffern does nobody have a rule for yet. There is no status and no workflow — a
+    row is written once, by the pilot who hit the gap, and stands as one data point towards "build a
+    rule for this Ziffer next."
+
+    **No foreign key on `ziffer`.** Like `RuleReviewRecord.rule_id`, a Ziffer names a position in
+    the GOÄ catalog, which is versioned source data outside this database — see the module
+    docstring on why `data/rules/*.csv` and the catalog are never referenced with a constraint.
+    Unlike a rule id, a Ziffer here is not even required to exist in the loaded catalog: a pilot
+    reporting a typo'd or superseded Ziffer is itself useful signal, and refusing the write would
+    throw away a report over the one thing this table cannot verify offline.
+
+    **Org-scoped and not nullable, unlike `ProposalRecord.organization_id`.** There is no legacy
+    data here to explain a `NULL` — every row this table has ever held was written after
+    `X-Organization-ID` became mandatory, so there is nothing for a missing tenant to mean.
+    """
+
+    __tablename__ = "rule_proposals"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The GOÄ position the reporter says has no rule — `"34"`, `"3306"`. Indexed because "how many
+    #: reports has this Ziffer collected" is the query that turns this table into a work queue: the
+    #: Ziffer with the most reports is the next rule worth writing.
+    ziffer: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+
+    #: What the reporter typed, describing what they expected the engine to catch. Capped at 500
+    #: characters by `RuleProposalRequest` before it ever reaches this column — `String(500)`
+    #: matches the contract rather than leaving room the API already refuses to fill.
+    context: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+
+    #: The receipt of the audit the report was raised from, if the reporter followed the link from a
+    #: Prüfbericht rather than typing a Ziffer in by hand. Optional: a pilot may also report a gap
+    #: they noticed without a specific report open. Not a foreign key — nothing here reads back
+    #: through it, it is carried so a later triage can find the exact case that prompted the report.
+    receipt_hash: Mapped[str | None] = mapped_column(String(64), index=True, default=None)
+
+    #: The Better Auth `organization.id` that reported this. Not a foreign key, for the same reason
+    #: as everywhere else in this file — see the module docstring. Not nullable: see the class
+    #: docstring on why there is no legacy case to accommodate here.
+    organization_id: Mapped[str] = mapped_column(String(256), nullable=False)
+
+    #: Who reported it — the forwarded Better Auth `user.id`, or `anonymous` for a call that carried
+    #: no session. Recorded, not authenticated, like every other `created_by` in this file.
+    created_by: Mapped[str | None] = mapped_column(String(256), index=True, default=None)
+
+    created_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        # "This practice's reports, newest first" — the only read this table has today. Tenant-
+        # leading for the same reason as `proposals.organization_id`'s composite: a plain index on
+        # `organization_id` alone would be redundant with this one.
+        Index("ix_rule_proposals_organization_id_created_at", "organization_id", "created_at"),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return f"<RuleProposalRecord {self.ziffer} org={self.organization_id}>"
+
+
 class AuditLogIsAppendOnly(RuntimeError):
     """Raised when something tries to change or remove an audit row.
 
@@ -586,6 +659,7 @@ __all__ = [
     "BatchJobRecord",
     "ErrorLogRecord",
     "ProposalRecord",
+    "RuleProposalRecord",
     "RuleReviewRecord",
     "as_utc",
     "utcnow",

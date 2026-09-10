@@ -957,6 +957,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rules/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose Rule
+         * @description Record that a pilot hit a Ziffer this engine has no rule for at all.
+         *
+         *     The button on an audit report that opens this dialog is `Regel fehlt? Ziffer melden`. Unlike
+         *     every other write in this router, nothing here is verified against the catalog or the rule
+         *     tables — a Ziffer that does not exist is itself a data point, and refusing the write would throw
+         *     the report away over the one thing this endpoint cannot check offline (see `RuleProposalRecord`).
+         *
+         *     Scoped to the caller's organisation and rate-limited per organisation — see
+         *     `app.api.ratelimit.limit_rule_proposal` — because this is a browser-session endpoint with no
+         *     API key to count against.
+         */
+        post: operations["propose_rule_api_v1_rules_proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rules/review-queue": {
         parameters: {
             query?: never;
@@ -3868,6 +3897,37 @@ export interface components {
             verified_share: string;
         };
         /**
+         * RuleProposal
+         * @description A stored report, echoed back as confirmation of what was recorded.
+         */
+        RuleProposal: {
+            /** Context */
+            context: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: string;
+            /** Receipt Hash */
+            receipt_hash?: string | null;
+            /** Ziffer */
+            ziffer: string;
+        };
+        /**
+         * RuleProposalRequest
+         * @description One pilot's report that a Ziffer has no rule at all.
+         */
+        RuleProposalRequest: {
+            /** Context */
+            context: string;
+            /** Receipt Hash */
+            receipt_hash?: string | null;
+            /** Ziffer */
+            ziffer: string;
+        };
+        /**
          * RuleReviewQueue
          * @description The rules still awaiting a decision, with enough context to show progress.
          */
@@ -5540,6 +5600,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RuleCoverage"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    propose_rule_api_v1_rules_proposals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleProposal"];
                 };
             };
             /** @description See docs/errors.md for the codes. */

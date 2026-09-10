@@ -1,6 +1,7 @@
-import { CircleAlertIcon, CircleCheckIcon, CircleHelpIcon } from "lucide-react"
+import { CircleAlertIcon, CircleCheckIcon, CircleHelpIcon, FlagIcon } from "lucide-react"
 
 import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
 import {
   Table,
   TableBody,
@@ -86,7 +87,14 @@ function RuleIds({ position }: { position: PadnextAuditedPosition }) {
  * different questions, and a position that reads `unbestätigt` / `durch Regel entfernt` is exactly
  * the case this refactor exists to make legible — a rule removed it, but no verified rule did.
  */
-export function PositionsTable({ report }: { report: PadnextAuditReport }) {
+export function PositionsTable({
+  report,
+  onReportZiffer,
+}: {
+  report: PadnextAuditReport
+  /** Opens the "Regel fehlt? Ziffer melden" dialog, prefilled with one position's Ziffer. */
+  onReportZiffer?: (ziffer: string) => void
+}) {
   const positions = report.positions ?? []
 
   return (
@@ -122,8 +130,25 @@ export function PositionsTable({ report }: { report: PadnextAuditReport }) {
                       {position.positionsnr}
                     </TableCell>
                     <TableCell>
-                      <div className="font-mono text-sm">
-                        {position.go} {position.ziffer}
+                      <div className="flex items-center gap-1">
+                        <div className="font-mono text-sm">
+                          {position.go} {position.ziffer}
+                        </div>
+                        {onReportZiffer ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-muted-foreground hover:text-foreground"
+                            title="Regel fehlt? Ziffer melden"
+                            onClick={() => onReportZiffer(position.ziffer)}
+                          >
+                            <FlagIcon aria-hidden />
+                            <span className="sr-only">
+                              Regel für Ziffer {position.ziffer} melden
+                            </span>
+                          </Button>
+                        ) : null}
                       </div>
                       {position.official_text ? (
                         <div className="max-w-xs truncate text-xs text-muted-foreground">

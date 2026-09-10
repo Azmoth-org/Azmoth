@@ -235,6 +235,17 @@ export type RuleReviewRequest = Schemas["RuleReviewRequest"];
 /** The reviewed rule and the coverage it moved, so a progress bar updates from one response. */
 export type RuleReviewResult = Schemas["RuleReviewResult"];
 
+/**
+ * Body of `POST /api/v1/rules/proposals`: a pilot's report that a Ziffer has no rule at all. Not
+ * to be confused with `RuleReviewRequest` — a verdict on a rule that already exists — or with the
+ * billing-draft `Proposal` above, despite the name collision. See the engine's
+ * `app.db.models.RuleProposalRecord` for why this is a separate concept from both.
+ */
+export type RuleProposalRequest = Schemas["RuleProposalRequest"];
+
+/** The stored report, echoed back as confirmation. */
+export type RuleProposal = Schemas["RuleProposal"];
+
 /* -- catalog and vocabulary ---------------------------------------------------------------- */
 
 export type HealthResponse = Schemas["HealthResponse"];

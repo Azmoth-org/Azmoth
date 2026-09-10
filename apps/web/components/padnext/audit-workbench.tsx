@@ -1,6 +1,6 @@
 "use client"
 
-import { FileUpIcon, Loader2Icon } from "lucide-react"
+import { FileUpIcon, FlagIcon, Loader2Icon } from "lucide-react"
 import { useRef, useState } from "react"
 
 import {
@@ -21,6 +21,7 @@ import { SinglePruefberichtButton } from "@/components/padnext/pruefbericht-butt
 import { ReportProvenance } from "@/components/padnext/report-provenance"
 import { ValidationErrorList } from "@/components/padnext/validation-error-list"
 import { ErrorPanel } from "@/components/review/error-panel"
+import { ZifferReportDialog } from "@/components/rules/ziffer-report-dialog"
 import { auditPadnextFile } from "@/lib/padnext/client"
 import { toValidationReport, type PadnextResult } from "@/lib/padnext/types"
 
@@ -93,6 +94,17 @@ export function AuditWorkbench() {
   const [audited, setAudited] = useState<File | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // The "Regel fehlt?" dialog — one instance shared by the page-level button (manual entry) and
+  // every row's own flag icon (prefilled). `reportZiffer` is intentionally separate from `result`:
+  // opening the dialog must not touch the report on screen.
+  const [reportDialogOpen, setReportDialogOpen] = useState(false)
+  const [reportZiffer, setReportZiffer] = useState("")
+
+  function openZifferReport(ziffer: string) {
+    setReportZiffer(ziffer)
+    setReportDialogOpen(true)
+  }
 
   // Derived rather than stored: it is a projection of `result`, and a second piece of state that
   // had to be cleared alongside it is a second piece of state that will one day not be.
@@ -196,16 +208,29 @@ export function AuditWorkbench() {
 
       {result?.kind === "report" ? (
         <>
-          {audited ? (
-            <div className="flex justify-end print:hidden">
-              <SinglePruefberichtButton file={audited} />
-            </div>
-          ) : null}
+          <div className="flex flex-wrap justify-end gap-2 print:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => openZifferReport("")}
+            >
+              <FlagIcon aria-hidden />
+              Regel fehlt? Ziffer melden
+            </Button>
+            {audited ? <SinglePruefberichtButton file={audited} /> : null}
+          </div>
           <PilotWarningsPanel report={result.report} />
           <BucketSummary report={result.report} />
           <ReportProvenance report={result.report} />
-          <PositionsTable report={result.report} />
+          <PositionsTable report={result.report} onReportZiffer={openZifferReport} />
           <FindingsPanel report={result.report} />
+          <ZifferReportDialog
+            open={reportDialogOpen}
+            onOpenChange={setReportDialogOpen}
+            initialZiffer={reportZiffer}
+            receiptHash={result.report.receipt_hash}
+          />
         </>
       ) : null}
 

@@ -1,15 +1,19 @@
-"""A per-key request budget, kept in this process's memory.
+"""A request budget, kept in this process's memory.
 
-Two limits, both per API key rather than per organisation:
+Three limits:
 
-    POST /api/v1/audit/single    RATE_LIMIT_SINGLE_PER_MINUTE   (100/min)
-    POST /api/v1/audit/bulk      RATE_LIMIT_BULK_PER_HOUR       (10/hour)
+    POST /api/v1/audit/single       RATE_LIMIT_SINGLE_PER_MINUTE          (100/min, per API key)
+    POST /api/v1/audit/bulk         RATE_LIMIT_BULK_PER_HOUR              (10/hour, per API key)
+    POST /api/v1/rules/proposals    RATE_LIMIT_RULE_PROPOSALS_PER_HOUR    (20/hour, per organisation)
 
-Per key and not per practice on purpose. A billing centre that runs two integrations takes two
-keys, and a runaway loop in one of them then cannot spend the other's budget — the blast radius of
-a client bug is the integration that has it. It also makes the limit legible in a support
-conversation: the answer to "why are we being throttled" is a key id, which is a thing both sides
-can look at.
+The first two are per key and not per practice on purpose. A billing centre that runs two
+integrations takes two keys, and a runaway loop in one of them then cannot spend the other's
+budget — the blast radius of a client bug is the integration that has it. It also makes the limit
+legible in a support conversation: the answer to "why are we being throttled" is a key id, which is
+a thing both sides can look at.
+
+The third has no key to count against — it is reached through a browser session, not a partner
+integration — so it is counted per organisation instead. See `limit_rule_proposal`.
 
 **The window is fixed, not sliding.** A counter per `(key, endpoint, window index)`, where the
 index is `floor(now / window)`. That admits the classic burst — 100 requests in the last second of
@@ -44,6 +48,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from app.api.apikeys import RequestApiKey
+from app.api.tenancy import RequestOrganization
 from app.config import get_settings
 from app.errors import RateLimitExceeded
 from app.services.api_keys import AuthenticatedKey
@@ -224,10 +229,46 @@ def limit_bulk(key: RequestApiKey) -> Decision:
     )
 
 
+def limit_rule_proposal(organization: RequestOrganization) -> Decision:
+    """The per-hour budget on `POST /api/v1/rules/proposals`, counted per organisation.
+
+    Keyed by `organization_id` rather than by API key, unlike the two limits above — this endpoint
+    is reached through a browser session and has no key. The identity counted is the same
+    `X-Organization-ID` every other write on this endpoint is scoped by, so it is one practice's
+    total volume of reports that is bounded, not any one person's clicks within it. Same
+    single-process caveat as the module docstring: under multiple workers each counts its own share.
+    """
+    settings = get_settings()
+    limit = settings.rate_limit_rule_proposals_per_hour
+    if not settings.rate_limit_enabled:
+        return Decision(
+            allowed=True, limit=limit, remaining=limit, window_seconds=HOUR_SECONDS, reset_after=1
+        )
+
+    decision = limiter().check(
+        organization, bucket="rule_proposal", limit=limit, window_seconds=HOUR_SECONDS
+    )
+    if not decision.allowed:
+        log.info(
+            "organisation %s exceeded the rule-proposal limit (%d per hour)", organization, limit
+        )
+        raise RateLimitExceeded(
+            f"Ratenlimit erreicht: {limit} Meldungen pro Stunde für diese Praxis. Wiederholen Sie "
+            f"die Anfrage in {decision.reset_after} Sekunden. — Rate limit exceeded: {limit} "
+            f"reports per hour for this organisation.",
+            limit=limit,
+            window_seconds=HOUR_SECONDS,
+            retry_after=decision.reset_after,
+            details={"bucket": "rule_proposal", "organization_id": organization},
+        )
+    return decision
+
+
 #: What a path function annotates with. It returns a `Decision` rather than `None` so the route can
 #: put the headers on its own response — see `app.api.audit`.
 SingleRateLimit = Annotated[Decision, Depends(limit_single)]
 BulkRateLimit = Annotated[Decision, Depends(limit_bulk)]
+RuleProposalRateLimit = Annotated[Decision, Depends(limit_rule_proposal)]
 
 
 __all__ = [
@@ -236,8 +277,10 @@ __all__ = [
     "BulkRateLimit",
     "Decision",
     "FixedWindowLimiter",
+    "RuleProposalRateLimit",
     "SingleRateLimit",
     "limit_bulk",
+    "limit_rule_proposal",
     "limit_single",
     "limiter",
 ]

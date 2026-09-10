@@ -13,6 +13,12 @@ that used to be here went stale and misstated the engine by an order of magnitud
     GET  /rules/review-queue        what is still undecided, with the evidence to decide it
     POST /rules/{rule_id}/review    a verdict, stored and merged immediately
     GET  /rules/coverage            where the effort has got to
+    POST /rules/proposals           a pilot's report that a Ziffer has no rule at all
+
+The fourth is a different kind of thing from the other three, and deliberately the simplest
+endpoint in this module. It does not touch the pipeline, merges nothing and enforces nothing — it
+writes one row to `rule_proposals` and returns. See `app.services.rule_proposals` and, on why this
+is a new table rather than an overlay onto `rule_reviews`, the module docstring of `app.db.models`.
 
 **The CSVs are never written.** A verdict goes into `rule_reviews` in Postgres and is merged onto
 the parsed CSVs at load time. `data/rules/` is versioned source data whose changes need a reviewed
@@ -41,13 +47,18 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 from starlette.concurrency import run_in_threadpool
 
-from app.api.deps import pipeline, rule_reviews
+from app.api.deps import pipeline, rule_proposals, rule_reviews
+from app.api.identity import RequestActor
+from app.api.ratelimit import RuleProposalRateLimit
 from app.api.session_auth import VerifiedSession
+from app.api.tenancy import RequestOrganization
+from app.db.models import as_utc
 from app.rules.rule_store import RuleReviewStatus
 from app.schemas import RuleCoverage
+from app.schemas.rule_proposals import RuleProposal, RuleProposalRequest
 from app.schemas.rules import (
     ReviewableRule,
     RuleKind,
@@ -205,4 +216,41 @@ async def review_rule(
     return RuleReviewResult(
         rule=review_service.describe(merged, record),
         coverage=_coverage(),
+    )
+
+
+@router.post("/proposals", response_model=RuleProposal, status_code=201)
+async def propose_rule(
+    request: RuleProposalRequest,
+    response: Response,
+    organization: RequestOrganization,
+    actor: RequestActor,
+    limit: RuleProposalRateLimit,
+) -> RuleProposal:
+    """Record that a pilot hit a Ziffer this engine has no rule for at all.
+
+    The button on an audit report that opens this dialog is `Regel fehlt? Ziffer melden`. Unlike
+    every other write in this router, nothing here is verified against the catalog or the rule
+    tables — a Ziffer that does not exist is itself a data point, and refusing the write would throw
+    the report away over the one thing this endpoint cannot check offline (see `RuleProposalRecord`).
+
+    Scoped to the caller's organisation and rate-limited per organisation — see
+    `app.api.ratelimit.limit_rule_proposal` — because this is a browser-session endpoint with no
+    API key to count against.
+    """
+    response.headers.update(limit.headers())
+    record = await rule_proposals().create(
+        ziffer=request.ziffer,
+        context=request.context,
+        receipt_hash=request.receipt_hash,
+        organization_id=organization,
+        created_by=actor,
+    )
+    log.info("rule proposal for ziffer %s reported by %s", record.ziffer, actor)
+    return RuleProposal(
+        id=str(record.id),
+        ziffer=record.ziffer,
+        context=record.context,
+        receipt_hash=record.receipt_hash,
+        created_at=as_utc(record.created_at),
     )
