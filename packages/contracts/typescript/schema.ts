@@ -3041,6 +3041,11 @@ export interface components {
          */
         PadnextAuditedPosition: {
             /**
+             * Abrechnungsfall Id
+             * @default
+             */
+            abrechnungsfall_id: string;
+            /**
              * Accepted As Claimed
              * @default false
              */
@@ -3113,6 +3118,11 @@ export interface components {
              * @default
              */
             reason: string;
+            /**
+             * Rechnungs Id
+             * @default
+             */
+            rechnungs_id: string;
             /** Recomputed Amount Eur */
             recomputed_amount_eur?: string | null;
             /**
@@ -3120,7 +3130,7 @@ export interface components {
              * @default chargeable
              * @enum {string}
              */
-            verdict: "chargeable" | "blocked" | "out_of_scope" | "unknown_ziffer";
+            verdict: "chargeable" | "blocked" | "out_of_scope" | "unknown_ziffer" | "surcharge_not_modelled";
             /** Verified Rule Ids */
             verified_rule_ids?: string[];
             /** Ziffer */
@@ -3131,6 +3141,11 @@ export interface components {
          * @description Something the audit noticed. Every non-chargeable position produces at least one.
          */
         PadnextFinding: {
+            /**
+             * Abrechnungsfall Id
+             * @default
+             */
+            abrechnungsfall_id: string;
             /** Claimed */
             claimed?: string | null;
             /**
@@ -3142,6 +3157,11 @@ export interface components {
             message: string;
             /** Positionsnr */
             positionsnr?: string | null;
+            /**
+             * Rechnungs Id
+             * @default
+             */
+            rechnungs_id: string;
             /** Recomputed */
             recomputed?: string | null;
             /**
