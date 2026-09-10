@@ -1,3 +1,5 @@
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy"
+
 /**
  * Better Auth's error codes, in German.
  *
@@ -6,33 +8,68 @@
  * thing to translate rather than the prose, because the prose is the library's to change between
  * versions and the codes are its contract.
  *
+ * The codes below are enumerated from the installed `better-auth@1.7.1` itself (`grep -r
+ * BASE_ERROR_CODES` / `ORGANIZATION_ERROR_CODES` under `node_modules/@better-auth/core` and
+ * `node_modules/better-auth`), not guessed — a code this map does not recognise falls through to
+ * the honest fallback at the bottom rather than to a wrong sentence.
+ *
  * **Sign-in never says which half was wrong.** `INVALID_EMAIL_OR_PASSWORD` and a nonexistent
  * account produce the same sentence, deliberately: a login form that distinguishes them is a tool
  * for confirming whether a given address has an account here, and on an application whose user list
  * is a list of people auditing medical invoices that is not a question to answer for free.
  */
+
+/**
+ * The one code `signup-form.tsx` reacts to on its own, beyond translating it: a duplicate address
+ * is the one failure on that form with a next step ("Stattdessen anmelden") rather than just a
+ * sentence. Exported so the form can recognise it without repeating the string.
+ */
+export const DUPLICATE_EMAIL_CODE = "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
+
+const DUPLICATE_EMAIL_MESSAGE =
+  "Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an."
+
 const MESSAGES: Record<string, string> = {
   INVALID_EMAIL_OR_PASSWORD: "E-Mail-Adresse oder Passwort ist falsch.",
   INVALID_EMAIL: "Diese E-Mail-Adresse ist nicht gültig.",
   INVALID_PASSWORD: "E-Mail-Adresse oder Passwort ist falsch.",
   USER_NOT_FOUND: "E-Mail-Adresse oder Passwort ist falsch.",
-  USER_ALREADY_EXISTS: "Für diese E-Mail-Adresse besteht bereits ein Konto.",
+  /**
+   * The one sign-up actually throws — `USER_ALREADY_EXISTS` (no suffix) is a code this library
+   * defines but its `sign-up/email` route never raises; only the longer name below comes back over
+   * the wire. It stayed mapped here too, as a harmless synonym, in case a future version starts
+   * throwing the shorter one — but it was the reason a duplicate-email sign-up used to fall through
+   * to the generic fallback message below instead of this one.
+   */
+  [DUPLICATE_EMAIL_CODE]: DUPLICATE_EMAIL_MESSAGE,
+  USER_ALREADY_EXISTS: DUPLICATE_EMAIL_MESSAGE,
   USER_EMAIL_NOT_FOUND: "E-Mail-Adresse oder Passwort ist falsch.",
-  PASSWORD_TOO_SHORT:
-    "Das Passwort ist zu kurz. Es sind mindestens 12 Zeichen erforderlich.",
+  PASSWORD_TOO_SHORT: `Das Passwort ist zu kurz. Es sind mindestens ${MIN_PASSWORD_LENGTH} Zeichen erforderlich.`,
   PASSWORD_TOO_LONG: "Das Passwort ist zu lang.",
-  EMAIL_NOT_VERIFIED: "Diese E-Mail-Adresse ist noch nicht bestätigt.",
+  /**
+   * Should never reach a person on this deployment — `requireEmailVerification` is off (see
+   * `lib/auth.ts`), so no sign-in ever raises it. Mapped anyway, in the pilot's own terms, in case a
+   * stale account or a future config change ever makes it happen for real.
+   */
+  EMAIL_NOT_VERIFIED:
+    "Pilotbetrieb: E-Mail-Verifizierung deaktiviert. Bitte schreiben Sie an " +
+    "support@azmoth.com, falls Sie keine Einladung erhalten haben.",
   SESSION_EXPIRED:
     "Die Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
   PROVIDER_NOT_FOUND:
     "Die Anmeldung mit Google ist auf diesem Server nicht eingerichtet.",
   SOCIAL_ACCOUNT_ALREADY_LINKED:
     "Dieses Google-Konto ist bereits mit einem anderen Konto verknüpft.",
+  // Both from the `organization()` plugin — `signup-form.tsx` calls `organization.create` in the
+  // same submit as `signUp.email`, so a name collision surfaces through this same map.
+  ORGANIZATION_ALREADY_EXISTS: "Eine Organisation mit diesem Namen besteht bereits.",
+  ORGANIZATION_SLUG_ALREADY_TAKEN:
+    "Dieser Organisationsname ist bereits vergeben. Bitte wählen Sie einen anderen.",
   /**
    * Ours, not the library's — `lib/auth-allowlist.ts` raises it when an address is not on
    * `SIGNUP_ALLOWLIST`. It is here for the same reason every other entry is: without a mapping the
-   * form would render the generic "Die Anmeldung ist fehlgeschlagen" and a legitimate pilot
-   * participant would have no idea that the fix is to ask us to add their address.
+   * form would render the generic fallback below and a legitimate pilot participant would have no
+   * idea that the fix is to ask us to add their address.
    *
    * Deliberately identical for "no allowlist configured" and "address not on it". A stranger must
    * not be able to probe for a misconfigured deployment through a sign-up form; the operator sees
@@ -51,8 +88,13 @@ export function authErrorMessage(
   const code = error?.code
   if (code && code in MESSAGES) return MESSAGES[code]!
   // Not the library's English message: a sentence in the wrong language reads as a bug in the
-  // application rather than as a problem with what was typed, and it can name internals.
-  return "Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut."
+  // application rather than as a problem with what was typed, and it can name internals. Names a
+  // way out (support@azmoth.com) rather than just "try again", because a code missing from
+  // `MESSAGES` is by definition one this map's author never anticipated.
+  return (
+    "Anmeldung momentan nicht möglich. Bitte versuchen Sie es erneut " +
+    "oder schreiben Sie an support@azmoth.com."
+  )
 }
 
 /** The same, for a request that never reached the server at all. */
