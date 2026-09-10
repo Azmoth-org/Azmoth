@@ -49,6 +49,12 @@
 # with pnpm and TypeScript, neither of which is in the traced runtime bundle. See the note on that
 # service in infra/docker/docker-compose.azure.yml.
 #
+# ── infra/docker/docker-compose.azure.yml is REQUIRED at HEAD ────────────────────────────────
+# It is the port-closing override — the thing that makes 8000/3000 unreachable from the internet
+# on both Azure and AWS (historical name; see that file's own header). This script refuses to run
+# without it (the preflight check below), but a refusal five minutes into a deploy is still five
+# minutes wasted. Never delete it, and if it is ever missing: `git checkout HEAD -- infra/docker/docker-compose.azure.yml`.
+#
 # ── Why the source is still shipped ───────────────────────────────────────────────────────────
 # The images carry the application. The VM still needs the two compose files and the Caddyfile, and
 # `git archive HEAD` sends exactly the commit you have checked out with no credential on the server.
@@ -110,6 +116,7 @@ SSH_USER="${SSH_USER:-azmoth}"
 DOMAIN="${DOMAIN:-azmoth.com}"
 ACME_EMAIL="${ACME_EMAIL:-}"
 SKIP_PULL=false
+FRESH_AUTH=false
 
 # Which images, and which tag. The registry namespace is derived from the git remote so that a fork
 # deploys its own images rather than the upstream's; `--registry` overrides it.
@@ -163,10 +170,16 @@ usage: ./scripts/deploy.sh <host> [options]
   --tag <sha>            image tag to deploy       (default: the current HEAD commit)
                          Pass an older sha to ROLL BACK — see docs/deploy/RUNBOOK.md § 6.
   --skip-pull            restart with the images already on the box, do not pull
+  --fresh-auth           clear the box's registry credential (~/.docker/config.json AND the
+                         GHCR_TOKEN in /opt/azmoth/shared/.env) and prompt for a new token.
+                         The escape hatch when a pull fails with "unauthorized" and you
+                         already know why — otherwise this script detects that on its own.
   -h, --help             this
 
 environment (never passed as flags, because they are secrets):
-  GHCR_TOKEN             a GitHub PAT with repo + read:packages. Prompted for if absent.
+  GHCR_TOKEN             a GitHub PAT with repo + read:packages. Prompted for if absent, or if
+                         the token already on the box fails validation. A fresh value here always
+                         replaces whatever is on the box (unlike the other secrets below).
   DATABASE_URL           Neon's DIRECT connection string.   Required on the FIRST deploy only.
   DATABASE_URL_POOLED    Neon's POOLED connection string.   Required on the FIRST deploy only.
 
@@ -187,6 +200,7 @@ while [ $# -gt 0 ]; do
     --registry)   GHCR_REGISTRY="$2"; shift 2 ;;
     --tag)        IMAGE_TAG="$2"; shift 2 ;;
     --skip-pull)  SKIP_PULL=true; shift ;;
+    --fresh-auth) FRESH_AUTH=true; shift ;;
     # Kept as an alias so an old invocation does not die on "unknown option". It meant "do not
     # build on the box", and nothing builds on the box any more, so the nearest honest meaning is
     # "do not pull either — just restart".
@@ -214,6 +228,48 @@ SSH_OPTS=(-o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new)
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m !! %s\033[0m\n' "$*" >&2; }
 die()  { printf '\033[1;31m !! %s\033[0m\n' "$*" >&2; exit 1; }
+
+# ── Shared GHCR-auth recovery ─────────────────────────────────────────────────────────────────
+# Three paths land here: --fresh-auth (the operator already knows auth is broken), the pre-source
+# validation of a token the box already has, and a `docker compose pull` that gets rejected after
+# the source has shipped. All three leave the same two things behind — a `~/.docker/config.json`
+# holding the bad credential, and a `GHCR_TOKEN` line in the persisted .env — so all three clear
+# the same way, and all three then need a fresh token typed in.
+clear_ghcr_auth_on_box() {
+  ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "REMOTE_ROOT='$REMOTE_ROOT' bash -s" <<'CLEARAUTH'
+set -euo pipefail
+sudo rm -f /root/.docker/config.json
+echo "    cleared /root/.docker/config.json"
+if [ -f "$REMOTE_ROOT/shared/.env" ] && grep -q '^GHCR_TOKEN=' "$REMOTE_ROOT/shared/.env"; then
+  tmp="$(mktemp "$REMOTE_ROOT/shared/.env.XXXXXX")"
+  grep -v '^GHCR_TOKEN=' "$REMOTE_ROOT/shared/.env" > "$tmp"
+  mv "$tmp" "$REMOTE_ROOT/shared/.env"
+  chmod 600 "$REMOTE_ROOT/shared/.env"
+  echo "    removed GHCR_TOKEN from $REMOTE_ROOT/shared/.env"
+else
+  echo "    no GHCR_TOKEN on the box to remove"
+fi
+CLEARAUTH
+}
+
+# Writes (or replaces) just the GHCR_TOKEN line in the box's persisted .env, over stdin so the
+# token is never on a command line or in `ps`. Used to retry after a rejected pull without redoing
+# the whole candidate-.env dance — Neon URLs, BETTER_AUTH_SECRET and all — for what is at that
+# point a single stale credential.
+update_ghcr_token_on_box() {
+  printf '%s' "$1" | ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "REMOTE_ROOT='$REMOTE_ROOT' bash -s" <<'UPDATETOKEN'
+set -euo pipefail
+umask 077
+NEW_TOKEN="$(cat)"
+ENV_FILE="$REMOTE_ROOT/shared/.env"
+tmp="$(mktemp "$REMOTE_ROOT/shared/.env.XXXXXX")"
+grep -v '^GHCR_TOKEN=' "$ENV_FILE" > "$tmp" 2>/dev/null || true
+printf 'GHCR_TOKEN="%s"\n' "$NEW_TOKEN" >> "$tmp"
+mv "$tmp" "$ENV_FILE"
+chmod 600 "$ENV_FILE"
+echo "    GHCR_TOKEN updated on the box"
+UPDATETOKEN
+}
 
 # ── Resolve and check the sign-up allowlist ───────────────────────────────────────────────────
 #
@@ -442,6 +498,11 @@ done
 # Skipped entirely on a re-deploy where the box already has one — the same "written once" doctrine
 # as the other secrets.
 
+if [ "$FRESH_AUTH" = true ]; then
+  say "Clearing registry credentials on the VM (--fresh-auth)"
+  clear_ghcr_auth_on_box
+fi
+
 if [ -z "$GHCR_USER" ]; then
   # `gh` knows who you are; fall back to the registry namespace, which is right for a personal
   # account and wrong-but-harmless for an org (any org member's login authenticates).
@@ -534,8 +595,59 @@ elif ! command -v jq >/dev/null 2>&1; then
   warn "jq is not installed locally, so the registry manifest check is skipped."
   warn "A missing image will surface as a failed 'docker compose pull' on the VM instead."
 else
-  warn "no token in this shell (the box has one), so the registry manifest check is skipped."
-  warn "A missing image will surface as a failed 'docker compose pull' on the VM instead."
+  # No token in THIS shell, but the box already has one — the routine re-deploy case. Rather than
+  # skip the check entirely (the old behaviour), validate the box's own stored token, on the box,
+  # before Docker is installed or a single byte of source ships. This is the fix for a real
+  # incident: a stale ~/.docker/config.json AND a stale GHCR_TOKEN in .env both survived from a
+  # prior failed attempt, and the deploy read the stale value without ever checking it, discovering
+  # the problem only after five minutes of shipping the source and installing Docker.
+  say "Validating the registry token already on the VM"
+  rc=0
+  ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
+    "REMOTE_ROOT='$REMOTE_ROOT' ENGINE_IMAGE='$ENGINE_IMAGE' IMAGE_TAG='$IMAGE_TAG' bash -s" \
+    <<'TOKENCHECK' || rc=$?
+set -euo pipefail
+if ! command -v docker >/dev/null 2>&1; then
+  echo "    docker isn't installed on the box yet — the bootstrap step below installs it, and the"
+  echo "    pull step after that will be the first real test of this token"
+  exit 0
+fi
+set -a
+# shellcheck disable=SC1091  # a deployment location, not a file in this repo
+. "$REMOTE_ROOT/shared/.env"
+set +a
+if [ -z "${GHCR_TOKEN:-}" ]; then
+  echo "    the box has no GHCR_TOKEN after all — nothing to validate"
+  exit 0
+fi
+if ! printf '%s' "$GHCR_TOKEN" \
+   | sudo docker login ghcr.io --username "${GHCR_USER:-x}" --password-stdin >/dev/null 2>&1; then
+  exit 9
+fi
+if ! sudo docker manifest inspect "$ENGINE_IMAGE:$IMAGE_TAG" >/dev/null 2>&1; then
+  exit 9
+fi
+echo "    valid — can see $ENGINE_IMAGE:$IMAGE_TAG"
+TOKENCHECK
+
+  if [ "$rc" -eq 9 ]; then
+    warn "the registry token already on this box is stale, or can't see $ENGINE_IMAGE:$IMAGE_TAG."
+    warn "Clearing it now — before spending five minutes shipping the source — and asking for a fresh one."
+    clear_ghcr_auth_on_box
+    say "GitHub registry token"
+    cat >&2 <<'TOKENHELP2'
+    Create a CLASSIC personal access token with the scopes `repo` and `read:packages`:
+
+        https://github.com/settings/tokens/new?scopes=repo,read:packages&description=azmoth-vm-pull
+
+TOKENHELP2
+    read -r -s -p "    Paste it (not echoed): " GHCR_TOKEN
+    echo
+    [ -n "$GHCR_TOKEN" ] || die "no token given, and the box's was stale — the pull would fail"
+    box_has_token=false
+  elif [ "$rc" -ne 0 ]; then
+    warn "could not validate the box's token (ssh/docker error) — the pull step will tell you for certain."
+  fi
 fi
 
 # ── 1. Bootstrap the VM ───────────────────────────────────────────────────────────────────────
@@ -779,6 +891,12 @@ if [ "$box_has_env" = false ]; then
        DATABASE_URL_POOLED='postgresql+asyncpg://USER:PW@ep-xxx-pooler.eu-central-1.aws.neon.tech/azmoth?sslmode=require' \\
          ./scripts/deploy.sh $HOST
 
+   !! IMPORTANT: wrap each URL in SINGLE QUOTES, exactly as above. Neon's strings end in
+      '...?sslmode=require&channel_binding=require', and an unquoted '&' is a bash background
+      operator — the shell launches everything before it as a job and truncates the rest, so the
+      export looks like it succeeded and the failure only shows up later as an opaque
+      authentication error against the VM.
+
    The difference between them is the '-pooler' in the hostname. docs/deploy/RUNBOOK.md § 3
    is the click-by-click version."
   fi
@@ -792,6 +910,18 @@ check_neon_url() {
     postgresql://*|postgres://*|postgresql+asyncpg://*) : ;;
     *) die "$label does not look like a Postgres URL: ${url%%:*}://…
    Expected postgresql:// or postgresql+asyncpg://" ;;
+  esac
+
+  # Not fatal: a non-Neon Postgres is conceivable and the rest of this deployment does not depend
+  # on it being Neon specifically. But every other string in this file's history has been a Neon
+  # URL missing its '@' (the unquoted-'&' truncation above, cutting the string mid-host) or pasted
+  # from the wrong place entirely, and both are worth a word before they turn into a migration that
+  # fails against nothing.
+  case "$url" in
+    *@*neon.tech*) : ;;
+    *) warn "$label doesn't look like a Neon URL (no '@' before a neon.tech host)."
+       warn "If that's deliberate — a non-Neon Postgres — ignore this. If not, it may have been"
+       warn "truncated by an unquoted '&'; see the quoting warning above." ;;
   esac
 
   # Quotes are rejected because the value is written into the env file wrapped in double quotes —
@@ -1051,7 +1181,9 @@ if [ -f "$ENV_FILE" ]; then
   # The `grep -q '^KEY='` is anchored so a commented-out line does not count as present. The
   # non-empty test on the candidate side matters for a re-deploy, where DATABASE_URL was not passed
   # in this shell and the candidate's value is blank — backfilling that would blank the real one.
-  for key in SIGNUP_ALLOWLIST DATABASE_URL DATABASE_URL_POOLED GHCR_USER GHCR_TOKEN; do
+  #
+  # GHCR_TOKEN is NOT in this list — see below.
+  for key in SIGNUP_ALLOWLIST DATABASE_URL DATABASE_URL_POOLED GHCR_USER; do
     if grep -q "^$key=" "$ENV_FILE"; then
       echo "    $key already set — left untouched"
       continue
@@ -1068,12 +1200,46 @@ if [ -f "$ENV_FILE" ]; then
     printf '\n# -- added by deploy.sh on %s --\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$ENV_FILE"
     printf '%s\n' "$line" >> "$ENV_FILE"
     case "$key" in
-      GHCR_TOKEN|DATABASE_URL|DATABASE_URL_POOLED)
+      DATABASE_URL|DATABASE_URL_POOLED)
         echo "    $key was MISSING and has been appended (value not printed)" ;;
       *)
         echo "    $key was MISSING and has been appended: $value" ;;
     esac
   done
+
+  # ── GHCR_TOKEN: deliberately NOT write-once ─────────────────────────────────────────────────
+  # Every other secret here is written once because overwriting it breaks something (a new
+  # BETTER_AUTH_SECRET logs everyone out; a different Neon URL points at the wrong database). A
+  # registry token has no such downside — it is validated against ghcr.io before every pull, not
+  # trusted blind — and it rotates and expires on GitHub's own schedule, not this deployment's. The
+  # old write-once treatment of this key was a real incident: an operator supplied a fresh, working
+  # token on the command line, and the deploy silently kept the box's stale one instead because a
+  # GHCR_TOKEN line — any GHCR_TOKEN line — already existed. So: if this run supplies a non-empty
+  # value, it replaces whatever is on the box. If it supplies nothing, the box's existing value
+  # (validated above, before the source ever shipped) is left alone.
+  line="$(grep "^GHCR_TOKEN=" "$CANDIDATE" || true)"
+  value="${line#*=}"
+  probe="${value%\"}"; probe="${probe#\"}"
+  if [ -z "$probe" ]; then
+    if grep -q "^GHCR_TOKEN=" "$ENV_FILE"; then
+      echo "    GHCR_TOKEN not supplied this run — keeping the box's existing value"
+    else
+      echo "    !! GHCR_TOKEN is MISSING here and was not supplied — set it by hand in $ENV_FILE"
+    fi
+  else
+    if grep -q "^GHCR_TOKEN=" "$ENV_FILE"; then
+      tmp="$(mktemp "$(dirname "$ENV_FILE")/.env.XXXXXX")"
+      grep -v "^GHCR_TOKEN=" "$ENV_FILE" > "$tmp"
+      printf '%s\n' "$line" >> "$tmp"
+      mv "$tmp" "$ENV_FILE"
+      chmod 600 "$ENV_FILE"
+      echo "    GHCR_TOKEN updated with the value supplied this run (not printed)"
+    else
+      printf '\n# -- added by deploy.sh on %s --\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$ENV_FILE"
+      printf '%s\n' "$line" >> "$ENV_FILE"
+      echo "    GHCR_TOKEN was MISSING and has been appended (value not printed)"
+    fi
+  fi
 else
   echo "    generating $ENV_FILE"
   mv "$CANDIDATE" "$ENV_FILE"
@@ -1097,6 +1263,12 @@ say "4/5 Pulling, migrating and starting"
 #
 # Passed on the command line rather than over stdin, unlike the secrets: an image reference in `ps`
 # output is not a disclosure.
+#
+# Wrapped in a function, and not just inlined, so it can be retried ONCE: a `docker compose pull`
+# rejected with "unauthorized"/"denied" exits 42 (a sentinel distinct from every other failure in
+# this step), and the caller below clears the box's credential, prompts for a fresh token, and
+# calls this again rather than making the operator re-run the whole script from scratch.
+run_pull_migrate_start() {
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "
       REMOTE_ROOT='$REMOTE_ROOT' SKIP_PULL='$SKIP_PULL' \
       ENGINE_IMAGE='$ENGINE_IMAGE' WEB_IMAGE='$WEB_IMAGE' \
@@ -1193,10 +1365,18 @@ if [ "$SKIP_PULL" != "true" ]; then
   # `pull` and not `up --pull always`: a failure here must stop before anything is restarted. The
   # running stack keeps serving the previous tag while this fails, which is the whole point of
   # separating the two steps.
-  if ! "${COMPOSE[@]}" pull --quiet; then
+  pull_output=""
+  if ! pull_output="$("${COMPOSE[@]}" pull --quiet 2>&1)"; then
+    echo "$pull_output" >&2
     echo >&2
     echo "!! docker compose pull failed." >&2
     echo "   The previous release is still running and still serving — nothing was restarted." >&2
+    if printf '%s' "$pull_output" | grep -qiE 'unauthorized|denied'; then
+      echo >&2
+      echo "   The registry rejected the credential — exiting 42 so the caller can retry with a" >&2
+      echo "   fresh token instead of failing the whole deploy." >&2
+      exit 42
+    fi
     echo >&2
     echo "   Most likely: the images for $IMAGE_TAG are not in the registry, or the token has" >&2
     echo "   expired. Check:" >&2
@@ -1300,6 +1480,26 @@ echo "    pruning images older than a week (a week of rollback targets is kept)"
 sudo docker image prune -f --filter "until=168h" 2>/dev/null | tail -1 || true
 df -h / | awk 'NR==2 {printf "    disk: %s used of %s (%s)\n", $3, $2, $5}'
 DEPLOY
+}
+
+rc=0
+run_pull_migrate_start || rc=$?
+if [ "$rc" -eq 42 ]; then
+  warn "the registry token on the box was rejected (unauthorized/denied) during the pull."
+  warn "Clearing it and asking for a fresh one — same recovery as --fresh-auth — then retrying once."
+  clear_ghcr_auth_on_box
+  say "GitHub registry token (retry after a rejected pull)"
+  read -r -s -p "    Paste a fresh token (not echoed): " GHCR_TOKEN
+  echo
+  [ -n "$GHCR_TOKEN" ] || die "no token given — cannot retry the pull"
+  update_ghcr_token_on_box "$GHCR_TOKEN"
+  say "Retrying the pull with the fresh token"
+  run_pull_migrate_start || die "the pull failed again even with a fresh token.
+   Check the token's scopes (repo + read:packages) and that '$GHCR_USER' actually has access to
+   $GHCR_REGISTRY.  https://github.com/settings/tokens"
+elif [ "$rc" -ne 0 ]; then
+  exit "$rc"
+fi
 
 # ── 5. Verify ─────────────────────────────────────────────────────────────────────────────────
 
