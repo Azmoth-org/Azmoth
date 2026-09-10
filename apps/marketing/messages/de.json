@@ -12,7 +12,8 @@
     "kontakt": "Kontakt",
     "impressum": "Impressum",
     "datenschutz": "Datenschutz",
-    "anmelden": "Termin buchen",
+    "terminBuchen": "Termin buchen",
+    "login": "Anmelden",
     "pilot": "Pilot-Zugang anfordern",
     "ablauf": "So funktioniert es",
     "entwickler": "Entwickler",
@@ -46,8 +47,8 @@
       "badge": "Für Abrechnungsstellen, PVS-Hersteller und Privatliquidation nach GOÄ",
       "titel": "Jede Position geprüft. Jeder Befund belegt.",
       "untertitel": "Azmoth prüft PADnext-Lieferungen deterministisch gegen die GOÄ — mit Paragraph und Beweis neben jedem Befund. Kein Sprachmodell, keine Schätzung.",
-      "ctaPrimaer": "Demo-Termin vereinbaren",
-      "hinweis": "Ein kurzes Gespräch, keine Verpflichtung — wir zeigen Ihnen die Prüfung an einer synthetischen Beispiellieferung. Der Pilotbetrieb ist derzeit auf freigeschaltete Teilnehmer beschränkt."
+      "ctaPrimaer": "Am Pilotprogramm teilnehmen",
+      "hinweis": "Kostenlos, unverbindlich, ausschließlich mit synthetischen Testdaten. Der Pilotbetrieb ist derzeit auf freigeschaltete Teilnehmer beschränkt."
     },
     "mockup": {
       "ariaLabel": "Beispielansicht eines Azmoth-Prüfberichts",
@@ -428,6 +429,64 @@
     "pilotText": "Schreiben Sie uns kurz, welche Software Sie einsetzen und mit welchem Volumen Sie arbeiten. Wir melden uns mit einem Termin und dem Generator für synthetische Testlieferungen.",
     "pilotCta": "Pilot-Zugang anfordern"
   },
+  "pilot": {
+    "hero": {
+      "eyebrow": "Pilotprogramm",
+      "titel": "Prüfen Sie Azmoth an Ihren eigenen Fällen, bevor Sie sich entscheiden",
+      "untertitel": "Sechs bis acht Wochen, kostenlos, ausschließlich mit synthetischen Testdaten. Sie beurteilen, ob die Befunde stimmen — wir bauen danach, was Ihre Abrechnungsstelle tatsächlich braucht.",
+      "ctaPrimaer": "Pilot-Zugang anfordern",
+      "hinweis": "Der Pilotbetrieb ist derzeit auf freigeschaltete Teilnehmer beschränkt. Ein kurzes Gespräch entscheidet, ob wir zueinander passen — ohne Verpflichtung."
+    },
+    "umfang": {
+      "eyebrow": "Ablauf",
+      "titel": "Was Sie bekommen — und worum wir bitten",
+      "untertitel": "Formlos kündbar von beiden Seiten, jederzeit, ohne Angabe von Gründen. Nach Ende des Piloten löschen wir die überlassenen Testlieferungen und die daraus erzeugten Berichte.",
+      "bekommtTitel": "Sie bekommen",
+      "bekommt": [
+        "Vollen Zugang zur Engine für die Dauer des Piloten",
+        "Einen Generator für synthetische PADnext-Testlieferungen",
+        "Persönliche Einweisung und Support innerhalb eines Werktags",
+        "Direkten Einfluss auf die Produkt-Roadmap"
+      ],
+      "bittenTitel": "Wir bitten um",
+      "bitten": [
+        "Ausschließlich synthetische Testlieferungen — keine echten Patientendaten",
+        "Rückmeldung zu Prüfergebnissen, Bedienung und Berichtsform",
+        "Vertrauliche Behandlung von Testdaten, Berichten und Rückmeldungen",
+        "Ein kurzes Abschlussgespräch nach sechs bis acht Wochen"
+      ]
+    },
+    "architektur": {
+      "eyebrow": "Architektur",
+      "titel": "Eine Lieferung, ein Weg, ein Bericht",
+      "untertitel": "Dieselbe Pipeline, die jede Testlieferung im Pilotbetrieb durchläuft — nichts davon ändert sich zwischen Pilot und Echtbetrieb."
+    },
+    "verifizierbarkeit": {
+      "eyebrow": "Statt eines Zertifikats",
+      "titel": "Was technisch erzwungen ist — nicht nur zugesagt",
+      "untertitel": "Kein ISO 27001, kein SOC 2, kein TÜV-Siegel: Für ein sechswöchiges Pilotprogramm gibt es davon ehrlicherweise keines zu zeigen. Was es stattdessen gibt, lässt sich nachrechnen.",
+      "punkte": [
+        {
+          "titel": "Nur synthetische Daten — im Code, nicht nur im Vertrag",
+          "text": "Eine Lieferung, die sich als Echtdaten ausweist, weist die Anwendung ab. Eine Lieferung, die dazu keine Angabe macht, ebenso. Das prüft die Anwendung selbst, nicht nur eine Vertragsklausel."
+        },
+        {
+          "titel": "Reproduzierbar bis auf den Hash",
+          "text": "Jeder Prüfbericht trägt einen Receipt-Hash über Katalog, Regeln, Logik, Solver, Policy und Eingabe. Dieselbe Lieferung ergibt denselben Hash — heute, in einer Woche, nach jedem Neustart."
+        },
+        {
+          "titel": "Keine Blackbox-Bewertung",
+          "text": "Jede Position landet in einer von drei belegten Kategorien statt in einem Risikowert. Was wir nicht beweisen können, nennen wir „unbestätigt“ — nicht „unauffällig“."
+        }
+      ]
+    },
+    "cta": {
+      "titel": "Zehn Plätze, freigeschaltet nacheinander",
+      "text": "Schreiben Sie uns oder vereinbaren Sie ein kurzes Gespräch — wir prüfen gemeinsam, ob der Pilot zu Ihrem Volumen und Ihrer Software passt.",
+      "primaer": "Gespräch vereinbaren",
+      "sekundaer": "Lieber per E-Mail? Kontakt aufnehmen"
+    }
+  },
   "nichtGefunden": {
     "titel": "Seite nicht gefunden",
     "text": "Diese Adresse gibt es nicht — oder nicht mehr.",
@@ -443,6 +502,8 @@
     "faqBeschreibung": "Antworten zu Regelwerk, Freigabe, Datenhaltung und Einrichtung von Azmoth.",
     "kontaktTitel": "Kontakt",
     "kontaktBeschreibung": "Fragen zur Einführung von Azmoth in Ihrer Praxis? Schreiben Sie uns.",
+    "pilotTitel": "Pilotprogramm",
+    "pilotBeschreibung": "Sechs bis acht Wochen, kostenlos, ausschließlich mit synthetischen Testdaten: Prüfen Sie Azmoth an Ihren eigenen GOÄ-Fällen, bevor Sie sich entscheiden.",
     "impressumTitel": "Impressum",
     "impressumBeschreibung": "Anbieterkennzeichnung nach § 5 DDG und § 18 Abs. 2 MStV.",
     "datenschutzTitel": "Datenschutz",

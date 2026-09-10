@@ -24,19 +24,22 @@ import { Link } from "@/i18n/navigation";
 import { routes, siteConfig } from "@/lib/site";
 
 /**
- * The site navigation: the resizable glass bar, with dropdowns hanging off two of its four items.
+ * The site navigation: the resizable glass bar, with dropdowns hanging off two of its five items.
  *
  * The shell and the dropdown are `@workspace/ui`'s — see `resizable-navbar.tsx` for why those are
  * one component split in two. What lives here is the only part that is genuinely this site's: the
  * information architecture, the German labels, and which of the three origins each link points at.
  *
- * ## Why four top-level items and not seven
+ * ## Why five top-level items and not eight
  *
- * The site has seven routes plus two outbound origins. Listing all of them flat is the version
+ * The site has eight routes plus two outbound origins. Listing all of them flat is the version
  * this replaces, and it forced two compromises: the documentation link sat between "Über uns" and
  * "Kontakt" with nothing to say it left the site, and there was nowhere to put the API reference
- * at all — it existed only in the footer. Grouping into four gives every destination a place and
+ * at all — it existed only in the footer. Grouping into five gives every destination a place and
  * gives the outbound ones a line of copy explaining that they are outbound.
+ *
+ * `/pilot` is the one plain link with no dropdown of its own, same as "So funktioniert es": it is
+ * a destination in itself, not a category with siblings to group.
  *
  * ## Three kinds of link, and they are not interchangeable
  *
@@ -52,12 +55,21 @@ import { routes, siteConfig } from "@/lib/site";
  */
 export function SiteHeader({
   bookingUrl,
+  loginUrl,
   docs,
 }: {
   /** The one booking CTA. `login` and `demo` used to be separate destinations; both resolve to
    * the same Cal.com link now (see `getProductLinks()`), so two buttons that did the same thing
    * collapsed into one. */
   bookingUrl: string;
+  /**
+   * Where an existing user signs in. The same `getProductLinks().login` value as `bookingUrl`
+   * today — there is no hosted app yet, see `getProductLinks()` — but it is threaded through as
+   * its own prop rather than reusing `bookingUrl` so this link keeps pointing at the product's
+   * actual sign-in destination once that function switches back to `appHref(...)`, with no call
+   * site here to update.
+   */
+  loginUrl: string;
   /** `docs.azmoth.com` — the orientation material, its own Next application. */
   docs: string;
 }) {
@@ -88,6 +100,7 @@ export function SiteHeader({
   const mobileLinks = [
     { href: routes.funktionen, label: t("funktionen") },
     { href: "/#loesung", label: t("ablauf") },
+    { href: routes.pilot, label: t("pilot") },
     { href: routes.faq, label: t("faq") },
     { href: routes.ueberUns, label: t("ueberUns") },
     { href: routes.kontakt, label: t("kontakt") },
@@ -139,6 +152,15 @@ export function SiteHeader({
         <Link href="/#loesung" className={className}>
           {children}
         </Link>
+      ),
+    },
+    {
+      name: t("pilot"),
+      link: routes.pilot,
+      render: ({ className, children }) => (
+        <TransitionLink href={routes.pilot} className={className}>
+          {children}
+        </TransitionLink>
       ),
     },
     {
@@ -226,8 +248,16 @@ export function SiteHeader({
         <NavItems items={items} />
 
         <div className="relative z-10 flex shrink-0 items-center gap-2">
+          {/*
+            A plain ghost button, not `ButtonLink`'s default styling: this is the quiet exit for a
+            visitor who already has access, and it must not compete with "Pilot" in `NavItems` or
+            with the booking button beside it — see the component doc for the hierarchy.
+          */}
+          <ButtonLink external href={loginUrl} variant="ghost" size="sm">
+            {t("login")}
+          </ButtonLink>
           <ButtonLink external href={bookingUrl} size="sm">
-            {t("anmelden")}
+            {t("terminBuchen")}
             <CalendarIcon data-icon="inline-end" />
           </ButtonLink>
         </div>
@@ -267,8 +297,11 @@ export function SiteHeader({
           </nav>
           <div className="mt-3 flex flex-col gap-2 border-t border-azm-hairline pt-3">
             <ButtonLink external href={bookingUrl}>
-              {t("anmelden")}
+              {t("terminBuchen")}
               <CalendarIcon data-icon="inline-end" />
+            </ButtonLink>
+            <ButtonLink external href={loginUrl} variant="ghost" onClick={close}>
+              {t("login")}
             </ButtonLink>
           </div>
         </MobileNavMenu>

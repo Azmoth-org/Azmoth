@@ -2,7 +2,7 @@ import { PageTransitionOverlay } from "@/components/page-transition-overlay";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { SmoothScroll } from "@/components/smooth-scroll";
-import { getCalComUrl, getDocsUrl } from "@/lib/site";
+import { getDocsUrl, getProductLinks } from "@/lib/site";
 
 /**
  * The chrome around every marketing page.
@@ -20,6 +20,7 @@ import { getCalComUrl, getDocsUrl } from "@/lib/site";
  */
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const docsUrl = getDocsUrl();
+  const links = getProductLinks();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -30,7 +31,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         Zum Inhalt springen
       </a>
 
-      <SiteHeader bookingUrl={getCalComUrl()} docs={docsUrl} />
+      <SiteHeader bookingUrl={links.demo} loginUrl={links.login} docs={docsUrl} />
 
       {/*
         `pt-16` for the header, which is `fixed` rather than `sticky` since the rebuild — see

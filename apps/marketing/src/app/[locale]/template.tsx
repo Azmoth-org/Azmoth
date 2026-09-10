@@ -32,6 +32,7 @@ import { routes } from "@/lib/site";
 const PAGE_LABELS: Record<string, string> = {
   [routes.home]: "startseite",
   [routes.funktionen]: "funktionen",
+  [routes.pilot]: "pilot",
   [routes.faq]: "faq",
   [routes.ueberUns]: "ueberUns",
   [routes.kontakt]: "kontakt",
