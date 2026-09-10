@@ -12,7 +12,8 @@
     "kontakt": "Kontakt",
     "impressum": "Impressum",
     "datenschutz": "Datenschutz",
-    "anmelden": "Termin buchen",
+    "terminBuchen": "Termin buchen",
+    "login": "Anmelden",
     "pilot": "Pilot-Zugang anfordern",
     "ablauf": "So funktioniert es",
     "entwickler": "Entwickler",
@@ -46,8 +47,8 @@
       "badge": "Für Abrechnungsstellen, PVS-Hersteller und Privatliquidation nach GOÄ",
       "titel": "Jede Position geprüft. Jeder Befund belegt.",
       "untertitel": "Azmoth prüft PADnext-Lieferungen deterministisch gegen die GOÄ — mit Paragraph und Beweis neben jedem Befund. Kein Sprachmodell, keine Schätzung.",
-      "ctaPrimaer": "Demo-Termin vereinbaren",
-      "hinweis": "Ein kurzes Gespräch, keine Verpflichtung — wir zeigen Ihnen die Prüfung an einer synthetischen Beispiellieferung. Der Pilotbetrieb ist derzeit auf freigeschaltete Teilnehmer beschränkt."
+      "ctaPrimaer": "Am Pilotprogramm teilnehmen",
+      "hinweis": "Kostenlos, unverbindlich, ausschließlich mit synthetischen Testdaten. Der Pilotbetrieb ist derzeit auf freigeschaltete Teilnehmer beschränkt."
     },
     "mockup": {
       "ariaLabel": "Beispielansicht eines Azmoth-Prüfberichts",

@@ -55,12 +55,21 @@ import { routes, siteConfig } from "@/lib/site";
  */
 export function SiteHeader({
   bookingUrl,
+  loginUrl,
   docs,
 }: {
   /** The one booking CTA. `login` and `demo` used to be separate destinations; both resolve to
    * the same Cal.com link now (see `getProductLinks()`), so two buttons that did the same thing
    * collapsed into one. */
   bookingUrl: string;
+  /**
+   * Where an existing user signs in. The same `getProductLinks().login` value as `bookingUrl`
+   * today — there is no hosted app yet, see `getProductLinks()` — but it is threaded through as
+   * its own prop rather than reusing `bookingUrl` so this link keeps pointing at the product's
+   * actual sign-in destination once that function switches back to `appHref(...)`, with no call
+   * site here to update.
+   */
+  loginUrl: string;
   /** `docs.azmoth.com` — the orientation material, its own Next application. */
   docs: string;
 }) {
@@ -239,8 +248,16 @@ export function SiteHeader({
         <NavItems items={items} />
 
         <div className="relative z-10 flex shrink-0 items-center gap-2">
+          {/*
+            A plain ghost button, not `ButtonLink`'s default styling: this is the quiet exit for a
+            visitor who already has access, and it must not compete with "Pilot" in `NavItems` or
+            with the booking button beside it — see the component doc for the hierarchy.
+          */}
+          <ButtonLink external href={loginUrl} variant="ghost" size="sm">
+            {t("login")}
+          </ButtonLink>
           <ButtonLink external href={bookingUrl} size="sm">
-            {t("anmelden")}
+            {t("terminBuchen")}
             <CalendarIcon data-icon="inline-end" />
           </ButtonLink>
         </div>
@@ -280,8 +297,11 @@ export function SiteHeader({
           </nav>
           <div className="mt-3 flex flex-col gap-2 border-t border-azm-hairline pt-3">
             <ButtonLink external href={bookingUrl}>
-              {t("anmelden")}
+              {t("terminBuchen")}
               <CalendarIcon data-icon="inline-end" />
+            </ButtonLink>
+            <ButtonLink external href={loginUrl} variant="ghost" onClick={close}>
+              {t("login")}
             </ButtonLink>
           </div>
         </MobileNavMenu>

@@ -160,7 +160,6 @@ function HeroBackdrop() {
 
 function Hero() {
   const t = useTranslations("startseite.hero");
-  const links = getProductLinks();
 
   return (
     <Section
@@ -236,18 +235,18 @@ function Hero() {
         </div>
 
         {/*
-          One CTA, not two: `demo` and `signup` both resolve to the same Cal.com link while
-          there is no partner pipeline and no hosted app (see `getProductLinks()`), so a second
-          button here would just be the first one's text in a different shape.
+          One CTA, not two, and it goes to `/pilot` rather than straight to booking: that page
+          carries the pilot programme's full scope and the "freigeschaltete Teilnehmer" caveat, so
+          a visitor lands on the honest ask (request access) rather than a call cold.
         */}
         <div
           className="azm-enter mt-2 w-full sm:w-auto"
           style={{ "--azm-enter-delay": "180ms" } as React.CSSProperties}
         >
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <ButtonLink external href={links.demo} size="lg">
+            <ButtonLink href={routes.pilot} size="lg">
               {t("ctaPrimaer")}
-              <CalendarIcon data-icon="inline-end" />
+              <ArrowRightIcon data-icon="inline-end" />
             </ButtonLink>
           </div>
         </div>
