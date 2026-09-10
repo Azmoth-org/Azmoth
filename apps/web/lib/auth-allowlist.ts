@@ -114,9 +114,9 @@ export function mayRegister(
  *
  * Better Auth's own codes are its contract and are translated by code rather than by prose in
  * `components/auth/auth-messages.ts`; this one is ours and joins them there, so the sign-up form
- * renders the German sentence below instead of falling through to the generic
- * "Die Anmeldung ist fehlgeschlagen". Without a code the message would be correct on the wire and
- * invisible on the screen.
+ * renders the German sentence below instead of falling through to the generic "Anmeldung momentan
+ * nicht möglich" fallback. Without a code the message would be correct on the wire and invisible
+ * on the screen.
  */
 export const SIGNUP_REFUSED_CODE = "SIGNUP_NOT_ALLOWED"
 

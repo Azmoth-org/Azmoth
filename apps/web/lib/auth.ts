@@ -165,8 +165,25 @@ function buildAuth() {
 
     emailAndPassword: {
       enabled: true,
-      /** 12, not Better Auth's default 8. See the module docstring. */
+      /**
+       * 12, not Better Auth's default 8. See the module docstring.
+       *
+       * The pilot's full policy also wants at least 3 of {lower, upper, digit, symbol} — this
+       * installed version (1.7.1) has no character-class option on `emailAndPassword` to express
+       * that with (only `minPasswordLength`/`maxPasswordLength` exist; see this package's
+       * `EmailAndPasswordOptions` type). That half of the policy is therefore enforced client-side
+       * instead, in `lib/password-policy.ts` — this length floor is what still holds if a request
+       * bypasses the form entirely.
+       */
       minPasswordLength: 12,
+      /**
+       * Email verification disabled for the pilot phase. There is no SMTP relay configured (see
+       * the module docstring), so turning this on would create accounts nobody could ever use.
+       * Admission is instead controlled server-side by `SIGNUP_ALLOWLIST` (`lib/auth-allowlist.ts`),
+       * checked in the `user.create.before` hook below for every account-creation path. Enable this
+       * once the pilot moves to paying customers with real inboxes — AWS SES is the obvious relay,
+       * at roughly €0.10 per 1,000 emails.
+       */
       requireEmailVerification: false,
     },
 

@@ -23,23 +23,26 @@
  * forward the user id it records in its audit log; leaving them open would mean the UI is protected
  * and the data behind it is not.
  *
- * ## The second gate: onboarding
+ * ## The second gate: onboarding — disabled for the pilot
  *
- * A session that has never entered its practice details is sent to `/onboarding`, and the check is
- * the same shape as the one above it — a cookie, because middleware has no database and cannot ask
- * whether a row exists in `doctor_profiles` any more than it can verify a session token.
+ * This used to send a session that had never entered its practice details to `/onboarding` before
+ * it could reach anything else. It is switched off here rather than in `/onboarding` itself: the
+ * pilot persona is a billing bureau working from synthetic data, and a wizard asking for a doctor's
+ * LANR and a practice's BSNR before the dashboard is reachable at all is exactly the friction (and
+ * the personal data) the pilot's first run is supposed to not require. Nothing downstream *needs*
+ * that data — see the next paragraph — so a fresh sign-up now goes straight to the dashboard.
  *
- * The two gates are not the same kind of thing, though, and the difference is worth being plain
- * about. The session check is a **security** boundary with an authoritative counterpart in
- * `app/(app)/layout.tsx`; this one is a **workflow** gate with no counterpart, because nothing is
- * protected by it. Onboarding data is what a practice puts on its own invoices: a forged
- * `onboarding_complete=1` buys the forger nothing except not having typed their own LANR. If that
- * ever stops being true — if some screen comes to *require* a stored BSNR — the check that enforces
- * it belongs in that screen with the database in front of it, not here.
+ * The mechanism is left in place rather than deleted: `lib/onboarding/cookie.ts` still holds the
+ * cookie, `/onboarding` and `/api/onboarding` still work for anyone who navigates there directly,
+ * and `forgetOnboarding` below still clears the cookie on sign-out. Re-enabling the gate is one
+ * `if` reverted here, not a rebuild.
  *
- * `lib/onboarding/cookie.ts` holds the cookie and the reasoning; `app/onboarding/page.tsx` is what
- * makes it self-correcting, by asking the database and re-issuing the cookie for a session that has
- * already onboarded on some other device.
+ * The two gates were never the same kind of thing, and that is what makes turning one off safe. The
+ * session check above is a **security** boundary with an authoritative counterpart in
+ * `app/(app)/layout.tsx`; onboarding was a **workflow** gate with no counterpart, because nothing
+ * was ever protected by it — a forged `onboarding_complete=1` bought a forger nothing except not
+ * having typed their own LANR. If some screen ever comes to *require* a stored BSNR, the check that
+ * enforces it belongs in that screen with the database in front of it, not here.
  *
  * ## The third gate, and why it runs before the other two
  *
@@ -99,21 +102,6 @@ const PUBLIC_PREFIXES = [
   "/demo",
   "/api/demo",
 ] as const
-
-/**
- * Paths a signed-in session reaches whether or not it has onboarded.
- *
- * Short, and every entry is here to stop a loop rather than to grant an exemption. `/onboarding` is
- * the destination — redirecting it to itself is an infinite redirect the browser reports as
- * `ERR_TOO_MANY_REDIRECTS` with nothing on screen to explain it. `/api/onboarding` is the endpoint
- * that form posts to and the resume route that issues the cookie: gating either behind the cookie
- * they exist to *set* is the same loop with a fetch in the middle, and it would present as a form
- * that silently fails to submit.
- *
- * `PUBLIC_PREFIXES` needs no entry here — those paths return before this check runs — but note that
- * `/api/auth` being among them is what keeps signing out possible for a session mid-onboarding.
- */
-const ONBOARDING_EXEMPT_PREFIXES = ["/onboarding", "/api/onboarding"] as const
 
 /**
  * The Better Auth paths that spend a rate-limit budget: the ones that take a credential.
@@ -204,31 +192,9 @@ export function middleware(request: NextRequest) {
     return forgetOnboarding(request, NextResponse.redirect(login))
   }
 
-  // Signed in. The second gate: has this session said who it bills as?
-  const onboarded = request.cookies.get(ONBOARDING_COOKIE)?.value === "1"
-  if (onboarded || matchesPrefix(pathname, ONBOARDING_EXEMPT_PREFIXES)) {
-    return NextResponse.next()
-  }
-
-  // Same reasoning as the 401 above, and the same reason it is not a redirect: an API caller wants
-  // a status it can branch on, not the HTML of a form. 403 rather than 401 because the session is
-  // perfectly valid — what is missing is a step, not a credential.
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.json(
-      {
-        error: "onboarding_required",
-        message:
-          "Bitte vervollständigen Sie zuerst Ihr Praxisprofil unter /onboarding.",
-      },
-      { status: 403 }
-    )
-  }
-
-  const onboarding = new URL("/onboarding", request.url)
-  // Carried for the same reason `/login` carries it, and consumed the same way: the form redirects
-  // here on success, and `safeNext` refuses anything that is not a same-site path.
-  onboarding.searchParams.set("next", `${pathname}${search}`)
-  return NextResponse.redirect(onboarding)
+  // Signed in. The onboarding gate is disabled for the pilot — see the module docstring — so every
+  // signed-in session reaches whatever it asked for directly.
+  return NextResponse.next()
 }
 
 /**

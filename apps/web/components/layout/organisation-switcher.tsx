@@ -14,6 +14,7 @@ import {
   useActiveOrganization,
   useListOrganizations,
 } from "@/lib/auth-client"
+import { slugifyOrganizationName } from "@/lib/organization-slug"
 
 /** What the server already knew about the organisations, so the first paint is not an empty rail. */
 export type OrganisationSnapshot = {
@@ -88,7 +89,10 @@ export function OrganisationSwitcher({
 
     setPending(true)
     try {
-      await authClient.organization.create({ name, slug: slugify(name) })
+      await authClient.organization.create({
+        name,
+        slug: slugifyOrganizationName(name),
+      })
       router.refresh()
     } finally {
       setPending(false)
@@ -110,30 +114,4 @@ export function OrganisationSwitcher({
       triggerLabel="Organisation wechseln"
     />
   )
-}
-
-/**
- * A URL-safe slug from a practice's name.
- *
- * Better Auth requires one and enforces its uniqueness, so this only has to produce something legal
- * and recognisable. German names are the whole input here, which is why the umlauts are transliterated
- * rather than stripped: `NFD` alone would turn "Röntgenpraxis" into "Rontgenpraxis", and ö → oe is
- * what a German reader expects to see. The random suffix is what stops the second "Praxis Müller"
- * from colliding with the first and failing with an error this prompt has nowhere to put.
- */
-function slugify(name: string): string {
-  const base = name
-    .toLowerCase()
-    .replace(/ä/g, "ae")
-    .replace(/ö/g, "oe")
-    .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40)
-
-  const suffix = Math.random().toString(36).slice(2, 6)
-  return base ? `${base}-${suffix}` : `organisation-${suffix}`
 }

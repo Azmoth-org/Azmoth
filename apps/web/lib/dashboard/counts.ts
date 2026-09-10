@@ -66,6 +66,36 @@ export async function countBatches(
 }
 
 /**
+ * Whether this organisation has ever had anything to show — across every status, not one at a
+ * time. `null` when either read failed, exactly like every other count in this module: a broken
+ * engine call must not be read as "this is a fresh organisation" and steer a signed-in reader into
+ * the first-run cards instead of the ordinary (if currently broken) dashboard.
+ *
+ * Unfiltered, unlike `countProposals` / `countBatches` above — this is the one place the dashboard
+ * asks "anything at all", so a single `DRAFT` or `PENDING` count would answer the wrong question
+ * for an organisation whose only proposal has already been approved.
+ */
+export async function hasAnyDeliveries(): Promise<boolean | null> {
+  const [proposals, batches] = await Promise.all([
+    callEngine(`/api/v1/proposals?${ONE_ROW}`),
+    callEngine(`/api/v1/padnext/batch?${ONE_ROW}`),
+  ])
+
+  if (!proposals.ok || !isProposalList(proposals.body)) return null
+  if (!batches.ok || !isBatchAuditJobList(batches.body)) return null
+
+  const proposalTotal = totalOrPageLength(
+    proposals.body.total,
+    proposals.body.items?.length ?? 0
+  )
+  const batchTotal = totalOrPageLength(
+    batches.body.total,
+    batches.body.jobs?.length ?? 0
+  )
+  return proposalTotal > 0 || batchTotal > 0
+}
+
+/**
  * Two counts into one, keeping "unknown" contagious.
  *
  * The "Stapel in Arbeit" tile is queued *plus* running, which is two requests, and the arithmetic
