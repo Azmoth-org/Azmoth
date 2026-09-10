@@ -33,11 +33,17 @@
  * from `COPY`d sources there is no `.gitignore` and no `.git` (see
  * infra/docker/docker-compose.dev.yml — only `apps/` and `packages/` are mounted), so the scan
  * reached into the build output, and that output is a feedback loop: Next writes the rendered
- * DOM into it with every class attribute HTML-escaped, so
- * `*:[svg:not([class*='size-'])]:size-4` from `Alert` came back as a candidate spelled
- * `...[class*=&#x27;size-&#x27;]...`. Tailwind duly generated a rule for it, and the browser
- * dropped the declaration it could not parse — "Unexpected token CurlyBracketBlock", with a
- * `size-4` that silently stopped applying to every alert icon.
+ * DOM into it with every class attribute HTML-escaped, so an arbitrary-variant selector this
+ * project uses for icon sizing (see the `size-` `not()` selector on `Alert`, in
+ * `packages/ui/src/components/alert.tsx`) came back as a candidate with its quote marks turned
+ * into numeric character references. Tailwind duly generated a rule for that candidate, and the
+ * browser dropped the declaration it could not parse — "Unexpected token CurlyBracketBlock",
+ * with a `size-4` that silently stopped applying to every alert icon.
+ *
+ * Deliberately not quoted verbatim above: Tailwind's source scanner reads this stylesheet's own
+ * text for candidates too, comments included, so a literal copy of the escaped selector sitting
+ * right here would regenerate the exact bug it documents on every scan — which is what happened
+ * the first time this note was written with the real string in it.
  *
  * Excluding rather than `source(none)`: the detection still covers anything these globs have
  * not thought of, which is the behaviour a checkout has today. Only generated output is removed,
