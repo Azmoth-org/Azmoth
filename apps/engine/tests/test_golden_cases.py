@@ -509,6 +509,35 @@ def test_case_i_a_percentage_surcharge_is_unmodelled_not_unknown(client):
     assert Decimal(report["confirmed_wrong_eur"]) == Decimal("0.00")
 
 
+def test_case_j_a_coverage_sprint_batch1_rule_actually_suppresses_its_ziffer(client):
+    """GOÄ 1485 beside GOÄ 1473: `excl_man_1473_1485` fires, from the coverage sprint's batch 1.
+
+    Neither Ziffer carried any enforced rule before that batch (`docs/content/
+    coverage-sprint-plan.md`): a CSV row alone is not coverage until something exercises it end to
+    end, which is what this case is for — the same proof `test_case_b_cites_the_verified_rule_and_
+    leaves_the_other_line_alone` gives the older, auto-extracted exclusions.
+    """
+    case = "case_j_coverage_sprint_batch1"
+    expected = _expected(case)
+    response = _audit(client, case)
+    assert response.status_code == expected["http_status"], response.text
+    report = response.json()
+    assert_report_matches(report, expected["report"])
+
+    blocked = next(p for p in report["positions"] if p["ziffer"] == "1485")
+    winner = next(p for p in report["positions"] if p["ziffer"] == "1473")
+
+    assert blocked["verdict"] == "blocked"
+    assert blocked["bucket"] == "confirmed_wrong"
+    assert blocked["blocked_by"] == "1473"
+    assert winner["verdict"] == "chargeable"
+    assert winner["bucket"] == "confirmed_fine"
+
+    citations = [f for f in report["findings"] if f["rule_id"] == "excl_man_1473_1485"]
+    assert citations, f"no finding cites the rule; got {[f['type'] for f in report['findings']]}"
+    assert all(f["positionsnr"] == "2" or f["ziffer"] == "1485" for f in citations)
+
+
 def test_every_audited_position_names_the_invoice_it_was_billed_on(client):
     """The attribution a billing centre files by, asserted on a delivery that has three of them."""
     report = _audit(client, "case_h_cross_invoice_duplicates").json()

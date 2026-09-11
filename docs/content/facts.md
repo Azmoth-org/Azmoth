@@ -11,32 +11,32 @@ Two facts are load-bearing for how this whole bank must be written:
   `docs/api/PARTNER_API.md` — prints a bare rule count. `docs/content/` isn't in its scanned globs,
   so nothing here trips it mechanically, but the discipline is the point, not the test: **every
   number below is dated and sourced**, so a post reads as "true as of this commit," never as a
-  permanent claim. Treat "Stand: 2026-09-09" as part of the number, not a footnote.
+  permanent claim. Treat "Stand: 2026-09-12" as part of the number, not a footnote.
 - Two snapshots of the same engine disagree with each other, on purpose: `engine-facts.ts`
-  (verified 2026-09-09) and `docs/performance_baseline.md` (measured 2026-08-23) quote different
+  (verified 2026-09-12) and `docs/performance_baseline.md` (measured 2026-08-23) quote different
   catalog sizes and rule counts because the rule set and catalog changed between the two dates.
   **Never mix figures from different snapshots in one post.** F01–F04 use the current
-  (2026-09-09) snapshot; F33 is the older, dated one, kept only because F03's latency figure comes
+  (2026-09-12) snapshot; F33 is the older, dated one, kept only because F03's latency figure comes
   from that same measurement run.
 
 ---
 
-## Engine numbers (current snapshot, verified 2026-09-09)
+## Engine numbers (current snapshot, verified 2026-09-12)
 
-**F01 — Enforced rule count.** 858 rules may currently suppress a position; 894 constraint rules
-are loaded in total (enforced + not-yet-enforced).
+**F01 — Enforced rule count.** 944 rules may currently suppress a position; 980 constraint rules
+are loaded in total (enforced + not-yet-enforced). Moved from 858/894 by the coverage-sprint batch
+1 (`docs/content/coverage-sprint-plan.md`), which added 86 hand-verified rules.
 Source: `apps/marketing/src/lib/engine-facts.ts:22-34` (`ENFORCED_RULE_COUNT`,
 `CONSTRAINT_RULE_COUNT`), pinned against the live engine by
-`apps/engine/tests/test_published_numbers.py::test_the_marketing_site_quotes_the_engine_and_not_a_memory`.
+`test_the_marketing_site_quotes_the_engine_and_not_a_memory` (in
+`apps/engine/tests/test_published_numbers.py`).
 
-**F02 — Catalog coverage.** The loaded catalog snapshot holds 2,343 GOÄ Ziffern; 358 of them are
-named by at least one enforced rule — about 15.3% (`358 / 2343`). This is the number the site
-prints at the same size as its strongest figures, not in a footnote.
+**F02 — Catalog coverage.** The loaded catalog snapshot holds 2,343 GOÄ Ziffern; 383 of them are
+named by at least one enforced rule — about 16.3% (`383 / 2343`). This is the number the site
+prints at the same size as its strongest figures, not in a footnote. Moved from 358 / ~15.3% by the
+same coverage-sprint batch.
 Source: `apps/marketing/src/lib/engine-facts.ts:36-56` (`CATALOG_ZIFFER_COUNT`,
-`ZIFFERN_UNDER_RULE_COUNT`, `CATALOG_COVERAGE_SHARE`). Note: in-repo prose comments in
-`apps/marketing/src/components/metrics.tsx` still say "358 von 2.192" / "16%" — those are stale
-comments referencing an older snapshot; the exported constants (2,343 / ~15.3%) are the ones
-actually rendered and tested. Use the constants, not the comment text.
+`ZIFFERN_UNDER_RULE_COUNT`, `CATALOG_COVERAGE_SHARE`).
 
 **F03 — Latency.** Median end-to-end latency for one full invoice through the pipeline: 80 ms
 (rounded), from a measured median of 75.8 / 76.8 / 79.5 ms across the three golden cases, seven

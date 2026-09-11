@@ -32,9 +32,9 @@ import {
  *
  * ## The third tile is the point
  *
- * Two of these numbers flatter the product. The third — 358 of 2,343 catalog positions have any
- * enforced rule speaking to them, ~15.3 percent — does not, and it is rendered at exactly the
- * same size as the other two rather than tucked into a footnote. Stand 2026-09-09, siehe
+ * Two of these numbers flatter the product. The third — 383 of 2,343 catalog positions have any
+ * enforced rule speaking to them, ~16.3 percent — does not, and it is rendered at exactly the
+ * same size as the other two rather than tucked into a footnote. Stand 2026-09-12, siehe
  * docs/content/facts.md.
  *
  * That is a deliberate conversion decision, not a fit of conscience. The audience is billing
@@ -63,7 +63,7 @@ type Metric = {
   value: number;
   display: string;
   format?: "integer" | "percent";
-  /** Rendered after the figure, at body size: "ms", "%", "von 894". */
+  /** Rendered after the figure, at body size: "ms", "%", "von 980". */
   unit?: string;
 };
 
@@ -132,8 +132,8 @@ export function Metrics() {
       {/*
         The one share figure worth stating on its own line under the tiles.
 
-        Only the catalog share — "358 von 2.343" said as a percentage — belongs here. The rules
-        share (858 von 894, as a percentage) is a share of Azmoth's own rule table, not of the
+        Only the catalog share — "383 von 2.343" said as a percentage — belongs here. The rules
+        share (944 von 980, as a percentage) is a share of Azmoth's own rule table, not of the
         GOÄ, and printing it beside the catalog figure invited a reader to conflate the two; the
         honest coverage claim this page can make is `katalogAnteil` alone.
       */}

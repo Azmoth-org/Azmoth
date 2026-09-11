@@ -1,0 +1,79 @@
+{
+  "case": "case_j_coverage_sprint_batch1",
+  "delivery": "delivery_padx.xml",
+  "http_status": 200,
+  "report": {
+    "invoice_ids": [
+      "GOLDEN-J-0001"
+    ],
+    "echtdaten_declared": "0",
+    "catalog_version": "goae_official_snapshot_2026-07-25",
+    "claimed_total_eur": "421.48",
+    "recomputed_total_eur": "421.48",
+    "comparable_claimed_eur": "421.48",
+    "arithmetic_delta_eur": "0.00",
+    "unpriceable_claimed_eur": "0.00",
+    "confirmed_fine_eur": "297.61",
+    "confirmed_wrong_eur": "123.87",
+    "unconfirmed_eur": "0.00",
+    "coverage_ratio": 1.0,
+    "finding_types": [
+      "advisory_rules_present",
+      "padnext_blocked_exclusion"
+    ],
+    "findings": [
+      {
+        "type": "padnext_blocked_exclusion",
+        "severity": "error",
+        "positionsnr": "2",
+        "ziffer": "1485",
+        "rule_id": "excl_man_1473_1485",
+        "legal_basis": "GOÄ Anmerkung zu Nummer 1473"
+      },
+      {
+        "type": "advisory_rules_present",
+        "severity": "warning",
+        "positionsnr": null,
+        "ziffer": null,
+        "rule_id": "",
+        "legal_basis": ""
+      }
+    ],
+    "positions": [
+      {
+        "positionsnr": "1",
+        "ziffer": "1473",
+        "punkte": 2220,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "297.61",
+        "recomputed_amount_eur": "297.61",
+        "amount_delta_eur": "0.00",
+        "verdict": "chargeable",
+        "bucket": "confirmed_fine",
+        "blocked_by": null,
+        "verified_rule_ids": [
+          "excl_man_1473_1485"
+        ],
+        "cited_rule_ids": []
+      },
+      {
+        "positionsnr": "2",
+        "ziffer": "1485",
+        "punkte": 924,
+        "claimed_faktor": "2.3",
+        "claimed_amount_eur": "123.87",
+        "recomputed_amount_eur": "123.87",
+        "amount_delta_eur": "0.00",
+        "verdict": "blocked",
+        "bucket": "confirmed_wrong",
+        "blocked_by": "1473",
+        "verified_rule_ids": [
+          "excl_man_1473_1485"
+        ],
+        "cited_rule_ids": [
+          "excl_man_1473_1485"
+        ]
+      }
+    ]
+  }
+}

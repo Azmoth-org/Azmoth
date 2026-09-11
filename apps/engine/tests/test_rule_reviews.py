@@ -140,7 +140,7 @@ def test_the_coverage_counts_move_with_the_reviews(csv_rules, unverified_ids):
 
 
 def test_the_denominator_is_the_number_the_dashboard_counts_towards(csv_rules):
-    """894 as shipped: every constraint rule, excluding Analogansatz candidates.
+    """980 as shipped: every constraint rule, excluding Analogansatz candidates.
 
     A candidate is an offer under § 6 Abs. 2 GOÄ and can never remove a position, so putting one in
     the queue would pad a reviewer's backlog with work that changes no outcome.
@@ -159,7 +159,7 @@ def test_the_denominator_is_the_number_the_dashboard_counts_towards(csv_rules):
     )
 
     assert coverage.total_constraint_rule_count == every_loaded_rule
-    assert coverage.total_constraint_rule_count == 894
+    assert coverage.total_constraint_rule_count == 980
     # Derived, not pinned. The *denominator* is a property of the CSVs and is asserted literally
     # above; the number still outstanding is supposed to fall as rules get verified, so a literal
     # here would have to be edited after every verification pass — which is exactly the kind of
@@ -235,7 +235,7 @@ def review(client, rule_id: str, **body) -> object:
 def test_the_review_queue_lists_the_undecided_rules_with_their_evidence(client):
     body = queue(client, limit=5)
 
-    assert body["total_constraint_rules"] == 894
+    assert body["total_constraint_rules"] == 980
     # Everything in the denominator that nobody has enforced yet is what a reviewer is offered.
     # Redundant rules are verified and enforced by their twin, so they are neither in the queue
     # nor a coverage gap — see `RuleStore._dedupe_exclusions`.
@@ -380,7 +380,7 @@ def test_reviewing_an_unknown_rule_is_a_404(client):
 
 def test_the_coverage_endpoint_reports_what_the_engine_is_holding(client):
     before = client.get("/api/v1/rules/coverage").json()
-    assert before["total_constraint_rule_count"] == 894
+    assert before["total_constraint_rule_count"] == 980
     assert before["review_verified_rule_count"] == 0
 
     target = queue(client, limit=5)["rules"][0]["rule_id"]

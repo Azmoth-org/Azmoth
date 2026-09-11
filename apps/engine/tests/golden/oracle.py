@@ -101,9 +101,15 @@ BUG_CASES = ("bug_positionsnr_collision",)
 #:                                    warnings. The flat `delivery.positions()` walk produced two.
 #:   case_i_percentage_surcharges     GOÄ 441 beside its base service → `surcharge_not_modelled`,
 #:                                    not `unknown_ziffer`, and no error blaming the GOÄ edition.
+#:   case_j_coverage_sprint_batch1    GOÄ 1473 beside GOÄ 1485 → `padnext_blocked_exclusion` on
+#:                                    `excl_man_1473_1485` (docs/content/coverage-sprint-plan.md,
+#:                                    batch 1). Neither Ziffer carried an enforced rule before that
+#:                                    batch; this is the known-answer proof that the new CSV row
+#:                                    actually suppresses the position it names.
 REGRESSION_CASES = (
     "case_h_cross_invoice_duplicates",
     "case_i_percentage_surcharges",
+    "case_j_coverage_sprint_batch1",
 )
 
 #: Case A's receipt canary. Not computable from the catalog — it is a SHA-256 over the engine's own
@@ -111,7 +117,12 @@ REGRESSION_CASES = (
 #: additionally asserts two runs agree with each other. A move here means the catalog, the rule
 #: tables, the logic, the solver, the policy or the response shape changed; `app/services/receipt.py`
 #: documents which of those are expected to move it.
-CASE_A_RECEIPT_PREFIX = "a11b95a38a06640c"
+#:
+#: Moved on 2026-09-12 by the coverage-sprint batch 1 rule additions (`docs/content/
+#: coverage-sprint-plan.md`): 86 new enforced rules changed `rules_hash`, which the receipt covers,
+#: while nothing about case A's own Ziffern, factors or amounts changed. Re-verified stable across
+#: two runs before this value was updated — see `test_case_a_receipt_is_stable_across_runs`.
+CASE_A_RECEIPT_PREFIX = "c8a8aed33dcc7cd9"
 
 
 # ------------------------------------------------------------------------------------------
@@ -257,7 +268,11 @@ def load_rules() -> Rules:
             legal_basis=r.get("legal_basis", ""),
             verified=_is_verified(r),
         )
-        for r in _rows("exclusions.csv")
+        # Both files, like `app.rules.rule_store.EXCLUSIONS_FILES`: `exclusions.manual.csv` is
+        # not auto-extracted residue, it is the other half of the same table, and a golden case
+        # built only from `exclusions.csv` would silently never exercise a hand-curated rule.
+        for name in ("exclusions.csv", "exclusions.manual.csv")
+        for r in _rows(name)
     )
     caps = tuple(
         CapRow(

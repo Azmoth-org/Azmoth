@@ -159,7 +159,7 @@ run for pages:
 
   "receipt_hash": "bd8abb06ef7f0a4b…",  // SHA-256 over catalog, rules, logic, solvers, policy, input
   "catalog_version": "goae_official_snapshot_2026-07-25",
-  "enforced_rule_count": 858,      // live figures — see the note below
+  "enforced_rule_count": 944,      // live figures — see the note below
   "advisory_rule_count": 9
 }
 ```
