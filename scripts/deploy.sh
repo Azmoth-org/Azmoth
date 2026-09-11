@@ -256,11 +256,28 @@ CLEARAUTH
 # token is never on a command line or in `ps`. Used to retry after a rejected pull without redoing
 # the whole candidate-.env dance — Neon URLs, BETTER_AUTH_SECRET and all — for what is at that
 # point a single stale credential.
+#
+# TWO ssh calls, not one — same reason as the ENVSETUP comment further down: a heredoc on an ssh
+# invocation replaces the process's stdin, so piping the token into `ssh ... <<'UPDATETOKEN'` never
+# delivers it — the remote `bash -s` reads the heredoc as its stdin, the pipe is discarded (or, on a
+# shell with MULTIOS, the two get concatenated with no separating newline). Either way, the `cat`
+# below does not receive the token: it either blocks/EOFs immediately, or — worse — reads whatever
+# of the heredoc's own remaining lines happen to still be sitting on that same stream, so the token
+# silently never lands and the mv/chmod below silently never run. This shipped once: the retry path
+# looked like it worked (no error, no output lost) and left GHCR_TOKEN missing from the box every
+# time. So: one call whose stdin is the token and whose command is trivial, then one call whose
+# stdin is the logic.
 update_ghcr_token_on_box() {
-  printf '%s' "$1" | ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "REMOTE_ROOT='$REMOTE_ROOT' bash -s" <<'UPDATETOKEN'
+  printf '%s' "$1" | ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
+    "umask 077 && cat > '$REMOTE_ROOT/shared/.env.ghcr_token.tmp'" \
+    || die "could not stage the new GHCR_TOKEN on $SSH_TARGET"
+
+  ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "REMOTE_ROOT='$REMOTE_ROOT' bash -s" <<'UPDATETOKEN'
 set -euo pipefail
 umask 077
-NEW_TOKEN="$(cat)"
+TOKEN_FILE="$REMOTE_ROOT/shared/.env.ghcr_token.tmp"
+NEW_TOKEN="$(cat "$TOKEN_FILE")"
+rm -f "$TOKEN_FILE"
 ENV_FILE="$REMOTE_ROOT/shared/.env"
 tmp="$(mktemp "$REMOTE_ROOT/shared/.env.XXXXXX")"
 grep -v '^GHCR_TOKEN=' "$ENV_FILE" > "$tmp" 2>/dev/null || true
