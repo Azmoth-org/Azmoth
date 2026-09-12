@@ -23,7 +23,7 @@ data_dir               : /home/oussama/Desktop/MVP/TARGET_MONOREPO/data
   [PASS] facts generate — 3 candidates
   [PASS] end-to-end coding — ['1', '301'] = 32.17 EUR
   [PASS] result is a DRAFT proposal — DRAFT
-  [PASS] receipt hash produced — 4397e315869a95c6
+  [PASS] receipt hash produced — 9b8cfa2833a6a148
   [PASS] rule coverage reported — 944 enforced / 9 advisory
   [PASS] openapi schema builds — 35 paths, 90 schemas
 

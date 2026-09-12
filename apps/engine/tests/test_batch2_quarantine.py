@@ -93,6 +93,21 @@ QUARANTINED_AGE: dict[str, tuple[str, ...]] = {
 }
 
 
+#: Quarantined **fragments** — a sentence held out while the Ziffer itself still carries a rule
+#: from another clause. Distinct from the Ziffer-level lists above, which assert that a Ziffer
+#: has no rule at all; here the rule exists and what must not exist is one particular *bound*.
+#:
+#: Keyed by `(ziffer, field)` so the regression is specific: it is not "GOÄ 26 has no age rule"
+#: (it does — `max_age: 13`), it is "GOÄ 26 asserts no lower bound".
+QUARANTINED_AGE_FRAGMENTS: dict[tuple[str, str], tuple[str, str]] = {
+    ("26", "min_age"): (
+        "Die Leistung nach Nummer 26 ist ab dem vollendeten 2. Lebensjahr je Kalenderjahr "
+        "höchstens einmal berechnungsfähig.",
+        "ambiguous: eligibility gate vs frequency activation — requires human review",
+    ),
+}
+
+
 def _flat(groups: dict[str, tuple[str, ...]]) -> list[str]:
     return [ziffer for members in groups.values() for ziffer in members]
 
@@ -267,3 +282,72 @@ def test_the_advisory_time_relation_kind_is_not_counted_as_enforced(rules):
     advisory = [r for r in rules.time_relations if r.relation == "min_hours_apart"]
     assert advisory == []
     assert all(r not in rules.constraint_rules() for r in rules.time_relations)
+
+
+# ==============================================================================================
+# Quarantined fragments — finding F1
+# ==============================================================================================
+
+
+@pytest.mark.parametrize(("key", "value"), sorted(QUARANTINED_AGE_FRAGMENTS.items()))
+def test_a_quarantined_age_fragment_is_not_encoded_as_a_bound(rules, key, value):
+    """The held-out bound must be `None` on the shipped rule — the row may keep its other side.
+
+    GOÄ 26 is the case this exists for. Its Anmerkung ("… ab dem vollendeten 2. Lebensjahr je
+    Kalenderjahr höchstens einmal berechnungsfähig") was read as a lower eligibility bound and
+    encoded as `min_age: 2`, which made the engine refuse the Früherkennungsuntersuchung to
+    every child under two — a population the sentence never excludes. The sentence states when a
+    *frequency* cap begins to apply, and this catalog states eligibility in the Leistungslegende,
+    which here bounds only the upper side.
+
+    Both readings are recorded rather than one being asserted, because the operative decision is
+    the same under either: only an explicit Leistungslegende lower bound could justify blocking,
+    and there is none. See §10 (finding F1) of
+    `docs/content/coverage-sprint-batch2-validation.md`.
+    """
+    ziffer, field = key
+    _quote, reason = value
+    rule = next((r for r in rules.age_restrictions if r.ziffer == ziffer), None)
+    assert rule is not None, f"GOÄ {ziffer} lost its age rule entirely; only {field} was held out"
+    assert getattr(rule, field) is None, (
+        f"GOÄ {ziffer} re-encoded {field}={getattr(rule, field)} from a quarantined fragment "
+        f"({reason})"
+    )
+
+
+@pytest.mark.parametrize(("key", "value"), sorted(QUARANTINED_AGE_FRAGMENTS.items()))
+def test_a_quarantined_age_fragment_is_not_cited_by_the_rule_that_dropped_it(rules, key, value):
+    """A rule must not keep quoting a sentence it no longer encodes anything from — otherwise
+    the citation claims support the row does not actually rest on."""
+    ziffer, _field = key
+    quote, _reason = value
+    rule = next(r for r in rules.age_restrictions if r.ziffer == ziffer)
+    assert quote not in rule.quote, (
+        f"GOÄ {ziffer} still cites the quarantined fragment in its `quote` field"
+    )
+    assert "Anmerkung" not in rule.legal_basis, (
+        f"GOÄ {ziffer}'s legal_basis still names an Anmerkung it no longer encodes"
+    )
+
+
+def test_the_engine_never_blocks_a_child_under_two_on_goae_26(souffle):
+    """The invariant F1's resolution exists to guarantee, asserted end to end against the real
+    engine rather than against the CSV: no patient under 2 may be refused GOÄ 26, at any age
+    the contract allows, for any reason this batch introduced."""
+    for age in (0, 1):
+        result = souffle.run(_extraction(age=age), make_bridge(("a1", "26", 100, "1.0")))
+        assert "26" in result.billable, f"GOÄ 26 refused at age {age}"
+        assert [b for b in result.blocked if b.ziffer == "26"] == []
+
+
+def test_no_shipped_age_rule_asserts_a_lower_bound(rules):
+    """The general form of F1. Every "vollendeten N. Lebensjahr" phrase in this catalog that
+    sits in a Leistungslegende is an upper bound; the single lower-bound phrase anywhere in the
+    2,343-Ziffer corpus is GOÄ 26's frequency Anmerkung, now held out. So no shipped row should
+    carry a `min_age` at all — and a future one may only do so with an explicit Leistungslegende
+    lower bound behind it."""
+    with_min = [(r.ziffer, r.min_age) for r in rules.age_restrictions if r.min_age is not None]
+    assert with_min == [], (
+        f"a row asserts a lower age bound: {with_min}. Confirm an explicit Leistungslegende "
+        f"lower bound exists before allowing this."
+    )

@@ -1,4 +1,4 @@
-LEGAL ARTEFACTS CHANGED:
+LEGAL ARTEFACTS (branch + working tree):
   data/rules/age_restrictions.manual.csv
   data/rules/exclusions.manual.csv
   data/rules/factor_caps.csv
@@ -7,7 +7,7 @@ LEGAL ARTEFACTS CHANGED:
   data/rules/time_relations.manual.csv
   logic/datalog/goae_rules.dl
 
-EVIDENCE (golden/cases) CHANGED:
+EVIDENCE (golden/cases):
   logic/tests/golden/case_001_knee.golden.normalized.json
   logic/tests/golden/case_002_cardiology.golden.normalized.json
   logic/tests/golden/case_003_dermatology.golden.normalized.json

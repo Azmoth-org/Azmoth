@@ -7,13 +7,20 @@ against the checkout, not read out of that report.
 **Final status: VALIDATED WITH QUALIFICATIONS.**
 
 The corpus is schema-clean, citation-exact, deterministic and correctly quarantined; the parity
-relaxation is sound and narrowly scoped; every published metric reproduces to the digit. Two
-findings qualify it: one shipped row (`age_man_26`) encodes an over-restrictive lower age bound
-that its own citation does not support (**F1**), and all 37 rows are inert on the PADnext
-ingestion path because no production call site supplies the facts the three layers need (**F2**).
-Neither is caused by the parity work, and neither is visible in any public claim — the batch is
-deliberately excluded from every published number, which is what keeps F2 from being a
-misstatement rather than a limitation.
+relaxation is sound and narrowly scoped; every published metric reproduces to the digit.
+
+**F1 is resolved.** `age_man_26` was blocking GOÄ 26 for every child under two on the strength of
+a sentence that sets when a *frequency* cap starts, not who may be billed. Its `min_age` is
+withdrawn, the fragment is quarantined with a regression test, and the receipt hash is re-pinned.
+Evidence, decision and diff in §10 (finding F1).
+
+**F2 remains the standing qualification**: all 37 rows are inert on the PADnext ingestion path,
+because no production call site supplies `history_counts`, `Patient.age` or `Patient.sex`. That is
+a wiring gap, not a false claim — the batch is deliberately excluded from every published number,
+and nothing public counts a rule that cannot fire. It stays open until the pipeline wiring lands.
+
+Three lower-severity findings (F3–F5) are documented and, where they were documentation defects,
+fixed in place.
 
 ---
 
@@ -24,6 +31,8 @@ misstatement rather than a limitation.
 | Repository | `/home/oussama/Desktop/MVP/TARGET_MONOREPO` |
 | Branch | `feat/goae-coverage-sprint-batch1` |
 | HEAD at start | `cc8ff7b` — *fix(rules): refreeze_rule_coverage.py — files_loaded is metadata* |
+| Validation commit | `4025fed` — validator, harness, 441 tests, first revision of this report |
+| F1 resolution | this revision — one CSV line, receipt re-pin, test updates, report corrections |
 | Merge base vs `main` | `673d5b0` |
 | Working tree at start | **clean** — no pre-existing modifications, nothing stashed or discarded |
 | Batch 2 commits | `3e1bbad` (data + tests), `cc8ff7b` (refreeze tool + snapshot re-freeze) |
@@ -88,14 +97,18 @@ correct: 380 `1..30`→30, 381 `31..50`→20, 382 `51..100`→50, 385 `1..20`→
 "bis zum vollendeten N. Lebensjahr" is satisfied while the patient has *not yet* completed year N
 — i.e. `age ≤ N-1`, since `Patient.age` is whole years. All nine shipped rows satisfy this, checked
 mechanically by the validator's `vollendet_max_age`: 26→13, 250a→7, 273→3, 412→1, 413→1, 1063→9,
-5041→13, K1→3, K2→3. The `min_age` on `age_man_26` is the exception, and is finding **F1**.
+5041→13, K1→3, K2→3.
+
+`age_man_26` originally also carried `min_age: 2`, taken from an Anmerkung rather than the
+Leistungslegende. That was finding **F1**, now resolved — see §10. After the fix **no shipped row
+asserts a lower age bound**, which `test_no_shipped_age_rule_asserts_a_lower_bound` enforces.
 
 ---
 
 ## 3. The validator
 
-**`apps/engine/scripts/validate_batch2_csvs.py`** — 1,545 checks over the four files, exit 0 on
-the shipped corpus with **0 errors, 5 warnings**.
+**`apps/engine/scripts/validate_batch2_csvs.py`** — 1,539 checks over the four files, exit 0 on
+the shipped corpus with **0 errors, 4 warnings**.
 
 It exists because `RuleStore._parse` is deliberately permissive — `int(row.get("max_count") or
 "1")`, `(row.get("window") or "behandlungsfall")` — which is right for a loader that must not
@@ -119,12 +132,16 @@ quote is checked independently, so one real sentence cannot carry an invented on
 `window: sitzung` would therefore not be skipped and not fail: it would be silently enforced at
 the wrong width. Batch 2 keeps such rows out by hand (report §4); this check makes that a gate.
 
-The five warnings on the shipped corpus:
+The warnings on the shipped corpus:
 
 | Warning | Files | Assessment |
 |---|---|---|
 | `line_endings_are_lf` | all four | **Benign, verified.** The files are CRLF. `RuleStore._rows` opens with `newline=''` and hands the handle to `csv`, which strips the terminator — confirmed by loading all 37 rows and finding zero values carrying a CR or edge whitespace. `exclusions.csv` and `factor_bands.csv` are CRLF too, so this is the existing convention. Reported so a reviewer knows it is deliberate. |
-| `min_age_is_eligibility_not_frequency` | `age_man_26` | **Real.** This is finding **F1**. |
+
+The fifth warning in the first revision of this report was
+`min_age_is_eligibility_not_frequency` on `age_man_26` — a real defect, and the one that became
+finding **F1**. It is **gone** now that the row no longer asserts a lower bound: the shipped
+corpus raises **0 errors and 4 warnings**, all four the benign CRLF notice.
 
 Tests: **`apps/engine/tests/test_validate_batch2_csvs.py`**, 65 tests, all passing. Every check
 that can fail is driven against a deliberately broken copy in `tmp_path`; `data/rules/` is never
@@ -134,7 +151,7 @@ written to.
 
 ## 4. Semantic boundaries
 
-**`apps/engine/tests/test_batch2_semantic_boundaries.py`** — 188 tests, all passing, every one
+**`apps/engine/tests/test_batch2_semantic_boundaries.py`** — 192 tests, all passing, every one
 against the shipped corpus through the `souffle` fixture (not a hand-built store). Both halves
 are asserted: the verdict *and* the audit trail (`reason`, `rule_id`, `legal_basis`, `detail`).
 
@@ -150,9 +167,10 @@ blocked with full trail · unknown (`sex=None`) **admitted** · `d` **blocked by
 Ziffer with no rule never blocked · no leakage between Ziffern.
 
 **Alter** (LAYER 3.8, `Age < MinAge ∨ Age > MaxAge`), across all 9 rows: exactly at the upper
-bound admitted · one year above blocked · age 0 admitted wherever `min_age` is unset · unknown
-admitted · the `NO_MIN_AGE=0` / `NO_MAX_AGE=999` sentinels proven unreachable for a valid
-`Patient.age`.
+bound admitted · one year above blocked · **age 0 admitted for every shipped row** (true of all
+nine since F1 was resolved) · unknown admitted · the `NO_MIN_AGE=0` / `NO_MAX_AGE=999` sentinels
+proven unreachable for a valid `Patient.age` · GOÄ 26 specifically admitted at ages 0, 1 and 2 and
+still blocked at 14.
 
 Two points of interpretation, stated rather than assumed:
 
@@ -181,7 +199,7 @@ Tag angelegten Gipsverband" names no counterpart Ziffer, also as reported. **§2
 
 ## 5. Quarantine
 
-**`apps/engine/tests/test_batch2_quarantine.py`** — 156 tests, all passing. All 103 quarantined
+**`apps/engine/tests/test_batch2_quarantine.py`** — 160 tests, all passing. All 103 quarantined
 Ziffern from report §3 are transcribed as data, grouped by the stated reason, and the per-family
 totals are asserted against the report's own counts (68 / 5 / 3 / 27 — all match, no duplicates,
 every Ziffer resolves in the catalog).
@@ -359,42 +377,131 @@ The distinctions the script keeps apart, because the headline depends on which i
 
 ## 10. Findings
 
-### F1 — `age_man_26` encodes a frequency condition as an eligibility gate · **severity: high (billing correctness)** · blocks release: **no, but should be fixed before this row is relied on**
+### F1 — `age_man_26` encoded a frequency condition as an eligibility gate · **severity: high (billing correctness)** · **RESOLVED**
 
-**Symptom.** The shipped rule carries `min_age: 2`, so the engine refuses GOÄ 26 for any patient
-aged 0 or 1.
-
-**Reproduce.**
+**Symptom (before).** The shipped rule carried `min_age: 2`, so the engine refused GOÄ 26 —
+*Untersuchung zur Früherkennung von Krankheiten bei einem Kind* — to any patient aged 0 or 1:
 
 ```
-result = souffle.run(_extraction(age=1), make_bridge(("a1", "26", 100, "1.0")))
-# → billable=[]  blocked=[('26', 'age_restricted', 'age_man_26')]  detail='patient_age:1/band:2-13'
+souffle.run(_extraction(age=1), make_bridge(("a1", "26", 100, "1.0")))
+# → billable=[]  blocked=[('26','age_restricted','age_man_26')]  detail='patient_age:1/band:2-13'
 ```
 
-Also flagged independently, from the data alone, by
-`validate_batch2_csvs.py` → `min_age_is_eligibility_not_frequency`.
+Flagged independently from the data alone by
+`validate_batch2_csvs.py::min_age_is_eligibility_not_frequency`.
 
-**Cause.** `min_age` was read out of the Anmerkung *"Die Leistung nach Nummer 26 ist **ab dem
-vollendeten 2. Lebensjahr** je Kalenderjahr höchstens einmal berechnungsfähig."* That sentence
-limits how **often** the service may be billed from age 2 onward. It does not exclude younger
-children — and the Leistungslegende itself bounds only the upper side (*"bei einem Kind bis zum
-vollendeten 14. Lebensjahr"*). Under-twos are the population for whom this service is billed most
-frequently, and the cited text is silent about excluding them, not supportive of it.
+#### Evidence
 
-The report's own §3 quarantines GOÄ 26's Mengenbegrenzung clause as an unsupported
-(`je Kalenderjahr`) window while §2.4 keeps "its Alter clause" — but the age phrase is not a
-separate clause; it is the scope qualifier *of* the quarantined frequency sentence. Splitting it
-out inverted its meaning.
+`data/catalogs/goae_current/goae.official.json` holds **no structured age field of any kind** —
+an entry's keys are `ziffer, official_text, punkte, category, section, section_title, status,
+provenance, rule_coverage, text_quality, minderung_exempt, annotations`. All age information for
+GOÄ 26 is free text in exactly two strings, and no `overrides.json` entry or unparsed row touches
+this Ziffer.
 
-The existing batch 2 test asserts `age=42` blocked and `age=8` admitted, so it never exercises the
-lower bound. The defect was untested, not tested-and-accepted.
+**Sentence A — the source of `max_age: 13`** · field: `official_text` (the **Leistungslegende**)
 
-**Next action.** Drop `min_age` from `age_man_26` (leaving `max_age: 13`, which the
-Leistungslegende does support) and adjust the `age_man_26` case in
-`test_batch2_semantic_boundaries.py::test_goae_26_blocks_a_one_year_old`, which pins the current
-behaviour deliberately so the change cannot happen silently. **Not done here**: this is a change
-to shipped billing semantics, which is out of scope for a validation task and is a rules decision,
-not a test-fixing one.
+> Untersuchung zur Früherkennung von Krankheiten bei einem Kind **bis zum vollendeten 14.
+> Lebensjahr** (Erhebung der Anamnese, Feststellung der Körpermaße, Untersuchung von
+> Nervensystem, Sinnesorganen, Skelettsystem, Haut, Brust-, Bauch- und Geschlechtsorganen) -
+> gegebenenfalls einschließlich Beratung der Bezugsperson(en) -
+
+**Sentence B — the source of `min_age: 2`** · field: `annotations[0]` (an **Anmerkung**)
+
+> Die Leistung nach Nummer 26 ist **ab dem vollendeten 2. Lebensjahr** je Kalenderjahr höchstens
+> einmal berechnungsfähig.
+
+#### Which reading each text supports
+
+**Sentence A → (a) eligibility gate, upper bound only.** "bei einem Kind bis zum vollendeten 14.
+Lebensjahr" is an attributive qualifier on *Kind*: it defines who the service may be performed on,
+inside the definition of the service. It states no lower bound.
+
+**Sentence B → (b) frequency activation.** The predicate is *"ist … höchstens einmal
+berechnungsfähig"*; "je Kalenderjahr" is its window and "ab dem vollendeten 2. Lebensjahr" is the
+point from which that cap applies. The operative restriction the sentence exists to impose is the
+once-per-year cap — an eligibility gate would read *"ist erst ab dem vollendeten 2. Lebensjahr
+berechnungsfähig"*, with no frequency clause. Reading it as (a) requires inferring a prohibition
+from a sentence whose subject is frequency, and it inverts clinical reality: the
+Früherkennungsuntersuchungen of the first two years are the most frequently billed instances of
+this service.
+
+Two further facts from the catalog make the structural pattern one-sided, and neither depends on
+reading German:
+
+* **"ab dem vollendeten N. Lebensjahr" occurs exactly once in all 2,343 Ziffern** — this sentence.
+  There is no second instance to compare against, and no instance anywhere of the phrase used as
+  an eligibility gate.
+* **"bis zum vollendeten N. Lebensjahr" occurs in 9 Leistungslegenden and in 1 Anmerkung.** All
+  nine Leistungslegende occurrences are the age rules this batch ships. The single Anmerkung
+  occurrence is GOÄ 30's — *"Dauert die Erhebung einer homöopathischen Erstanamnese bei einem Kind
+  bis zum vollendeten 14. Lebensjahr weniger als eine Stunde, …"* — a conditional **fee
+  adjustment**, which report §3 had already quarantined for exactly that reason.
+
+So both annotation-resident age numbers in this catalog modify something other than eligibility,
+and every eligibility bound lives in a Leistungslegende. Sentence B is an Anmerkung.
+
+#### Decision
+
+The decision rule was: *if the Leistungslegende states an explicit lower age bound, keep `min_age`
+and re-cite it; otherwise remove it.* **The Leistungslegende for Nr. 26 states no lower age
+bound** — its only age phrase is the upper one in Sentence A. Therefore `min_age` is **removed**.
+
+`max_age: 13` is kept, re-cited to Sentence A alone. Sentence B is moved to the quarantine list
+with the reason *"ambiguous: eligibility gate vs frequency activation — requires human review"* —
+recorded under the weaker "ambiguous" label deliberately, because the operative decision is
+identical under readings (b) and (c) and only (a) could justify blocking, which no
+Leistungslegende text supports.
+
+#### Diff
+
+```diff
+--- a/data/rules/age_restrictions.manual.csv
++++ b/data/rules/age_restrictions.manual.csv
+-age_man_26,26,2,13,GOÄ Leistungslegende Nr. 26 + Anmerkung,"Untersuchung zur Früherkennung … -  | Die Leistung nach Nummer 26 ist ab dem vollendeten 2. Lebensjahr je Kalenderjahr höchstens einmal berechnungsfähig.",true,2026-09-12,…
++age_man_26,26,,13,GOÄ Leistungslegende Nr. 26,"Untersuchung zur Früherkennung … -",true,2026-09-12,…
+```
+
+One line. `min_age` emptied, `legal_basis` narrowed to the Leistungslegende, and the Anmerkung
+dropped from `quote` — a row must not keep citing a sentence it no longer encodes anything from.
+CRLF line endings preserved byte-for-byte.
+
+#### Behaviour after
+
+| Age | Before | After |
+|---|---|---|
+| 0 | blocked | **admitted** |
+| 1 | blocked | **admitted** |
+| 2 | admitted | admitted |
+| 13 | admitted | admitted |
+| 14 | blocked | blocked — `detail: patient_age:14/band:0-13`, `legal_basis: GOÄ Leistungslegende Nr. 26` |
+
+The cited upper bound still fires; only the uncited lower bound is gone.
+
+#### Regression protection
+
+* `test_batch2_semantic_boundaries.py::test_goae_26_admits_a_child_under_two` (ages 0, 1, 2) —
+  replaces the old `test_goae_26_blocks_a_one_year_old`, which had pinned the defect.
+* `…::test_goae_26_still_blocks_above_its_cited_upper_bound` — the fix removed one bound, not both.
+* `test_batch2_quarantine.py::QUARANTINED_AGE_FRAGMENTS` plus three tests: the fragment's bound is
+  not encoded, the rule no longer cites it, and **the engine never blocks a child under two on
+  GOÄ 26**, asserted end to end.
+* `…::test_no_shipped_age_rule_asserts_a_lower_bound` — the general form. No row may carry a
+  `min_age` at all; a future one may only do so with an explicit Leistungslegende lower bound.
+
+#### Consequences
+
+`rules_hash()` moved `4fbec3c5…` → `6cfde287…`, and with it the case A receipt,
+`9f2a7e385de0fc51` → **`a6ab0366db492a08`**. Both pins (`tests/golden/oracle.py::
+CASE_A_RECEIPT_PREFIX` and `case_a_known_answer/expected.json`) were re-pinned following the exact
+batch-1/batch-2 precedent: the new value was confirmed identical across two separate processes
+**before** either pin was touched, and the comment records why it moved. No case A Ziffer, factor
+or amount changed — the rest of `test_golden_cases.py` (23 tests) passes unmodified, and case A
+claims none of the Ziffern this batch constrains.
+
+`refreeze_rule_coverage.py` reports **all nine golden snapshots CLEAN — "Nothing to do: every
+snapshot already matches"** — so no billing behaviour moved anywhere in the golden corpus. The CI
+logic guard remains **SATISFIED** for the branch.
+
 
 ### F2 — every Batch 2 rule is inert on the PADnext ingestion path · **severity: medium (scope/claim accuracy)** · blocks release: **no**
 
@@ -442,10 +549,10 @@ is anatomical rather than administrative. Neither ADR-002 nor the batch 2 report
 on `d`. Currently unreachable in production (F2). Pinned as a test so the behaviour is visible and
 any change is deliberate. **Next action:** a product/clinical decision, not an engineering one.
 
-### F5 — report §1 overstates the "no snapshots touched" claim · **severity: informational**
+### F5 — report §1 overstated the "no snapshots touched" claim · **severity: informational** · **FIXED**
 
-See §6. The substance holds (purely additive, no value moved); the sentence does not. **Next
-action:** amend §1 of the batch 2 report.
+See §6. The substance holds (purely additive, no value moved); the sentence did not. §1 of the
+batch 2 report now carries a dated correction saying so.
 
 ---
 
@@ -457,19 +564,24 @@ action:** amend §1 of the batch 2 report.
 | C2 | `ZIFFERN_UNDER_RULE_COUNT = 383`, `CATALOG_ZIFFER_COUNT = 2343` | same | **Accurate** — recomputed exactly |
 | C3 | F01–F04 in `docs/content/facts.md` | `facts.md:26-49` | **Accurate**, each sourced to the constant and the pinning test |
 | C4 | `"~15,3 %"` and `"358 von 2.343"` in `engine-facts.ts` doc comments | lines 56, 75 | **Was stale** — pre-batch-1 values left behind when the constant moved 358 → 383. Rendered output is computed from the constants, so nothing user-facing was wrong. **Fixed** to `~16,3 %` / `383 von` |
-| C5 | Batch 2 report §2.1 prints GOÄ 382's official text as *"je Test"* | `coverage-sprint-report-batch2.md:61` | **Inaccurate by one character** — the catalog says *"je Text"*. The CSV is correct; the report tidied it. Recommend restoring the verbatim string with a `[sic]` |
-| C6 | Batch 2 report §1: snapshots untouched | §1 | **Overstated** — see F5 |
+| C5 | Batch 2 report §2.1 prints GOÄ 382's official text as *"je Test"* | `coverage-sprint-report-batch2.md` §2.1 | **Was inaccurate by one character** — the catalog says *"je Text"*. The CSV was always correct; the report had tidied it. **Fixed**: the table now reads *"je Text [sic]"* with a note explaining the upstream OCR defect and why the citation is not corrected |
+| C6 | Batch 2 report §1: snapshots untouched | §1 | **Was overstated** — see F5. **Fixed**: §1 now carries a dated correction stating that `cc8ff7b` re-froze all nine, that the diff is 36 added lines and zero removed, and that no value moved |
 | C7 | Batch 2 report §5 coverage table (944/981, 980/1017, 383/406, +23) | §5 | **Accurate** — every cell reproduced, including the 14-Ziffer overlap set |
 | C8 | Batch 2 report §2.2: zero encodable Zeitbeziehung sentences | §2.2 | **Confirmed** by an independent scan |
 | C9 | Batch 2 report §7: `logic_version` unchanged, no `.dl` edit | §7 | **Accurate** for the batch's own commit |
-| C10 | Implied by report §6: Mengenbegrenzung works end to end | §6 | **Needs qualification** — true in test, not wired in production. See F2 |
+| C10 | Implied by report §6: Mengenbegrenzung works end to end | §6 | **Needs qualification** — true in test, not wired in production. See F2, which remains open |
+| C11 | Batch 2 report §2.4 lists GOÄ 26 with `min_age: 2` | §2.4 | **Was unsupported** — see F1. **Fixed**: the table now shows `—`, and a dated correction records the withdrawal, the catalog-wide evidence and the quarantine entry |
 
 No claim anywhere asserts that Batch 2 rules are enforced in production, and no published number
 counts them. Words like "mathematically provable", "legally traceable", "production-ready" and
 "all rules" do not appear attached to this batch.
 
-**Documentation changed in this task:** only C4 — two stale illustrative figures in code comments.
-Nothing else was edited; C5 and C6 are recommendations, left for the batch 2 report's author.
+**Documentation changed in this task:** C4 (two stale illustrative figures in code comments),
+and — as part of resolving F1 and closing the gate — C5, C6 and C11 in
+`docs/content/coverage-sprint-report-batch2.md`. Each is a dated, narrow correction that states
+what the earlier text claimed and what the evidence shows; no number was changed without a
+recomputation behind it, and §5's coverage table needed no change at all (the corpus is still 37
+rows over 37 Ziffern).
 
 ---
 
@@ -481,17 +593,19 @@ Working directory `apps/engine` unless noted. Full output under
 | # | Command | Exit | Result |
 |---|---|---|---|
 | 1 | `pytest tests/test_coverage_sprint_batch2.py tests/test_complex_constraints.py -q` | 0 | 24 passed (baseline) |
-| 2 | `python scripts/validate_batch2_csvs.py` | 0 | 1,545 checks, 0 errors, 5 warnings |
+| 2 | `python scripts/validate_batch2_csvs.py` | 0 | 1,539 checks, **0 errors, 4 warnings** |
 | 3 | `pytest tests/test_validate_batch2_csvs.py -q` | 0 | 65 passed |
-| 4 | `pytest tests/test_batch2_semantic_boundaries.py -q` | 0 | 188 passed |
+| 4 | `pytest tests/test_batch2_semantic_boundaries.py -q` | 0 | 192 passed |
 | 5 | `pytest tests/test_batch2_parity_hardening.py tests/test_refreeze_rule_coverage.py tests/test_golden_snapshot.py -q` | 0 | 51 passed |
 | 6 | `python scripts/engine_cli.py check` ×2 | 0, 0 | identical output; 944/980, 0 dangling, openapi builds |
 | 7 | `pytest tests/ -q -k "receipt_is_stable or case_a"` | 0 | 31 passed |
 | 8 | `python scripts/recompute_batch2_metrics.py` | 0 | all figures reproduce |
-| 9 | `pytest tests/test_batch2_quarantine.py -q` | 0 | 156 passed |
+| 9 | `pytest tests/test_batch2_quarantine.py -q` | 0 | 160 passed |
 | 10 | `python scripts/mutate_batch2.py` | 0 | 25 detected / 4 survivors / 0 unexpected; tree unchanged |
 | 11 | `pytest tests/test_batch2_reproducibility.py -q` | 0 | 14 passed |
-| 12 | `pytest tests/ -q -rs` (full engine suite) | 0 | **2,224 collected — 2,217 passed, 7 skipped, 0 failed, 0 errors.** The 7 skips are the 3 benchmarks (`--benchmark-skip`) and 4 Postgres-dialect tests (`POSTGRES_TEST_URL` unset), each naming its reason under `-rs` |
+| 12 | `pytest tests/ -q -rs` (full engine suite) | 0 | **2,232 collected — 2,225 passed, 7 skipped, 0 failed, 0 errors.** The 7 skips are the 3 benchmarks (`--benchmark-skip`) and 4 Postgres-dialect tests (`POSTGRES_TEST_URL` unset), each naming its reason under `-rs` |
+| 16 | `pytest tests/test_golden_cases.py -q` (after the F1 re-pin) | 0 | 23 passed — receipt re-pinned, no billing number moved |
+| 17 | `python scripts/refreeze_rule_coverage.py` (after F1) | 0 | all 9 snapshots **CLEAN**; "Nothing to do: every snapshot already matches" |
 | 13 | CI logic guard, simulated on `main...HEAD` | — | **SATISFIED** (legal artefacts + golden evidence both present) |
 | 14 | `python scripts/export_openapi.py --check` | 0 | up to date — 35 paths, 90 schemas |
 | 15 | `pnpm turbo lint typecheck` (repo root) | 0 | 9/9 tasks; 0 errors, 6 pre-existing warnings unrelated to this work |
@@ -505,7 +619,11 @@ Batch 2 rule families. `pnpm turbo build` was skipped as it is unaffected by Pyt
 
 ## 13. Unresolved questions
 
-1. **Is `age_man_26`'s `min_age: 2` intended?** F1 argues it is not. Needs a rules decision.
+1. ~~**Is `age_man_26`'s `min_age: 2` intended?**~~ **Closed.** The Leistungslegende states no
+   lower bound, so it is withdrawn (§10, F1). What remains open is the narrower question a human
+   should still answer: whether *"ab dem vollendeten 2. Lebensjahr je Kalenderjahr höchstens
+   einmal"* should eventually be encoded as a **Mengenbegrenzung** once a `kalenderjahr` window
+   exists — it is a frequency rule, and this engine has no window for it.
 2. **Should `d` be blocked, admitted, or flagged for review?** F4. Needs a product decision.
 3. **Is the Mengenbegrenzung wiring gap (F2) planned work or an oversight?** The table, the
    service and the tests all exist; only the call site is missing.
@@ -523,13 +641,15 @@ Batch 2 rule families. `pnpm turbo build` was skipped as it is unaffected by Pyt
 | `apps/engine/scripts/recompute_batch2_metrics.py` | live coverage-metric recomputation |
 | `apps/engine/scripts/mutate_batch2.py` | copy-isolated mutation harness |
 | `apps/engine/tests/test_validate_batch2_csvs.py` | 65 tests — validator + harness |
-| `apps/engine/tests/test_batch2_semantic_boundaries.py` | 188 tests — boundary sweep |
-| `apps/engine/tests/test_batch2_quarantine.py` | 156 tests — quarantine enforcement |
+| `apps/engine/tests/test_batch2_semantic_boundaries.py` | 192 tests — boundary sweep |
+| `apps/engine/tests/test_batch2_quarantine.py` | 160 tests — quarantine enforcement |
 | `apps/engine/tests/test_batch2_parity_hardening.py` | 18 tests — the `files_loaded` carve-out |
 | `apps/engine/tests/test_batch2_reproducibility.py` | 14 tests — determinism, hashes, audit trail |
 
-**441 tests added in total** (65 + 188 + 156 + 18 + 14), taking the engine suite from 1,783 to
-2,224 collected. All pass; no existing test was modified, skipped or weakened.
+**449 tests added in total** (65 + 192 + 160 + 18 + 14 — the extra 8 over the first revision are
+F1's regression tests), taking the engine suite from 1,783 to 2,232 collected. All pass. The only
+pre-existing tests touched are the two receipt pins, re-pinned for a hash that legitimately moved;
+nothing was skipped, weakened or deleted.
 | `docs/content/coverage-sprint-batch2-validation.md` | this report |
 | `docs/content/batch2-validation-logs/` | raw command output |
 
@@ -538,6 +658,12 @@ Batch 2 rule families. `pnpm turbo build` was skipped as it is unaffected by Pyt
 | Path | Change |
 |---|---|
 | `apps/marketing/src/lib/engine-facts.ts` | two stale figures in doc comments (C4) — no constant, no rendered value |
+| `data/rules/age_restrictions.manual.csv` | **F1**: `age_man_26` drops `min_age` and the Anmerkung it cited (§10) |
+| `apps/engine/tests/golden/oracle.py` | `CASE_A_RECEIPT_PREFIX` re-pinned for the hash F1 moved, with the reason recorded |
+| `apps/engine/tests/golden/case_a_known_answer/expected.json` | same pin; the only changed line |
+| `docs/content/coverage-sprint-report-batch2.md` | §1 snapshot overstatement, §2.1 "je Text [sic]", §2.4 and §3 updated for F1 |
 
-**Unchanged:** `data/rules/`, `logic/`, and every production module. No rule was added, removed or
-edited; no billing semantics were changed to make a test pass.
+**Unchanged:** `logic/` and every production module. The one rule edit removes an uncited
+restriction; no rule was added, and no billing semantics were changed to make a test pass — the
+receipt re-pin follows a hash that moved *because* of the rule edit, which is the documented
+precedent, and every case A amount is asserted unchanged independently.

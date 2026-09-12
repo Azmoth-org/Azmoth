@@ -5,14 +5,12 @@ catalog   : /home/oussama/Desktop/MVP/TARGET_MONOREPO/data/catalogs/goae_current
   age_restrictions.manual.csv          9 data row(s)
   time_relations.manual.csv            0 data row(s)
 
-1545 checks run, 5 failing
+1539 checks run, 4 failing
 
 SEVERITY  FILE                               LINE RULE             CHECK / MESSAGE
 --------------------------------------------------------------------------------------------------------------
 WARN      age_restrictions.manual.csv                              line_endings_are_lf
                                                                      → file is CRLF; harmless (csv strips the terminator) but inconsistent with the LF-terminated manual tables such as exclusions.manual.csv
-WARN      age_restrictions.manual.csv           2 age_man_26       min_age_is_eligibility_not_frequency
-                                                                     → min_age=2 is taken from a sentence that also limits billing frequency ('je Kalenderjahr' appears in the quote). Confirm the age scopes who may be billed at all, not how often — otherwise this row blocks younger patients the citation never excludes
 WARN      gender_restrictions.manual.csv                           line_endings_are_lf
                                                                      → file is CRLF; harmless (csv strips the terminator) but inconsistent with the LF-terminated manual tables such as exclusions.manual.csv
 WARN      quantity_limits.manual.csv                               line_endings_are_lf
@@ -20,4 +18,4 @@ WARN      quantity_limits.manual.csv                               line_endings_
 WARN      time_relations.manual.csv                                line_endings_are_lf
                                                                      → file is CRLF; harmless (csv strips the terminator) but inconsistent with the LF-terminated manual tables such as exclusions.manual.csv
 
-0 error(s), 5 warning(s) — exit 0
+0 error(s), 4 warning(s) — exit 0

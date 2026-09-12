@@ -258,7 +258,7 @@ def test_gender_rules_do_not_leak_across_ziffern(souffle):
 #: (Ziffer, min_age, max_age) exactly as `data/rules/age_restrictions.manual.csv` ships them.
 #: `None` is the unbounded side, emitted as the `NO_MIN_AGE`/`NO_MAX_AGE` sentinel.
 AGE_ROWS = [
-    ("26", 2, 13),
+    ("26", None, 13),
     ("250a", None, 7),
     ("273", None, 3),
     ("412", None, 1),
@@ -321,8 +321,8 @@ def test_an_unbounded_lower_side_never_blocks_a_young_patient(souffle, ziffer):
 
 def test_the_upper_sentinel_does_not_cap_a_real_patient(souffle):
     """`NO_MAX_AGE = 999` sits above `Patient.age`'s `le=130`, so a rule with only a `min_age`
-    can never block on the upper side. GOÄ 26 is the only shipped row with a lower bound, and it
-    has an upper bound too — so this is asserted against the sentinel's arithmetic directly."""
+    could never block on the upper side. Since F1 was resolved no shipped row carries a lower
+    bound at all, so this is asserted against the sentinel's arithmetic directly."""
     from app.solvers.souffle_facts import NO_MAX_AGE, NO_MIN_AGE
 
     assert NO_MIN_AGE == 0
@@ -341,23 +341,37 @@ def test_an_age_outside_the_contract_is_rejected_before_the_engine(age):
         _extraction(age=age)
 
 
-def test_goae_26_blocks_a_one_year_old(souffle):
-    """The shipped `age_man_26` carries `min_age: 2`, so a one-year-old is refused GOÄ 26.
+@pytest.mark.parametrize("age", [0, 1, 2])
+def test_goae_26_admits_a_child_under_two(souffle, age):
+    """GOÄ 26 must **not** be refused to an infant. This is finding F1, resolved.
 
-    This is a **finding**, pinned as the behaviour that actually ships rather than as the
-    behaviour that is correct. `min_age` was read out of "Die Leistung nach Nummer 26 ist ab dem
-    vollendeten 2. Lebensjahr je Kalenderjahr höchstens einmal berechnungsfähig." — a sentence
-    that limits how *often* the service may be billed from age 2 onward. It does not exclude
-    younger children, and the Leistungslegende bounds only the upper side ("bei einem Kind bis
-    zum vollendeten 14. Lebensjahr"). See the validation report, finding F1: if that row is
-    corrected, this test is the one that must change with it, deliberately.
+    `age_man_26` previously carried `min_age: 2`, read out of the Anmerkung "Die Leistung nach
+    Nummer 26 ist ab dem vollendeten 2. Lebensjahr je Kalenderjahr höchstens einmal
+    berechnungsfähig." That sentence limits how *often* the service may be billed from age 2
+    onward; it does not say who may be billed at all. The Leistungslegende — which is where this
+    catalog states eligibility — bounds only the upper side ("bei einem Kind bis zum vollendeten
+    14. Lebensjahr"), so there is no cited lower bound to enforce and the row no longer asserts
+    one. The Früherkennungsuntersuchungen of the first two years are exactly the population that
+    was being refused.
+
+    See `tests/test_batch2_quarantine.py::QUARANTINED_AGE_FRAGMENTS` for the held-out fragment,
+    and §10 (finding F1) of `docs/content/coverage-sprint-batch2-validation.md` for the evidence.
     """
-    result = souffle.run(_extraction(age=1), make_bridge(("a1", "26", 100, "1.0")))
+    result = souffle.run(_extraction(age=age), make_bridge(("a1", "26", 100, "1.0")))
+    assert "26" in result.billable
+    assert _blocked(result, "26") is None
+
+
+def test_goae_26_still_blocks_above_its_cited_upper_bound(souffle):
+    """Resolving F1 removed the lower bound and nothing else — the Leistungslegende's own
+    "bis zum vollendeten 14. Lebensjahr" must still be enforced."""
+    result = souffle.run(_extraction(age=14), make_bridge(("a1", "26", 100, "1.0")))
     assert "26" not in result.billable
     blocked = _blocked(result, "26")
     assert blocked.reason == "age_restricted"
     assert blocked.rule_id == "age_man_26"
-    assert blocked.detail == "patient_age:1/band:2-13"
+    assert blocked.legal_basis == "GOÄ Leistungslegende Nr. 26"
+    assert blocked.detail == "patient_age:14/band:0-13"
 
 
 def test_a_ziffer_with_no_age_rule_is_never_age_blocked(souffle):
