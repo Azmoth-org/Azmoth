@@ -1,0 +1,16 @@
+rule_id,ziffer,allowed_gender,legal_basis,quote,verified,verified_at,source
+gr_man_27,27,w,GOÄ Leistungslegende Nr. 27,"Untersuchung einer Frau zur Früherkennung von Krebserkrankungen der Brust, des Genitales, des Rektums und der Haut - einschließlich Erhebung der Anamnese, Abstrichentnahme zur zytologischen Untersuchung, Untersuchung auf Blut im Stuhl und Urinuntersuchung auf Eiweiß, Zucker und Erythrozyten, einschließlich Beratung -",true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1700,1700,m,GOÄ Leistungslegende Nr. 1700,Spülung der männlichen Harnröhre und/oder Instillation von Arzneimitteln,true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1701,1701,m,GOÄ Leistungslegende Nr. 1701,"Dehnung der männlichen Harnröhre - auch einschließlich Spülung und/oder Instillation von Arzneimitteln -, je Sitzung",true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1702,1702,m,GOÄ Leistungslegende Nr. 1702,"Dehnung der männlichen Harnröhre mit filiformen Bougies und/oder Bougies mit Leitsonde - auch einschließlich Spülung und/oder Instillation von Arzneimitteln -, erste Sitzung",true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1703,1703,m,GOÄ Leistungslegende Nr. 1703,Unblutige Fremdkörperentfernung aus der männlichen Harnröhre,true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1704,1704,m,GOÄ Leistungslegende Nr. 1704,Operative Fremdkörperentfernung aus der männlichen Harnröhre,true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1708,1708,m,GOÄ Leistungslegende Nr. 1708,Kalibrierung der männlichen Harnröhre,true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1709,1709,w,GOÄ Leistungslegende Nr. 1709,Kalibrierung der weiblichen Harnröhre,true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1710,1710,w,GOÄ Leistungslegende Nr. 1710,"Dehnung der weiblichen Harnröhre - auch einschließlich Spülung und/oder Instillation von Arzneimitteln -, je Sitzung",true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1711,1711,w,GOÄ Leistungslegende Nr. 1711,Unblutige Fremdkörperentfernung aus der weiblichen Harnröhre,true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1728,1728,m,GOÄ Leistungslegende Nr. 1728,Katheterisierung der Harnblase beim Mann,true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1729,1729,m,GOÄ Leistungslegende Nr. 1729,Spülung der Harnblase beim Mann und/oder Instillation von Arzneimitteln - einschließlich Katheterisierung und gegebenenfalls auch Ausspülung von Blutkoagula -,true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1730,1730,w,GOÄ Leistungslegende Nr. 1730,Katheterisierung der Harnblase bei der Frau,true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1731,1731,w,GOÄ Leistungslegende Nr. 1731,Spülung der Harnblase bei der Frau und/oder Instillation von Medikamenten - einschließlich Katheterisierung und gegebenenfalls auch Ausspülung von Blutkoagula -,true,2026-09-12,manual_verification:coverage_sprint_batch2
+gr_man_1782,1782,w,GOÄ Leistungslegende Nr. 1782,Transurethrale Resektion des Harnblasenhalses bei der Frau,true,2026-09-12,manual_verification:coverage_sprint_batch2

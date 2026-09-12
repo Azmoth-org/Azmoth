@@ -70,6 +70,34 @@ FIELDS_ADDED_SINCE_POC = {
     "/coding/blocked_codes/cross_date",
 }
 
+#: `rule_summary.files_loaded` is a list of CSV filenames that exist on disk, appended the moment
+#: a rule file is found (`RuleStore._rows`) — including one with zero data rows. It is not a
+#: business value like a rule count; it is closer to a directory listing. Comparing it by array
+#: index (like every other leaf in this response) would fail the moment a coverage batch ships a
+#: new rule-file format, even one with no data rows yet, purely because inserting a new filename
+#: into the sorted list shifts every later index — see `docs/content/adr-002-complex-constraints
+#: .md` §6. So this one path is compared as a set, separately, below: every file the frozen
+#: snapshot saw must still load (nothing regressed), and new files are always allowed (nothing a
+#: later batch introduces should ever have to touch this snapshot).
+RULE_SUMMARY_FILES_LOADED_PATH = "/audit_trail/rule_summary/files_loaded"
+
+
+def _get_path(node, path: str):
+    """Walk a `/a/b/c` path (as `_flatten` spells it) back to its value in the original tree."""
+    current = node
+    for part in path.strip("/").split("/"):
+        current = current[int(part)] if part.isdigit() else current[part]
+    return current
+
+
+def _without_files_loaded(leaves: dict) -> dict:
+    prefix = f"{RULE_SUMMARY_FILES_LOADED_PATH}["
+    return {
+        path: value
+        for path, value in leaves.items()
+        if path != RULE_SUMMARY_FILES_LOADED_PATH and not path.startswith(prefix)
+    }
+
 
 def _in_git_repo() -> bool:
     """Ask git rather than look for a `.git` directory.
@@ -178,8 +206,13 @@ def test_the_engine_still_reproduces_the_frozen_snapshot(client, manual_case, go
     live = canonical(solve_payload(client, manual_case(name)))
     frozen = canonical(golden_case(name))
 
-    frozen_leaves = _flatten(frozen)
-    live_leaves = _flatten(live)
+    frozen_files = set(_get_path(frozen, RULE_SUMMARY_FILES_LOADED_PATH))
+    live_files = set(_get_path(live, RULE_SUMMARY_FILES_LOADED_PATH))
+    dropped = sorted(frozen_files - live_files)
+    assert dropped == [], f"{name}: rule files the snapshot loaded that no longer load: {dropped}"
+
+    frozen_leaves = _without_files_loaded(_flatten(frozen))
+    live_leaves = _without_files_loaded(_flatten(live))
 
     missing = sorted(p for p in frozen_leaves if p not in live_leaves)
     assert missing == [], f"{name}: fields the snapshot has and the engine no longer emits: {missing}"
@@ -211,10 +244,17 @@ def test_no_undeclared_field_was_added(client, manual_case, golden_case, name):
 
     # A declared subtree covers everything inside it: declaring `/coding/missing_documentation`
     # is a decision about that field, not about each of its five members.
+    #
+    # `files_loaded` is excluded the same way: a new index there is new *data* (another rule file
+    # on disk), never a new *field* in the contract, and the dedicated set-comparison above already
+    # covers whether the change is safe.
+    files_loaded_prefix = f"{RULE_SUMMARY_FILES_LOADED_PATH}["
     added = {
         path
         for path in keys(live) - keys(frozen)
-        if not any(path.startswith(f"{declared}/") for declared in FIELDS_ADDED_SINCE_POC)
+        if path != RULE_SUMMARY_FILES_LOADED_PATH
+        and not path.startswith(files_loaded_prefix)
+        and not any(path.startswith(f"{declared}/") for declared in FIELDS_ADDED_SINCE_POC)
     }
 
     assert added <= FIELDS_ADDED_SINCE_POC, (

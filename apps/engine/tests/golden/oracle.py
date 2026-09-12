@@ -129,7 +129,16 @@ REGRESSION_CASES = (
 #: ASP programs themselves — for every case regardless of whether any of the four ever fire.
 #: Nothing about case A's own Ziffern, factors or amounts changed; re-verified stable across two
 #: runs before this value was updated.
-CASE_A_RECEIPT_PREFIX = "8e8f5e96b745eac8"
+#:
+#: Moved a third time on 2026-09-12 by the coverage-sprint batch 2 rule additions (see
+#: `docs/content/coverage-sprint-report-batch2.md`): `quantity_limits.manual.csv`,
+#: `gender_restrictions.manual.csv`, `age_restrictions.manual.csv` and an empty
+#: `time_relations.manual.csv` are new files under `data/rules/`, and `rules_hash()`
+#: (`app/services/rule_coverage.py`) hashes every `*.csv` it finds there — logic_version did not
+#: move this time (`logic/datalog/goae_rules.dl` was not touched), only rules_hash, which the
+#: receipt also covers. Nothing about case A's own Ziffern, factors or amounts changed; re-verified
+#: stable across two runs before this value was updated.
+CASE_A_RECEIPT_PREFIX = "9f2a7e385de0fc51"
 
 
 # ------------------------------------------------------------------------------------------
