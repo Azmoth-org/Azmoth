@@ -122,7 +122,14 @@ REGRESSION_CASES = (
 #: coverage-sprint-plan.md`): 86 new enforced rules changed `rules_hash`, which the receipt covers,
 #: while nothing about case A's own Ziffern, factors or amounts changed. Re-verified stable across
 #: two runs before this value was updated — see `test_case_a_receipt_is_stable_across_runs`.
-CASE_A_RECEIPT_PREFIX = "c8a8aed33dcc7cd9"
+#:
+#: Moved again on 2026-09-12 by `docs/content/adr-002-complex-constraints.md`: four new relation
+#: families (Mengenbegrenzung, Zeitbeziehung, Geschlecht, Alter) were added to
+#: `logic/datalog/goae_rules.dl`, which changes `logic_version` — a SHA-256 over the Datalog and
+#: ASP programs themselves — for every case regardless of whether any of the four ever fire.
+#: Nothing about case A's own Ziffern, factors or amounts changed; re-verified stable across two
+#: runs before this value was updated.
+CASE_A_RECEIPT_PREFIX = "8e8f5e96b745eac8"
 
 
 # ------------------------------------------------------------------------------------------

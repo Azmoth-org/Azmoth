@@ -86,6 +86,53 @@
 .decl datum(z: symbol, date: symbol)
 .input datum
 
+// --- coverage-sprint constraint families — see docs/content/adr-002-complex-constraints.md ------
+// Mengenbegrenzung, Zeitbeziehung, Geschlecht, Alter. Every one of these relations is empty for a
+// caller that supplies nothing for it, in which case the layer it feeds concludes nothing — the
+// same "absent means untracked, not permitted" reading `datum` already established above.
+
+// quantity_limit(RuleId, Ziffer, MaxCount): Z may be billed at most MaxCount times per
+// Behandlungsfall (§ 21 GOÄ — the calendar quarter). Scaled by nothing; MaxCount is a plain count.
+.decl quantity_limit(rule_id: symbol, z: symbol, max_count: number)
+.input quantity_limit
+
+// history_count(Ziffer, Count): how many times Z was already billed for THIS patient earlier in
+// the current Behandlungsfall, before this invoice. Computed in Postgres
+// (`app.services.patient_history.quarter_counts`) and handed in exactly like `proposed_factor` —
+// a caller that never tracks patient history (every caller except the wired-up PADnext path)
+// supplies none, and the layer below concludes nothing, exactly as if no limit existed.
+.decl history_count(z: symbol, occurrences: number)
+.input history_count
+
+// time_relation(RuleId, A, B, Kind): a Zeitbeziehung between two Ziffern. Kind is
+// "same_day_excludes" (B is not chargeable alongside A on the same claimed date — decidable from
+// `datum`) or "min_hours_apart" (A and B must be a minimum number of hours apart — NOT decidable
+// from a date alone, and therefore only ever advisory; see LAYER 8).
+.decl time_relation(rule_id: symbol, a: symbol, b: symbol, kind: symbol)
+.input time_relation
+
+// gender_restriction(RuleId, Ziffer, AllowedGender): Z's Leistungslegende is scoped to one sex —
+// "m", "w" or "d", matching `app.schemas.case.Patient.sex` exactly.
+.decl gender_restriction(rule_id: symbol, z: symbol, allowed_gender: symbol)
+.input gender_restriction
+
+// patient_gender(Gender): 0 or 1 rows — the claimed encounter's patient, when known.
+.decl patient_gender(gender: symbol)
+.input patient_gender
+
+// age_restriction(RuleId, Ziffer, MinAge, MaxAge): Z's Leistungslegende is scoped to an age band,
+// inclusive on both ends. An unbounded side is written 0 (MinAge) or 999 (MaxAge) by
+// `app/solvers/souffle_facts.py` — Datalog has no null, and both sentinels sit outside any real
+// human age, which `Patient.age`'s own `ge=0, le=130` validator already enforces upstream.
+.decl age_restriction(rule_id: symbol, z: symbol, min_age: number, max_age: number)
+.input age_restriction
+
+// patient_age(Age): 0 or 1 rows — whole years as of the service date. **Never** derived from a
+// date of birth inside this engine; see the ADR for why a birth date is not something a PADnext
+// ingestion path may compute this from.
+.decl patient_age(age: number)
+.input patient_age
+
 // ============================================================================================
 // LAYER 0 — what was proposed, and whether it is usable at all
 // ============================================================================================
@@ -208,13 +255,95 @@ exclusion_chain_warning(C, B, A) :-
 .output exclusion_chain_warning
 
 // ============================================================================================
+// LAYER 3.5 — Mengenbegrenzung (§ 21 GOÄ Behandlungsfall — a quantity cap per patient per quarter)
+// ============================================================================================
+// `history_count` is computed OUTSIDE this program, in Postgres — see
+// `app/services/patient_history.py` — because it is a fact about a patient across invoices, and
+// this program only ever sees one invoice. Empty for every caller that does not track patient
+// history, in which case this layer concludes nothing and every Ziffer passes through unchanged.
+
+.decl blocked_quantity(z: symbol, rule_id: symbol, occurrences: number, max_count: number)
+blocked_quantity(Z, RuleId, Count, Max) :-
+    surviving_exclusion(Z), quantity_limit(RuleId, Z, Max), history_count(Z, Count), Count >= Max.
+.output blocked_quantity
+
+.decl surviving_quantity(z: symbol)
+surviving_quantity(Z) :- surviving_exclusion(Z), !blocked_quantity(Z, _, _, _).
+
+// ============================================================================================
+// LAYER 3.6 — Zeitbeziehung (time relations between two Ziffern)
+// ============================================================================================
+// Only the "same_day_excludes" kind is decidable and enforced — a claimed `<datum>` is a calendar
+// date, and two dates either match or they do not. "min_hours_apart" is NEVER enforced: it needs a
+// timestamp this engine does not have and must not guess at, so it is surfaced below as an
+// advisory finding on a same-day match and never removes a position from `billable`. See
+// `docs/content/adr-002-complex-constraints.md` §Zeitbeziehung.
+
+.decl blocked_time_relation(z: symbol, blocked_by: symbol, rule_id: symbol)
+blocked_time_relation(B, A, RuleId) :-
+    surviving_quantity(A),
+    surviving_quantity(B),
+    time_relation(RuleId, A, B, "same_day_excludes"),
+    same_service_date(A, B),
+    A != B.
+.output blocked_time_relation
+
+.decl surviving_time_relation(z: symbol)
+surviving_time_relation(Z) :- surviving_quantity(Z), !blocked_time_relation(Z, _, _).
+
+// Advisory only — never negated into `surviving_time_relation`. A same-day match under a
+// "min_hours_apart" relation is exactly the case this engine cannot resolve either way.
+.decl time_relation_advisory(z: symbol, other: symbol, rule_id: symbol)
+time_relation_advisory(A, B, RuleId) :-
+    surviving_time_relation(A),
+    surviving_time_relation(B),
+    time_relation(RuleId, A, B, "min_hours_apart"),
+    same_service_date(A, B),
+    A != B.
+.output time_relation_advisory
+
+// ============================================================================================
+// LAYER 3.7 — Geschlecht (a Leistungslegende scoped to one sex)
+// ============================================================================================
+// `patient_gender` is 0 or 1 rows. Absent means unknown, and unknown must not read as a mismatch
+// — the same "silence is not evidence" reading `cross_service_date` gives an unknown `datum`.
+
+.decl blocked_gender(z: symbol, rule_id: symbol, patient_gender: symbol, allowed_gender: symbol)
+blocked_gender(Z, RuleId, G, Allowed) :-
+    surviving_time_relation(Z),
+    gender_restriction(RuleId, Z, Allowed),
+    patient_gender(G),
+    G != Allowed.
+.output blocked_gender
+
+.decl surviving_gender(z: symbol)
+surviving_gender(Z) :- surviving_time_relation(Z), !blocked_gender(Z, _, _, _).
+
+// ============================================================================================
+// LAYER 3.8 — Alter (a Leistungslegende scoped to an age band, in whole years)
+// ============================================================================================
+// `patient_age` is 0 or 1 rows, in whole years as of the service date — never derived from a date
+// of birth inside this engine. Absent means unknown, read the same way as an absent
+// `patient_gender`: not evidence of a violation.
+
+.decl blocked_age(z: symbol, rule_id: symbol, age: number, min_age: number, max_age: number)
+blocked_age(Z, RuleId, Age, MinAge, MaxAge) :-
+    surviving_gender(Z), age_restriction(RuleId, Z, MinAge, MaxAge), patient_age(Age), Age < MinAge.
+blocked_age(Z, RuleId, Age, MinAge, MaxAge) :-
+    surviving_gender(Z), age_restriction(RuleId, Z, MinAge, MaxAge), patient_age(Age), Age > MaxAge.
+.output blocked_age
+
+.decl surviving_age(z: symbol)
+surviving_age(Z) :- surviving_gender(Z), !blocked_age(Z, _, _, _, _).
+
+// ============================================================================================
 // LAYER 4 — mutual clusters: handed to the ASP solver
 // ============================================================================================
 
 .decl conflict(a: symbol, b: symbol, rule_id: symbol)
 conflict(A, B, RuleId) :-
-    surviving_exclusion(A),
-    surviving_exclusion(B),
+    surviving_age(A),
+    surviving_age(B),
     exclusion(RuleId, A, B, 1),
     exclusion(_, B, A, 1),
     ord(A) < ord(B).
@@ -226,12 +355,12 @@ in_conflict(Z) :- conflict(_, Z, _).
 
 // Certainly chargeable: survived every hard rule and competes with nothing.
 .decl billable(z: symbol)
-billable(Z) :- surviving_exclusion(Z), !in_conflict(Z).
+billable(Z) :- surviving_age(Z), !in_conflict(Z).
 .output billable
 
 // Chargeable in principle, but a choice is required.
 .decl needs_arbitration(z: symbol)
-needs_arbitration(Z) :- surviving_exclusion(Z), in_conflict(Z).
+needs_arbitration(Z) :- surviving_age(Z), in_conflict(Z).
 .output needs_arbitration
 
 .decl chargeable(z: symbol)
@@ -306,6 +435,19 @@ proof(Z, "blocked_less_specific", W, RuleId) :- blocked_less_specific(Z, W, Rule
 proof(Z, "blocked_zielleistung", P, RuleId) :- blocked_zielleistung(Z, P, RuleId).
 proof(Z, "blocked_exclusion", A, RuleId) :- blocked_exclusion(Z, A, RuleId).
 proof(Z, "blocked_exclusion_cross_date", A, RuleId) :- blocked_exclusion_cross_date(Z, A, RuleId).
+
+// Deliberately negative-only, unlike the positive `not_excluded`-style lines above. Those cover
+// checks every golden case was already captured against; these four are new, and an unconditional
+// positive line here (`chargeable(Z), !blocked_quantity(Z, _, _, _)`) would add a proof row to
+// EVERY chargeable position in EVERY existing case — not just the ones a new rule ever touches —
+// which reorders `tests/golden/*/expected.json`'s frozen proof-step arrays for a check that never
+// actually ran. A negative row appears only when something was actually concluded.
+proof(Z, "blocked_quantity", "history_count_at_or_above_max", RuleId) :-
+    blocked_quantity(Z, RuleId, _, _).
+proof(Z, "blocked_time_relation", A, RuleId) :- blocked_time_relation(Z, A, RuleId).
+proof(Z, "blocked_gender", Allowed, RuleId) :- blocked_gender(Z, RuleId, _, Allowed).
+proof(Z, "blocked_age", "outside_permitted_age_band", RuleId) :- blocked_age(Z, RuleId, _, _, _).
+proof(Z, "time_relation_advisory", B, RuleId) :- time_relation_advisory(Z, B, RuleId).
 
 proof(Z, "conflict_pending_arbitration", B, RuleId) :- conflict(Z, B, RuleId).
 proof(Z, "conflict_pending_arbitration", A, RuleId) :- conflict(A, Z, RuleId).

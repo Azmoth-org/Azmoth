@@ -49,6 +49,17 @@ SPECIFICITY_FILES = ("specificity.csv", "specificity.manual.csv")
 ANALOG_FILES = ("analog_candidates.csv", "analog_candidates.manual.csv")
 FACTOR_CAP_FILES = ("factor_caps.csv", "factor_caps.manual.csv")
 
+#: The coverage-sprint's four new constraint families — see `docs/content/adr-002-complex-
+#: constraints.md`. Each pair follows the auto/manual split every other rule type uses, though only
+#: the manual half is populated today: nobody has built an extractor for a Mengenbegrenzung,
+#: Zeitbeziehung, Geschlecht or Alter clause yet, exactly the state `zielleistung.csv` shipped in
+#: for a long time. Deliberately their own lists on `RuleStore` rather than folded into
+#: `exclusions`/`zielleistung`/`specificity`/`factor_caps` — see the class docstring.
+QUANTITY_LIMIT_FILES = ("quantity_limits.csv", "quantity_limits.manual.csv")
+TIME_RELATION_FILES = ("time_relations.csv", "time_relations.manual.csv")
+GENDER_RESTRICTION_FILES = ("gender_restrictions.csv", "gender_restrictions.manual.csv")
+AGE_RESTRICTION_FILES = ("age_restrictions.csv", "age_restrictions.manual.csv")
+
 
 def _truthy(value: str | None) -> bool:
     return str(value or "").strip().lower() in {"true", "1", "yes", "y"}
@@ -162,6 +173,73 @@ class FactorCapRule(Rule):
     max_factor: Decimal = Decimal(1)
 
 
+@dataclass(frozen=True)
+class QuantityLimitRule(Rule):
+    """Mengenbegrenzung: § 21 GOÄ's `Behandlungsfall` (a calendar quarter) caps how often one
+    Ziffer may be billed for one patient — "im Behandlungsfall nur einmal", "nicht mehr als
+    dreimal je Behandlungsfall". `window` is a symbol rather than a number of days because the
+    only value this engine can evaluate today is `"behandlungsfall"`: the GOÄ's own Anmerkungen
+    never state a plain day count, and inventing one would be guessing at law the text does not
+    contain. See `app.services.patient_history` for where `max_count` is compared against.
+    """
+
+    ziffer: str = ""
+    max_count: int = 1
+    window: str = "behandlungsfall"
+
+
+@dataclass(frozen=True)
+class TimeRelationRule(Rule):
+    """Zeitbeziehung between two Ziffern, evaluated over `datum` — the same claimed-date facts
+    LAYER 3's `same_service_date`/`cross_service_date` already carry.
+
+    `relation`:
+        same_day_excludes   `ziffer_b` is not chargeable if claimed on the same date as
+                             `ziffer_a`. Decidable: a PADnext `<datum>` is a calendar date, and
+                             two dates either match or they do not.
+        min_hours_apart     `ziffer_a` and `ziffer_b` must be at least `min_hours` apart.
+                             **Never enforced** — see `docs/content/adr-002-complex-constraints
+                             .md` §Zeitbeziehung. A PADnext delivery carries a date, not a
+                             timestamp, so two services on the same calendar date could be six
+                             hours apart or six minutes, and two services on consecutive dates
+                             could be one minute apart across midnight. Neither reading is
+                             something this engine may assert; it is surfaced as an advisory
+                             finding only, on a same-day match, for a human to resolve.
+    """
+
+    ziffer_a: str = ""
+    ziffer_b: str = ""
+    relation: str = "same_day_excludes"
+    min_hours: int = 0
+
+
+@dataclass(frozen=True)
+class GenderRestrictionRule(Rule):
+    """Geschlecht: a Leistungslegende scoped to one sex — gynaecological, obstetric or urological
+    Ziffern typically. `allowed_gender` is one of `Sex` (`"m"`, `"w"`, `"d"`) exactly as
+    `app.schemas.case.Patient.sex` already models it; see the ADR for why that field predates this
+    rule type by a long way and was never read by anything until now.
+    """
+
+    ziffer: str = ""
+    allowed_gender: str = ""
+
+
+@dataclass(frozen=True)
+class AgeRestrictionRule(Rule):
+    """Alter: a Leistungslegende scoped to an age band — most GOÄ examples are paediatric
+    ("bis zum vollendeten 14. Lebensjahr"). `min_age`/`max_age` are inclusive years; `None` means
+    unbounded on that side. Evaluated against `app.schemas.case.Patient.age`, in whole years as of
+    the service date — **never** against a date of birth, which this engine does not and must not
+    parse from a PADnext delivery. See the ADR for why age-in-years is the data-minimised form this
+    check accepts and a birth date is not.
+    """
+
+    ziffer: str = ""
+    min_age: int | None = None
+    max_age: int | None = None
+
+
 def _reviewed(rule: Rule, reviews: Mapping[str, RuleReviewStatus | str]) -> Rule:
     """Apply one review decision to one rule, or return it untouched.
 
@@ -203,6 +281,10 @@ class SourceRules:
     specificity: tuple[SpecificityRule, ...] = ()
     analog_candidates: tuple[AnalogCandidateRule, ...] = ()
     factor_caps: tuple[FactorCapRule, ...] = ()
+    quantity_limits: tuple[QuantityLimitRule, ...] = ()
+    time_relations: tuple[TimeRelationRule, ...] = ()
+    gender_restrictions: tuple[GenderRestrictionRule, ...] = ()
+    age_restrictions: tuple[AgeRestrictionRule, ...] = ()
     files_loaded: tuple[str, ...] = ()
 
     def constraint_rules(self) -> tuple[Rule, ...]:
@@ -228,6 +310,26 @@ class RuleStore:
     specificity: list[SpecificityRule] = field(default_factory=list)
     analog_candidates: list[AnalogCandidateRule] = field(default_factory=list)
     factor_caps: list[FactorCapRule] = field(default_factory=list)
+
+    #: The four coverage-sprint constraint families — see `docs/content/adr-002-complex-
+    #: constraints.md`. Deliberately **not** part of `constraint_rules()` / `enforced_rule_count()`
+    #: / `summary()` below: those numbers are published (the homepage's coverage tile, the review
+    #: dashboard) and pinned by `tests/test_published_numbers.py`'s guarantee that a shipped figure
+    #: is one the engine actually computes *today*. Folding a new rule family into that denominator
+    #: is a product decision about what "rule coverage" means, not a side effect of shipping the
+    #: mechanism — so these four are admitted under the same unverified-rule policy as everything
+    #: else (`_admit`, `quantity_limits_suppressed` and its three siblings are this table's
+    #: `suppressed`) but counted nowhere the public figure is built from, until that decision is
+    #: made on purpose.
+    quantity_limits: list[QuantityLimitRule] = field(default_factory=list)
+    time_relations: list[TimeRelationRule] = field(default_factory=list)
+    gender_restrictions: list[GenderRestrictionRule] = field(default_factory=list)
+    age_restrictions: list[AgeRestrictionRule] = field(default_factory=list)
+    quantity_limits_suppressed: list[QuantityLimitRule] = field(default_factory=list)
+    time_relations_suppressed: list[TimeRelationRule] = field(default_factory=list)
+    gender_restrictions_suppressed: list[GenderRestrictionRule] = field(default_factory=list)
+    age_restrictions_suppressed: list[AgeRestrictionRule] = field(default_factory=list)
+
     #: Rules loaded but not enforced — unverified under the policy, or rejected by a reviewer.
     suppressed: list[Rule] = field(default_factory=list)
 
@@ -243,15 +345,21 @@ class RuleStore:
 
     # -- policy ----------------------------------------------------------------------------
 
-    def _admit(self, rule: Rule) -> bool:
+    def _admit(self, rule: Rule, *, sink: list[Rule] | None = None) -> bool:
         """Decide whether a rule may actually constrain an invoice.
 
         Order matters. Rejection is checked first because it outranks everything, including
         `policy=block`: `block` exists to enforce rules nobody has *looked at*, and a rule somebody
         has looked at and refused is the opposite of that.
+
+        `sink` is where a held-back rule is recorded — `self.suppressed` by default, and one of
+        the four `*_suppressed` lists for the coverage-sprint constraint families, so a rule this
+        policy holds back is still visible to whoever is deciding whether to verify it, without
+        moving `self.suppressed` or anything counted from it.
         """
+        sink = self.suppressed if sink is None else sink
         if rule.rejected:
-            self.suppressed.append(rule)
+            sink.append(rule)
             return False
         if rule.verified:
             return True
@@ -259,7 +367,7 @@ class RuleStore:
             return True
         # warn and ignore both keep the rule out of the enforcement path; the difference is
         # whether the caller is told about it.
-        self.suppressed.append(rule)
+        sink.append(rule)
         return False
 
     # -- reviews ---------------------------------------------------------------------------
@@ -282,6 +390,16 @@ class RuleStore:
             # Reviewed too, so the flag is honest, but never admitted or suppressed by policy.
             analog_candidates=tuple(_reviewed(r, reviews) for r in self.source.analog_candidates),
             factor_caps=tuple(_reviewed(r, reviews) for r in self.source.factor_caps),
+            # The coverage-sprint constraint families carry over unreviewed. The review queue
+            # (`app.services.rule_reviews`) only ever offers rules out of the four established
+            # families, so there is nothing in `reviews` that could name one of these rule ids —
+            # `_reviewed` would be a no-op dressed up as a merge. Carrying `self.source` forward
+            # unchanged is what a no-op merge actually looks like, and it is what stops these four
+            # lists silently reverting to empty every time a review is applied.
+            quantity_limits=self.source.quantity_limits,
+            time_relations=self.source.time_relations,
+            gender_restrictions=self.source.gender_restrictions,
+            age_restrictions=self.source.age_restrictions,
             files_loaded=self.source.files_loaded,
         )
         return RuleStore._from_source(merged, self.policy)
@@ -331,6 +449,28 @@ class RuleStore:
         # suppress anything, and every analog line carries a human-review warning regardless. So
         # they bypass `_admit` entirely and are always loaded.
         store.analog_candidates = list(source.analog_candidates)
+
+        # The coverage-sprint constraint families — admitted under the same policy as everything
+        # above, into their own sinks so `self.suppressed` (and everything counted from it) does
+        # not move. See the field comment on `RuleStore.quantity_limits`.
+        store.quantity_limits = [
+            r
+            for r in source.quantity_limits
+            if store._admit(r, sink=store.quantity_limits_suppressed)
+        ]
+        store.time_relations = [
+            r for r in source.time_relations if store._admit(r, sink=store.time_relations_suppressed)
+        ]
+        store.gender_restrictions = [
+            r
+            for r in source.gender_restrictions
+            if store._admit(r, sink=store.gender_restrictions_suppressed)
+        ]
+        store.age_restrictions = [
+            r
+            for r in source.age_restrictions
+            if store._admit(r, sink=store.age_restrictions_suppressed)
+        ]
         return store
 
     # -- loading ---------------------------------------------------------------------------
@@ -351,6 +491,7 @@ class RuleStore:
         """CSV → `SourceRules`. Parsing only: no policy decision is taken here."""
         loader = cls()
         exclusions, zielleistung, specificity, analog, factor_caps = [], [], [], [], []
+        quantity_limits, time_relations, gender_restrictions, age_restrictions = [], [], [], []
 
         for name in EXCLUSIONS_FILES:
             for row in loader._rows(directory / name):
@@ -404,12 +545,63 @@ class RuleStore:
                     )
                 )
 
+        for name in QUANTITY_LIMIT_FILES:
+            for row in loader._rows(directory / name):
+                quantity_limits.append(
+                    QuantityLimitRule(
+                        **loader._base(row),
+                        ziffer=row["ziffer"].strip(),
+                        max_count=int(row.get("max_count") or "1"),
+                        window=(row.get("window") or "behandlungsfall").strip() or "behandlungsfall",
+                    )
+                )
+
+        for name in TIME_RELATION_FILES:
+            for row in loader._rows(directory / name):
+                time_relations.append(
+                    TimeRelationRule(
+                        **loader._base(row),
+                        ziffer_a=row["ziffer_a"].strip(),
+                        ziffer_b=row["ziffer_b"].strip(),
+                        relation=(row.get("relation") or "same_day_excludes").strip()
+                        or "same_day_excludes",
+                        min_hours=int(row.get("min_hours") or "0"),
+                    )
+                )
+
+        for name in GENDER_RESTRICTION_FILES:
+            for row in loader._rows(directory / name):
+                gender_restrictions.append(
+                    GenderRestrictionRule(
+                        **loader._base(row),
+                        ziffer=row["ziffer"].strip(),
+                        allowed_gender=row["allowed_gender"].strip(),
+                    )
+                )
+
+        for name in AGE_RESTRICTION_FILES:
+            for row in loader._rows(directory / name):
+                min_age = (row.get("min_age") or "").strip()
+                max_age = (row.get("max_age") or "").strip()
+                age_restrictions.append(
+                    AgeRestrictionRule(
+                        **loader._base(row),
+                        ziffer=row["ziffer"].strip(),
+                        min_age=int(min_age) if min_age else None,
+                        max_age=int(max_age) if max_age else None,
+                    )
+                )
+
         return SourceRules(
             exclusions=tuple(exclusions),
             zielleistung=tuple(zielleistung),
             specificity=tuple(specificity),
             analog_candidates=tuple(analog),
             factor_caps=tuple(factor_caps),
+            quantity_limits=tuple(quantity_limits),
+            time_relations=tuple(time_relations),
+            gender_restrictions=tuple(gender_restrictions),
+            age_restrictions=tuple(age_restrictions),
             files_loaded=tuple(loader.files_loaded),
         )
 
@@ -474,6 +666,28 @@ class RuleStore:
                 return rule
         return None
 
+    def quantity_limit(self, ziffer: str) -> QuantityLimitRule | None:
+        for rule in self.quantity_limits:
+            if rule.ziffer == ziffer:
+                return rule
+        return None
+
+    def time_relations_for(self, ziffer: str) -> list[TimeRelationRule]:
+        """Every enforced time relation naming `ziffer` on either side."""
+        return [r for r in self.time_relations if ziffer in (r.ziffer_a, r.ziffer_b)]
+
+    def gender_restriction(self, ziffer: str) -> GenderRestrictionRule | None:
+        for rule in self.gender_restrictions:
+            if rule.ziffer == ziffer:
+                return rule
+        return None
+
+    def age_restriction(self, ziffer: str) -> AgeRestrictionRule | None:
+        for rule in self.age_restrictions:
+            if rule.ziffer == ziffer:
+                return rule
+        return None
+
     def analog_for(self, entity_type: str) -> list[AnalogCandidateRule]:
         return sorted(
             (r for r in self.analog_candidates if r.source_entity_type == entity_type),
@@ -495,7 +709,15 @@ class RuleStore:
             self.specificity,
             self.analog_candidates,
             self.factor_caps,
+            self.quantity_limits,
+            self.time_relations,
+            self.gender_restrictions,
+            self.age_restrictions,
             self.suppressed,
+            self.quantity_limits_suppressed,
+            self.time_relations_suppressed,
+            self.gender_restrictions_suppressed,
+            self.age_restrictions_suppressed,
         ):
             for rule in group:
                 if rule.rule_id == rule_id:
@@ -525,6 +747,12 @@ class RuleStore:
             ],
             analog_candidates=list(self.analog_candidates),
             factor_caps=[r for r in self.factor_caps if r.ziffer in ziffern],
+            quantity_limits=[r for r in self.quantity_limits if r.ziffer in ziffern],
+            time_relations=[
+                r for r in self.time_relations if r.ziffer_a in ziffern and r.ziffer_b in ziffern
+            ],
+            gender_restrictions=[r for r in self.gender_restrictions if r.ziffer in ziffern],
+            age_restrictions=[r for r in self.age_restrictions if r.ziffer in ziffern],
             suppressed=list(self.suppressed),
             files_loaded=list(self.files_loaded),
             # Carried unfiltered: a restricted view is a grounding optimisation for one case, not a
