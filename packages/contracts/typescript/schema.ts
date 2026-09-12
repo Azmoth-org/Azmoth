@@ -2013,7 +2013,7 @@ export interface components {
              * Reason
              * @enum {string}
              */
-            reason: "exclusion" | "mutual_exclusion" | "zielleistung" | "less_specific" | "unknown_ziffer" | "inactive_ziffer" | "conflict_lost";
+            reason: "exclusion" | "mutual_exclusion" | "zielleistung" | "less_specific" | "unknown_ziffer" | "inactive_ziffer" | "conflict_lost" | "quantity_exceeded" | "time_relation" | "gender_restricted" | "age_restricted";
             /**
              * Reconciled With Final Invoice
              * @default true
