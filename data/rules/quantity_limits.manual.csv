@@ -1,0 +1,14 @@
+rule_id,ziffer,max_count,window,legal_basis,quote,verified,verified_at,source
+cnt_man_4,4,1,behandlungsfall,GOÄ Anmerkung zu Nummer 4,Die Leistung nach Nummer 4 ist im Behandlungsfall nur einmal berechnungsfähig.,true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_380,380,30,behandlungsfall,GOÄ Leistungslegende Nr. 380,"Epikutantest, je Test (1. bis 30. Test je Behandlungsfall)",true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_381,381,20,behandlungsfall,GOÄ Leistungslegende Nr. 381,"Epikutantest, je Test (31. bis 50. Test je Behandlungsfall)",true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_382,382,50,behandlungsfall,GOÄ Leistungslegende Nr. 382,"Epikutantest, je Text (51. bis 100. Test je Behandlungsfall)",true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_385,385,20,behandlungsfall,GOÄ Leistungslegende Nr. 385,"Pricktest, je Test (1. bis 20. Test je Behandlungsfall)",true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_386,386,20,behandlungsfall,GOÄ Leistungslegende Nr. 386,"Pricktest, je Test (21. bis 40. Test je Behandlungsfall)",true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_387,387,40,behandlungsfall,GOÄ Leistungslegende Nr. 387,"Pricktest, je Test (41. bis 80. Test je Behandlungsfall)",true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_388,388,10,behandlungsfall,GOÄ Leistungslegende Nr. 388,"Reib-, Scratch- oder Skarifikationstest, je Test (bis zu 10 Tests je Behandlungsfall)",true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_390,390,20,behandlungsfall,GOÄ Leistungslegende Nr. 390,"Intrakutantest, je Test (1. bis 20. Test je Behandlungsfall)",true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_807,807,1,behandlungsfall,GOÄ Anmerkung zu Nummer 807,Die Leistung nach Nummer 807 ist im Behandlungsfall nur einmal berechnungsfähig.,true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_842,842,1,behandlungsfall,GOÄ Anmerkung zu Nummer 842,Die Leistung nach Nummer 842 ist im Behandlungsfall nur einmal berechnungsfähig.,true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_860,860,1,behandlungsfall,GOÄ Anmerkung zu Nummer 860,Die Nummer 860 ist im Behandlungsfall nur einmal berechnungsfähig.,true,2026-09-12,manual_verification:coverage_sprint_batch2
+cnt_man_4601,4601,3,behandlungsfall,GOÄ Anmerkung zu Nummer 4601,Eine mehr als dreimalige Berechnung der Leistung nach Nummer 4601 im Behandlungsfall ist nicht zulässig.,true,2026-09-12,manual_verification:coverage_sprint_batch2

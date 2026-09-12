@@ -281,11 +281,15 @@
       "exclusions_mutual": 58,
       "factor_caps_enforced": 27,
       "files_loaded": [
+        "age_restrictions.manual.csv",
         "analog_candidates.csv",
         "exclusions.csv",
         "exclusions.manual.csv",
         "factor_caps.csv",
+        "gender_restrictions.manual.csv",
+        "quantity_limits.manual.csv",
         "specificity.csv",
+        "time_relations.manual.csv",
         "zielleistung.csv",
         "zielleistung.manual.csv"
       ],

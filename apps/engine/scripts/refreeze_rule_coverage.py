@@ -18,6 +18,13 @@ someone reaches for after a verification pass cannot quietly absorb a behavioura
 
 Run it after `auto_verify_rules.py`, read the summary, and commit the snapshot diff alongside the
 rule diff so a reviewer sees both halves.
+
+`rule_summary.files_loaded` gets the same special treatment `test_golden_snapshot.py` gives it, and
+for the same reason: it is a list of CSV filenames found on disk (`RuleStore._rows`), not a business
+value, so a coverage-sprint batch that ships a new rule-file format shifts every later index in the
+sorted list without anything about billing behaviour having moved. Compared here as a set — a
+dropped file (evidence of an actual regression) is still refused, but the array is otherwise
+rewritten as one unit rather than patched index by index, which a length change makes meaningless.
 """
 
 from __future__ import annotations
@@ -71,12 +78,25 @@ ALLOWED_WARNING_RE = re.compile(
 )
 WARNING_FINGERPRINTS = ("Regelabdeckung ist unvollständig", "verifizierte Regeln von", "nur beratend")
 
+#: A directory listing, not a rule count — see the module docstring. Not in `ALLOWED` because it
+#: is not unconditionally safe to move the way those leaves are: growing (a new rule-file format
+#: appearing) is fine, but a file *disappearing* is exactly the kind of regression this script
+#: exists to catch, so it gets its own conditional check in `is_allowed` rather than a blanket pass.
+FILES_LOADED_PATH = "/audit_trail/rule_summary/files_loaded"
+
 
 def flatten(node, prefix="") -> dict[str, object]:
     out: dict[str, object] = {}
     if isinstance(node, dict):
         for key, value in node.items():
-            out.update(flatten(value, f"{prefix}/{key}"))
+            child = f"{prefix}/{key}"
+            if child == FILES_LOADED_PATH and isinstance(value, list):
+                # Kept as one leaf, not exploded into `[0]`, `[1]`, … — a length change (a new rule
+                # file on disk) makes per-index comparison meaningless, since every later index
+                # shifts for a reason that has nothing to do with billing behaviour.
+                out[child] = list(value)
+            else:
+                out.update(flatten(value, child))
     elif isinstance(node, list):
         for i, value in enumerate(node):
             out.update(flatten(value, f"{prefix}[{i}]"))
@@ -86,6 +106,10 @@ def flatten(node, prefix="") -> dict[str, object]:
 
 
 def is_allowed(path: str, old, new) -> bool:
+    if path == FILES_LOADED_PATH:
+        # Reordering or a new file appearing is metadata; a file the frozen snapshot loaded that
+        # no longer loads is not — that half still falls through to `bad` / "REFUSING TO WRITE".
+        return isinstance(old, list) and isinstance(new, list) and set(old) <= set(new)
     if path in ALLOWED:
         return True
     if ALLOWED_WARNING_RE.match(path):
