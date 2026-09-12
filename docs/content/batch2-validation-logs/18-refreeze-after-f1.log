@@ -1,0 +1,38 @@
+{"ts": "2026-09-12T04:47:32.594598+00:00", "level": "INFO", "logger": "app.db.session", "message": "database: schema ensured via create_all at sqlite+aiosqlite:///:memory:"}
+{"ts": "2026-09-12T04:47:32.594864+00:00", "level": "WARNING", "logger": "app.main", "message": "database is sqlite (sqlite+aiosqlite:///:memory:) — a single-file store with one writer and no encryption at rest. Fine for development and the test suite; set DATABASE_URL to Postgres for anything an approval has to survive in."}
+{"ts": "2026-09-12T04:47:32.609874+00:00", "level": "INFO", "logger": "app.services.rule_reviews", "message": "rules refreshed: 0 review(s) applied, 944 enforced, 6 still unverified"}
+{"ts": "2026-09-12T04:47:32.616868+00:00", "level": "INFO", "logger": "app.main", "message": "ready: env=development mode=manual catalog=goae_official_snapshot_2026-07-25 (2343 Ziffern) coverage=partial rules=944 enforced / 9 advisory (6 unverified, policy=warn) souffle=2.5 (2.5) clingo=5.8.0 logic=83fae8e7f036 cache=on timeout=5.0s"}
+{"ts": "2026-09-12T04:47:32.616993+00:00", "level": "INFO", "logger": "app.main", "message": "database: sqlite+aiosqlite:///:memory: (durable=False)"}
+{"ts": "2026-09-12T04:47:32.760572+00:00", "level": "INFO", "logger": "app.request", "message": "POST /api/v1/solve -> 200", "request_id": "9bbf89f65acb4c69b657f2152e570a08", "organization_id": "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J", "http_method": "POST", "http_route": "/api/v1/solve", "http_status": 200, "duration_ms": 139.91}
+{"ts": "2026-09-12T04:47:32.761163+00:00", "level": "INFO", "logger": "httpx2", "message": "HTTP Request: POST http://testserver/api/v1/solve \"HTTP/1.1 200 OK\""}
+{"ts": "2026-09-12T04:47:32.882510+00:00", "level": "INFO", "logger": "app.request", "message": "POST /api/v1/solve -> 200", "request_id": "98df81e604ac4fafa6595d76d24453d0", "organization_id": "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J", "http_method": "POST", "http_route": "/api/v1/solve", "http_status": 200, "duration_ms": 115.5}
+{"ts": "2026-09-12T04:47:32.883059+00:00", "level": "INFO", "logger": "httpx2", "message": "HTTP Request: POST http://testserver/api/v1/solve \"HTTP/1.1 200 OK\""}
+{"ts": "2026-09-12T04:47:33.009600+00:00", "level": "INFO", "logger": "app.request", "message": "POST /api/v1/solve -> 200", "request_id": "21cc4cc21b884eafa66afba612262264", "organization_id": "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J", "http_method": "POST", "http_route": "/api/v1/solve", "http_status": 200, "duration_ms": 113.27}
+{"ts": "2026-09-12T04:47:33.010047+00:00", "level": "INFO", "logger": "httpx2", "message": "HTTP Request: POST http://testserver/api/v1/solve \"HTTP/1.1 200 OK\""}
+{"ts": "2026-09-12T04:47:33.121492+00:00", "level": "INFO", "logger": "app.request", "message": "POST /api/v1/solve -> 200", "request_id": "ed44411ede824f95941a9e17d4662fe5", "organization_id": "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J", "http_method": "POST", "http_route": "/api/v1/solve", "http_status": 200, "duration_ms": 106.37}
+{"ts": "2026-09-12T04:47:33.121957+00:00", "level": "INFO", "logger": "httpx2", "message": "HTTP Request: POST http://testserver/api/v1/solve \"HTTP/1.1 200 OK\""}
+{"ts": "2026-09-12T04:47:33.241040+00:00", "level": "INFO", "logger": "app.request", "message": "POST /api/v1/solve -> 200", "request_id": "3a2ee92c5b484067aecf2bab7b503192", "organization_id": "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J", "http_method": "POST", "http_route": "/api/v1/solve", "http_status": 200, "duration_ms": 113.59}
+{"ts": "2026-09-12T04:47:33.241463+00:00", "level": "INFO", "logger": "httpx2", "message": "HTTP Request: POST http://testserver/api/v1/solve \"HTTP/1.1 200 OK\""}
+{"ts": "2026-09-12T04:47:33.361042+00:00", "level": "INFO", "logger": "app.request", "message": "POST /api/v1/solve -> 200", "request_id": "ae7e8aa7ee2d45298d89461c8cb4006d", "organization_id": "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J", "http_method": "POST", "http_route": "/api/v1/solve", "http_status": 200, "duration_ms": 114.49}
+{"ts": "2026-09-12T04:47:33.361686+00:00", "level": "INFO", "logger": "httpx2", "message": "HTTP Request: POST http://testserver/api/v1/solve \"HTTP/1.1 200 OK\""}
+{"ts": "2026-09-12T04:47:33.480999+00:00", "level": "INFO", "logger": "app.request", "message": "POST /api/v1/solve -> 200", "request_id": "ef72bfc42cc24165be1d63cdb9443cc4", "organization_id": "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J", "http_method": "POST", "http_route": "/api/v1/solve", "http_status": 200, "duration_ms": 113.86}
+{"ts": "2026-09-12T04:47:33.481632+00:00", "level": "INFO", "logger": "httpx2", "message": "HTTP Request: POST http://testserver/api/v1/solve \"HTTP/1.1 200 OK\""}
+{"ts": "2026-09-12T04:47:33.613937+00:00", "level": "INFO", "logger": "app.request", "message": "POST /api/v1/solve -> 200", "request_id": "6d8353a72c1a41c4b8ae79ae5ddd02db", "organization_id": "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J", "http_method": "POST", "http_route": "/api/v1/solve", "http_status": 200, "duration_ms": 126.44}
+{"ts": "2026-09-12T04:47:33.614392+00:00", "level": "INFO", "logger": "httpx2", "message": "HTTP Request: POST http://testserver/api/v1/solve \"HTTP/1.1 200 OK\""}
+{"ts": "2026-09-12T04:47:33.676949+00:00", "level": "WARNING", "logger": "app.solvers.clingo_solver", "message": "Analogansatz-Kollision: Die als Analogziffer gewählte GOÄ 750 wird bereits direkt abgerechnet (Akt a4). Es existiert kein kollisionsfreier Analogkandidat – bitte manuell prüfen.", "request_id": "97cc211ee98e44d687c23fd855ac37c8", "organization_id": "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J"}
+{"ts": "2026-09-12T04:47:33.728112+00:00", "level": "INFO", "logger": "app.request", "message": "POST /api/v1/solve -> 200", "request_id": "97cc211ee98e44d687c23fd855ac37c8", "organization_id": "org7Kd2Vn8Qs4Rt6Yw1Zx3Bc5Ef9Gh0J", "http_method": "POST", "http_route": "/api/v1/solve", "http_status": 200, "duration_ms": 99.62}
+{"ts": "2026-09-12T04:47:33.728522+00:00", "level": "INFO", "logger": "httpx2", "message": "HTTP Request: POST http://testserver/api/v1/solve \"HTTP/1.1 200 OK\""}
+{"ts": "2026-09-12T04:47:33.734380+00:00", "level": "INFO", "logger": "app.main", "message": "flushed 9 of 9 buffered usage row(s) on shutdown"}
+golden cases: 9
+
+  case_001_knee                      CLEAN  (0 allowed, 0 not)
+  case_002_cardiology                CLEAN  (0 allowed, 0 not)
+  case_003_dermatology               CLEAN  (0 allowed, 0 not)
+  case_004_factor_cap                CLEAN  (0 allowed, 0 not)
+  case_005_mutual_exclusion          CLEAN  (0 allowed, 0 not)
+  case_006_zielleistung              CLEAN  (0 allowed, 0 not)
+  case_007_missing_docs              CLEAN  (0 allowed, 0 not)
+  case_008_complex_polytrauma        CLEAN  (0 allowed, 0 not)
+  case_009_analog_exclusion          CLEAN  (0 allowed, 0 not)
+
+Nothing to do: every snapshot already matches.

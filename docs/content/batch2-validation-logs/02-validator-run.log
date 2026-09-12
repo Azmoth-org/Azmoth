@@ -1,0 +1,21 @@
+rules dir : /home/oussama/Desktop/MVP/TARGET_MONOREPO/data/rules
+catalog   : /home/oussama/Desktop/MVP/TARGET_MONOREPO/data/catalogs/goae_current/goae.official.json
+  quantity_limits.manual.csv          13 data row(s)
+  gender_restrictions.manual.csv      15 data row(s)
+  age_restrictions.manual.csv          9 data row(s)
+  time_relations.manual.csv            0 data row(s)
+
+1539 checks run, 4 failing
+
+SEVERITY  FILE                               LINE RULE             CHECK / MESSAGE
+--------------------------------------------------------------------------------------------------------------
+WARN      age_restrictions.manual.csv                              line_endings_are_lf
+                                                                     → file is CRLF; harmless (csv strips the terminator) but inconsistent with the LF-terminated manual tables such as exclusions.manual.csv
+WARN      gender_restrictions.manual.csv                           line_endings_are_lf
+                                                                     → file is CRLF; harmless (csv strips the terminator) but inconsistent with the LF-terminated manual tables such as exclusions.manual.csv
+WARN      quantity_limits.manual.csv                               line_endings_are_lf
+                                                                     → file is CRLF; harmless (csv strips the terminator) but inconsistent with the LF-terminated manual tables such as exclusions.manual.csv
+WARN      time_relations.manual.csv                                line_endings_are_lf
+                                                                     → file is CRLF; harmless (csv strips the terminator) but inconsistent with the LF-terminated manual tables such as exclusions.manual.csv
+
+0 error(s), 4 warning(s) — exit 0

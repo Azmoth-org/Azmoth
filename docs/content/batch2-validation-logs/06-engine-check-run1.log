@@ -1,0 +1,30 @@
+app_env                : development
+extraction_mode        : manual
+unverified_rule_policy : warn
+base_factor_policy     : schwellenwert
+solver_timeout_seconds : 5.0
+logic_dir              : /home/oussama/Desktop/MVP/TARGET_MONOREPO/logic
+data_dir               : /home/oussama/Desktop/MVP/TARGET_MONOREPO/data
+
+  [PASS] souffle available — 2.5 (2.5)
+  [PASS] clingo available — 5.8.0
+  [PASS] datalog program present — /home/oussama/Desktop/MVP/TARGET_MONOREPO/logic/datalog/goae_rules.dl
+  [PASS] asp program present — /home/oussama/Desktop/MVP/TARGET_MONOREPO/logic/asp/goae_optimize.lp
+  [PASS] logic version resolvable — 83fae8e7f0369c25
+  [PASS] catalog loads — 2343 Ziffern, goae_official_snapshot_2026-07-25, coverage=partial
+  [PASS] catalog has factor bands — 16 bands
+  [PASS] punktwert is Decimal — 5.82873
+  [PASS] padnext schema compiles — padx_adl_v2.12.subset.xsd (bundled subset), policy=strict, libxml2 2.14.6
+  [PASS] bundled PADnext example validates — 0 violation(s)
+  [PASS] rules load — 944 of 980 enforced, 6 unverified/not enforced
+  [PASS] enforced rules reference known Ziffern — 0 dangling
+  [PASS] mapping loads — 33 rows
+  [PASS] mapping references known Ziffern — all present
+  [PASS] facts generate — 3 candidates
+  [PASS] end-to-end coding — ['1', '301'] = 32.17 EUR
+  [PASS] result is a DRAFT proposal — DRAFT
+  [PASS] receipt hash produced — 9b8cfa2833a6a148
+  [PASS] rule coverage reported — 944 enforced / 9 advisory
+  [PASS] openapi schema builds — 35 paths, 90 schemas
+
+check: OK

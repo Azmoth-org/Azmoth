@@ -270,6 +270,11 @@ jobs:
       #
       # This does not judge WHETHER the new behaviour is right — a human does that. It refuses the
       # case where nobody looked.
+      #
+      # The decision itself lives in apps/engine/scripts/logic_guard.py (unit-tested in
+      # apps/engine/tests/test_logic_guard.py) rather than in this bash, so it also covers the
+      # ADR-002 family carve-out: four rule-family CSVs whose Ziffern have no `entity_to_ziffer.csv`
+      # row yet, so no golden *case* can ever exercise them — see that script's module docstring.
       # ---------------------------------------------------------------------------------------
       - name: Logic guard — legal artefacts require a golden-snapshot review
         if: github.event_name == 'pull_request'
@@ -285,46 +290,7 @@ jobs:
           printf '%s\n' "$changed" | sed 's/^/  /'
           echo
 
-          # The legal artefacts: the solver programs, and the versioned official data they run on.
-          #
-          # Narrowed to data/catalogs/goae_current/ rather than all of data/catalogs/. That
-          # directory holds the real official GOÄ snapshot and is the only catalog edition the
-          # engine bills with (DEFAULT_CATALOG_VERSION); the era directories beside it are small
-          # synthetic fixtures for the temporal-routing tests, carry "synthetic": true, and cannot
-          # move a golden receipt because no golden case loads them. Gating on them would demand
-          # golden-snapshot evidence for a change that provably has no billing behaviour to
-          # re-examine — and a gate that fires when nothing happened is a gate people learn to
-          # bypass. Adding a *real* edition still trips this, because its directory is not a
-          # fixture and someone must look at what it prices. See data/catalogs/README.md.
-          legal=$(printf '%s\n' "$changed" \
-            | grep -E '^(logic/asp/|logic/datalog/|data/catalogs/goae_current/|data/rules/)' || true)
-
-          # The evidence that billing behaviour was re-examined.
-          evidence=$(printf '%s\n' "$changed" \
-            | grep -E '^logic/tests/(golden|cases)/' || true)
-
-          if [ -z "$legal" ]; then
-            echo "No changes under logic/asp/, logic/datalog/, data/catalogs/goae_current/ or data/rules/."
-            echo "Logic guard: not applicable."
-            exit 0
-          fi
-
-          echo "Legal artefacts changed:"
-          printf '%s\n' "$legal" | sed 's/^/  /'
-          echo
-
-          if [ -n "$evidence" ]; then
-            echo "Golden snapshots / cases also changed:"
-            printf '%s\n' "$evidence" | sed 's/^/  /'
-            echo
-            echo "::warning title=Legal artefacts changed::This pull request modifies the legal reasoning or the catalog. The golden snapshots were touched, so the billing behaviour was re-examined — the reviewer must confirm that every changed number is correct and intended. See logic/README.md."
-            echo "Logic guard: satisfied."
-            exit 0
-          fi
-
-          echo "🚨 LOGIC OR DATA CHANGED WITHOUT GOLDEN SNAPSHOT UPDATE. You modified the legal reasoning or catalog. You must review and update the golden snapshots in logic/tests/ to prove the billing behavior is still correct."
-          echo "::error title=Logic guard failed::🚨 LOGIC OR DATA CHANGED WITHOUT GOLDEN SNAPSHOT UPDATE. You modified the legal reasoning or catalog. You must review and update the golden snapshots in logic/tests/ to prove the billing behavior is still correct."
-          exit 1
+          printf '%s\n' "$changed" | python apps/engine/scripts/logic_guard.py
 
       # ---------------------------------------------------------------------------------------
       # STEP 3 — nothing that looks like a credential, and no real .env, may be committed.

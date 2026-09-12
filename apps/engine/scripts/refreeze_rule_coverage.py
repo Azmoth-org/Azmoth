@@ -3,6 +3,8 @@
 
     python scripts/refreeze_rule_coverage.py            # report what would change
     python scripts/refreeze_rule_coverage.py --write    # apply it
+    python scripts/refreeze_rule_coverage.py --report logic/tests/refreeze_report.json
+                                                         # also write a machine-checkable summary
 
 Verifying a rule moves the rule-coverage counters that every solve response carries, so the nine
 frozen snapshots stop matching. That is expected and says nothing about the engine. What is *not*
@@ -25,6 +27,14 @@ value, so a coverage-sprint batch that ships a new rule-file format shifts every
 sorted list without anything about billing behaviour having moved. Compared here as a set — a
 dropped file (evidence of an actual regression) is still refused, but the array is otherwise
 rewritten as one unit rather than patched index by index, which a length change makes meaningless.
+
+`--report` is for `scripts/logic_guard.py`'s ADR-002 family carve-out: a rule edit confined to one
+of the four family CSVs (quantity/gender/age/time) can be genuinely inert for every golden case —
+GOÄ 26's withdrawal is the first example, and it is unreachable through `entity_to_ziffer.csv`
+regardless, so no golden *case* can ever exercise it (see F2). The report records the `rules_hash`
+this run was computed against and whether every one of the nine cases came back CLEAN (zero
+leaves changed at all — not even an ALLOWED one), so the guard can trust a committed report only
+when it was produced for the exact rule content on disk right now, and only when nothing moved.
 """
 
 from __future__ import annotations
@@ -34,6 +44,7 @@ import json
 import os
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
@@ -49,7 +60,8 @@ os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["DATABASE_AUTO_CREATE"] = "true"
 os.environ["APP_ENV"] = "development"
 
-from app.config import GOLDEN_DIR  # noqa: E402
+from app.config import GOLDEN_DIR, RULES_DATA_DIR  # noqa: E402
+from app.services.rule_coverage import rules_hash as _rules_hash  # noqa: E402
 
 #: Leaf paths a verification pass is allowed to move. Everything here is a count of rules or a
 #: sentence quoting one; none of it is a billing decision.
@@ -142,6 +154,12 @@ def _step(node, part):
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--write", action="store_true", help="apply the updates (default: report only)")
+    parser.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help="also write a machine-checkable JSON summary (rules_hash + per-case CLEAN status) here",
+    )
     args = parser.parse_args(argv)
 
     # Imported lazily: building the app pulls in the solvers, which --help has no business doing.
@@ -166,6 +184,7 @@ def main(argv: list[str] | None = None) -> int:
 
     violations: dict[str, dict] = {}
     updates: dict[str, dict] = {}
+    case_reports: dict[str, dict] = {}
 
     deps.reset()
     with TestClient(app, headers={ORGANIZATION_ID_HEADER: TEST_ORGANIZATION_ID}) as client:
@@ -191,7 +210,19 @@ def main(argv: list[str] | None = None) -> int:
                 updates[name] = ok
 
             status = "CLEAN" if not changed else ("METADATA ONLY" if not bad else "!! BEHAVIOUR MOVED")
+            case_reports[name] = {"status": status, "allowed": len(ok), "not_allowed": len(bad)}
             print(f"  {name:34} {status}  ({len(ok)} allowed, {len(bad)} not)")
+
+    if args.report is not None:
+        report = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "rules_hash": _rules_hash(RULES_DATA_DIR),
+            "cases": case_reports,
+            "all_clean": all(c["status"] == "CLEAN" for c in case_reports.values()),
+        }
+        args.report.parent.mkdir(parents=True, exist_ok=True)
+        args.report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        print(f"\nwrote report: {args.report}")
 
     if violations:
         print("\n" + "=" * 90)

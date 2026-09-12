@@ -138,7 +138,18 @@ REGRESSION_CASES = (
 #: move this time (`logic/datalog/goae_rules.dl` was not touched), only rules_hash, which the
 #: receipt also covers. Nothing about case A's own Ziffern, factors or amounts changed; re-verified
 #: stable across two runs before this value was updated.
-CASE_A_RECEIPT_PREFIX = "9f2a7e385de0fc51"
+#:
+#: Moved a fourth time on 2026-09-12 by the resolution of finding F1 (see
+#: `docs/content/coverage-sprint-batch2-validation.md` §4): `age_man_26` in
+#: `data/rules/age_restrictions.manual.csv` dropped its `min_age` and the Anmerkung it quoted,
+#: because that sentence states when a *frequency* cap begins to apply and was being enforced as
+#: an eligibility gate that refused GOÄ 26 to every child under two. One CSV line changed, so
+#: `rules_hash()` moved and the receipt with it. `logic_version` did not move (nothing under
+#: `logic/` was touched), and case A claims none of the four Ziffern this batch constrains — its
+#: own Ziffern, factors and amounts are unchanged, which the rest of `test_golden_cases.py`
+#: asserts independently. Re-verified stable across two separate processes before this value was
+#: updated.
+CASE_A_RECEIPT_PREFIX = "a6ab0366db492a08"
 
 
 # ------------------------------------------------------------------------------------------

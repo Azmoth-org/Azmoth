@@ -1,0 +1,72 @@
+ID    FILE                             EXPECT    ACTUAL    RESULT  CAUGHT BY
+----------------------------------------------------------------------------------------------------------------------
+M01   age_restrictions.manual.csv      detected  detected  OK      vollendet_max_age
+      shift GOÄ 250a max_age 7 → 8 (one year past 'bis zum vollendeten 8. Lebensjahr')
+M02   age_restrictions.manual.csv      detected  detected  OK      vollendet_max_age
+      shift GOÄ 5041 max_age 13 → 12 (one year short of the cited band)
+M03   age_restrictions.manual.csv      detected  detected  OK      age_band_coherent, vollendet_max_age
+      invert GOÄ 26's band: min_age 2 → 14, max_age 13 → 2
+M04   age_restrictions.manual.csv      detected  detected  OK      vollendet_max_age
+      widen GOÄ 412 max_age 1 → 130 (rule made vacuous)
+M05   quantity_limits.manual.csv       survives  survived  OK      —
+      loosen GOÄ 4601 max_count 3 → 4 (the '<' vs '<=' equivalent for a cap)
+      note: max_count is a free integer; nothing in the citation is machine-comparable to it. Covered instead by tests/test_batch2_semantic_boundaries.py, which asserts the cap value per Ziffer.
+M06   quantity_limits.manual.csv       detected  detected  OK      max_count_positive
+      set GOÄ 4 max_count 1 → 0 (blocks every claim)
+M07   quantity_limits.manual.csv       detected  detected  OK      max_count_int
+      set GOÄ 860 max_count to a non-integer ('einmal')
+M08   quantity_limits.manual.csv       detected  detected  OK      window_supported
+      change GOÄ 4 window behandlungsfall → sitzung (a window the engine cannot evaluate)
+M09   quantity_limits.manual.csv       detected  detected  OK      window_supported
+      change GOÄ 807 window → kalenderjahr
+M10   quantity_limits.manual.csv       detected  detected  OK      required:window, window_supported
+      blank GOÄ 842's window entirely (loader would default it to behandlungsfall)
+M11   gender_restrictions.manual.csv   survives  survived  OK      —
+      reverse GOÄ 27 allowed_gender w → m (contradicts 'Untersuchung einer Frau')
+      note: 'm' is in the vocabulary and the citation stays verbatim; the contradiction is between German prose and a one-letter code, which this validator does not parse. Covered by the GENDER_ROWS parametrisation in the boundary suite.
+M12   gender_restrictions.manual.csv   detected  detected  OK      gender_vocabulary
+      set GOÄ 1700 allowed_gender to 'male' (out of the Sex vocabulary)
+M13   gender_restrictions.manual.csv   detected  detected  OK      gender_vocabulary
+      uppercase GOÄ 1730 allowed_gender w → W
+M14   gender_restrictions.manual.csv   detected  detected  OK      required:quote
+      remove GOÄ 1709's citation entirely
+M15   quantity_limits.manual.csv       detected  detected  OK      citation_verbatim
+      replace GOÄ 380's citation with a plausible invention
+M16   quantity_limits.manual.csv       detected  detected  OK      citation_verbatim
+      silently correct the catalog's 'je Text' typo on GOÄ 382 to 'je Test'
+M17   age_restrictions.manual.csv      detected  detected  OK      citation_verbatim, vollendet_max_age
+      swap GOÄ 273's citation for GOÄ 412's (a real sentence, wrong Ziffer)
+M18   age_restrictions.manual.csv      detected  detected  OK      not_placeholder:source
+      replace GOÄ 1063's source with a placeholder ('TBD')
+M19   gender_restrictions.manual.csv   detected  detected  OK      required:legal_basis
+      blank GOÄ 1782's legal_basis
+M20   quantity_limits.manual.csv       survives  survived  OK      —
+      flip GOÄ 388 verified true → false (claims verification it does not have)
+      note: 'false' is a legal value — an unverified rule is a supported state, handled by UnverifiedRulePolicy at load time, not a malformed row. Its effect is a rule that stops being enforced, which the engine-level count would show.
+M21   quantity_limits.manual.csv       survives  survived  OK      —
+      delete the GOÄ 4601 row outright
+      note: A validator cannot know which rows *should* exist. Detected instead by tests/test_coverage_sprint_batch2.py (asserts cnt_man_4601 fires) and by the row counts pinned in tests/test_validate_batch2_csvs.py.
+M22   gender_restrictions.manual.csv   detected  detected  OK      rule_id_unique
+      duplicate GOÄ 1700's rule_id onto the GOÄ 1701 row
+M23   age_restrictions.manual.csv      detected  detected  OK      ziffer_in_catalog:ziffer
+      point GOÄ 413's row at a Ziffer that is not in the catalog (99999)
+M24   age_restrictions.manual.csv      detected  detected  OK      age_has_a_bound, vollendet_max_age
+      blank both age bounds on GOÄ K1 (row constrains nothing)
+M25   quantity_limits.manual.csv       detected  detected  OK      header_exact, max_count_int, required:max_count
+      rename the max_count column in the header
+      note: applied as a raw text edit, not a row edit
+M26   age_restrictions.manual.csv      detected  detected  OK      header_exact, no_bom, required:rule_id
+      prepend a UTF-8 BOM
+      note: applied as a raw byte edit
+M27   gender_restrictions.manual.csv   detected  detected  OK      no_control_chars:legal_basis
+      embed a tab inside GOÄ 1711's legal_basis
+M28   time_relations.manual.csv        detected  detected  OK      relation_vocabulary
+      add a time-relation row with an unknown relation kind
+      note: applied by writing a row into the empty family
+M29   time_relations.manual.csv        detected  detected  OK      distinct_ziffern
+      add a self-referential time-relation row (ziffer_a == ziffer_b)
+      note: applied by writing a row into the empty family
+
+29 mutation(s): 25 detected, 4 survived
+unexpected outcomes           : 0
+working tree unchanged        : True

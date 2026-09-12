@@ -1,0 +1,222 @@
+• turbo 2.10.11
+
+   • Packages in scope: @workspace/contracts, @workspace/eslint-config, @workspace/typescript-config, @workspace/ui, docs, marketing, web
+   • Running lint, typecheck in 7 packages
+   • Remote caching disabled
+
+@workspace/contracts:typecheck: cache hit, replaying logs 680498d43922edc0
+@workspace/ui:lint: cache hit, replaying logs c640fb4467fc5ff1
+@workspace/contracts:typecheck: 
+@workspace/contracts:typecheck: > @workspace/contracts@0.0.1 typecheck /home/oussama/Desktop/MVP/TARGET_MONOREPO/packages/contracts
+@workspace/contracts:typecheck: > tsc --noEmit
+@workspace/ui:lint: 
+@workspace/contracts:typecheck: 
+@workspace/ui:lint: > @workspace/ui@0.0.0 lint /home/oussama/Desktop/MVP/TARGET_MONOREPO/packages/ui
+@workspace/ui:lint: > eslint
+@workspace/ui:lint: 
+@workspace/ui:lint: 
+@workspace/ui:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/packages/ui/src/components/carousel.tsx
+@workspace/ui:lint:   98:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+@workspace/ui:lint: 
+@workspace/ui:lint: Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+@workspace/ui:lint: * Update external systems with the latest state from React.
+@workspace/ui:lint: * Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+@workspace/ui:lint: 
+@workspace/ui:lint: Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+@workspace/ui:lint: 
+@workspace/ui:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/packages/ui/src/components/carousel.tsx:98:5
+@workspace/ui:lint:    96 |   React.useEffect(() => {
+@workspace/ui:lint:    97 |     if (!api) return
+@workspace/ui:lint: >  98 |     onSelect(api)
+@workspace/ui:lint:       |     ^^^^^^^^ Avoid calling setState() directly within an effect
+@workspace/ui:lint:    99 |     api.on("reInit", onSelect)
+@workspace/ui:lint:   100 |     api.on("select", onSelect)
+@workspace/ui:lint:   101 |  react-hooks/set-state-in-effect
+@workspace/ui:lint: 
+@workspace/ui:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/packages/ui/src/components/social-links.tsx
+@workspace/ui:lint:   20:10  warning  NEXT_PUBLIC_FACEBOOK_URL is not listed as a dependency in turbo.json     turbo/no-undeclared-env-vars
+@workspace/ui:lint:   25:10  warning  NEXT_PUBLIC_INSTAGRAM_URL is not listed as a dependency in turbo.json    turbo/no-undeclared-env-vars
+@workspace/ui:lint:   30:10  warning  NEXT_PUBLIC_LINKEDIN_URL is not listed as a dependency in turbo.json     turbo/no-undeclared-env-vars
+@workspace/ui:lint:   35:10  warning  NEXT_PUBLIC_PRODUCTHUNT_URL is not listed as a dependency in turbo.json  turbo/no-undeclared-env-vars
+@workspace/ui:lint:   40:10  warning  NEXT_PUBLIC_TWITTER_URL is not listed as a dependency in turbo.json      turbo/no-undeclared-env-vars
+@workspace/ui:lint: 
+@workspace/ui:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/packages/ui/src/hooks/use-mobile.ts
+@workspace/ui:lint:   14:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+@workspace/ui:lint: 
+@workspace/ui:lint: Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+@workspace/ui:lint: * Update external systems with the latest state from React.
+@workspace/ui:lint: * Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+@workspace/ui:lint: 
+@workspace/ui:lint: Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+@workspace/ui:lint: 
+@workspace/ui:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/packages/ui/src/hooks/use-mobile.ts:14:5
+@workspace/ui:lint:   12 |     }
+@workspace/ui:lint:   13 |     mql.addEventListener("change", onChange)
+@workspace/ui:lint: > 14 |     setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+@workspace/ui:lint:      |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+@workspace/ui:lint:   15 |     return () => mql.removeEventListener("change", onChange)
+@workspace/ui:lint:   16 |   }, [])
+@workspace/ui:lint:   17 |  react-hooks/set-state-in-effect
+@workspace/ui:lint: 
+@workspace/ui:lint: ✖ 7 problems (0 errors, 7 warnings)
+@workspace/ui:lint: 
+marketing:lint: cache miss, executing ac9856bf08da4251
+@workspace/ui:typecheck: cache hit, replaying logs 5f6bea49520ec7ef
+@workspace/ui:typecheck: 
+@workspace/ui:typecheck: > @workspace/ui@0.0.0 typecheck /home/oussama/Desktop/MVP/TARGET_MONOREPO/packages/ui
+@workspace/ui:typecheck: > tsc --noEmit
+@workspace/ui:typecheck: 
+marketing:typecheck: cache miss, executing 7080e694527ae0c3
+docs:lint: cache hit, replaying logs 1b00962dd4ef2657
+web:lint: cache hit, replaying logs 6a8a38700ce81427
+docs:lint: 
+docs:lint: > docs@0.0.1 lint /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/docs
+docs:lint: > eslint
+docs:lint: 
+web:lint: 
+web:lint: > web@0.0.1 lint /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web
+web:lint: > eslint
+web:lint: 
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/dashboard/pilot-only-banner.tsx
+web:lint:   32:9  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+web:lint: 
+web:lint: Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+web:lint: * Update external systems with the latest state from React.
+web:lint: * Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+web:lint: 
+web:lint: Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/dashboard/pilot-only-banner.tsx:32:9
+web:lint:   30 |     try {
+web:lint:   31 |       if (window.localStorage.getItem(DISMISSED_KEY) === "1") {
+web:lint: > 32 |         setDismissed(true)
+web:lint:      |         ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+web:lint:   33 |       }
+web:lint:   34 |     } catch {
+web:lint:   35 |       // Private browsing, cleared site data, or storage disabled outright — the banner just stays  react-hooks/set-state-in-effect
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/rules/review-dialog.tsx
+web:lint:   71:15  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+web:lint: 
+web:lint: Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+web:lint: * Update external systems with the latest state from React.
+web:lint: * Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+web:lint: 
+web:lint: Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/rules/review-dialog.tsx:71:15
+web:lint:   69 |   // notes do not — they belong to one rule.
+web:lint:   70 |   React.useEffect(() => {
+web:lint: > 71 |     if (rule) setNotes(rule.review_notes ?? "")
+web:lint:      |               ^^^^^^^^ Avoid calling setState() directly within an effect
+web:lint:   72 |   }, [rule])
+web:lint:   73 |
+web:lint:   74 |   if (!rule) return null  react-hooks/set-state-in-effect
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/rules/review-workbench.tsx
+web:lint:   76:10  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+web:lint: 
+web:lint: Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+web:lint: * Update external systems with the latest state from React.
+web:lint: * Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+web:lint: 
+web:lint: Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/rules/review-workbench.tsx:76:10
+web:lint:   74 |
+web:lint:   75 |   React.useEffect(() => {
+web:lint: > 76 |     void load(kind)
+web:lint:      |          ^^^^ Avoid calling setState() directly within an effect
+web:lint:   77 |   }, [load, kind])
+web:lint:   78 |
+web:lint:   79 |   async function decide(  react-hooks/set-state-in-effect
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/rules/ziffer-report-dialog.tsx
+web:lint:   60:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+web:lint: 
+web:lint: Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+web:lint: * Update external systems with the latest state from React.
+web:lint: * Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+web:lint: 
+web:lint: Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/rules/ziffer-report-dialog.tsx:60:5
+web:lint:   58 |   React.useEffect(() => {
+web:lint:   59 |     if (!open) return
+web:lint: > 60 |     setZiffer(initialZiffer)
+web:lint:      |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+web:lint:   61 |     setContext("")
+web:lint:   62 |     setError(null)
+web:lint:   63 |     setDone(false)  react-hooks/set-state-in-effect
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/settings/api-key-manager.tsx
+web:lint:   121:10  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+web:lint: 
+web:lint: Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+web:lint: * Update external systems with the latest state from React.
+web:lint: * Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+web:lint: 
+web:lint: Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/settings/api-key-manager.tsx:121:10
+web:lint:   119 |   React.useEffect(() => {
+web:lint:   120 |     const controller = new AbortController()
+web:lint: > 121 |     void load(controller.signal)
+web:lint:       |          ^^^^ Avoid calling setState() directly within an effect
+web:lint:   122 |     return () => controller.abort()
+web:lint:   123 |   }, [load])
+web:lint:   124 |  react-hooks/set-state-in-effect
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/settings/new-key-dialog.tsx
+web:lint:   76:7  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+web:lint: 
+web:lint: Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+web:lint: * Update external systems with the latest state from React.
+web:lint: * Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+web:lint: 
+web:lint: Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+web:lint: 
+web:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web/components/settings/new-key-dialog.tsx:76:7
+web:lint:   74 |   React.useEffect(() => {
+web:lint:   75 |     if (open) {
+web:lint: > 76 |       setName("")
+web:lint:      |       ^^^^^^^ Avoid calling setState() directly within an effect
+web:lint:   77 |       setCopied(false)
+web:lint:   78 |       setCopyFailed(false)
+web:lint:   79 |     }  react-hooks/set-state-in-effect
+web:lint: 
+web:lint: ✖ 6 problems (0 errors, 6 warnings)
+web:lint: 
+web:typecheck: cache hit, replaying logs 86a9e5c4bdf68536
+web:typecheck: 
+web:typecheck: > web@0.0.1 typecheck /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/web
+web:typecheck: > tsc --noEmit
+web:typecheck: 
+docs:typecheck: cache hit, replaying logs 856850d70308e463
+docs:typecheck: 
+docs:typecheck: > docs@0.0.1 typecheck /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/docs
+docs:typecheck: > tsc --noEmit
+docs:typecheck: 
+marketing:typecheck: 
+marketing:typecheck: > marketing@0.0.1 typecheck /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/marketing
+marketing:typecheck: > tsc --noEmit
+marketing:typecheck: 
+marketing:lint: 
+marketing:lint: > marketing@0.0.1 lint /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/marketing
+marketing:lint: > eslint
+marketing:lint: 
+marketing:lint: 
+marketing:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/marketing/src/app/[locale]/(marketing)/page.tsx
+marketing:lint:   19:10  warning  'AuroraBackground' is defined but never used  @typescript-eslint/no-unused-vars
+marketing:lint: 
+marketing:lint: /home/oussama/Desktop/MVP/TARGET_MONOREPO/apps/marketing/src/lib/og-image.tsx
+marketing:lint:   57:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+marketing:lint: 
+marketing:lint: ✖ 2 problems (0 errors, 2 warnings)
+marketing:lint: 
+
+ Tasks:    9 successful, 9 total
+Cached:    7 cached, 9 total
+  Time:    4.987s 
+

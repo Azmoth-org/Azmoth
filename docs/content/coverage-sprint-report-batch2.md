@@ -33,8 +33,16 @@ Fixed by special-casing that one path in both tests:
 Nothing else changed about either test: a real value drifting anywhere else in the response still
 fails both, with no allow-list. Verified by materializing all four files below (one of them,
 `time_relations.manual.csv`, ends up with zero data rows this batch — see §3) and re-running
-`test_golden_snapshot.py` without touching any of the nine frozen `logic/tests/golden/
-*.golden.normalized.json` files. All 23 of its tests pass unmodified.
+`test_golden_snapshot.py`. All 23 of its tests pass unmodified.
+
+**Correction (2026-09-12).** An earlier revision of this section said the four files were
+materialized "without touching any of the nine frozen `logic/tests/golden/*.golden.normalized
+.json` files". That is true of the data commit itself, but not of the branch: the follow-up commit
+that taught `refreeze_rule_coverage.py` the same `files_loaded` lesson re-froze all nine. The
+claim worth making is the narrower one, and it holds — the re-freeze was **purely additive**. The
+complete diff across all nine files is 36 added lines, four per file, each a new filename inside
+`rule_summary.files_loaded`; **zero lines were removed and no value changed**. No billing
+behaviour moved. See §6 of `docs/content/coverage-sprint-batch2-validation.md`.
 
 ---
 
@@ -58,7 +66,7 @@ behandlungsfall` would silently strengthen or weaken the actual rule — see §4
 | 4 | 1 | "Die Leistung nach Nummer 4 ist im Behandlungsfall nur einmal berechnungsfähig." |
 | 380 | 30 | official text: "Epikutantest, je Test (1. bis 30. Test je Behandlungsfall)" |
 | 381 | 20 | official text: "Epikutantest, je Test (31. bis 50. Test je Behandlungsfall)" |
-| 382 | 50 | official text: "Epikutantest, je Test (51. bis 100. Test je Behandlungsfall)" |
+| 382 | 50 | official text: "Epikutantest, je Text [sic] (51. bis 100. Test je Behandlungsfall)" |
 | 385 | 20 | official text: "Pricktest, je Test (1. bis 20. Test je Behandlungsfall)" |
 | 386 | 20 | official text: "Pricktest, je Test (21. bis 40. Test je Behandlungsfall)" |
 | 387 | 40 | official text: "Pricktest, je Test (41. bis 80. Test je Behandlungsfall)" |
@@ -68,6 +76,13 @@ behandlungsfall` would silently strengthen or weaken the actual rule — see §4
 | 842 | 1 | "Die Leistung nach Nummer 842 ist im Behandlungsfall nur einmal berechnungsfähig." |
 | 860 | 1 | "Die Nummer 860 ist im Behandlungsfall nur einmal berechnungsfähig." |
 | 4601 | 3 | "Eine mehr als dreimalige Berechnung der Leistung nach Nummer 4601 im Behandlungsfall ist nicht zulässig." |
+
+The `[sic]` on 382 is not a typo in this table: the catalog entry really does read "je Text",
+an upstream OCR defect in `goae.official.json`. `quantity_limits.manual.csv` quotes it verbatim,
+defect included, because a citation that has been tidied is no longer the catalog's sentence —
+`validate_batch2_csvs.py::citation_verbatim` enforces exactly that, and an earlier revision of
+this table silently printed the corrected spelling. Nothing in the engine reads the quote, so
+`max_count: 50` is unaffected either way.
 
 380/381/382 (Epikutantest) and 385/386/387 (Pricktest) are banded: each Ziffer's own official text
 states an explicit, non-overlapping test-number range for that specific billing code (e.g. 382 is
@@ -118,7 +133,7 @@ this batch's "explicit sentence, cited" bar. It stays a synthetic test fixture, 
 
 | Ziffer | min_age | max_age | Citation |
 |---|---|---|---|
-| 26 | 2 | 13 | "… bei einem Kind bis zum vollendeten 14. Lebensjahr …" + "… ist ab dem vollendeten 2. Lebensjahr je Kalenderjahr höchstens einmal berechnungsfähig." |
+| 26 | — | 13 | "… bei einem Kind bis zum vollendeten 14. Lebensjahr …" |
 | 250a | — | 7 | "Kapillarblutentnahme bei Kindern bis zum vollendeten 8. Lebensjahr" |
 | 273 | — | 3 | "… bei einem Kind bis zum vollendeten 4. Lebensjahr" |
 | 412 | — | 1 | "… bei einem Säugling oder Kleinkind bis zum vollendeten 2. Lebensjahr" |
@@ -128,10 +143,32 @@ this batch's "explicit sentence, cited" bar. It stays a synthetic test fixture, 
 | K1 | — | 3 | "Zuschlag zu Untersuchungen nach Nummer 5, 6, 7 oder 8 bei Kindern bis zum vollendeten 4. Lebensjahr" |
 | K2 | — | 3 | "Zuschlag zu den Leistungen nach Nummer 45, 46, 48, 50, 51, 55 oder 56 bei Kindern bis zum vollendeten 4. Lebensjahr" |
 
-Only sentences with an explicit "(bis/ab dem) vollendeten N. Lebensjahr" number were encoded.
+Only sentences with an explicit "bis zum vollendeten N. Lebensjahr" number were encoded.
 Bare "Neugeborenes" / "Säugling" / "Kleinkind" / "Kind" / "Jugendlicher" with no attached number
 were quarantined — see §4; `Patient.age` is whole years, and a qualitative word alone does not fix
 a defensible year boundary.
+
+**Correction (2026-09-12) — GOÄ 26's lower bound, withdrawn.** This row originally shipped
+`min_age: 2`, taken from the second half of its Anmerkung: "Die Leistung nach Nummer 26 ist **ab
+dem vollendeten 2. Lebensjahr** je Kalenderjahr höchstens einmal berechnungsfähig." Treated as an
+eligibility gate, that made the engine refuse the Früherkennungsuntersuchung to every child under
+two — the U-Untersuchungen of the first two years, which is the population the service exists for.
+
+The sentence does not say that. It says when a *frequency* cap begins to apply, and it is an
+Anmerkung; in this catalog, eligibility is stated in the Leistungslegende, whose only age bound
+here is the upper one. The wider evidence is one-sided: "ab dem vollendeten N. Lebensjahr" occurs
+**exactly once** in all 2,343 Ziffern — this sentence — while "bis zum vollendeten N. Lebensjahr"
+occurs in nine Leistungslegenden (all nine encoded here) and in one further Anmerkung, GOÄ 30's,
+which is a fee adjustment and was itself quarantined. Both annotation-resident age numbers in the
+catalog modify something other than eligibility.
+
+`min_age` is therefore withdrawn and the Anmerkung is no longer cited by this row; `max_age: 13`
+and its Leistungslegende citation stand unchanged. The fragment is recorded in
+`tests/test_batch2_quarantine.py::QUARANTINED_AGE_FRAGMENTS` with the reason *"ambiguous:
+eligibility gate vs frequency activation — requires human review"*, and
+`test_no_shipped_age_rule_asserts_a_lower_bound` prevents any row from reintroducing a lower bound
+without an explicit Leistungslegende one behind it. Full evidence: §10 (finding F1) of
+`docs/content/coverage-sprint-batch2-validation.md`.
 
 ---
 
@@ -152,7 +189,10 @@ test/Intrakutantest band family) — 13 included (§2.1), 68 quarantined below.
   already enforced via batch 1's `exclusions.manual.csv`; only its per-Sitzung self-cap is new and
   quarantined here).
 - *Unsupported window — per Kalenderjahr or a stated N-month/year period, not per Behandlungsfall*:
-  **15, 21, 26 (Mengenbegrenzung clause only — its Alter clause is included, §2.4), 30, 31, 33, 34**.
+  **15, 21, 26, 30, 31, 33, 34**. (GOÄ 26's Anmerkung is now quarantined in full: the
+  Mengenbegrenzung clause for its `je Kalenderjahr` window, and — since the 2026-09-12 correction
+  in §2.4 — the `ab dem vollendeten 2. Lebensjahr` fragment too, which had been read as an Alter
+  eligibility gate. Only 26's Leistungslegende upper bound is encoded.)
 - *Conditioned on "aus demselben Untersuchungsmaterial/Probenmaterial" — not visible on an invoice
   line, same shape batch 1 already declined for GOÄ 4851→4850*: **3511, 3550, 4530, 4531, 4533,
   4538, 4539, 4551, 4715, 4716**.
@@ -193,7 +233,7 @@ test/Intrakutantest band family) — 13 included (§2.1), 68 quarantined below.
 - **4851**: "z.B. aus dem Genitale der Frau" is one illustrative example specimen source ("z.B."),
   not an eligibility restriction on the Ziffer.
 
-**Alter (27 quarantined of 36 examined):**
+**Alter (27 Ziffern quarantined of 36 examined, plus one fragment — see §2.4):**
 
 - *"Neugeboren(es/er)" with no attached number — whole-year age granularity cannot distinguish a
   newborn (~0–28 days) from any other infant under one year, and asserting `max_age: 0` would be
