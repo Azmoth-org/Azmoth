@@ -30,7 +30,7 @@ Two ways to satisfy it:
    - a touched family regression test (`apps/engine/tests/test_batch2_*.py` or
      `test_complex_constraints.py`) — the human evidence that someone actually exercised the
      family the edit is in, and
-   - a committed `logic/tests/golden/refreeze_report.json` (see `scripts/refreeze_rule_coverage.py
+   - a committed `logic/tests/refreeze_report.json` (see `scripts/refreeze_rule_coverage.py
      --report`) whose `rules_hash` matches the rule tables on disk *right now* and whose
      `all_clean` is true — the mechanical proof that, for the exact rules just edited, all nine
      golden cases came back with zero leaves changed, not even an allowed one. A stale hash or a
@@ -79,7 +79,7 @@ FAMILY_TEST_RE = re.compile(r"^apps/engine/tests/(test_batch2_[A-Za-z0-9_]+\.py|
 
 #: Where `scripts/refreeze_rule_coverage.py --report` writes its summary, and where this guard
 #: looks for it — both relative to the monorepo root.
-REFREEZE_REPORT_PATH = "logic/tests/golden/refreeze_report.json"
+REFREEZE_REPORT_PATH = "logic/tests/refreeze_report.json"
 
 LOGIC_GUARD_FAILED_MESSAGE = (
     "🚨 LOGIC OR DATA CHANGED WITHOUT GOLDEN SNAPSHOT UPDATE. You modified the legal reasoning or "
@@ -149,11 +149,15 @@ def evaluate(changed: list[str], *, repo_root: Path | None = None) -> tuple[bool
     lines += [f"  {p}" for p in legal]
     lines.append("")
 
-    # `REFREEZE_REPORT_PATH` lives under `logic/tests/golden/` but is not itself golden-corpus
-    # evidence: it is machine-generated, and its presence in the diff proves nothing on its own —
-    # `verify_refreeze_report` is what actually checks it, and only the carve-out below calls that.
-    # Without this exclusion, committing the report would satisfy the ORIGINAL evidence path for
-    # *any* legal change (a `.dl` edit included), skipping every check the carve-out exists to run.
+    # `REFREEZE_REPORT_PATH` lives directly under `logic/tests/`, deliberately not inside
+    # `golden/` or `cases/`: `test_batch2_parity_hardening.py` diffs `logic/tests/golden` and
+    # asserts every added line is a rule-CSV filename, so a machine-generated report sitting in
+    # that directory would trip it. It also is not golden-corpus evidence on its own — it is
+    # machine-generated, and its presence in the diff proves nothing without `verify_refreeze_
+    # report` actually checking it, which only the carve-out below does. The explicit exclusion
+    # here is belt-and-braces: `EVIDENCE_RE` does not match this path today, but if the report ever
+    # moved back under `golden/` or `cases/`, committing it would otherwise satisfy the ORIGINAL
+    # evidence path for *any* legal change (a `.dl` edit included), skipping every carve-out check.
     evidence = sorted(p for p in changed if EVIDENCE_RE.match(p) and p != REFREEZE_REPORT_PATH)
     if evidence:
         lines.append("Golden snapshots / cases also changed:")

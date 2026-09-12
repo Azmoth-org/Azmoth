@@ -36,7 +36,6 @@ import sys
 from pathlib import Path
 
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = ENGINE_ROOT.parents[1]
 sys.path.insert(0, str(ENGINE_ROOT))
 
 from app.catalog.catalog_loader import load_catalog  # noqa: E402

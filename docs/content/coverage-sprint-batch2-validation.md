@@ -502,7 +502,7 @@ claims none of the Ziffern this batch constrains.
 snapshot already matches"** — so no billing behaviour moved anywhere in the golden corpus. That
 report is what the real CI logic guard needed and did not have at the time — see F6: the branch's
 own self-check was run against a stale diff base, and the mechanical gate correctly found no
-evidence in `logic/tests/`. Closed by committing `logic/tests/golden/refreeze_report.json` and the
+evidence in `logic/tests/`. Closed by committing `logic/tests/refreeze_report.json` and the
 `scripts/logic_guard.py` carve-out that checks it.
 
 
@@ -583,7 +583,7 @@ move, however real the rule edit is.
 **Fix.** `scripts/logic_guard.py` (unit-tested in `tests/test_logic_guard.py`) now encodes the
 gate's decision, including a narrow ADR-002 family carve-out: when every legal artefact changed is
 one of the four family CSVs, the gate accepts a touched family regression test *and* a committed,
-fresh, all-CLEAN `logic/tests/golden/refreeze_report.json` (`scripts/refreeze_rule_coverage.py
+fresh, all-CLEAN `logic/tests/refreeze_report.json` (`scripts/refreeze_rule_coverage.py
 --report`, whose `rules_hash` is checked against the rule tables on disk — a stale or non-clean
 report is refused like no evidence at all). Every other legal artefact — a `.dl`/`.lp` edit, the
 catalog, any non-family CSV — still requires golden-corpus evidence exactly as before; the carve-out
@@ -645,7 +645,7 @@ Working directory `apps/engine` unless noted. Full output under
 | 13 | CI logic guard, simulated on `main...HEAD` | — | **Was wrong** — see F6. Simulated against a stale local `main`; the real `origin/main` base leaves no golden-corpus evidence in this branch's diff, and the mechanical gate correctly failed |
 | 14 | `python scripts/export_openapi.py --check` | 0 | up to date — 35 paths, 90 schemas |
 | 15 | `pnpm turbo lint typecheck` (repo root) | 0 | 9/9 tasks; 0 errors, 6 pre-existing warnings unrelated to this work |
-| 18 | `python scripts/refreeze_rule_coverage.py --report ../../logic/tests/golden/refreeze_report.json` | 0 | all 9 CLEAN; report committed for `scripts/logic_guard.py`'s ADR-002 family carve-out (F6) |
+| 18 | `python scripts/refreeze_rule_coverage.py --report ../../logic/tests/refreeze_report.json` | 0 | all 9 CLEAN; report committed for `scripts/logic_guard.py`'s ADR-002 family carve-out (F6) |
 | 19 | `pytest tests/test_logic_guard.py tests/test_validate_batch2_csvs.py -q` | 0 | 10 + 65 passed |
 
 **Not run, and why:** `pnpm test` phase 4 (E2E) needs a stack answering on two ports, and

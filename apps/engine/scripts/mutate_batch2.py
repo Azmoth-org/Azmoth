@@ -35,7 +35,21 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = ENGINE_ROOT.parents[1]
+
+
+def _find_repo_root() -> Path:
+    """The nearest ancestor holding both `logic/` and `data/` — see `validate_batch2_csvs.py`'s
+    copy of this helper for why it is independent rather than imported from `app.config`: this
+    script is stdlib-only by design (like it, and like the padnext validator/anonymiser), and a
+    fixed `.parents[1]` breaks in the container image, where `logic/` and `data/` sit directly
+    under `/srv` rather than under a nested `apps/engine`."""
+    for candidate in (ENGINE_ROOT, *ENGINE_ROOT.parents):
+        if (candidate / "logic").is_dir() and (candidate / "data").is_dir():
+            return candidate
+    return ENGINE_ROOT.parent.parent
+
+
+REPO_ROOT = _find_repo_root()
 sys.path.insert(0, str(ENGINE_ROOT))
 
 RULES_DIR = REPO_ROOT / "data" / "rules"

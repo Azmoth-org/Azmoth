@@ -40,7 +40,26 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = ENGINE_ROOT.parents[1]
+
+
+def _find_repo_root() -> Path:
+    """The nearest ancestor holding both `logic/` and `data/` — the same search `app.config
+    ._find_repo_root` does, kept independent rather than imported so this script stays stdlib-only
+    (see the module docstring's Dockerfile note about `validate_padnext.py`/`anonymize_padnext.py`,
+    the same design).
+
+    Checkout:  …/TARGET_MONOREPO/apps/engine/scripts → …/TARGET_MONOREPO
+    Container: /srv/scripts                          → /srv (`logic/` and `data/` are copied
+    directly under `/srv`, not under a nested `apps/engine`, so a fixed `.parents[1]` walks past
+    `/` and raises `IndexError` there — this is what broke before the search replaced it).
+    """
+    for candidate in (ENGINE_ROOT, *ENGINE_ROOT.parents):
+        if (candidate / "logic").is_dir() and (candidate / "data").is_dir():
+            return candidate
+    return ENGINE_ROOT.parent.parent
+
+
+REPO_ROOT = _find_repo_root()
 sys.path.insert(0, str(ENGINE_ROOT))
 
 DEFAULT_RULES_DIR = REPO_ROOT / "data" / "rules"

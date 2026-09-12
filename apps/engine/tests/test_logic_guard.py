@@ -161,10 +161,11 @@ def test_family_csv_change_with_a_non_clean_report_fails(tmp_path):
 
 
 def test_committing_the_report_alone_does_not_satisfy_a_non_family_change(tmp_path):
-    """The report file lives under `logic/tests/golden/`, which is exactly the directory the
-    ORIGINAL evidence path matches on path alone. Without excluding it explicitly, committing the
-    report — even a stale or dirty one — would satisfy the guard for a `.dl` edit or any other
-    legal artefact, skipping every check the carve-out exists to run. It must not."""
+    """The guard excludes `REFREEZE_REPORT_PATH` from the ORIGINAL evidence match explicitly,
+    belt-and-braces: if that path ever moved back under `logic/tests/golden/` or `logic/tests/
+    cases/`, committing the report — even a stale or dirty one — would otherwise satisfy the guard
+    for a `.dl` edit or any other legal artefact, skipping every check the carve-out exists to run.
+    It must not, regardless of where the report happens to live."""
     _write_report(tmp_path, rules_hash_value=_live_rules_hash(), all_clean=True)
 
     satisfied, message = logic_guard.evaluate(

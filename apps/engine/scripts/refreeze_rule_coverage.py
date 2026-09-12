@@ -3,7 +3,7 @@
 
     python scripts/refreeze_rule_coverage.py            # report what would change
     python scripts/refreeze_rule_coverage.py --write    # apply it
-    python scripts/refreeze_rule_coverage.py --report logic/tests/golden/refreeze_report.json
+    python scripts/refreeze_rule_coverage.py --report logic/tests/refreeze_report.json
                                                          # also write a machine-checkable summary
 
 Verifying a rule moves the rule-coverage counters that every solve response carries, so the nine
