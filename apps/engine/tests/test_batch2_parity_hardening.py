@@ -225,10 +225,16 @@ def test_no_behavioural_value_moved_in_any_frozen_snapshot_on_this_branch():
     # everything after it. Deliberately *not* the merge base against main: that range also spans
     # coverage-sprint batch 1, which added 25 Ziffern and legitimately moved rule counts in every
     # snapshot. Widening this window would make the test fail for a reason batch 2 did not cause.
-    intro = subprocess.run(
-        ["git", "log", "--diff-filter=A", "--format=%H", "--", "data/rules/quantity_limits.manual.csv"],
-        capture_output=True, text=True, cwd=repo_root,
-    )
+    # `git` itself is absent from the container image (see `test_golden_snapshot.py::_in_git_repo`,
+    # which guards the same way) — that raises `FileNotFoundError` before `subprocess.run` produces
+    # a returncode to check, so it needs its own catch rather than folding into the checks below.
+    try:
+        intro = subprocess.run(
+            ["git", "log", "--diff-filter=A", "--format=%H", "--", "data/rules/quantity_limits.manual.csv"],
+            capture_output=True, text=True, cwd=repo_root,
+        )
+    except (FileNotFoundError, NotADirectoryError):
+        pytest.skip("git is not available (running from a built image)")
     if intro.returncode != 0 or not intro.stdout.strip():
         pytest.skip("not in a git checkout that carries the batch 2 history")
     first_commit = intro.stdout.split()[-1]
