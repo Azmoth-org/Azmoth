@@ -1,0 +1,39 @@
+catalog                        : 2343 Ziffern (goae_official_snapshot_2026-07-25)
+
+── Published (unchanged by batch 2) ───────────────────────────────────────────
+  enforced_rule_count          : 944
+  total_constraint_rule_count  : 980
+  Ziffern under an enforced rule: 383 / 2343  (16.35%)
+  formula                      : |union of exclusions/zielleistung/specificity/factor_caps Ziffern| / |catalog|
+
+── Batch 2 corpus ─────────────────────────────────────────────────────────────
+  rows total                   : 37
+    quantity_limits            :  13 row(s),  13 Ziffer(n)
+    gender_restrictions        :  15 row(s),  15 Ziffer(n)
+    age_restrictions           :   9 row(s),   9 Ziffer(n)
+    time_relations             :   0 row(s),   0 Ziffer(n)
+  distinct Ziffern             : 37
+  families pairwise disjoint   : True
+  already under an older rule  : 14  ['4', '26', '27', '273', '807', '860', '1700', '1701', '1710', '1728', '1729', '1730', '1731', '5041']
+  newly represented            : 23
+  formula                      : newly = |batch2 Ziffern| - |batch2 Ziffern already in the counted union|
+
+── If batch 2 were folded into the published counts ───────────────────────────
+  enforced_rule_count          : 981
+  total_constraint_rule_count  : 1017
+  Ziffern under a rule         : 406 / 2343  (17.33%)
+
+── Executable today, PADnext ingestion ────────────────────────────────────────
+    quantity_limits            :   0
+    gender_restrictions        :   0
+    age_restrictions           :   0
+    time_relations             :   0
+  total                        : 0
+  why                          : no production call site supplies the fact this layer needs: `app/services/pipeline.py` calls `souffle.run(extraction, bridge, proposed_factors=...)` with no `history_counts`, and `app/padnext/audit.py::_build_group_audit_input` builds `Patient(setting=setting)`, leaving `age` and `sex` None
+
+── Enforceable given the facts (general extraction API) ───────────────────────
+    quantity_limits            :  13
+    gender_restrictions        :  15
+    age_restrictions           :   9
+    time_relations             :   0
+  total                        : 37

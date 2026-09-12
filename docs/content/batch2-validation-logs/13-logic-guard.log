@@ -1,0 +1,21 @@
+LEGAL ARTEFACTS CHANGED:
+  data/rules/age_restrictions.manual.csv
+  data/rules/exclusions.manual.csv
+  data/rules/factor_caps.csv
+  data/rules/gender_restrictions.manual.csv
+  data/rules/quantity_limits.manual.csv
+  data/rules/time_relations.manual.csv
+  logic/datalog/goae_rules.dl
+
+EVIDENCE (golden/cases) CHANGED:
+  logic/tests/golden/case_001_knee.golden.normalized.json
+  logic/tests/golden/case_002_cardiology.golden.normalized.json
+  logic/tests/golden/case_003_dermatology.golden.normalized.json
+  logic/tests/golden/case_004_factor_cap.golden.normalized.json
+  logic/tests/golden/case_005_mutual_exclusion.golden.normalized.json
+  logic/tests/golden/case_006_zielleistung.golden.normalized.json
+  logic/tests/golden/case_007_missing_docs.golden.normalized.json
+  logic/tests/golden/case_008_complex_polytrauma.golden.normalized.json
+  logic/tests/golden/case_009_analog_exclusion.golden.normalized.json
+
+LOGIC GUARD: SATISFIED
