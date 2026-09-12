@@ -19,10 +19,11 @@ from pathlib import Path
 
 import pytest
 
+from app.config import CATALOG_PATH, RULES_DATA_DIR
+
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = ENGINE_ROOT.parents[1]
-RULES_DIR = REPO_ROOT / "data" / "rules"
-CATALOG = REPO_ROOT / "data" / "catalogs" / "goae_current" / "goae.official.json"
+RULES_DIR = RULES_DATA_DIR
+CATALOG = CATALOG_PATH
 
 _spec = importlib.util.spec_from_file_location(
     "validate_batch2_csvs", ENGINE_ROOT / "scripts" / "validate_batch2_csvs.py"

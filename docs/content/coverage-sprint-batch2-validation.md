@@ -499,8 +499,11 @@ or amount changed — the rest of `test_golden_cases.py` (23 tests) passes unmod
 claims none of the Ziffern this batch constrains.
 
 `refreeze_rule_coverage.py` reports **all nine golden snapshots CLEAN — "Nothing to do: every
-snapshot already matches"** — so no billing behaviour moved anywhere in the golden corpus. The CI
-logic guard remains **SATISFIED** for the branch.
+snapshot already matches"** — so no billing behaviour moved anywhere in the golden corpus. That
+report is what the real CI logic guard needed and did not have at the time — see F6: the branch's
+own self-check was run against a stale diff base, and the mechanical gate correctly found no
+evidence in `logic/tests/`. Closed by committing `logic/tests/golden/refreeze_report.json` and the
+`scripts/logic_guard.py` carve-out that checks it.
 
 
 ### F2 — every Batch 2 rule is inert on the PADnext ingestion path · **severity: medium (scope/claim accuracy)** · blocks release: **no**
@@ -554,6 +557,39 @@ any change is deliberate. **Next action:** a product/clinical decision, not an e
 See §6. The substance holds (purely additive, no value moved); the sentence did not. §1 of the
 batch 2 report now carries a dated correction saying so.
 
+### F6 — row 13's "CI logic guard: SATISFIED" was checked against the wrong diff · **severity: medium (process)** · **FIXED**
+
+**Symptom.** The real `contract-and-logic-gate` CI job failed on this branch: `data/rules/age_restrictions.manual.csv`
+changed (F1) but the diff carried no file under `logic/tests/(golden|cases)/`, and the guard's bash
+refused it exactly as designed.
+
+**Why the self-check missed it.** Row 13 below was "simulated on `main...HEAD`" against a local
+`main` that had not been updated past `cc8ff7b`/`a5ad632`/`7323630` — commits already merged to
+`origin/main` by the time this branch was validated. Diffed against the real base (`origin/main`),
+those commits' `logic/tests/golden/*.json` changes drop out of the comparison entirely, leaving
+only this branch's own commits — which touch `age_restrictions.manual.csv` and nothing under
+`logic/tests/`. The local simulation was answering a different question than the one CI actually
+asks.
+
+**Why the gate was right to refuse it anyway, and why a real golden case can't fix that.** Investigated
+whether a golden case could exercise GOÄ 26 to give the guard real evidence. It cannot:
+`logic/tests/cases/*/input.json` only carries clinical extraction data, and the only path from an
+extraction to a Ziffer is `data/mappings/entity_to_ziffer.csv` — which has zero rows for Ziffer 26,
+or for any Ziffer in the other three ADR-002 families (quantity/gender/age/time). This is a sharper
+version of F2: not just "the request-shaping fields are unpopulated in production", but "the
+extraction pipeline has no way to request these Ziffern at all." No `logic/tests/cases/` fixture can
+move, however real the rule edit is.
+
+**Fix.** `scripts/logic_guard.py` (unit-tested in `tests/test_logic_guard.py`) now encodes the
+gate's decision, including a narrow ADR-002 family carve-out: when every legal artefact changed is
+one of the four family CSVs, the gate accepts a touched family regression test *and* a committed,
+fresh, all-CLEAN `logic/tests/golden/refreeze_report.json` (`scripts/refreeze_rule_coverage.py
+--report`, whose `rules_hash` is checked against the rule tables on disk — a stale or non-clean
+report is refused like no evidence at all). Every other legal artefact — a `.dl`/`.lp` edit, the
+catalog, any non-family CSV — still requires golden-corpus evidence exactly as before; the carve-out
+never widens to cover them, even alongside a family CSV in the same diff. See the sunset item in
+§13.
+
 ---
 
 ## 11. Public-claim review
@@ -606,9 +642,11 @@ Working directory `apps/engine` unless noted. Full output under
 | 12 | `pytest tests/ -q -rs` (full engine suite) | 0 | **2,232 collected — 2,225 passed, 7 skipped, 0 failed, 0 errors.** The 7 skips are the 3 benchmarks (`--benchmark-skip`) and 4 Postgres-dialect tests (`POSTGRES_TEST_URL` unset), each naming its reason under `-rs` |
 | 16 | `pytest tests/test_golden_cases.py -q` (after the F1 re-pin) | 0 | 23 passed — receipt re-pinned, no billing number moved |
 | 17 | `python scripts/refreeze_rule_coverage.py` (after F1) | 0 | all 9 snapshots **CLEAN**; "Nothing to do: every snapshot already matches" |
-| 13 | CI logic guard, simulated on `main...HEAD` | — | **SATISFIED** (legal artefacts + golden evidence both present) |
+| 13 | CI logic guard, simulated on `main...HEAD` | — | **Was wrong** — see F6. Simulated against a stale local `main`; the real `origin/main` base leaves no golden-corpus evidence in this branch's diff, and the mechanical gate correctly failed |
 | 14 | `python scripts/export_openapi.py --check` | 0 | up to date — 35 paths, 90 schemas |
 | 15 | `pnpm turbo lint typecheck` (repo root) | 0 | 9/9 tasks; 0 errors, 6 pre-existing warnings unrelated to this work |
+| 18 | `python scripts/refreeze_rule_coverage.py --report ../../logic/tests/golden/refreeze_report.json` | 0 | all 9 CLEAN; report committed for `scripts/logic_guard.py`'s ADR-002 family carve-out (F6) |
+| 19 | `pytest tests/test_logic_guard.py tests/test_validate_batch2_csvs.py -q` | 0 | 10 + 65 passed |
 
 **Not run, and why:** `pnpm test` phase 4 (E2E) needs a stack answering on two ports, and
 `engine-database` CI needs a Postgres service — neither was available, and neither exercises the
@@ -628,6 +666,13 @@ Batch 2 rule families. `pnpm turbo build` was skipped as it is unaffected by Pyt
 3. **Is the Mengenbegrenzung wiring gap (F2) planned work or an oversight?** The table, the
    service and the tests all exist; only the call site is missing.
 4. **Should the validator run in CI?** F3 — the `window` gate is only a gate if something runs it.
+5. **Sunset the ADR-002 family carve-out, per family, as F2 closes.** F6. The carve-out in
+   `scripts/logic_guard.py` exists only because quantity/gender/age/time Ziffern have no
+   `entity_to_ziffer.csv` row, so no golden case can exercise them. The moment a family gets that
+   wiring — production supplies the fact its Ziffern need, and at least one gets a mapping row — a
+   real `logic/tests/cases/` fixture must be added for it and `FAMILY_CSVS` in `logic_guard.py`
+   trimmed to drop that file. Tracked here rather than only in the script comment so it surfaces at
+   the next batch's planning, not just to someone reading the gate's source.
 
 ---
 
