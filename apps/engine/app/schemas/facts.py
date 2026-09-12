@@ -69,6 +69,15 @@ class BlockedCode(BaseModel):
         "unknown_ziffer",
         "inactive_ziffer",
         "conflict_lost",
+        #: The coverage-sprint constraint families — see `docs/content/adr-002-complex-
+        #: constraints.md`. Each removes a position from `billable` exactly like `exclusion`
+        #: does; `app.padnext.audit.classify_position` needs no changes for any of them, since it
+        #: already reads `verdict == "blocked"` plus whether the rule that fired is verified,
+        #: generically over every reason.
+        "quantity_exceeded",
+        "time_relation",
+        "gender_restricted",
+        "age_restricted",
     ]
     detail: str = ""
     blocked_by: str | None = None

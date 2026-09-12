@@ -25,18 +25,19 @@ it was written. So:
 - German copy in [`messages/de.json`](messages/de.json) carries ICU placeholders — `{regeln}`,
   `{laufzeit}`, `{katalogAnteil}` — and **never a digit**.
 
-The current values, verified against the engine on 2026-08-31:
+The current values, verified against the engine on 2026-09-12 (see
+[`docs/content/coverage-sprint-plan.md`](../../docs/content/coverage-sprint-plan.md)):
 
 | Fact | Value | Constant |
 |---|---|---|
-| Rules that can suppress a position | 858 | `ENFORCED_RULE_COUNT` |
-| Constraint rules loaded | 894 | `CONSTRAINT_RULE_COUNT` |
-| GOÄ positions in the catalog snapshot | 2 192 | `CATALOG_ZIFFER_COUNT` |
-| Positions named by ≥ 1 enforced rule | 358 | `ZIFFERN_UNDER_RULE_COUNT` |
+| Rules that can suppress a position | 944 | `ENFORCED_RULE_COUNT` |
+| Constraint rules loaded | 980 | `CONSTRAINT_RULE_COUNT` |
+| GOÄ positions in the catalog snapshot | 2 343 | `CATALOG_ZIFFER_COUNT` |
+| Positions named by ≥ 1 enforced rule | 383 | `ZIFFERN_UNDER_RULE_COUNT` |
 | Median latency per delivery | 80 ms | `LATENCY_MS_PER_INVOICE` |
 
-Shares (96 %, 16,3 %) are **computed** from those counts, never written down — "96 %" and "858 von
-894" are the same claim twice, and the failure mode is the version where one gets updated.
+Shares (96 %, 16,3 %) are **computed** from those counts, never written down — "96 %" and "944 von
+980" are the same claim twice, and the failure mode is the version where one gets updated.
 
 ### What this rules out
 

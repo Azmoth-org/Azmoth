@@ -19,25 +19,26 @@
  * what `Pipeline().rule_coverage()` computes. Changing a rule set without changing
  * this file turns the engine's own suite red.
  *
- * Verified against the engine on 2026-09-09:
+ * Verified against the engine on 2026-09-12 (coverage sprint batch 1 — see
+ * docs/content/coverage-sprint-plan.md):
  *
- *     enforced_rule_count       858
- *     total_constraint_rule_count 894
+ *     enforced_rule_count       944
+ *     total_constraint_rule_count 980
  *     catalog                   2343 Ziffern (goae_official_snapshot_2026-07-25)
- *     Ziffern named by >= 1 enforced rule  358
+ *     Ziffern named by >= 1 enforced rule  383
  */
 
 /** Rules that may actually suppress a position right now. `enforced_rule_count`. */
-export const ENFORCED_RULE_COUNT = 858;
+export const ENFORCED_RULE_COUNT = 944;
 
 /** Every constraint rule loaded, enforced or not. `total_constraint_rule_count`. */
-export const CONSTRAINT_RULE_COUNT = 894;
+export const CONSTRAINT_RULE_COUNT = 980;
 
 /** GOÄ positions in the loaded catalog snapshot. */
 export const CATALOG_ZIFFER_COUNT = 2343;
 
 /** Catalog positions named by at least one enforced rule. The honest coverage figure. */
-export const ZIFFERN_UNDER_RULE_COUNT = 358;
+export const ZIFFERN_UNDER_RULE_COUNT = 383;
 
 /**
  * Median end-to-end latency for one invoice, in milliseconds.

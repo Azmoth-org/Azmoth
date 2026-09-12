@@ -103,11 +103,11 @@ this migration cannot create would make the schema unappliable wherever the engi
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Text, event
+from sqlalchemy import Boolean, Date, ForeignKey, Index, Integer, String, Text, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, JSONVariant, TimestampVariant, UUIDVariant
@@ -1228,3 +1228,117 @@ class BillingInvoiceRecord(Base):
             f"<BillingInvoiceRecord {self.public_id} {self.organization_id} "
             f"{self.total_cents}c {self.status}>"
         )
+
+
+class PatientZifferHistoryRecord(Base):
+    """One Ziffer, billed for one pseudonymous patient, on one date — the ledger a Mengenbegrenzung
+    check reads before admitting another occurrence of the same Ziffer in the current Behandlungsfall
+    (§ 21 GOÄ — a calendar quarter). See `docs/content/adr-002-complex-constraints.md`.
+
+    **This table exists because the rules engine cannot answer this question on its own.** Every
+    other constraint here — an exclusion, a Zielleistung, a factor cap — is decidable from one
+    invoice, because the fact it depends on is entirely on that invoice. "Has this Ziffer already
+    been billed three times this quarter" is a fact about a *patient across invoices*, and the
+    engine (`app.solvers.souffle_engine`) is deliberately stateless per call — see `datum` in
+    `logic/datalog/goae_rules.dl` for the same reasoning applied to a single invoice's own dates.
+    So the count is assembled here, in Postgres, by `app.services.patient_history.quarter_counts`,
+    and handed to Soufflé as a plain fact (`history_count`) exactly like a factor is handed in as
+    `proposed_factor` — the engine never learns that a database exists.
+
+    **`patient_pseudonym` is opaque and this table does not care how it was derived.** It is
+    supplied by the caller, never computed here and never read out of a parsed PADnext delivery:
+    `app.schemas.padnext` deliberately parses no field that could hold patient identity (name,
+    address, date of birth — see that module's docstring and
+    `tests/test_padnext.py::test_no_parsed_model_can_hold_patient_identity`), and a table that
+    accumulates a patient's billing history over a quarter is exactly the place that invariant would
+    be defeated by accident. The caller — today, nothing; see the ADR for what "wiring this in"
+    would require — is responsible for a token that is stable for one patient across invoices and
+    is not itself reversible to a name, e.g. a keyed hash the PVS computes locally and never
+    discloses the key for. Two different practices' pseudonyms are never compared: every read and
+    write here is scoped to `organization_id` first.
+
+        patient_ziffer_history  n ─── 1  organization   (by id; no FK — Better Auth owns that table)
+        patient_ziffer_history  n ─── 1  proposals       (by id; ON DELETE SET NULL)
+
+    **Append-only, like `audit_events`, and for the same reason.** A row is evidence that a Ziffer
+    was billed on a date; editing it in place after the fact is indistinguishable from making a
+    quantity cap unenforceable by rewriting history. The retention purge
+    (`scripts/purge_old_data.py`) deletes `proposals` and leaves `audit_events` standing with
+    `proposal_id` nulled — this table follows the identical shape, for the identical reason: the
+    *evidence that billing happened* must survive the deletion of the *draft* it came from, even
+    though nothing here is patient identity for a DSGVO retention clock to run against on its own.
+    """
+
+    __tablename__ = "patient_ziffer_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDVariant, primary_key=True, default=uuid.uuid4)
+
+    #: The Better Auth `organization.id` this occurrence belongs to. Not a foreign key, for the
+    #: same reason as everywhere else in this file — see the module docstring. Leads every index:
+    #: a quantity check is always "this practice's patient", never a cross-tenant question.
+    organization_id: Mapped[str] = mapped_column(String(256), nullable=False)
+
+    #: An opaque, caller-supplied token naming one patient within one organisation. See the class
+    #: docstring on what this must and must not be.
+    patient_pseudonym: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    #: The GOÄ position billed. No foreign key — a Ziffer names a row in the versioned catalog,
+    #: same reasoning as `rule_reviews.rule_id` and `rule_proposals.ziffer`.
+    ziffer: Mapped[str] = mapped_column(String(16), nullable=False)
+
+    #: The claimed Leistungsdatum this occurrence was rendered on — a plain calendar date, never a
+    #: timestamp, matching what a PADnext `<datum>` actually carries and what `datum` in
+    #: `goae_rules.dl` already assumes.
+    service_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    #: The proposal this occurrence was recorded from, once approved — **while that proposal still
+    #: exists**. `ON DELETE SET NULL`, exactly like `audit_events.proposal_id`, and for the same
+    #: reason: the retention purge must delete the draft without silently destroying the ledger
+    #: row a later quantity check depends on. Nullable also for a row backfilled from a source that
+    #: never had a `ProposalRecord` at all — a direct PADnext audit, which today has no draft/
+    #: approval step of its own.
+    proposal_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUIDVariant,
+        ForeignKey("proposals.id", ondelete="SET NULL"),
+        index=True,
+        default=None,
+    )
+
+    recorded_at: Mapped[datetime] = mapped_column(TimestampVariant, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        # The one read this table exists for: "how many times has this patient been billed this
+        # Ziffer, in this window" — see `app.services.patient_history.quarter_counts`. Tenant-
+        # leading for the same reason as every other index in this file.
+        Index(
+            "ix_patient_ziffer_history_lookup",
+            "organization_id",
+            "patient_pseudonym",
+            "ziffer",
+            "service_date",
+        ),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - diagnostics only
+        return (
+            f"<PatientZifferHistoryRecord {self.organization_id} {self.ziffer} "
+            f"{self.service_date}>"
+        )
+
+
+@event.listens_for(PatientZifferHistoryRecord, "before_update")
+def _reject_history_update(_mapper, _connection, target: PatientZifferHistoryRecord) -> None:
+    raise AuditLogIsAppendOnly(
+        f"patient_ziffer_history is append-only: the {target.ziffer} occurrence on "
+        f"{target.service_date} cannot be modified. Record a new row instead."
+    )
+
+
+@event.listens_for(PatientZifferHistoryRecord, "before_delete")
+def _reject_history_delete(_mapper, _connection, target: PatientZifferHistoryRecord) -> None:
+    raise AuditLogIsAppendOnly(
+        f"patient_ziffer_history is append-only: the {target.ziffer} occurrence on "
+        f"{target.service_date} cannot be deleted. The retention purge deletes the proposal it "
+        "came from and leaves this row standing, with `proposal_id` set to NULL — see "
+        "scripts/purge_old_data.py."
+    )

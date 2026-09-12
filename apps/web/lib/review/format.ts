@@ -77,6 +77,10 @@ export const BLOCKED_REASON_LABEL: Record<BlockedReason, string> = {
   unknown_ziffer: "Ziffer nicht im Katalog",
   inactive_ziffer: "Ziffer nicht aktiv",
   conflict_lost: "Arbitrierung verloren",
+  quantity_exceeded: "Mengenbegrenzung überschritten (Behandlungsfall)",
+  time_relation: "Zeitbeziehung verletzt (selber Tag)",
+  gender_restricted: "Auf ein Geschlecht beschränkt",
+  age_restricted: "Auf eine Altersgruppe beschränkt",
 }
 
 export const SEVERITY_LABEL: Record<WarningSeverity, string> = {
@@ -157,7 +161,7 @@ export function bySeverity<
 }
 
 /**
- * The same seven reasons, short enough to be a badge.
+ * The same reasons as `BLOCKED_REASON_LABEL`, short enough to be a badge.
  *
  * `BLOCKED_REASON_LABEL` is the full sentence — "Zielleistung (§ 4 Abs. 2a GOÄ)" — and it is what a
  * reader needs once they are looking at *one* suppression. It is not what they need while scanning
@@ -176,6 +180,10 @@ export const BLOCKED_REASON_SHORT: Record<BlockedReason, string> = {
   unknown_ziffer: "Unbekannte Ziffer",
   inactive_ziffer: "Ziffer inaktiv",
   conflict_lost: "Arbitrierung",
+  quantity_exceeded: "Mengenbegrenzung",
+  time_relation: "Zeitbeziehung",
+  gender_restricted: "Geschlecht",
+  age_restricted: "Alter",
 }
 
 /**

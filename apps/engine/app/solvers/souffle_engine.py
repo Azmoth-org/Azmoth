@@ -52,6 +52,15 @@ BLOCK_EXPLANATIONS = {
     "conflict_lost": (
         "GOÄ {z} konkurriert wechselseitig mit GOÄ {by}; der Optimierer hat GOÄ {by} gewählt."
     ),
+    "quantity_exceeded": (
+        "GOÄ {z} wurde für diesen Patienten im laufenden Behandlungsfall bereits an der zulässigen "
+        "Höchstmenge berechnet – eine weitere Berechnung ist nicht zulässig."
+    ),
+    "time_relation": (
+        "GOÄ {z} ist am selben Tag wie GOÄ {by} nicht berechnungsfähig (Zeitbeziehung)."
+    ),
+    "gender_restricted": "GOÄ {z} ist auf ein Geschlecht beschränkt, das nicht zum Patienten passt.",
+    "age_restricted": "GOÄ {z} ist auf eine Altersgruppe beschränkt, die der Patient nicht erfüllt.",
 }
 
 
@@ -149,6 +158,7 @@ class SouffleEngine:
         bridge: BridgeResult,
         *,
         proposed_factors: dict[str, Decimal] | None = None,
+        history_counts: dict[str, int] | None = None,
         keep_workdir: Path | None = None,
     ) -> RulesResult:
         if not self.available():
@@ -169,7 +179,13 @@ class SouffleEngine:
             fact_dir, out_dir = workdir / "facts", workdir / "out"
             out_dir.mkdir(parents=True, exist_ok=True)
             counts = write_fact_files(
-                fact_dir, self.catalog, self.rules, bridge, extraction, proposed_factors
+                fact_dir,
+                self.catalog,
+                self.rules,
+                bridge,
+                extraction,
+                proposed_factors,
+                history_counts,
             )
             log.debug("souffle facts: %s", counts)
 
@@ -250,6 +266,9 @@ class SouffleEngine:
             # goae_rules.dl. Reported under the same `reason` so a caller that does not read
             # `cross_date` sees exactly what it always did.
             ("exclusion", "blocked_exclusion_cross_date", True),
+            # Zeitbeziehung's enforceable half: same shape as `blocked_exclusion`
+            # (Ziffer, BlockedBy, RuleId), so it needs no special casing here — see LAYER 3.6.
+            ("time_relation", "blocked_time_relation", False),
         ):
             for row in read_relation(out_dir, relation):
                 ziffer, by = row[0], row[1]
@@ -268,6 +287,53 @@ class SouffleEngine:
                         cross_date=cross_date,
                     )
                 )
+
+        # Mengenbegrenzung, Geschlecht and Alter each carry a different shape than the pair above
+        # (no second Ziffer to name as `blocked_by`), so they are parsed on their own.
+        for row in read_relation(out_dir, "blocked_quantity"):
+            ziffer, rule_id, occurrences, max_count = row[0], row[1], row[2], row[3]
+            rule = self.rules.rule_by_id(rule_id)
+            blocked.append(
+                BlockedCode(
+                    ziffer=ziffer,
+                    official_text=official(ziffer),
+                    reason="quantity_exceeded",
+                    detail=f"history_count:{occurrences}/max:{max_count}",
+                    rule_id=rule_id,
+                    legal_basis=rule.legal_basis if rule else "",
+                    explanation=BLOCK_EXPLANATIONS["quantity_exceeded"].format(z=ziffer, by=""),
+                )
+            )
+
+        for row in read_relation(out_dir, "blocked_gender"):
+            ziffer, rule_id, patient_gender, allowed_gender = row[0], row[1], row[2], row[3]
+            rule = self.rules.rule_by_id(rule_id)
+            blocked.append(
+                BlockedCode(
+                    ziffer=ziffer,
+                    official_text=official(ziffer),
+                    reason="gender_restricted",
+                    detail=f"patient_gender:{patient_gender}/allowed:{allowed_gender}",
+                    rule_id=rule_id,
+                    legal_basis=rule.legal_basis if rule else "",
+                    explanation=BLOCK_EXPLANATIONS["gender_restricted"].format(z=ziffer, by=""),
+                )
+            )
+
+        for row in read_relation(out_dir, "blocked_age"):
+            ziffer, rule_id, age, min_age, max_age = row[0], row[1], row[2], row[3], row[4]
+            rule = self.rules.rule_by_id(rule_id)
+            blocked.append(
+                BlockedCode(
+                    ziffer=ziffer,
+                    official_text=official(ziffer),
+                    reason="age_restricted",
+                    detail=f"patient_age:{age}/band:{min_age}-{max_age}",
+                    rule_id=rule_id,
+                    legal_basis=rule.legal_basis if rule else "",
+                    explanation=BLOCK_EXPLANATIONS["age_restricted"].format(z=ziffer, by=""),
+                )
+            )
 
         for reason, relation in (
             ("unknown_ziffer", "unknown_ziffer"),
@@ -333,6 +399,24 @@ class SouffleEngine:
                     message=(
                         f"Ausschluss-Kette erkannt: GOÄ {row[2]} → GOÄ {row[1]} → GOÄ {row[0]}. "
                         "Die Schichtung der Regeln deckt nur eine Ebene ab; bitte manuell prüfen."
+                    ),
+                )
+            )
+
+        for row in read_relation(out_dir, "time_relation_advisory"):
+            ziffer, other, rule_id = row[0], row[1], row[2] if len(row) > 2 else ""
+            rule = self.rules.rule_by_id(rule_id)
+            result.warnings.append(
+                Warning_(
+                    type="time_relation_advisory",
+                    ziffer=ziffer,
+                    severity="warning",
+                    rule_id=rule_id,
+                    legal_basis=rule.legal_basis if rule else "",
+                    message=(
+                        f"GOÄ {ziffer} und GOÄ {other} wurden am selben Tag beansprucht; die Regel "
+                        "verlangt einen zeitlichen Mindestabstand, den die Engine aus einem Datum "
+                        "allein nicht prüfen kann. Erfordert menschliche Prüfung."
                     ),
                 )
             )

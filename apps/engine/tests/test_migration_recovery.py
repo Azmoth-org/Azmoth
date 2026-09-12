@@ -51,7 +51,7 @@ BILLING = "0010_subscriptions_and_invoices"
 
 #: The current tip of the migration history. Bump this alongside a new migration file — it is the
 #: one hardcoded assumption in this file that a later revision naturally invalidates.
-HEAD = "0012_rule_proposals"
+HEAD = "0013_patient_ziffer_history"
 
 #: `Base.metadata` as of the incident — `BILLING`'s tables and everything before them. Fixed to this
 #: exact set rather than derived from the live `Base.metadata`, because `_damaged` recreates history

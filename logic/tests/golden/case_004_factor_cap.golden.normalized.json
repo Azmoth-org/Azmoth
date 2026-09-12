@@ -8,7 +8,7 @@
     "extraction_mode": "manual",
     "extraction_model": "manual",
     "llm_saw_goae_catalog": false,
-    "logic_version": "3426704f58391e20325bebe1dbb9cf1803a2a0a05e0565c61409d9586d626de1",
+    "logic_version": "83fae8e7f0369c2535b249abea93855ef9bfbe9e4671072f84e7bad12a0429ad",
     "optimizer": "clingo",
     "optimizer_version": "5.8.0",
     "per_code": [
@@ -299,22 +299,22 @@
     "rule_coverage_detail": {
       "advisory_rule_count": 9,
       "analog_candidate_count": 3,
-      "enforced_rule_count": 858,
+      "enforced_rule_count": 944,
       "policy_for_unverified_rules": "warn",
       "rejected_rule_count": 0,
       "review_verified_rule_count": 0,
       "rule_coverage": "partial",
       "rules_version": "auto_extracted_2026-07-25",
       "suppressed_unverified_rule_count": 6,
-      "total_constraint_rule_count": 894,
+      "total_constraint_rule_count": 980,
       "unverified_rule_count": 6,
-      "verified_share": "858/894"
+      "verified_share": "944/980"
     },
     "rule_summary": {
       "analog_candidates": 3,
-      "exclusions_enforced": 831,
-      "exclusions_mutual": 51,
-      "factor_caps_enforced": 22,
+      "exclusions_enforced": 912,
+      "exclusions_mutual": 58,
+      "factor_caps_enforced": 27,
       "files_loaded": [
         "analog_candidates.csv",
         "exclusions.csv",
@@ -328,10 +328,10 @@
       "rejected_rules": 0,
       "review_verified_rules": 0,
       "specificity_enforced": 2,
-      "total_constraint_rules": 894,
+      "total_constraint_rules": 980,
       "unverified_constraint_rules": 6,
       "unverified_rules_not_enforced": 6,
-      "verified_share": "858/894",
+      "verified_share": "944/980",
       "zielleistung_enforced": 3
     },
     "rules_engine": "souffle",
@@ -827,7 +827,7 @@
       },
       {
         "legal_basis": "",
-        "message": "Regelabdeckung ist unvollständig: 858 verifizierte Regeln von 894 werden durchgesetzt, 6 automatisch extrahierte Regeln sind NICHT verifiziert und wirken bei Policy 'warn' nicht blockierend. Die Rechnung ist ein Vorschlag und ersetzt keine ärztliche Prüfung.",
+        "message": "Regelabdeckung ist unvollständig: 944 verifizierte Regeln von 980 werden durchgesetzt, 6 automatisch extrahierte Regeln sind NICHT verifiziert und wirken bei Policy 'warn' nicht blockierend. Die Rechnung ist ein Vorschlag und ersetzt keine ärztliche Prüfung.",
         "rule_id": "",
         "severity": "warning",
         "type": "rule_coverage_incomplete",

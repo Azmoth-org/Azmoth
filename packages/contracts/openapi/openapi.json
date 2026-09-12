@@ -1063,7 +1063,11 @@
               "less_specific",
               "unknown_ziffer",
               "inactive_ziffer",
-              "conflict_lost"
+              "conflict_lost",
+              "quantity_exceeded",
+              "time_relation",
+              "gender_restricted",
+              "age_restricted"
             ],
             "title": "Reason",
             "type": "string"

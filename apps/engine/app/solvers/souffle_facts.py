@@ -39,7 +39,21 @@ INPUT_RELATIONS: dict[str, int] = {
     "minderung_rate": 2,
     "minderung_exempt": 1,
     "datum": 2,
+    #: The coverage-sprint constraint families — see `docs/content/adr-002-complex-constraints.md`.
+    "quantity_limit": 3,
+    "history_count": 2,
+    "time_relation": 4,
+    "gender_restriction": 3,
+    "patient_gender": 1,
+    "age_restriction": 4,
+    "patient_age": 1,
 }
+
+#: `age_restriction`'s sentinels for an unbounded side, in Datalog — see the `.decl` comment in
+#: `logic/datalog/goae_rules.dl`. Both sit outside `Patient.age`'s own `ge=0, le=130` range, so
+#: neither can ever collide with a real claimed age.
+NO_MIN_AGE = 0
+NO_MAX_AGE = 999
 
 _UNSAFE = re.compile(r"[\t\r\n]+")
 
@@ -81,12 +95,19 @@ def build_fact_rows(
     bridge: BridgeResult,
     extraction: ClinicalExtraction,
     proposed_factors: dict[str, Decimal] | None = None,
+    history_counts: dict[str, int] | None = None,
 ) -> dict[str, list[tuple]]:
     """Assemble every input relation.
 
     Only the Ziffern and rules that this case can possibly touch are emitted. The catalog holds
     2000-plus positions; shipping all of them into every Datalog run would make each request pay
     for the whole fee schedule.
+
+    `history_counts` is the Mengenbegrenzung input: `{ziffer: how many times already billed for
+    this patient earlier in the current Behandlungsfall}`, computed by
+    `app.services.patient_history.quarter_counts` before this call. `None`/empty for every caller
+    that does not track patient history — the common case today — which leaves `history_count`
+    empty and the quantity layer silently inert, exactly like an omitted `proposed_factors`.
     """
     relevant = bridge.ziffern()
     # Analog candidates can become chargeable, so their targets must be in the fact base too.
@@ -100,6 +121,9 @@ def build_fact_rows(
     for zrule in rules.zielleistung:
         if zrule.parent_ziffer in relevant or zrule.child_ziffer in relevant:
             relevant |= {zrule.parent_ziffer, zrule.child_ziffer}
+    for trule in rules.time_relations:
+        if trule.ziffer_a in relevant or trule.ziffer_b in relevant:
+            relevant |= {trule.ziffer_a, trule.ziffer_b}
     for srule in rules.specificity:
         if srule.specific_ziffer in relevant or srule.general_ziffer in relevant:
             relevant |= {srule.specific_ziffer, srule.general_ziffer}
@@ -173,6 +197,38 @@ def build_fact_rows(
             (ziffer,) for ziffer in sorted(relevant) if catalog.minderung_exempt(ziffer)
         ],
         "datum": datum_rows,
+        "quantity_limit": [
+            (r.rule_id, r.ziffer, r.max_count) for r in rules.quantity_limits if r.ziffer in relevant
+        ],
+        "history_count": sorted(
+            (ziffer, count)
+            for ziffer, count in (history_counts or {}).items()
+            if ziffer in relevant
+        ),
+        "time_relation": [
+            (r.rule_id, r.ziffer_a, r.ziffer_b, r.relation)
+            for r in rules.time_relations
+            if r.ziffer_a in relevant and r.ziffer_b in relevant
+        ],
+        "gender_restriction": [
+            (r.rule_id, r.ziffer, r.allowed_gender)
+            for r in rules.gender_restrictions
+            if r.ziffer in relevant
+        ],
+        "patient_gender": [(extraction.patient.sex,)] if extraction.patient.sex else [],
+        "age_restriction": [
+            (
+                r.rule_id,
+                r.ziffer,
+                r.min_age if r.min_age is not None else NO_MIN_AGE,
+                r.max_age if r.max_age is not None else NO_MAX_AGE,
+            )
+            for r in rules.age_restrictions
+            if r.ziffer in relevant
+        ],
+        "patient_age": (
+            [(extraction.patient.age,)] if extraction.patient.age is not None else []
+        ),
     }
 
 
@@ -183,10 +239,11 @@ def write_fact_files(
     bridge: BridgeResult,
     extraction: ClinicalExtraction,
     proposed_factors: dict[str, Decimal] | None = None,
+    history_counts: dict[str, int] | None = None,
 ) -> dict[str, int]:
     """Write every ``.input`` relation into ``fact_dir``. Returns row counts per relation."""
     fact_dir.mkdir(parents=True, exist_ok=True)
-    rows = build_fact_rows(catalog, rules, bridge, extraction, proposed_factors)
+    rows = build_fact_rows(catalog, rules, bridge, extraction, proposed_factors, history_counts)
 
     missing = set(INPUT_RELATIONS) - set(rows)
     if missing:
