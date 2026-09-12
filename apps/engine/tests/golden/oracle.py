@@ -188,6 +188,20 @@ class Catalog:
             return self.special_bands[ziffer]
         return self.bands.get(self.category.get(ziffer, ""), {})
 
+    def band_rule_id(self, ziffer: str) -> str:
+        """A stable id for the § 5 chapter band (or per-Ziffer override) this Ziffer falls under.
+
+        Mirrors `app.catalog.catalog_loader.Catalog._build`'s `FactorBand.rule_id`, derived here
+        independently from the same catalog structure (a chapter letter, or an overridden Ziffer)
+        rather than imported — this file may import nothing from `app`. Neither derivation reads a
+        `data/rules/*.csv` row because the § 5 bands are not one: they are catalog structure, one
+        row per chapter letter in `goae.official.json`, with no id of their own to reuse.
+        """
+        if ziffer in self.special_bands:
+            return f"factor_band_ziffer_{ziffer}"
+        letter = self.category.get(ziffer, "")
+        return f"factor_band_{letter.lower()}" if letter else ""
+
     def amount_eur(self, ziffer: str, faktor: Decimal, anzahl: int = 1) -> Decimal | None:
         """§ 5 Abs. 1 GOÄ. `None` when the Ziffer is not in the catalog at all."""
         punkte = self.punkte.get(ziffer)
@@ -545,7 +559,13 @@ def expected_report(path: Path, *, catalog: Catalog, rules: Rules) -> dict:
         )
         over_cap = cap is not None and position.faktor is not None and position.faktor > cap.max_factor
         if over_band or over_cap:
-            rule_id = "" if over_band or cap is None else cap.rule_id
+            # The band branch used to cite "" — no id at all — because the § 5 chapter band has no
+            # row of its own in `data/rules/*.csv` to cite. `band_rule_id` gives it the same stable
+            # id `app.catalog.catalog_loader` now attaches to the band it already cites via
+            # `legal_basis`; see that function's docstring for why this is not a new citation.
+            rule_id = (
+                catalog.band_rule_id(position.ziffer) if (over_band or cap is None) else cap.rule_id
+            )
             verified_defects.append("padnext_factor_above_maximum")
             if rule_id:
                 cited.append(rule_id)

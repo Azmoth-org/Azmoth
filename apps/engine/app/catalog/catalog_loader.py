@@ -204,6 +204,14 @@ class FactorBand:
     threshold: Decimal
     max: Decimal
     legal_basis: str = ""
+    #: A stable id for *which* band this is, so a finding that cites this band can be traced back
+    #: to it the same way a `factor_caps.csv` finding cites `FactorCapRule.rule_id` — see
+    #: `Catalog._build` for how it is assigned. Deliberately not sourced from a CSV/JSON row: § 5's
+    #: Abschnitt bands are catalog structure (one row per chapter letter in `goae.official.json`),
+    #: not a `RuleStore`-reviewed rule, so there is no existing rule id to reuse. The id itself
+    #: asserts nothing new — `legal_basis` above is the same already-verified citation this band
+    #: always carried — it only names the fact so it can be cited instead of silently omitted.
+    rule_id: str = ""
 
 
 @dataclass
@@ -329,12 +337,18 @@ class Catalog:
                 threshold=Decimal(str(band["threshold"])),
                 max=Decimal(str(band["max"])),
                 legal_basis=band.get("legal_basis", ""),
+                # See `FactorBand.rule_id`: derived from the chapter letter, not read off the row,
+                # because the row carries no id of its own. Stable across runs and catalog editions
+                # that share the same Abschnitt structure — it names the same § 5 chapter band every
+                # time, which is what a citation needs to be traceable rather than reissued per call.
+                rule_id=f"factor_band_{str(letter).lower()}",
             )
         for ziffer, band in raw.get("special_factor_ziffern", {}).items():
             self.special_factor_ziffern[str(ziffer)] = FactorBand(
                 threshold=Decimal(str(band["threshold"])),
                 max=Decimal(str(band["max"])),
                 legal_basis=band.get("legal_basis", ""),
+                rule_id=f"factor_band_ziffer_{ziffer}",
             )
 
         src = raw.get("source", {})

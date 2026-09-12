@@ -1162,7 +1162,18 @@ def _audit_group(
                 # The band is the stricter statement about the fee schedule as a whole, so it wins
                 # when both are broken; otherwise report whichever ceiling was actually exceeded.
                 if over_band or not over_cap:
-                    limit, basis, rule_id = band.max, band.legal_basis or "§ 5 Abs. 1 GOÄ", ""
+                    # `band.rule_id` — see `FactorBand.rule_id` — used to be hardcoded to "" here,
+                    # which produced a finding classified `confirmed_wrong` with a citation nobody
+                    # could trace: legal_basis was already correct (`band.legal_basis`, verified
+                    # catalog data), but the rule that basis came from had no id attached to it.
+                    # `band` is already the § 5 chapter band this position was checked against, so
+                    # its id is exactly what this finding needs — not a new rule, just the name of
+                    # the one already enforced.
+                    limit, basis, rule_id = (
+                        band.max,
+                        band.legal_basis or "§ 5 Abs. 1 GOÄ",
+                        band.rule_id,
+                    )
                     message = (
                         f"Faktor {position.faktor} überschreitet den Höchstsatz {limit} "
                         f"für GOÄ {position.ziffer}."
