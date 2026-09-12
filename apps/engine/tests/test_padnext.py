@@ -1602,6 +1602,46 @@ def test_breaking_both_ceilings_reports_the_chapter_hoechstsatz(pipeline):
     over = [f for f in report.findings if f.type == "padnext_factor_above_maximum"]
     assert len(over) == 1
     assert "3.5" in over[0].message and "Höchstsatz" in over[0].message
+    # The band citation, not the cap's — it is the band that convicted this line. See
+    # `test_a_pure_chapter_hoechstsatz_violation_carries_a_citation` for the case with no
+    # Anmerkung cap in play at all.
+    assert over[0].rule_id == "factor_band_b"
+
+
+def test_a_pure_chapter_hoechstsatz_violation_carries_a_citation(pipeline):
+    """GOÄ 3 has no `factor_caps.csv` Anmerkung row at all — its only ceiling is Abschnitt B's
+    Höchstsatz of 3.5. Charged at 4.0, the resulting `padnext_factor_above_maximum` finding used to
+    carry `rule_id: ""`: `legal_basis` was already the correct, verified "§ 5 Abs. 1, 2 GOÄ", but
+    nothing named *which* rule produced it, so a `confirmed_wrong` finding — a line the report calls
+    a problem — carried a citation nobody could trace back to data.
+
+    This is the exact defect a product-surface audit found in the worked example for GOÄ 3
+    (`docs/content/product-output-spec.md`, "O1", worked example): `verdict_code
+    FACTOR_ABOVE_CAP`, `rule_id ""`. Pinned here so it cannot regress silently.
+    """
+    assert pipeline.rules.factor_cap("3") is None, "this test needs GOÄ 3 to have no Anmerkung cap"
+
+    payload = _one_position_delivery("3", "4.0", "150", "34.97")
+    delivery, read_findings = read_delivery(payload, source_name="probe.xml")
+    report = audit_delivery(
+        delivery,
+        catalog=pipeline.catalog,
+        rules=pipeline.rules,
+        souffle_run=pipeline.souffle.run,
+        read_findings=read_findings,
+    )
+
+    over = [f for f in report.findings if f.type == "padnext_factor_above_maximum"]
+    assert len(over) == 1
+    assert over[0].legal_basis == "§ 5 Abs. 1, 2 GOÄ"
+    assert over[0].rule_id, "a confirmed_wrong finding must be traceable to the rule that produced it"
+    assert over[0].rule_id == "factor_band_b"
+    assert position(report, "1").bucket == "confirmed_wrong"
+
+    # The classification itself must be untouched by this fix: this line was already
+    # `confirmed_wrong` before the citation existed (see `VERIFIED_DEFECT_FINDINGS` in
+    # `app.padnext.audit`) — only the missing rule_id is new, nothing about the bucket is.
+    assert report.confirmed_wrong_eur == Decimal("34.97")
 
 
 # ==========================================================================================
