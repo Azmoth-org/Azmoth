@@ -218,9 +218,8 @@ def test_no_behavioural_value_moved_in_any_frozen_snapshot_on_this_branch():
     """
     import re
     import subprocess
-    from pathlib import Path
 
-    repo_root = Path(__file__).resolve().parents[3]
+    from app.config import REPO_ROOT as repo_root
 
     # Scope the window to batch 2 itself — the commit that introduced the four rule files, and
     # everything after it. Deliberately *not* the merge base against main: that range also spans
