@@ -58,6 +58,40 @@ export function timestamp(value: string | null | undefined): string {
   })
 }
 
+/**
+ * "944 von 980 Regeln durchgesetzt." Both numbers come from `RuleCoverage` directly
+ * (`enforced_rule_count`, `total_constraint_rule_count`) rather than from `verified_share` — the
+ * engine builds that string as `f"{enforced_rule_count}/{total_constraint_rule_count}"`, so parsing
+ * it back into a fraction only to restate the same two numbers is one indirection too many, and one
+ * more place the two counts could drift apart if a future engine version changed the string's shape.
+ */
+export function ruleCoverageHeadline(enforced: number, total: number): string {
+  return `${enforced} von ${total} Regeln durchgesetzt`
+}
+
+/**
+ * The four `RuleCoverageBanner` tiles. `unverified` and `analog` are a "davon" of `advisory` — the
+ * engine builds `advisory_rule_count` as their sum (`rule_coverage.py`) — and their labels say so
+ * rather than presenting four numbers a reader could add back together the wrong way.
+ */
+export type RuleCoverageTone = "enforced" | "advisory" | "unverified" | "analog"
+
+export const RULE_COVERAGE_LABEL: Record<RuleCoverageTone, string> = {
+  enforced: "Durchgesetzt",
+  advisory: "Nicht durchgesetzt",
+  unverified: "Davon nicht verifiziert",
+  analog: "Davon Analogkandidaten",
+}
+
+export const RULE_COVERAGE_HINT: Record<RuleCoverageTone, string> = {
+  enforced: "Diese Regeln dürfen automatisch in die Prüfung eingreifen.",
+  advisory:
+    "Diese Regeln werden aktuell nicht automatisch blockierend angewendet.",
+  unverified: "Diese Regeln sind noch nicht ausreichend bestätigt.",
+  analog:
+    "Diese Fälle brauchen gesonderte Bewertung und werden nicht als harte Blockade behandelt.",
+}
+
 // ------------------------------------------------------------------------------------------
 // closed unions from the contract — exhaustive, so a new value fails the build
 // ------------------------------------------------------------------------------------------

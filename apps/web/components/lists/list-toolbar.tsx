@@ -137,8 +137,10 @@ export function ListToolbar({
                 placeholder={search.placeholder}
                 // `search` inputs get a native clear affordance in some browsers; clearing it and
                 // submitting is what removes the filter, which is why the submit handler treats an
-                // empty value as "no filter" rather than as "match the empty string".
-                className="h-10 w-64"
+                // empty value as "no filter" rather than as "match the empty string". The height
+                // is the same `--control-height-lg` token the Select and Button beside it use for
+                // their `lg` size, rather than an independent `h-10` that happened to match.
+                className="h-(--control-height-lg) w-64"
                 aria-describedby={search.hint ? "list-search-hint" : undefined}
               />
               <Button type="submit" variant="outline" size="lg">

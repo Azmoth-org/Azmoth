@@ -154,6 +154,16 @@
      * 4px ramp with no remapping needed, which is why no spacing tokens appear here.
      */
     --radius-pill: 9999px;
+
+    /*
+     * The standard control height for an aligned action row — a label-topped select, input and
+     * button whose bottom edges have to land on the same line. `Button`'s `lg` size, `Select`'s
+     * `lg` size and the filter row's search `Input` used to each hardcode `h-10` independently, so
+     * nothing stopped one of the three drifting the next time only it was touched. One token, one
+     * source of truth for the run panel (`case-selector.tsx`) and the Prüfungen filter row
+     * (`list-toolbar.tsx`).
+     */
+    --control-height-lg: 2.5rem; /* 40px */
 }
 
 /*
