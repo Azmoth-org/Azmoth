@@ -140,9 +140,11 @@ function RowDetails({ position }: { position: PadnextAuditedPosition }) {
           </div>
           <div className={`min-w-0 ${NARROW_ONLY}`}>
             <div className="font-medium text-foreground">Regelurteil</div>
-            <p className="text-muted-foreground">
+            {/* `div`, not `p`: `Regelurteil` renders its own `div` for "neben X" when
+                `blocked_by` is set, and a `div` inside a `p` is invalid HTML. */}
+            <div className="text-muted-foreground">
               <Regelurteil position={position} />
-            </p>
+            </div>
           </div>
           <div className={`min-w-0 ${NARROW_ONLY}`}>
             <div className="mb-1 font-medium text-foreground">Regeln</div>
