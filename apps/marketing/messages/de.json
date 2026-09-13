@@ -472,7 +472,7 @@
         },
         {
           "titel": "Reproduzierbar bis auf den Hash",
-          "text": "Jeder Prüfbericht trägt einen Receipt-Hash über Katalog, Regeln, Logik, Solver, Policy und Eingabe. Dieselbe Lieferung ergibt denselben Hash — heute, in einer Woche, nach jedem Neustart."
+          "text": "Jeder Prüfbericht trägt einen Receipt-Hash über Katalog, Regeln, Logik, Solver, Policy und Eingabe. Dieselbe Lieferung ergibt denselben Hash — gleicher Katalog, gleiche Regeln, gleiche Logik, gleicher Solver, gleiche Policy, nach jedem Neustart. Neue Engine-Versionen ändern den Hash bewusst: Er sichert die tatsächliche Antwort ab, nicht nur die Entscheidung."
         },
         {
           "titel": "Keine Blackbox-Bewertung",
