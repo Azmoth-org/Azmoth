@@ -47,7 +47,16 @@ export function CaseSelector({
       </p>
 
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-64 space-y-1.5">
+        {/*
+          `flex flex-col gap-1.5` rather than `space-y-1.5`: the Select primitive renders a
+          visually hidden, `position: fixed` native `<input>` after the trigger for form
+          association, so the trigger is not actually this column's last child. `space-y-*`'s
+          "every child but the last" margin then landed on the trigger too, adding a phantom 6px
+          gap below it that `items-end` on the outer row could not see — the trigger's own bottom
+          edge sat 6px above the button's. A `gap` only applies between in-flow flex children, and
+          the fixed-position input isn't one, so it does not receive it.
+        */}
+        <div className="flex min-w-64 flex-col gap-1.5">
           <Label htmlFor="case-select" className="text-xs">
             Fall
           </Label>
@@ -64,7 +73,7 @@ export function CaseSelector({
               therefore the first paint, showed the raw id ("case_001_knee") instead of the case
               name. Rendering it here removes that gap entirely.
             */}
-            <SelectTrigger id="case-select" size="sm" className="w-full">
+            <SelectTrigger id="case-select" size="lg" className="w-full">
               <span className="flex-1 text-left">{selected.label}</span>
             </SelectTrigger>
             <SelectContent>
@@ -77,7 +86,7 @@ export function CaseSelector({
           </Select>
         </div>
 
-        <Button size="sm" onClick={onRun} disabled={pending}>
+        <Button size="lg" onClick={onRun} disabled={pending}>
           <PlayIcon />
           {pending ? "Engine läuft…" : "Engine ausführen"}
         </Button>
