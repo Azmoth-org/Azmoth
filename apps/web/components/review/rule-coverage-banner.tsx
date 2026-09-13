@@ -6,14 +6,11 @@ import { Badge } from "@workspace/ui/components/badge"
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
-import {
-  Progress,
-  ProgressLabel,
-  ProgressValue,
-} from "@workspace/ui/components/progress"
+import { Progress, ProgressLabel } from "@workspace/ui/components/progress"
 import {
   Tooltip,
   TooltipContent,
@@ -21,31 +18,16 @@ import {
 } from "@workspace/ui/components/tooltip"
 import { cn } from "@workspace/ui/lib/utils"
 
+import {
+  RULE_COVERAGE_HINT,
+  RULE_COVERAGE_LABEL,
+  ruleCoverageHeadline,
+  timestamp,
+  type RuleCoverageTone,
+} from "@/lib/review/format"
 import type { Proposal } from "@/lib/review/types"
 
-/**
- * `verified_share` as a fraction, or null when it is not a fraction.
- *
- * The engine publishes it as a display string — `"30/30"` — and a meter needs a number. Parsed here
- * rather than anywhere near the money: this is a count of *rules a human has reviewed*, not an
- * amount, so deriving a percentage from it invents nothing. Anything that does not match `a/b` with
- * `b > 0` returns null and the meter is not drawn, because a bar at an unknown position is worse
- * than no bar.
- */
-function verifiedFraction(
-  share: string | null | undefined
-): { done: number; total: number } | null {
-  if (!share) return null
-  const match = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(share)
-  if (!match) return null
-  const done = Number(match[1])
-  const total = Number(match[2])
-  if (!Number.isFinite(done) || !Number.isFinite(total) || total <= 0)
-    return null
-  return { done, total }
-}
-
-type Tone = "enforced" | "advisory" | "unverified" | "analog"
+type Tone = RuleCoverageTone
 
 const TONE_COLOR: Record<Tone, string> = {
   enforced: "text-emerald-700",
@@ -68,11 +50,14 @@ function Count({
   label,
   hint,
   tone,
+  size = "lg",
 }: {
   value: number
   label: string
   hint: string
   tone: Tone
+  /** `"sm"` for a count nested under another one — visually a "davon" of the tile above it. */
+  size?: "lg" | "sm"
 }) {
   return (
     <div className="min-w-0">
@@ -82,7 +67,8 @@ function Count({
             <div className="w-fit cursor-help">
               <div
                 className={cn(
-                  "text-2xl font-bold tabular-nums",
+                  "font-bold tabular-nums",
+                  size === "lg" ? "text-2xl" : "text-lg",
                   TONE_COLOR[tone]
                 )}
               >
@@ -116,12 +102,17 @@ function Count({
  * invoice had been checked against every rule the engine holds, when it was checked against the
  * enforced subset.
  *
- * The advisory set is published as its two components, so this no longer has to hedge about what is
- * in it. They are advisory for different reasons and the card says which:
- * `suppressed_unverified_rule_count` rules *could* suppress a position and the current policy is not
- * letting them, while `analog_candidate_count` offers under § 6 Abs. 2 GOÄ never could.
+ * `advisory_rule_count` is not a fifth number: it is `suppressed_unverified_rule_count +
+ * analog_candidate_count`, by construction on the engine (`rule_coverage.py`). The two are rendered
+ * nested under it — "davon" — rather than as peers in the same row, because a flat row of "944 / 9 /
+ * 6 / 3" invites adding 9 back into 944 or reading 6 and 3 as disjoint from 9, and both readings are
+ * wrong. Nesting them is what makes the sum unrepresentable rather than merely undocumented.
  *
- * The counts are never summed here — the engine publishes the total.
+ * The headline metric — "944 von 980 Regeln durchgesetzt" — reads `enforced_rule_count` and
+ * `total_constraint_rule_count` directly off `RuleCoverage` rather than through `verified_share`.
+ * The engine builds that string as `f"{enforced_rule_count}/{total_constraint_rule_count}"`
+ * (`rule_store.py`), so it is the same two counts one indirection removed; reading the fields
+ * directly means a future change to the string's shape cannot desynchronise the label from the bar.
  *
  * ## A card, not an alert
  *
@@ -143,11 +134,10 @@ export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
     0
   const analogCandidates =
     coverage?.analog_candidate_count ?? proposal.analog_candidate_count ?? 0
+  const totalConstraintRules = coverage?.total_constraint_rule_count ?? 0
   const policy = coverage?.policy_for_unverified_rules
   const ruleCoverage =
     coverage?.rule_coverage ?? proposal.solver_result.audit_trail.rule_coverage
-  const verifiedShare = coverage?.verified_share
-  const verified = verifiedFraction(verifiedShare)
 
   return (
     <Card>
@@ -169,69 +159,63 @@ export function RuleCoverageBanner({ proposal }: { proposal: Proposal }) {
               policy: {policy}
             </Badge>
           ) : null}
-          {verifiedShare && !verified ? (
-            <Badge variant="outline" className="font-mono">
-              verifiziert: {verifiedShare}
-            </Badge>
-          ) : null}
         </CardTitle>
+        <CardDescription>
+          Durchgesetzte Regeln aus dem aktuellen Regelsatz ·{" "}
+          {/* `created_at` is the timestamp the whole proposal — and the rule counts above — were
+              produced under; every rule count on this card must carry a visible as-of date. */}
+          Stand: {timestamp(proposal.created_at)}
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/*
-          The share of the *manually verified* rule set that has been reviewed — not the share of the
-          GOÄ that is covered. Those are different numbers and confusing them is the whole reason
-          this card exists, so the label says which one this is.
-        */}
-        {verified ? (
+        {totalConstraintRules > 0 ? (
           <Progress
-            value={(verified.done / verified.total) * 100}
+            value={(enforced / totalConstraintRules) * 100}
             className="max-w-md"
           >
             <ProgressLabel className="text-xs font-medium text-foreground">
-              Manuell verifizierte Regeln geprüft
+              {ruleCoverageHeadline(enforced, totalConstraintRules)}
             </ProgressLabel>
-            {/*
-              A render function, because that is what Base UI's `ProgressValue` takes. Its argument
-              is the formatted percentage, which is deliberately ignored: "30/30" says how many rules
-              a human actually reviewed, and "100 %" would read as a claim about GOÄ coverage — the
-              exact confusion this card exists to prevent.
-            */}
-            <ProgressValue className="text-xs tabular-nums">
-              {() => `${verified.done}/${verified.total}`}
-            </ProgressValue>
           </Progress>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <Count
             value={enforced}
-            label="durchgesetzt"
-            hint="Nur diese Regeln können eine Position unterdrücken."
+            label={RULE_COVERAGE_LABEL.enforced}
+            hint={RULE_COVERAGE_HINT.enforced}
             tone="enforced"
           />
-          <Count
-            value={advisory}
-            label="nur beratend"
-            hint="Unterdrücken keine Position. Summe der beiden folgenden Gruppen."
-            tone="advisory"
-          />
-          <Count
-            value={suppressed}
-            label="nicht verifiziert"
-            hint={
-              policy
-                ? `Könnten eine Position unterdrücken, tun es unter Policy „${policy}“ aber bewusst nicht: kein Mensch hat sie geprüft.`
-                : "Könnten eine Position unterdrücken, tun es aber bewusst nicht: kein Mensch hat sie geprüft."
-            }
-            tone="unverified"
-          />
-          <Count
-            value={analogCandidates}
-            label="Analogkandidaten"
-            hint="Angebote nach § 6 Abs. 2 GOÄ. Könnten eine Position nie unterdrücken — unabhängig von der Policy."
-            tone="analog"
-          />
+          <div className="space-y-3">
+            <Count
+              value={advisory}
+              label={RULE_COVERAGE_LABEL.advisory}
+              hint={RULE_COVERAGE_HINT.advisory}
+              tone="advisory"
+            />
+            {/*
+              "Davon" — a share of the tile above, not two more buckets beside it. Indented and
+              rail-marked so the hierarchy survives even where the tooltip and the print paragraph
+              (identical text) are not: `advisory` is the sum of exactly these two.
+            */}
+            <div className="grid grid-cols-2 gap-4 border-l-2 border-border py-0.5 pl-4">
+              <Count
+                value={suppressed}
+                label={RULE_COVERAGE_LABEL.unverified}
+                hint={RULE_COVERAGE_HINT.unverified}
+                tone="unverified"
+                size="sm"
+              />
+              <Count
+                value={analogCandidates}
+                label={RULE_COVERAGE_LABEL.analog}
+                hint={RULE_COVERAGE_HINT.analog}
+                tone="analog"
+                size="sm"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2 rounded-2xl border bg-muted/40 p-4 text-sm print:rounded-lg">
