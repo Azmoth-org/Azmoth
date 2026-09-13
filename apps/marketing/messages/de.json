@@ -114,7 +114,7 @@
         },
         {
           "titel": "Prüfen",
-          "text": "{regeln} durchgesetzte GOÄ-Regeln auf jede Position — in rund {laufzeit} ms je Lieferung."
+          "text": "{regeln} durchgesetzte GOÄ-Regeln auf jede Position — in rund {laufzeit} ms (Median) je Lieferung."
         },
         {
           "titel": "Bericht laden",
@@ -258,7 +258,7 @@
         },
         {
           "manuell": "Stichprobe statt Vollprüfung, sobald der Stapel wächst.",
-          "azmoth": "{regeln} durchgesetzte Regeln auf jede Position jeder Lieferung."
+          "azmoth": "{regeln} durchgesetzte Regeln prüfen jede Position — und wo keine greift, steht dort „unbestätigt“ statt einer Vermutung."
         },
         {
           "manuell": "Die Begründung entsteht erst bei der Rückfrage.",
@@ -266,7 +266,7 @@
         },
         {
           "manuell": "Der Aufwand wächst mit jeder weiteren Lieferung.",
-          "azmoth": "{laufzeit} ms pro Lieferung — die Stapelgröße ändert daran nichts."
+          "azmoth": "{laufzeit} ms pro Lieferung — Median einer vollständigen Lieferung im Messlauf, nicht je Position."
         },
         {
           "manuell": "Unklare Fälle verschwinden in „geht schon“.",
