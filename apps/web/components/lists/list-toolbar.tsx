@@ -76,85 +76,105 @@ export function ListToolbar({
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="space-y-2">
-        <Label htmlFor="status-filter">Status</Label>
-        <Select
-          value={selected}
-          onValueChange={(value) => {
-            if (typeof value !== "string") return
-            go({ status: value === ALL ? null : value })
-          }}
-        >
-          {/*
-            The label is rendered from the controlled value rather than through `<SelectValue />`.
-            The primitive resolves its label on the client only, so the server render — and therefore
-            the first paint, and therefore a shared link — would show the raw `DRAFT` instead of
-            "Entwurf". The same reason `components/review/case-selector.tsx` does it this way.
-          */}
-          <SelectTrigger id="status-filter" className="w-48">
-            <span className="flex-1 text-left">
-              {statuses.find((option) => (option.value ?? ALL) === selected)
-                ?.label ?? "Alle"}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            {statuses.map((option) => (
-              <SelectItem key={option.value ?? ALL} value={option.value ?? ALL}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap items-end gap-3">
+        {/*
+          `flex flex-col gap-2` rather than `space-y-2`: the Select primitive renders a visually
+          hidden, `position: fixed` native `<input>` after the trigger for form association, so the
+          trigger is not actually this column's last child. `space-y-*`'s "every child but the last"
+          margin then landed on the trigger too, adding a phantom gap below it that `items-end` on
+          this row could not see. A `gap` only applies between in-flow flex children, and the
+          fixed-position input isn't one, so it does not receive it.
+        */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="status-filter">Status</Label>
+          <Select
+            value={selected}
+            onValueChange={(value) => {
+              if (typeof value !== "string") return
+              go({ status: value === ALL ? null : value })
+            }}
+          >
+            {/*
+              The label is rendered from the controlled value rather than through `<SelectValue />`.
+              The primitive resolves its label on the client only, so the server render — and therefore
+              the first paint, and therefore a shared link — would show the raw `DRAFT` instead of
+              "Entwurf". The same reason `components/review/case-selector.tsx` does it this way.
+            */}
+            <SelectTrigger id="status-filter" size="lg" className="w-48">
+              <span className="flex-1 text-left">
+                {statuses.find((option) => (option.value ?? ALL) === selected)
+                  ?.label ?? "Alle"}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {statuses.map((option) => (
+                <SelectItem key={option.value ?? ALL} value={option.value ?? ALL}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {search ? (
+          <form
+            className="flex flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const trimmed = draft.trim()
+              go({ query: trimmed.length > 0 ? trimmed : null })
+            }}
+          >
+            <Label htmlFor="list-search">{search.label}</Label>
+            <div className="flex items-end gap-3">
+              <Input
+                id="list-search"
+                name="q"
+                type="search"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder={search.placeholder}
+                // `search` inputs get a native clear affordance in some browsers; clearing it and
+                // submitting is what removes the filter, which is why the submit handler treats an
+                // empty value as "no filter" rather than as "match the empty string".
+                className="h-10 w-64"
+                aria-describedby={search.hint ? "list-search-hint" : undefined}
+              />
+              <Button type="submit" variant="outline" size="lg">
+                <SearchIcon aria-hidden />
+                Suchen
+              </Button>
+            </div>
+          </form>
+        ) : null}
+
+        {filtered ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            onClick={() => router.push(pathname)}
+            // Not disabled when unfiltered — it is absent, so there is no dead control to reason about.
+          >
+            <XIcon aria-hidden />
+            Filter zurücksetzen
+          </Button>
+        ) : null}
       </div>
 
-      {search ? (
-        <form
-          className="space-y-2"
-          onSubmit={(event) => {
-            event.preventDefault()
-            const trimmed = draft.trim()
-            go({ query: trimmed.length > 0 ? trimmed : null })
-          }}
-        >
-          <Label htmlFor="list-search">{search.label}</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="list-search"
-              name="q"
-              type="search"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder={search.placeholder}
-              // `search` inputs get a native clear affordance in some browsers; clearing it and
-              // submitting is what removes the filter, which is why the submit handler treats an
-              // empty value as "no filter" rather than as "match the empty string".
-              className="w-64"
-              aria-describedby={search.hint ? "list-search-hint" : undefined}
-            />
-            <Button type="submit" variant="outline">
-              <SearchIcon aria-hidden />
-              Suchen
-            </Button>
-          </div>
-          {search.hint ? (
-            <p id="list-search-hint" className="text-xs text-muted-foreground">
-              {search.hint}
-            </p>
-          ) : null}
-        </form>
-      ) : null}
-
-      {filtered ? (
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => router.push(pathname)}
-          // Not disabled when unfiltered — it is absent, so there is no dead control to reason about.
-        >
-          <XIcon aria-hidden />
-          Filter zurücksetzen
-        </Button>
+      {/*
+        Rendered below the aligned row rather than inside the search `<form>`: it used to sit under
+        the input, which made the form the tallest item in the row — and with `items-end`, the
+        *taller* item's own bottom edge is what the shorter items align to, so the input and the
+        Suchen button (bottom-anchored to a form that extended past them) sat visibly higher than
+        the Status select, which has no hint beneath it. `aria-describedby` still points at this
+        paragraph, so the association a screen reader relies on is unchanged.
+      */}
+      {search?.hint ? (
+        <p id="list-search-hint" className="text-xs text-muted-foreground">
+          {search.hint}
+        </p>
       ) : null}
     </div>
   )
