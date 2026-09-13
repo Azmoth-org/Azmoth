@@ -36,6 +36,14 @@ test("timestamp — renders a Stand date for a valid ISO string", () => {
   assert.match(rendered, /2026/)
 })
 
+test("timestamp — always carries a timezone, whatever the machine's own zone is", () => {
+  // Not a fixed zone name: the abbreviation depends on the environment running the test (UTC,
+  // MESZ, GMT-4, …) — see `timestamp`'s own note on why `dateStyle`/`timeStyle` can't ask for it
+  // directly. What must hold everywhere is that *something* non-numeric follows the time.
+  const rendered = timestamp("2026-09-13T09:30:00Z")
+  assert.match(rendered, /\d\d:\d\d:\d\d\s+\S*[A-Za-z]/)
+})
+
 test("timestamp — falls back to an em dash when there is nothing to show", () => {
   assert.equal(timestamp(null), "—")
   assert.equal(timestamp(undefined), "—")

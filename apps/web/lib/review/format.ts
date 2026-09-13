@@ -49,14 +49,27 @@ export function shortHash(
   return hash.length <= length ? hash : `${hash.slice(0, length)}…`
 }
 
+/**
+ * A date and time a reader can act on without knowing what timezone the browser is in.
+ *
+ * `dateStyle`/`timeStyle` and `timeZoneName` cannot be requested in the same
+ * `Intl.DateTimeFormat` call — mixing the shorthand styles with an explicit component throws — so
+ * the zone abbreviation is taken from a second, minimal formatter and appended. Without it, "13.09.
+ * 2026, 11:30:00" looked precise but answered a question ("precisely when?") it did not actually
+ * answer for anyone not sitting in the same timezone as whoever is reading it.
+ */
 export function timestamp(value: string | null | undefined): string {
   if (!value) return "—"
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return value
-  return parsed.toLocaleString("de-DE", {
+  const main = parsed.toLocaleString("de-DE", {
     dateStyle: "medium",
     timeStyle: "medium",
   })
+  const zone = parsed
+    .toLocaleTimeString("de-DE", { timeZoneName: "short" })
+    .replace(/^[\d:.,\s]+/, "")
+  return zone ? `${main} ${zone}` : main
 }
 
 /**
