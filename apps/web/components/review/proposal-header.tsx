@@ -173,6 +173,15 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
           <Badge variant={STATUS_VARIANT[status]}>
             {PROPOSAL_STATUS_LABEL[status]}
           </Badge>
+          {/*
+            The catalog edition used to live only inside the collapsed "Technische Herkunft und
+            Versionen" disclosure below, as "Katalogversion" — a fact a reviewer needs to trust the
+            verdict at all, one click deep in a card most readers never open. It is visible here too,
+            uncollapsed, on the card's own title row.
+          */}
+          <Badge variant="outline" className="font-mono">
+            Katalogstand {proposal.catalog_version || "—"}
+          </Badge>
           {proposal.cached ? (
             <Badge variant="outline" className="gap-1">
               <DatabaseZapIcon />
@@ -242,7 +251,7 @@ export function ProposalHeader({ proposal }: { proposal: Proposal }) {
           <div className="min-w-0">
             <dt className={`${LABEL} flex items-center gap-1.5`}>
               <CalendarClockIcon className="size-3.5 shrink-0" />
-              Erstellt
+              Erstellt am
             </dt>
             <dd className="mt-2 text-sm">{timestamp(proposal.created_at)}</dd>
           </div>

@@ -8,6 +8,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
 
@@ -19,6 +20,10 @@ import { PilotWarningsPanel } from "@/components/padnext/pilot-warnings-panel"
 import { PositionsTable } from "@/components/padnext/positions-table"
 import { SinglePruefberichtButton } from "@/components/padnext/pruefbericht-button"
 import { ReportProvenance } from "@/components/padnext/report-provenance"
+import {
+  ReportSectionNav,
+  type ReportSection,
+} from "@/components/padnext/report-section-nav"
 import { ValidationErrorList } from "@/components/padnext/validation-error-list"
 import { ErrorPanel } from "@/components/review/error-panel"
 import { ZifferReportDialog } from "@/components/rules/ziffer-report-dialog"
@@ -157,6 +162,21 @@ export function AuditWorkbench() {
     pending,
   })
 
+  // `Befunde` only exists on screen when `FindingsPanel` actually renders something — a report
+  // with no findings renders no such section, and a nav link to a heading that is not on the page
+  // would just be a dead click.
+  const reportSections: ReportSection[] =
+    result?.kind === "report"
+      ? [
+          { id: "padnext-buckets-heading", label: "Bewertung" },
+          { id: "padnext-positions-heading", label: "Positionen" },
+          ...((result.report.findings?.length ?? 0) > 0
+            ? [{ id: "padnext-findings-heading", label: "Befunde" }]
+            : []),
+          { id: "padnext-meta-heading", label: "Meta" },
+        ]
+      : []
+
   return (
     <div className="space-y-6">
       <CatalogScopeNotice />
@@ -261,6 +281,14 @@ export function AuditWorkbench() {
             </Button>
             {audited ? <SinglePruefberichtButton file={audited} /> : null}
           </div>
+          <ReportSectionNav
+            sections={reportSections}
+            trailing={
+              <Badge variant="outline" className="font-mono">
+                Katalogstand {result.report.catalog_version || "—"}
+              </Badge>
+            }
+          />
           <PilotWarningsPanel report={result.report} />
           <BucketSummary report={result.report} />
           <ReportProvenance report={result.report} />
