@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 import { AuditWorkbench } from "@/components/padnext/audit-workbench"
-import { SyntheticDataBanner } from "@/components/review/synthetic-data-banner"
+import { SyntheticDataNotice } from "@/components/padnext/synthetic-data-notice"
 
 export const metadata: Metadata = {
   title: "PADnext-Rechnungsprüfung",
@@ -37,7 +37,7 @@ export default function PadnextPage() {
         </p>
       </header>
 
-      <SyntheticDataBanner />
+      <SyntheticDataNotice />
       <AuditWorkbench />
     </>
   )
