@@ -210,7 +210,7 @@
       ],
       "cta": "Pilot-Zugang anfordern",
       "hinweis": "Der Pilotbetrieb verarbeitet ausschließlich synthetische Testdaten. Eine Lieferung, die sich als Echtdaten ausweist, wird von der Anwendung abgewiesen — ebenso eine, die dazu keine Angabe macht.",
-      "hinweisKatalog": "Hinweis für den Pilotbetrieb: Azmoth prüft gegen den aktuellen GOÄ-Katalog. Bilden Sie Ihre synthetischen Testlieferungen daher an Behandlungsfällen der letzten 6–12 Monate nach."
+      "hinweisKatalog": "Hinweis für den Pilotbetrieb: Azmoth prüft gegen den aktuellen GOÄ-Katalog. Bilden Sie Ihre synthetischen Testlieferungen daher an Behandlungsfällen der letzten 12 Monate nach."
     },
     "api": {
       "eyebrow": "Für Entwickler",
@@ -400,11 +400,11 @@
       },
       {
         "q": "Wird gegen die aktuelle oder die damals gültige Gebührenordnung geprüft?",
-        "a": "Im Pilotbetrieb gegen den aktuellen GOÄ-Katalog. Die Engine ist auf mehrere Katalogstände ausgelegt und jeder Prüfbericht nennt die Fassung, gegen die er gerechnet wurde — historische Fassungen sind jedoch noch nicht hinterlegt. Bilden Sie Ihre synthetischen Testlieferungen deshalb an Behandlungsfällen der letzten 6–12 Monate nach. Ältere Fälle werden weiterhin vollständig geprüft; der Bericht weist dann ausdrücklich darauf hin, dass historische Regelabweichungen nicht erkannt werden können."
+        "a": "Im Pilotbetrieb gegen den aktuellen GOÄ-Katalog. Die Engine ist auf mehrere Katalogstände ausgelegt und jeder Prüfbericht nennt die Fassung, gegen die er gerechnet wurde — historische Fassungen sind jedoch noch nicht hinterlegt. Bilden Sie Ihre synthetischen Testlieferungen deshalb an Behandlungsfällen der letzten 12 Monate nach. Ältere Fälle werden weiterhin vollständig geprüft; der Bericht weist dann ausdrücklich darauf hin, dass historische Regelabweichungen nicht erkannt werden können."
       },
       {
         "q": "Welche Daten reiche ich für den Piloten ein?",
-        "a": "Ausschließlich synthetische Testlieferungen — keine echten Patienten- oder Abrechnungsdaten. Den Generator dafür stellen wir bereit. Eine Lieferung, die sich als Echtdaten ausweist oder dazu keine Angabe macht, wird von der Anwendung abgewiesen. Orientieren Sie die Fälle an Leistungsdaten der letzten 6–12 Monate: das ist der Zeitraum, für den der geladene GOÄ-Katalog die maßgebliche Fassung ist."
+        "a": "Ausschließlich synthetische Testlieferungen — keine echten Patienten- oder Abrechnungsdaten. Den Generator dafür stellen wir bereit. Eine Lieferung, die sich als Echtdaten ausweist oder dazu keine Angabe macht, wird von der Anwendung abgewiesen. Orientieren Sie die Fälle an Leistungsdaten der letzten 12 Monate: das ist der Zeitraum, für den der geladene GOÄ-Katalog die maßgebliche Fassung ist."
       },
       {
         "q": "Können bestehende Rechnungen geprüft werden?",
@@ -445,7 +445,7 @@
       "bekommt": [
         "Vollen Zugang zur Engine für die Dauer des Piloten",
         "Einen Generator für synthetische PADnext-Testlieferungen",
-        "Persönliche Einweisung und Support innerhalb eines Werktags",
+        "Persönliche Einweisung und Support in der Regel innerhalb eines Werktags",
         "Direkten Einfluss auf die Produkt-Roadmap"
       ],
       "bittenTitel": "Wir bitten um",

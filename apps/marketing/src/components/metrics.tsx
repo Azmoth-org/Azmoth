@@ -65,6 +65,14 @@ type Metric = {
   format?: "integer" | "percent";
   /** Rendered after the figure, at body size: "ms", "%", "von 980". */
   unit?: string;
+  /**
+   * The plain-language reading of the figure for assistive tech — "944 von 980", not "944" then,
+   * as a separate node, "von 980 geladen". `CountUp` already hides its own animated span from AT
+   * and exposes the finished number through a `sr-only` sibling, but that still leaves the number
+   * and the unit as two separately-announced nodes; this is the one string a screen reader speaks
+   * for the whole tile instead.
+   */
+  ariaLabel: string;
 };
 
 export function Metrics() {
@@ -75,16 +83,19 @@ export function Metrics() {
       value: ENFORCED_RULE_COUNT,
       display: engineFacts.regelnDurchgesetzt,
       unit: t("regeln.einheit", { gesamt: engineFacts.regelnGesamt }),
+      ariaLabel: `${engineFacts.regelnDurchgesetzt} von ${engineFacts.regelnGesamt}`,
     },
     {
       value: ZIFFERN_UNDER_RULE_COUNT,
       display: engineFacts.katalogGeprueft,
       unit: t("katalog.einheit", { gesamt: engineFacts.katalogZiffern }),
+      ariaLabel: `${engineFacts.katalogGeprueft} von ${engineFacts.katalogZiffern}`,
     },
     {
       value: LATENCY_MS_PER_INVOICE,
       display: engineFacts.laufzeitMs,
       unit: t("laufzeit.einheit"),
+      ariaLabel: `${engineFacts.laufzeitMs} Millisekunden`,
     },
   ];
 
@@ -109,8 +120,11 @@ export function Metrics() {
                   "72–96px, font-bold" asked, would make these three tiles the only place on the
                   site where a number is heavy.
                 */}
-                <p className="flex items-baseline gap-2">
-                  <span className="azm-display text-[3rem] leading-none sm:text-[3.5rem]">
+                <p aria-label={metric.ariaLabel} className="flex items-baseline gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="azm-display text-[3rem] leading-none sm:text-[3.5rem]"
+                  >
                     <CountUp
                       to={metric.value}
                       display={metric.display}
@@ -118,7 +132,9 @@ export function Metrics() {
                     />
                   </span>
                   {metric.unit ? (
-                    <span className="azm-tnum text-sm text-azm-ink-mute">{metric.unit}</span>
+                    <span aria-hidden="true" className="azm-tnum text-sm text-azm-ink-mute">
+                      {metric.unit}
+                    </span>
                   ) : null}
                 </p>
                 <p className="text-lg font-medium text-azm-ink">{label?.titel}</p>
