@@ -10,6 +10,7 @@
 
 import type {
   BlockedReason,
+  EngineWarning,
   FactorBasis,
   ProposalStatus,
   WarningSeverity,
@@ -257,4 +258,55 @@ const WARNING_TYPE_LABEL: Record<string, string> = {
 
 export function warningTitle(type: string): string {
   return WARNING_TYPE_LABEL[type] ?? type
+}
+
+/** `"1 Hinweis"` / `"6 Hinweise"` — never a bare, ambiguous count. */
+export function hintCountLabel(count: number): string {
+  return `${count} ${count === 1 ? "Hinweis" : "Hinweise"}`
+}
+
+/**
+ * One entry in `WarningsPanel`, once identical-`type` warnings are folded together.
+ *
+ * A proposal that trips `rule_coverage_incomplete` on eleven positions used to render eleven rows
+ * with the same title, the same severity, and the same message shape, differing only in which
+ * Ziffer they named — a reader had to open all eleven to learn there was only one distinct thing
+ * being said. `representative` is the most severe warning in the group (by `bySeverity`), so the
+ * group's icon, prominence styling and severity badge match what a single row would have shown.
+ */
+export type WarningGroup = {
+  type: string
+  representative: EngineWarning
+  warnings: readonly EngineWarning[]
+}
+
+/**
+ * Groups by `type`, preserving first-seen order of each type, then orders the groups themselves by
+ * `bySeverity` on their representative — so grouping never changes which type a reader sees first.
+ */
+export function groupWarnings(
+  warnings: readonly EngineWarning[]
+): WarningGroup[] {
+  const order: string[] = []
+  const byType = new Map<string, EngineWarning[]>()
+  for (const warning of warnings) {
+    const existing = byType.get(warning.type)
+    if (existing) {
+      existing.push(warning)
+    } else {
+      byType.set(warning.type, [warning])
+      order.push(warning.type)
+    }
+  }
+
+  const groups = order.map((type) => {
+    const items = byType.get(type)
+    if (!items) throw new Error(`unreachable: no warnings for type ${type}`)
+    const representative = items.reduce((worst, warning) =>
+      bySeverity(warning, worst) < 0 ? warning : worst
+    )
+    return { type, representative, warnings: items }
+  })
+
+  return groups.sort((a, b) => bySeverity(a.representative, b.representative))
 }
