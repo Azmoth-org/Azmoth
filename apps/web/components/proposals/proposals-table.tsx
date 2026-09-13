@@ -28,6 +28,7 @@ import {
   looksLikeProposalId,
   nextHref,
   pageCount,
+  resultCountLabel,
   type ListParams,
 } from "@/lib/lists/params"
 import { PROPOSAL_STATUS, statusPresentation } from "@/lib/status"
@@ -66,10 +67,13 @@ export const PROPOSAL_STATUS_VALUES = [
  *
  * **The search box filters on `case_id`, exactly, and that is a limit of the endpoint rather than a
  * choice.** `GET /api/v1/proposals` takes `status` and `case_id`; it has no `proposal_id` parameter
- * and no substring match. So a pasted `prop_…` matches nothing, and rather than let the empty state
- * read as "no such proposal" — when what happened is "this list cannot search for that" — the shape
- * is recognised and the no-match state says which of the two it was. Closing it properly means one
- * more `where` clause on the engine's list query, and this change adds no backend work.
+ * and no substring match — `case_id` is matched against a plain B-tree index, and `LIKE '%x%'`
+ * cannot use it (see `services/proposal_store.py`). So a pasted `prop_…` matches nothing, and
+ * rather than let the empty state read as "no such proposal" — when what happened is "this field
+ * does not search proposal ids" — the shape is recognised and the no-match state says which of the
+ * two it was. Closing it properly means a different index and a different query shape on the
+ * engine's list endpoint, which is backend work this change does not do; the copy says what the
+ * field does rather than apologising for it.
  *
  * `CopyableHash` for the two identifiers rather than plain truncated text. Both are values that have
  * to *leave* the browser: a `proposal_id` is how a record is found again in a ticket or a `psql`
@@ -89,7 +93,7 @@ export async function ProposalsTable({ params }: { params: ListParams }) {
       search={{
         label: "Fall-ID",
         placeholder: "z. B. ENC-2026-0001",
-        hint: "Exakte Übereinstimmung. Die Liste kann nicht nach Vorschlags-ID suchen.",
+        hint: "Suche nach exakter Fall-ID.",
       }}
     />
   )
@@ -162,7 +166,7 @@ export async function ProposalsTable({ params }: { params: ListParams }) {
 
   if (items.length === 0) {
     return (
-      <Shell toolbar={toolbar}>
+      <Shell toolbar={toolbar} resultLabel={resultCountLabel(total)}>
         {total > 0 ? (
           <PageOutOfRange
             firstPage={nextHref(PROPOSALS_PATH, params, { page: 1 })}
@@ -195,7 +199,7 @@ export async function ProposalsTable({ params }: { params: ListParams }) {
   }
 
   return (
-    <Shell toolbar={toolbar}>
+    <Shell toolbar={toolbar} resultLabel={resultCountLabel(total)}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -284,15 +288,27 @@ export async function ProposalsTable({ params }: { params: ListParams }) {
 /** One card holding the toolbar, a separator and whatever the body turned out to be. */
 function Shell({
   toolbar,
+  resultLabel,
   children,
 }: {
   toolbar: React.ReactNode
+  /**
+   * The live result count under the toolbar — "12 Prüfungen gefunden" and so on. Absent when the
+   * body was rendered without an engine query (a pasted proposal id, a load failure, an outdated
+   * response shape): there is no count to report for a search that was never sent.
+   */
+  resultLabel?: string
   children: React.ReactNode
 }) {
   return (
     <Card>
       <CardContent className="space-y-4 pt-6">
         {toolbar}
+        {resultLabel ? (
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            {resultLabel}
+          </p>
+        ) : null}
         <div className="border-t border-border pt-2">{children}</div>
       </CardContent>
     </Card>

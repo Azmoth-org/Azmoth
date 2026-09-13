@@ -192,3 +192,16 @@ export function nextHref(
 export function looksLikeProposalId(value: string): boolean {
   return isWellFormedId("proposal", value)
 }
+
+/**
+ * The result-count line under a list's filter row: "12 Prüfungen gefunden", "1 Prüfung gefunden",
+ * or "Keine Prüfungen gefunden".
+ *
+ * `total` is the engine's own count for the current filter — see `ProposalList.total` — not the
+ * length of the page in hand, so this reads the same on page 1 and page 3 of the same search.
+ */
+export function resultCountLabel(total: number): string {
+  if (total <= 0) return "Keine Prüfungen gefunden"
+  if (total === 1) return "1 Prüfung gefunden"
+  return `${total} Prüfungen gefunden`
+}
