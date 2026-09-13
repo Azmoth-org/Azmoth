@@ -1,7 +1,12 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { coverageFillPercent, coverageVerdictWidths } from "./format"
+import {
+  coverageFillPercent,
+  coverageVerdictWidths,
+  primaryBewertungText,
+  verifiedDefectCodes,
+} from "./format"
 
 test("coverageFillPercent — 0.0 % ratio fills 0 % of the track", () => {
   assert.equal(coverageFillPercent(0, "1000.00"), 0)
@@ -49,4 +54,51 @@ test("coverageVerdictWidths — both zero when neither verdict has an amount", (
     0
   )
   assert.deepEqual(widths, { wrong: 0, fine: 0 })
+})
+
+test("verifiedDefectCodes — pulls the codes out of a confirmed_wrong bucket_reason", () => {
+  assert.deepEqual(
+    verifiedDefectCodes(
+      "Verifizierte Prüfung fehlgeschlagen: padnext_amount_mismatch, padnext_factor_above_maximum."
+    ),
+    ["padnext_amount_mismatch", "padnext_factor_above_maximum"]
+  )
+})
+
+test("verifiedDefectCodes — a single code", () => {
+  assert.deepEqual(
+    verifiedDefectCodes("Verifizierte Prüfung fehlgeschlagen: padnext_justification_missing."),
+    ["padnext_justification_missing"]
+  )
+})
+
+test("verifiedDefectCodes — null for any other bucket_reason prose", () => {
+  assert.equal(
+    verifiedDefectCodes(
+      "Die Regelprüfung hat diese Ziffer nicht bestätigt, aber auch keine verifizierte Regel " +
+        "verletzt. Erfordert menschliche Prüfung."
+    ),
+    null
+  )
+  assert.equal(verifiedDefectCodes(""), null)
+})
+
+test("primaryBewertungText — translates every known code to its short German label", () => {
+  assert.equal(
+    primaryBewertungText(
+      "Verifizierte Prüfung fehlgeschlagen: padnext_amount_mismatch, padnext_factor_above_maximum."
+    ),
+    "Betrag weicht von der Nachrechnung ab · Faktor über dem Höchstsatz"
+  )
+})
+
+test("primaryBewertungText — falls back to the raw sentence when a code has no label", () => {
+  const reason =
+    "Verifizierte Prüfung fehlgeschlagen: padnext_amount_mismatch, padnext_some_future_code."
+  assert.equal(primaryBewertungText(reason), reason)
+})
+
+test("primaryBewertungText — passes prose bucket_reason through unchanged", () => {
+  const reason = "Alle anwendbaren Prüfungen bestanden; geprüft gegen verifizierte Regel(n) x."
+  assert.equal(primaryBewertungText(reason), reason)
 })
