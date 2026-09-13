@@ -120,30 +120,62 @@ export const BUCKET_TONE_CLASS: Record<
   },
 }
 
+function toPositiveNumber(amount: string | null | undefined): number {
+  const parsed = Number(amount)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
 /**
- * Segment widths for the coverage bar, as percentages that sum to 100.
+ * The coverage bar's fill, as a percentage of the track — or `null` when there is nothing to fill
+ * at all, which must render as an empty track rather than a fill of 0.
  *
- * This is the **one** function in this app that turns an amount string into a number, and it is
- * confined here so the exception is visible rather than scattered. What it produces is geometry — a
- * CSS width — and it is never rendered as a figure, never rounded back into an amount, and never
- * compared against another amount. The euro values on the screen come from `eur()`, straight from
- * the engine's exact decimal strings.
+ * The fill used to be sized from the three bucket amounts (`unconfirmed`'s share of the claimed
+ * total), which is a different number from `coverage_ratio` and can disagree with it: an invoice
+ * where nothing has been judged puts 100 % of the money in `unconfirmed`, so the bar rendered
+ * filled edge-to-edge in amber under a label reading "Prüfabdeckung 0.0 %" — and a bar filled
+ * edge-to-edge reads as 100 % regardless of which colour fills it. There is no independent
+ * computation here any more: the fill *is* `coverage_ratio`, clamped so a stale or malformed value
+ * from the engine cannot overflow the track in either direction.
  *
- * Doing it this way rather than sizing the segments by position count is what keeps the bar honest:
- * the label above it is a share of *money*, and a bar that silently showed a share of *line count*
- * would contradict it — nine positions of wildly different value do not divide a bar into ninths.
- *
- * Falls back to equal-looking zero widths when the total is not a usable positive number, so a
- * zero-total delivery renders an empty track instead of `NaN%`.
+ * `null` covers two cases the caller must render identically: a missing/non-numeric ratio (the
+ * engine sending something a stale client cannot interpret), and a claim with no usable
+ * denominator (`claimed_total_eur` not a positive number) — the ratio would be `0.0` in that case
+ * too, per the engine's own convention, but there is nothing to show a fill *against*.
  */
-export function segmentWidths(amounts: readonly string[]): number[] {
-  const values = amounts.map((amount) => {
-    const parsed = Number(amount)
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
-  })
-  const total = values.reduce((sum, value) => sum + value, 0)
-  if (total <= 0) return values.map(() => 0)
-  return values.map((value) => (value / total) * 100)
+export function coverageFillPercent(
+  ratio: number | null | undefined,
+  claimedTotalEur: string | null | undefined
+): number | null {
+  if (ratio === null || ratio === undefined || Number.isNaN(ratio)) return null
+  if (toPositiveNumber(claimedTotalEur) <= 0) return null
+  return clamp(ratio * 100, 0, 100)
+}
+
+/**
+ * How the coverage fill splits between the two verdicts it is made of.
+ *
+ * Sized against `confirmed_wrong_eur` and `confirmed_fine_eur` directly, in proportion to each
+ * other, and then scaled so the two segments always sum to exactly `fillPercent` — never a
+ * fraction of the *whole claim* that could round to something other than the number printed above
+ * the bar. `unconfirmed` has no segment here: it is the gap, and the gap is the untouched part of
+ * the track, not a third colour painted over it.
+ */
+export function coverageVerdictWidths(
+  figures: Pick<BucketFigures, "confirmed_wrong_eur" | "confirmed_fine_eur">,
+  fillPercent: number
+): { wrong: number; fine: number } {
+  const wrong = toPositiveNumber(figures.confirmed_wrong_eur)
+  const fine = toPositiveNumber(figures.confirmed_fine_eur)
+  const total = wrong + fine
+  if (total <= 0) return { wrong: 0, fine: 0 }
+  return {
+    wrong: (wrong / total) * fillPercent,
+    fine: (fine / total) * fillPercent,
+  }
 }
 
 /** The order the buckets are shown in: what to act on, what is safe, what is still open. */

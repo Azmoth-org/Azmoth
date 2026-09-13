@@ -22,9 +22,10 @@ import {
   BUCKET_ORDER,
   BUCKET_TONE_CLASS,
   UNCONFIRMED_DISCLAIMER,
+  coverageFillPercent,
+  coverageVerdictWidths,
   eur,
   percent,
-  segmentWidths,
   type BucketFigures,
 } from "@/lib/padnext/format"
 import type {
@@ -111,10 +112,13 @@ function BucketCard({
 /**
  * How much of the claim the audit could actually reach a verdict on.
  *
- * Deliberately not a pie chart of the three buckets. A pie invites the reader to compare red
- * against green and draw a conclusion about the *invoice*. This bar puts the two verdicts next to
- * the gap and says something about the *audit* — which is the honest comparison, because the amber
- * segment is our missing rule coverage, not the practice's billing.
+ * The fill's width is `coverage_ratio`, clamped to [0, 100] — never a share recomputed from the
+ * bucket amounts, which is what let a 0.0 % label sit above a bar filled edge-to-edge in amber (see
+ * `coverageFillPercent`). `unconfirmed` gets no segment of its own: the gap between the fill and
+ * the end of the track *is* the uncovered share, so painting it a third colour would fill the bar
+ * back up to 100 % and reproduce the exact bug this replaced. Deliberately not a pie chart of the
+ * three buckets, either — the two verdicts inside the fill say something about the *audit*, not
+ * about which way the *invoice* leans.
  */
 export function CoverageBar({
   figures,
@@ -123,8 +127,12 @@ export function CoverageBar({
   figures: BucketFigures
   totalLabel?: string
 }) {
-  const amounts = BUCKET_ORDER.map((bucket) => amountFor(figures, bucket))
-  const widths = segmentWidths(amounts)
+  const fillPercent = coverageFillPercent(
+    figures.coverage_ratio,
+    figures.claimed_total_eur
+  )
+  const verdictWidths =
+    fillPercent === null ? null : coverageVerdictWidths(figures, fillPercent)
 
   return (
     <div className="space-y-2">
@@ -141,29 +149,38 @@ export function CoverageBar({
         className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
         role="img"
         aria-label={
-          `Prüfabdeckung ${percent(figures.coverage_ratio)} der berechneten Summe. ` +
-          BUCKET_ORDER.map(
-            (bucket) =>
-              `${BUCKET[bucket].label}: ${eur(amountFor(figures, bucket))}`
-          ).join(". ")
+          verdictWidths === null
+            ? "Prüfabdeckung nicht verfügbar."
+            : `Prüfabdeckung ${percent(figures.coverage_ratio)} der berechneten Summe. ` +
+              `${BUCKET.confirmed_wrong.label}: ${eur(figures.confirmed_wrong_eur)}. ` +
+              `${BUCKET.confirmed_fine.label}: ${eur(figures.confirmed_fine_eur)}.`
         }
       >
-        {BUCKET_ORDER.map((bucket, index) =>
-          widths[index] === 0 ? null : (
-            <div
-              key={bucket}
-              className={BUCKET_TONE_CLASS[BUCKET[bucket].tone].bar}
-              style={{ width: `${widths[index]}%` }}
-            />
-          )
-        )}
+        {verdictWidths && verdictWidths.wrong > 0 ? (
+          <div
+            className={BUCKET_TONE_CLASS[BUCKET.confirmed_wrong.tone].bar}
+            style={{ width: `${verdictWidths.wrong}%` }}
+          />
+        ) : null}
+        {verdictWidths && verdictWidths.fine > 0 ? (
+          <div
+            className={BUCKET_TONE_CLASS[BUCKET.confirmed_fine.tone].bar}
+            style={{ width: `${verdictWidths.fine}%` }}
+          />
+        ) : null}
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Der Anteil der berechneten Summe, zu dem diese Prüfung überhaupt eine
-        Aussage treffen konnte. Er sagt <strong>nicht</strong>, wie viel davon
-        falsch ist.
-      </p>
+      {fillPercent === null ? (
+        <p className="text-xs text-muted-foreground">
+          Noch keine durchgesetzte Regel deckt diese Positionen ab.
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Der Anteil der berechneten Summe, zu dem diese Prüfung überhaupt eine
+          Aussage treffen konnte. Er sagt <strong>nicht</strong>, wie viel davon
+          falsch ist.
+        </p>
+      )}
     </div>
   )
 }
