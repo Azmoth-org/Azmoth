@@ -493,7 +493,7 @@
     "cta": "Zur Startseite"
   },
   "metadaten": {
-    "startseiteBeschreibung": "Mathematisch beweisbare GOÄ-Abrechnungsprüfung. Keine Blackbox-KI. 100 % nachvollziehbare Befunde mit gesetzlichen Grundlagen.",
+    "startseiteBeschreibung": "Deterministische Prüfung von PADnext-Lieferungen gegen die GOÄ. Drei Kategorien statt Risikoscore: bestätigt korrekt, nachweislich falsch, unbestätigt. Pilot kostenlos, ausschließlich synthetische Testdaten.",
     "funktionenTitel": "Funktionen",
     "funktionenBeschreibung": "Kodierung, Prüfung und Nachvollziehbarkeit — von der Dokumentation bis zur freigegebenen Rechnung.",
     "ueberUnsTitel": "Über uns",
