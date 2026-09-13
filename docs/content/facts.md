@@ -11,17 +11,17 @@ Two facts are load-bearing for how this whole bank must be written:
   `docs/api/PARTNER_API.md` — prints a bare rule count. `docs/content/` isn't in its scanned globs,
   so nothing here trips it mechanically, but the discipline is the point, not the test: **every
   number below is dated and sourced**, so a post reads as "true as of this commit," never as a
-  permanent claim. Treat "Stand: 2026-09-12" as part of the number, not a footnote.
+  permanent claim. Treat "Stand: 2026-09-13" as part of the number, not a footnote.
 - Two snapshots of the same engine disagree with each other, on purpose: `engine-facts.ts`
-  (verified 2026-09-12) and `docs/performance_baseline.md` (measured 2026-08-23) quote different
+  (verified 2026-09-13) and `docs/performance_baseline.md` (measured 2026-08-23) quote different
   catalog sizes and rule counts because the rule set and catalog changed between the two dates.
   **Never mix figures from different snapshots in one post.** F01–F04 use the current
-  (2026-09-12) snapshot; F33 is the older, dated one, kept only because F03's latency figure comes
+  (2026-09-13) snapshot; F33 is the older, dated one, kept only because F03's latency figure comes
   from that same measurement run.
 
 ---
 
-## Engine numbers (current snapshot, verified 2026-09-12)
+## Engine numbers (current snapshot, verified 2026-09-13)
 
 **F01 — Enforced rule count.** 944 rules may currently suppress a position; 980 constraint rules
 are loaded in total (enforced + not-yet-enforced). Moved from 858/894 by the coverage-sprint batch

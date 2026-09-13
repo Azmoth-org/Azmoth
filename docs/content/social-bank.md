@@ -9,16 +9,16 @@ Mix: 12 proof/education (40%), 8 method/build-in-public (26.7%), 6 contrarian ho
 pilot conversion (13.3%) — close to the 40/25/20/15 brief; rounding to whole posts moved one from
 pilot-conversion to method, noted where it happens.
 
-Numbers are as of the facts file's date (2026-09-09 snapshot). Anything using engine figures
-carries "Stand: 2026-09-09" in the body — never state a rule/catalog count without that date, per
+Numbers are as of the facts file's date (2026-09-13 snapshot). Anything using engine figures
+carries "Stand: 13.09.2026" in the body — never state a rule/catalog count without that date, per
 `apps/engine/tests/test_published_numbers.py`'s whole premise.
 
 ---
 
 ### 01 — Der ehrliche Deckungsgrad
 - **channel:** LinkedIn · **format:** single post + screenshot of the homepage stat tile
-- **hook:** 358 von 2.343. Die Zahl, die wir nicht verstecken.
-- **body:** Auf unserer Startseite steht eine Zahl in derselben Schriftgröße wie unsere besten Werte: 358 von 2.343 GOÄ-Ziffern haben aktuell eine durchgesetzte Regel, die sie prüft. Das sind rund 15 %. Nicht 90, nicht "fast alle" — 15. Wir hätten das in eine Fußnote schreiben können. Haben wir nicht, weil ein Produkt, dessen ganzes Versprechen "wir behaupten nichts, was wir nicht belegen können" ist, genau diese Zahl nicht kleinschreiben darf. Der Rest des Katalogs bekommt kein Rätselraten — er bekommt "unconfirmed" statt eines Bauchgefühls. Stand: 09.09.2026.
+- **hook:** 383 von 2.343. Die Zahl, die wir nicht verstecken.
+- **body:** Auf unserer Startseite steht eine Zahl in derselben Schriftgröße wie unsere besten Werte: 383 von 2.343 GOÄ-Ziffern haben aktuell eine durchgesetzte Regel, die sie prüft. Das sind rund 16 %. Nicht 90, nicht "fast alle" — 16. Wir hätten das in eine Fußnote schreiben können. Haben wir nicht, weil ein Produkt, dessen ganzes Versprechen "wir behaupten nichts, was wir nicht belegen können" ist, genau diese Zahl nicht kleinschreiben darf. Der Rest des Katalogs bekommt kein Rätselraten — er bekommt "unconfirmed" statt eines Bauchgefühls. Stand: 13.09.2026.
 - **artifact:** screenshot of the three-tile stat row on azmoth.com homepage
 - **CTA:** Was würde es für Ihre Prüfung bedeuten, wenn "wir wissen es nicht" ein eigener, sichtbarer Status wäre statt stillschweigend zu fehlen?
 - **facts used:** F02
@@ -235,7 +235,7 @@ carries "Stand: 2026-09-09" in the body — never state a rule/catalog count wit
 ### 25 — Warum die schwächste Zahl genauso groß gedruckt wird
 - **channel:** LinkedIn · **format:** single post
 - **hook:** Zwei unserer drei Startseiten-Zahlen schmeicheln uns. Die dritte nicht.
-- **body:** Auf unserer Startseite stehen drei Zahlen in derselben Kachel-Größe: die Zahl der durchgesetzten Regeln, die Katalogabdeckung, die Prüfzeit pro Rechnung. Die Katalogabdeckung — rund 15 % — ist die einzige der drei, die uns nicht schmeichelt. Unsere Zielgruppe hat "KI-gestützte Abrechnungsoptimierung" schon oft genug gehört, um zu wissen: ein Produkt, das behauptet, alles zu prüfen, lügt entweder oder rät. Diese Zahl in derselben Schriftgröße wie die anderen zu zeigen, ist die glaubwürdigste Handlung, die diese Seite überhaupt setzen kann.
+- **body:** Auf unserer Startseite stehen drei Zahlen in derselben Kachel-Größe: die Zahl der durchgesetzten Regeln, die Katalogabdeckung, die Prüfzeit pro Rechnung. Die Katalogabdeckung — rund 16 % — ist die einzige der drei, die uns nicht schmeichelt. Unsere Zielgruppe hat "KI-gestützte Abrechnungsoptimierung" schon oft genug gehört, um zu wissen: ein Produkt, das behauptet, alles zu prüfen, lügt entweder oder rät. Diese Zahl in derselben Schriftgröße wie die anderen zu zeigen, ist die glaubwürdigste Handlung, die diese Seite überhaupt setzen kann.
 - **artifact:** screenshot of the three-tile stat row, unedited
 - **CTA:** azmoth.com/pilot
 - **facts used:** F02
@@ -279,8 +279,8 @@ carries "Stand: 2026-09-09" in the body — never state a rule/catalog count wit
 
 ### 30 — Warum wir überhaupt so schreiben
 - **channel:** X (Woche 4, Thread) · **format:** thread, 5 tweets, closing/synthesis post
-- **hook:** 15 % Abdeckung. Kein Testimonial. Kein Siegel. Warum wir das alles zuerst sagen.
-- **body:** Tweet 1: Wir prüfen aktuell 358 von 2.343 GOÄ-Ziffern mit einer durchgesetzten Regel — rund 15 %. Diese Zahl steht bei uns genauso groß wie unsere besten. // Tweet 2: Wir haben kein Kundenzitat, weil es keinen gemessenen Piloten mit echten Zahlen gibt. Ein Entwurf mit erfundenen Zahlen wurde bei uns abgelehnt, nicht veröffentlicht. // Tweet 3: Wir haben kein ISO-, SOC-2- oder TÜV-Siegel, keinen durchgeführten Penetrationstest, und sagen das selbst, statt es zu verschweigen. // Tweet 4: Was wir stattdessen haben: einen zehnteiligen Hash über jede Prüfentscheidung, öffentlich nachvollziehbare Testfälle, und eine Testsuite, die den Build stoppt, wenn eine veraltete Zahl in unsere eigenen Texte rutscht. // Tweet 5: Der Pilot ist kostenlos, läuft mit Testdaten, sechs bis acht Wochen. Wenn Sie prüfen wollen, ob das stimmt, statt es zu glauben — das ist der ganze Punkt.
+- **hook:** 16 % Abdeckung. Kein Testimonial. Kein Siegel. Warum wir das alles zuerst sagen.
+- **body:** Tweet 1: Wir prüfen aktuell 383 von 2.343 GOÄ-Ziffern mit einer durchgesetzten Regel — rund 16 %. Diese Zahl steht bei uns genauso groß wie unsere besten. // Tweet 2: Wir haben kein Kundenzitat, weil es keinen gemessenen Piloten mit echten Zahlen gibt. Ein Entwurf mit erfundenen Zahlen wurde bei uns abgelehnt, nicht veröffentlicht. // Tweet 3: Wir haben kein ISO-, SOC-2- oder TÜV-Siegel, keinen durchgeführten Penetrationstest, und sagen das selbst, statt es zu verschweigen. // Tweet 4: Was wir stattdessen haben: einen zehnteiligen Hash über jede Prüfentscheidung, öffentlich nachvollziehbare Testfälle, und eine Testsuite, die den Build stoppt, wenn eine veraltete Zahl in unsere eigenen Texte rutscht. // Tweet 5: Der Pilot ist kostenlos, läuft mit Testdaten, sechs bis acht Wochen. Wenn Sie prüfen wollen, ob das stimmt, statt es zu glauben — das ist der ganze Punkt.
 - **artifact:** none — text thread, optional closing graphic with the receipt_hash motif
 - **CTA:** azmoth.com/pilot
 - **facts used:** F02, F33, F35, F11, F13, F40

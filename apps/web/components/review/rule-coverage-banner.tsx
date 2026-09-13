@@ -108,7 +108,7 @@ function Count({
  * 6 / 3" invites adding 9 back into 944 or reading 6 and 3 as disjoint from 9, and both readings are
  * wrong. Nesting them is what makes the sum unrepresentable rather than merely undocumented.
  *
- * The headline metric — "944 von 980 Regeln durchgesetzt" — reads `enforced_rule_count` and
+ * The headline metric — "{enforced} von {total} Regeln durchgesetzt" — reads `enforced_rule_count` and
  * `total_constraint_rule_count` directly off `RuleCoverage` rather than through `verified_share`.
  * The engine builds that string as `f"{enforced_rule_count}/{total_constraint_rule_count}"`
  * (`rule_store.py`), so it is the same two counts one indirection removed; reading the fields

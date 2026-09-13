@@ -114,7 +114,7 @@
         },
         {
           "titel": "Prüfen",
-          "text": "{regeln} durchgesetzte GOÄ-Regeln auf jede Position — in rund {laufzeit} ms je Lieferung."
+          "text": "{regeln} durchgesetzte GOÄ-Regeln auf jede Position — in rund {laufzeit} ms (Median) je Lieferung."
         },
         {
           "titel": "Bericht laden",
@@ -210,7 +210,7 @@
       ],
       "cta": "Pilot-Zugang anfordern",
       "hinweis": "Der Pilotbetrieb verarbeitet ausschließlich synthetische Testdaten. Eine Lieferung, die sich als Echtdaten ausweist, wird von der Anwendung abgewiesen — ebenso eine, die dazu keine Angabe macht.",
-      "hinweisKatalog": "Hinweis für den Pilotbetrieb: Azmoth prüft gegen den aktuellen GOÄ-Katalog. Bilden Sie Ihre synthetischen Testlieferungen daher an Behandlungsfällen der letzten 6–12 Monate nach."
+      "hinweisKatalog": "Hinweis für den Pilotbetrieb: Azmoth prüft gegen den aktuellen GOÄ-Katalog. Bilden Sie Ihre synthetischen Testlieferungen daher an Behandlungsfällen der letzten 12 Monate nach."
     },
     "api": {
       "eyebrow": "Für Entwickler",
@@ -258,7 +258,7 @@
         },
         {
           "manuell": "Stichprobe statt Vollprüfung, sobald der Stapel wächst.",
-          "azmoth": "{regeln} durchgesetzte Regeln auf jede Position jeder Lieferung."
+          "azmoth": "{regeln} durchgesetzte Regeln prüfen jede Position — und wo keine greift, steht dort „unbestätigt“ statt einer Vermutung."
         },
         {
           "manuell": "Die Begründung entsteht erst bei der Rückfrage.",
@@ -266,7 +266,7 @@
         },
         {
           "manuell": "Der Aufwand wächst mit jeder weiteren Lieferung.",
-          "azmoth": "{laufzeit} ms pro Lieferung — die Stapelgröße ändert daran nichts."
+          "azmoth": "{laufzeit} ms pro Lieferung — Median einer vollständigen Lieferung im Messlauf, nicht je Position."
         },
         {
           "manuell": "Unklare Fälle verschwinden in „geht schon“.",
@@ -301,7 +301,8 @@
       "laufzeit": {
         "einheit": "ms (Median)"
       },
-      "anteile": "Das sind {katalogAnteil} des vollständigen GOÄ-Katalogs."
+      "anteile": "Das sind {katalogAnteil} des vollständigen GOÄ-Katalogs.",
+      "stand": "Stand: {datum}"
     },
     "sicherheit": {
       "eyebrow": "Sicherheit & Compliance",
@@ -399,11 +400,11 @@
       },
       {
         "q": "Wird gegen die aktuelle oder die damals gültige Gebührenordnung geprüft?",
-        "a": "Im Pilotbetrieb gegen den aktuellen GOÄ-Katalog. Die Engine ist auf mehrere Katalogstände ausgelegt und jeder Prüfbericht nennt die Fassung, gegen die er gerechnet wurde — historische Fassungen sind jedoch noch nicht hinterlegt. Bilden Sie Ihre synthetischen Testlieferungen deshalb an Behandlungsfällen der letzten 6–12 Monate nach. Ältere Fälle werden weiterhin vollständig geprüft; der Bericht weist dann ausdrücklich darauf hin, dass historische Regelabweichungen nicht erkannt werden können."
+        "a": "Im Pilotbetrieb gegen den aktuellen GOÄ-Katalog. Die Engine ist auf mehrere Katalogstände ausgelegt und jeder Prüfbericht nennt die Fassung, gegen die er gerechnet wurde — historische Fassungen sind jedoch noch nicht hinterlegt. Bilden Sie Ihre synthetischen Testlieferungen deshalb an Behandlungsfällen der letzten 12 Monate nach. Ältere Fälle werden weiterhin vollständig geprüft; der Bericht weist dann ausdrücklich darauf hin, dass historische Regelabweichungen nicht erkannt werden können."
       },
       {
         "q": "Welche Daten reiche ich für den Piloten ein?",
-        "a": "Ausschließlich synthetische Testlieferungen — keine echten Patienten- oder Abrechnungsdaten. Den Generator dafür stellen wir bereit. Eine Lieferung, die sich als Echtdaten ausweist oder dazu keine Angabe macht, wird von der Anwendung abgewiesen. Orientieren Sie die Fälle an Leistungsdaten der letzten 6–12 Monate: das ist der Zeitraum, für den der geladene GOÄ-Katalog die maßgebliche Fassung ist."
+        "a": "Ausschließlich synthetische Testlieferungen — keine echten Patienten- oder Abrechnungsdaten. Den Generator dafür stellen wir bereit. Eine Lieferung, die sich als Echtdaten ausweist oder dazu keine Angabe macht, wird von der Anwendung abgewiesen. Orientieren Sie die Fälle an Leistungsdaten der letzten 12 Monate: das ist der Zeitraum, für den der geladene GOÄ-Katalog die maßgebliche Fassung ist."
       },
       {
         "q": "Können bestehende Rechnungen geprüft werden?",
@@ -444,7 +445,7 @@
       "bekommt": [
         "Vollen Zugang zur Engine für die Dauer des Piloten",
         "Einen Generator für synthetische PADnext-Testlieferungen",
-        "Persönliche Einweisung und Support innerhalb eines Werktags",
+        "Persönliche Einweisung und Support in der Regel innerhalb eines Werktags",
         "Direkten Einfluss auf die Produkt-Roadmap"
       ],
       "bittenTitel": "Wir bitten um",
@@ -471,7 +472,7 @@
         },
         {
           "titel": "Reproduzierbar bis auf den Hash",
-          "text": "Jeder Prüfbericht trägt einen Receipt-Hash über Katalog, Regeln, Logik, Solver, Policy und Eingabe. Dieselbe Lieferung ergibt denselben Hash — heute, in einer Woche, nach jedem Neustart."
+          "text": "Jeder Prüfbericht trägt einen Receipt-Hash über Katalog, Regeln, Logik, Solver, Policy und Eingabe. Dieselbe Lieferung ergibt denselben Hash — gleicher Katalog, gleiche Regeln, gleiche Logik, gleicher Solver, gleiche Policy, nach jedem Neustart. Neue Engine-Versionen ändern den Hash bewusst: Er sichert die tatsächliche Antwort ab, nicht nur die Entscheidung."
         },
         {
           "titel": "Keine Blackbox-Bewertung",
@@ -492,7 +493,7 @@
     "cta": "Zur Startseite"
   },
   "metadaten": {
-    "startseiteBeschreibung": "Mathematisch beweisbare GOÄ-Abrechnungsprüfung. Keine Blackbox-KI. 100 % nachvollziehbare Befunde mit gesetzlichen Grundlagen.",
+    "startseiteBeschreibung": "Deterministische Prüfung von PADnext-Lieferungen gegen die GOÄ. Drei Kategorien statt Risikoscore: bestätigt korrekt, nachweislich falsch, unbestätigt. Pilot kostenlos, ausschließlich synthetische Testdaten.",
     "funktionenTitel": "Funktionen",
     "funktionenBeschreibung": "Kodierung, Prüfung und Nachvollziehbarkeit — von der Dokumentation bis zur freigegebenen Rechnung.",
     "ueberUnsTitel": "Über uns",
