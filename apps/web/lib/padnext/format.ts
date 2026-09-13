@@ -210,6 +210,73 @@ export const VERDICT_LABEL: Record<PadnextVerdict, string> = {
   surcharge_not_modelled: "Zuschlag nicht abgebildet",
 }
 
+// ------------------------------------------------------------------------------------------
+// verified-defect reason codes — the machine codes `classify_position` folds into `bucket_reason`
+// ------------------------------------------------------------------------------------------
+
+/**
+ * The exact prefix `apps/engine/app/padnext/audit.py`'s `classify_position` writes for a
+ * `confirmed_wrong` position: `"Verifizierte Prüfung fehlgeschlagen: " + ", ".join(sorted(codes)) +
+ * "."`, where `codes` are the `VERIFIED_DEFECT_FINDINGS` raised against that position. This is the
+ * only place a raw finding type reaches `bucket_reason` — every other branch of `classify_position`
+ * already writes a full German sentence with no code embedded in it.
+ */
+const VERIFIED_DEFECT_PREFIX = "Verifizierte Prüfung fehlgeschlagen: "
+
+/**
+ * Pull the raw finding-type codes back out of a `confirmed_wrong` position's `bucket_reason`, or
+ * `null` when this `bucket_reason` is not that sentence — every other bucket's text is already
+ * human-readable prose with nothing to parse out of it.
+ */
+export function verifiedDefectCodes(bucketReason: string): string[] | null {
+  if (!bucketReason.startsWith(VERIFIED_DEFECT_PREFIX)) return null
+  const codes = bucketReason
+    .slice(VERIFIED_DEFECT_PREFIX.length)
+    .replace(/\.$/, "")
+    .split(",")
+    .map((code) => code.trim())
+    .filter(Boolean)
+  return codes.length > 0 ? codes : null
+}
+
+/**
+ * Short German labels for the finding types `VERIFIED_DEFECT_FINDINGS` can raise — the only codes
+ * `verifiedDefectCodes` ever returns. Each is worded from the exact check in
+ * `apps/engine/app/padnext/audit.py`, not guessed:
+ *
+ * * `padnext_amount_mismatch` — `gesamtbetrag` differs from `Punkte × Faktor × Punktwert`.
+ * * `padnext_factor_above_maximum` — the claimed Faktor exceeds the § 5 Abs. 1 chapter band's
+ *   Höchstsatz, or a Leistungslegende-specific cap.
+ * * `padnext_justification_missing` — the Faktor is above the § 12 Abs. 3 threshold and
+ *   `begruendung` is empty.
+ * * `padnext_inactive_ziffer` — the catalog carries this Ziffer as not active.
+ *
+ * A code outside this map falls back to the untranslated `bucket_reason` sentence — see
+ * `primaryBewertungText` — rather than a guessed label.
+ */
+export const REASON_CODE_LABEL: Partial<Record<string, string>> = {
+  padnext_amount_mismatch: "Betrag weicht von der Nachrechnung ab",
+  padnext_factor_above_maximum: "Faktor über dem Höchstsatz",
+  padnext_justification_missing: "Begründung für Faktor fehlt",
+  padnext_inactive_ziffer: "Ziffer im Katalog inaktiv",
+}
+
+/**
+ * The short text for the primary Bewertung cell: the codes in a `confirmed_wrong` `bucket_reason`
+ * translated to `REASON_CODE_LABEL`, or the `bucket_reason` itself when there is nothing to
+ * translate — a bucket whose text is already prose, or one carrying a code this map does not (yet)
+ * cover. Never a half-translated sentence: if any code in the list has no label, the whole thing
+ * falls back to `bucket_reason` untouched, because a mix of a German label and a bare
+ * `padnext_whatever` reads worse than the original machine sentence did.
+ */
+export function primaryBewertungText(bucketReason: string): string {
+  const codes = verifiedDefectCodes(bucketReason)
+  if (!codes) return bucketReason
+  const labels = codes.map((code) => REASON_CODE_LABEL[code])
+  if (labels.some((label) => label === undefined)) return bucketReason
+  return labels.join(" · ")
+}
+
 export const SEVERITY_LABEL: Record<"info" | "warning" | "error", string> = {
   info: "Hinweis",
   warning: "Warnung",

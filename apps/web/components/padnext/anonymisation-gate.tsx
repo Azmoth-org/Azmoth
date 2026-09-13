@@ -1,121 +1,66 @@
 "use client"
 
-import { ShieldAlertIcon } from "lucide-react"
-
 import { Checkbox } from "@workspace/ui/components/checkbox"
 import { Label } from "@workspace/ui/components/label"
 
 /**
- * The confirmation a pilot user gives before the file picker will open.
+ * The confirmation a pilot user gives before the file is submitted.
  *
  * ## What this is for, and what it is honestly not
  *
  * It is **not** the control that stops real patient data being processed. That control is in the
- * engine: `app/padnext/audit.py` refuses the delivery before a single position is read, and no
- * checkbox on this page can switch that off. A gate whose only enforcement is a tickbox in a
- * browser is not a gate.
- *
- * That refusal is three-valued, and the middle case is the one this text has to get right:
- *
- *   - `echtdaten="1"` / `"true"`  → `REAL_DATA_REFUSED`
- *   - `echtdaten="0"` / `"false"` → audited
- *   - anything else, including **absent** → `ECHTDATEN_UNDECLARED`
- *
- * The third row is new and it changes what a user has to do rather than merely what they must not
- * do. Before it, an export that said nothing was audited on the assumption that silence meant
- * synthetic; a file therefore reached a report without anyone having run anything. Now a delivery
- * that cannot declare itself is turned away, so `scripts/anonymize_padnext.py` is a step in the
- * workflow and not a recommendation — and the sentence beside the checkbox has to say that,
- * because a user who ticks a box asserting they ran a script they have never seen is being asked
- * to lie.
+ * engine: `app/padnext/audit.py` refuses a delivery flagged `echtdaten="true"` — and one that does
+ * not declare itself at all — before a single position is read, and no checkbox in a browser can
+ * switch that off. `SyntheticDataNotice`, above the upload card, is the one place this page states
+ * that rule; this card exists only to ask for the anonymisation confirmation itself, so the two
+ * are not saying the same thing twice.
  *
  * What it *is* for is the moment before the mistake. The realistic failure in a pilot is not
  * somebody defeating a control — it is somebody exporting from their PVS, forgetting the
- * anonymisation step, and uploading out of habit. A deliberate act placed between "I have a file"
- * and "the picker is open" is the cheapest intervention that addresses that, and it is the same
- * reason `restore-db.sh` makes an operator type the database name rather than offering `--force`.
- *
- * It also does something the engine's refusal cannot: it puts the obligation in writing, in the
- * user's own language, at the moment they accept it. Under § 203 StGB the practice — not us —
- * carries the duty of confidentiality, and "the software told me it was fine" is not a defence
- * either party wants to rely on. This is the sentence that makes the division of responsibility
- * explicit rather than assumed.
+ * anonymisation step, and uploading out of habit. A deliberate, explicit act next to the submit
+ * button is the cheapest intervention that addresses that.
  *
  * ## Why it resets on every file
  *
- * The parent clears this after each upload. A confirmation that stayed ticked for a session would
- * be given once, on the first file, and then silently cover the twentieth — which is exactly the
+ * The parent clears this after each upload attempt. A confirmation that stayed ticked would be
+ * given once, on the first file, and then silently cover the twentieth — which is exactly the
  * upload that will be the un-anonymised one, because by then it is routine. Per file is the only
  * granularity at which the statement is true.
  */
 export function AnonymisationGate({
   checked,
   onCheckedChange,
+  disabled,
 }: {
   checked: boolean
   onCheckedChange: (next: boolean) => void
+  /** True until a file is selected — there is nothing to confirm about yet. */
+  disabled?: boolean
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
-      <ShieldAlertIcon
-        aria-hidden
-        className="mt-0.5 size-4 shrink-0 text-amber-600"
+    <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-3">
+      <Checkbox
+        id="anonymisation-confirmed"
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+        className="mt-0.5"
+        aria-describedby="anonymisation-helper"
       />
-      <div className="min-w-0 space-y-3">
-        <div className="flex items-start gap-3">
-          <Checkbox
-            id="anonymisation-confirmed"
-            checked={checked}
-            onCheckedChange={(value) => onCheckedChange(value === true)}
-            className="mt-0.5 border-amber-600"
-            aria-describedby="anonymisation-consequence"
-          />
-          <Label
-            // `block` and `break-words` override the primitive, and they are what keeps this
-            // screen inside a 390 px viewport. `Label` is `flex items-center` — right for a word
-            // beside a control, wrong for a paragraph: a flex item will not shrink below its
-            // content's intrinsic width, so this sentence and the unbreakable
-            // `scripts/anonymize_padnext.py` below laid the gate out 471 px wide and put a
-            // scrollbar on the whole page, before anything had even been uploaded.
-            htmlFor="anonymisation-confirmed"
-            className="block min-w-0 text-xs leading-relaxed font-normal break-words"
-          >
-            Ich bestätige, dass ich diese Datei mit dem
-            Azmoth-Anonymisierungsskript{" "}
-            <code className="font-mono break-all">
-              scripts/anonymize_padnext.py
-            </code>{" "}
-            erzeugt habe und dass sie keine Patientendaten mehr enthält —
-            insbesondere keinen Namen, keine Anschrift, kein Geburtsdatum und
-            keine Versichertennummer. Das Hochladen echter Patientendaten ist
-            untersagt.
-          </Label>
-        </div>
-
-        <p
-          id="anonymisation-consequence"
-          className="text-xs leading-relaxed text-amber-900/80"
+      <div className="min-w-0 space-y-1">
+        <Label
+          htmlFor="anonymisation-confirmed"
+          className="block min-w-0 text-sm leading-relaxed font-normal break-words"
         >
-          Diese Bestätigung ersetzt keine technische Prüfung. Die Engine weist
-          eine Lieferung ab, die als Echtdaten gekennzeichnet ist — und ebenso
-          eine, die sich gar nicht erklärt: Fehlt das Attribut{" "}
-          <code className="font-mono">echtdaten</code> oder trägt es einen Wert
-          wie <code className="font-mono">&quot;ja&quot;</code>, wird die Datei
-          mit <code className="font-mono">ECHTDATEN_UNDECLARED</code>{" "}
-          zurückgewiesen. Eine fehlende Angabe gilt nicht als „Testdaten“. Das
-          Skript setzt{" "}
-          <code className="font-mono">echtdaten=&quot;false&quot;</code> in der
-          Auftragsdatei und in den Nutzdaten und ist damit der übliche Weg, eine
-          Datei überhaupt hochladbar zu machen.
-        </p>
-
-        <p className="text-xs leading-relaxed text-amber-900/80">
-          Das Skript entfernt keinen Freitext. Prüfen Sie die Felder{" "}
-          <code className="font-mono">text</code> und{" "}
-          <code className="font-mono">begruendung</code> selbst — das Skript
-          meldet auffällige Stellen am Ende seines Laufs. Was es genau entfernt
-          und warum das Ergebnis nicht mehr unter Art. 9 DSGVO fällt, steht in{" "}
-          <code className="font-mono">docs/pilot/ANONYMIZATION_SPEC.md</code>.
+          Ich bestätige, dass diese Datei mit dem Azmoth-Anonymisierungsskript
+          erzeugt wurde.
+        </Label>
+        <p
+          id="anonymisation-helper"
+          className="text-xs leading-relaxed text-muted-foreground"
+        >
+          Die Originaldatei bleibt in der Praxis. Das Skript erstellt eine neue
+          Testdatei.
         </p>
       </div>
     </div>

@@ -24,6 +24,7 @@ import { ErrorPanel } from "@/components/review/error-panel"
 import { ZifferReportDialog } from "@/components/rules/ziffer-report-dialog"
 import { auditPadnextFile } from "@/lib/padnext/client"
 import { toValidationReport, type PadnextResult } from "@/lib/padnext/types"
+import { pruefenButtonState } from "@/lib/padnext/upload-state"
 
 /** What the engine's reader accepts: a `.padx` container, or a bare payload/order file. */
 const ACCEPTED = ".padx,.xml,.auf"
@@ -31,25 +32,28 @@ const ACCEPTED = ".padx,.xml,.auf"
 /**
  * Upload a PADnext delivery and render the audit.
  *
- * The file's *bytes* never touch component state — they are read straight into the request body.
- * What is kept, for exactly as long as a report is on screen, is the `File` handle itself, and only
- * so `SinglePruefberichtButton` can produce the printable Prüfbericht from the same delivery. A
- * `File` is a reference to bytes the browser already holds on behalf of the file input, not a
- * second copy in JavaScript memory, and the next upload replaces it — so the window in which this
- * page can name a billing document is the window in which it is displaying one.
+ * The file's *bytes* never touch component state — they are read straight into the request body
+ * once the reader submits. What is kept, for exactly as long as a report is on screen, is the
+ * `File` handle itself, and only so `SinglePruefberichtButton` can produce the printable
+ * Prüfbericht from the same delivery. A `File` is a reference to bytes the browser already holds on
+ * behalf of the file input, not a second copy in JavaScript memory, and the next upload replaces it
+ * — so the window in which this page can name a billing document is the window in which it is
+ * displaying one.
  *
  * The alternative was to have the PDF button re-open the file picker, which asks a user to find the
  * same file twice to get two views of one audit. The one it was weighed against — caching the
  * rendered report on the server — is the option that would actually change what this endpoint is:
  * the single audit stores nothing, and that is what keeps it outside tenancy.
  *
- * ## The gate in front of the picker
+ * ## Selecting a file is not submitting it
  *
- * The file input cannot be opened until `AnonymisationGate` has been confirmed, and the confirmation
- * is cleared again after every upload. That is a deliberate act placed between "I have a file" and
- * "the picker is open", for the failure that actually happens in a pilot: not somebody defeating a
- * control, but somebody exporting from their PVS, forgetting the anonymisation step, and uploading
- * out of habit. See that component for why it resets per file rather than per session.
+ * Choosing a file only stores its handle and its name; the engine is not called until the reader
+ * presses "PADnext-Datei prüfen", and that button stays disabled until a file is selected *and*
+ * `AnonymisationGate` is checked — see `pruefenButtonState`. That is a deliberate act placed between
+ * "I have a file" and "the engine reads it", for the failure that actually happens in a pilot: not
+ * somebody defeating a control, but somebody exporting from their PVS, forgetting the anonymisation
+ * step, and uploading out of habit. Both the file and the confirmation are cleared after every
+ * submission, per `AnonymisationGate`'s own note on why it resets per file rather than per session.
  *
  * **It is not what enforces the rule.** The engine refuses a delivery flagged `echtdaten="true"`
  * with `REAL_DATA_REFUSED` before it reads a position, and that refusal is not reachable from this
@@ -88,7 +92,9 @@ const ACCEPTED = ".padx,.xml,.auf"
 export function AuditWorkbench() {
   const [result, setResult] = useState<PadnextResult | null>(null)
   const [pending, setPending] = useState(false)
-  const [filename, setFilename] = useState<string | null>(null)
+  // The file chosen but not yet submitted. Cleared, along with `confirmed`, after every submission
+  // attempt — see `AnonymisationGate`'s note on why the confirmation is per file, not per session.
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   // The delivery the report on screen describes, kept so it can be rendered as a PDF. Cleared
   // whenever the report it belongs to is — see the note above.
   const [audited, setAudited] = useState<File | null>(null)
@@ -115,21 +121,29 @@ export function AuditWorkbench() {
   const batched =
     validation && (validation.errors?.length ?? 0) > 0 ? validation : null
 
-  async function onPick(file: File | undefined) {
+  function onSelect(file: File | undefined) {
     if (!file) return
-    setFilename(file.name)
-    setPending(true)
+    setSelectedFile(file)
+    // A newly chosen file is a new statement: any confirmation or report about a previous one no
+    // longer applies to it.
+    setConfirmed(false)
     setResult(null)
     setAudited(null)
+  }
+
+  async function onSubmit() {
+    if (!selectedFile || !confirmed || pending) return
+    setPending(true)
     try {
-      const outcome = await auditPadnextFile(file)
+      const outcome = await auditPadnextFile(selectedFile)
       setResult(outcome)
       // Only alongside a report. A refusal has no document to export, and holding the file after
       // one would keep a delivery around for a screen that is showing an error.
-      setAudited(outcome.kind === "report" ? file : null)
+      setAudited(outcome.kind === "report" ? selectedFile : null)
     } finally {
       setPending(false)
       // Per file, not per session — see `AnonymisationGate`. The next upload is a new statement.
+      setSelectedFile(null)
       setConfirmed(false)
       // Without this, picking the same file twice in a row fires no `change` event and the second
       // attempt looks like a dead button.
@@ -137,51 +151,78 @@ export function AuditWorkbench() {
     }
   }
 
+  const buttonState = pruefenButtonState({
+    hasFile: selectedFile !== null,
+    confirmed,
+    pending,
+  })
+
   return (
     <div className="space-y-6">
-      <AnonymisationGate checked={confirmed} onCheckedChange={setConfirmed} />
       <CatalogScopeNotice />
 
       <Card>
-        <CardContent className="flex flex-wrap items-center gap-4 pt-6">
-          <input
-            ref={inputRef}
-            type="file"
-            accept={ACCEPTED}
-            className="hidden"
-            onChange={(event) => void onPick(event.target.files?.[0])}
+        <CardContent className="space-y-4 pt-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <input
+              ref={inputRef}
+              type="file"
+              accept={ACCEPTED}
+              className="hidden"
+              onChange={(event) => onSelect(event.target.files?.[0])}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => inputRef.current?.click()}
+              disabled={pending}
+            >
+              <FileUpIcon aria-hidden />
+              Datei auswählen
+            </Button>
+            <div className="min-w-0 text-xs text-muted-foreground">
+              {selectedFile ? (
+                <span className="font-mono break-all">
+                  {selectedFile.name}
+                </span>
+              ) : (
+                <span>
+                  <span className="font-mono">.padx</span>-Container oder{" "}
+                  <span className="font-mono">*_padx.xml</span>-Nutzdaten. Nur
+                  pseudonymisierte Testdaten.
+                </span>
+              )}
+            </div>
+          </div>
+
+          <AnonymisationGate
+            checked={confirmed}
+            onCheckedChange={setConfirmed}
+            disabled={selectedFile === null}
           />
-          <Button
-            onClick={() => inputRef.current?.click()}
-            disabled={pending || !confirmed}
-          >
-            {pending ? (
-              <>
-                <Loader2Icon className="animate-spin" aria-hidden />
-                Prüfung läuft…
-              </>
-            ) : (
-              <>
-                <FileUpIcon aria-hidden />
-                PADnext-Datei prüfen
-              </>
-            )}
-          </Button>
-          <div className="min-w-0 text-xs text-muted-foreground">
-            {!confirmed && !pending ? (
-              <span>
-                Bitte bestätigen Sie zuerst die Anonymisierung — erst dann lässt
-                sich eine Datei auswählen.
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => void onSubmit()}
+              disabled={buttonState.disabled}
+            >
+              {pending ? (
+                <>
+                  <Loader2Icon className="animate-spin" aria-hidden />
+                  Prüfung läuft…
+                </>
+              ) : (
+                <>
+                  <FileUpIcon aria-hidden />
+                  PADnext-Datei prüfen
+                </>
+              )}
+            </Button>
+            {buttonState.reason ? (
+              <span className="text-xs text-muted-foreground">
+                {buttonState.reason}
               </span>
-            ) : filename ? (
-              <span className="font-mono break-all">{filename}</span>
-            ) : (
-              <span>
-                <span className="font-mono">.padx</span>-Container oder{" "}
-                <span className="font-mono">*_padx.xml</span>-Nutzdaten. Nur
-                pseudonymisierte Testdaten.
-              </span>
-            )}
+            ) : null}
           </div>
         </CardContent>
       </Card>
