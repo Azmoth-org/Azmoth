@@ -130,6 +130,16 @@ export function Metrics() {
       </RevealGroup>
 
       {/*
+        The build/snapshot date every tile's figure is checked against — see `SNAPSHOT_DATE` in
+        `lib/engine-facts.ts`. A rule count or a latency figure without a date on it is a claim
+        with no way to tell whether it is still true; this is the same "Stand:" convention the
+        legal pages use for the same reason.
+      */}
+      <p className="azm-tnum mt-4 text-center text-xs text-azm-ink-mute">
+        {t("stand", { datum: engineFacts.standDatum })}
+      </p>
+
+      {/*
         The one share figure worth stating on its own line under the tiles.
 
         Only the catalog share — "383 von 2.343" said as a percentage — belongs here. The rules

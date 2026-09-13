@@ -19,8 +19,8 @@
  * what `Pipeline().rule_coverage()` computes. Changing a rule set without changing
  * this file turns the engine's own suite red.
  *
- * Verified against the engine on 2026-09-12 (coverage sprint batch 1 — see
- * docs/content/coverage-sprint-plan.md):
+ * Verified against the engine on 2026-09-13 (coverage sprint batch 1, 2026-09-12 — see
+ * docs/content/coverage-sprint-plan.md — re-checked unchanged the following day):
  *
  *     enforced_rule_count       944
  *     total_constraint_rule_count 980
@@ -57,6 +57,16 @@ export const LATENCY_MS_PER_INVOICE = 80;
 export const CATALOG_COVERAGE_SHARE = ZIFFERN_UNDER_RULE_COUNT / CATALOG_ZIFFER_COUNT;
 
 /**
+ * The date the three counts above were last checked against the live engine — the same date as
+ * the "Verified against the engine on" line atop this file. It is a plain ISO string, not a
+ * `Date`, so it formats identically regardless of the server's timezone.
+ *
+ * Every stat tile on the site prints this next to the numbers it goes with. A rule count without
+ * a date is exactly the kind of claim this file exists to prevent — see the module docstring.
+ */
+export const SNAPSHOT_DATE = "2026-09-13";
+
+/**
  * German number formatting, fixed to `de-DE` rather than the request locale.
  *
  * The site is single-locale and statically prerendered, so there is no request locale
@@ -68,6 +78,23 @@ const dePercent = new Intl.NumberFormat("de-DE", {
   style: "percent",
   maximumFractionDigits: 1,
 });
+/**
+ * `timeZone: "UTC"` pins the formatted day to the calendar day in `SNAPSHOT_DATE` itself. Without
+ * it, `Intl.DateTimeFormat` renders in the server's local zone, and a UTC midnight timestamp
+ * formatted anywhere west of Greenwich prints the *previous* day — a Stand date that is wrong by
+ * one day, in the one direction nobody notices until someone checks.
+ */
+const deDate = new Intl.DateTimeFormat("de-DE", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+/** `formatStandDatum("2026-09-13")` → `"13. September 2026"`. Exported so it can be unit-tested. */
+export function formatStandDatum(isoDate: string): string {
+  return deDate.format(new Date(`${isoDate}T00:00:00Z`));
+}
 
 /**
  * The values the message catalogue interpolates, pre-formatted.
@@ -82,5 +109,6 @@ export const engineFacts = {
   katalogZiffern: de.format(CATALOG_ZIFFER_COUNT),
   katalogGeprueft: de.format(ZIFFERN_UNDER_RULE_COUNT),
   katalogAnteil: dePercent.format(CATALOG_COVERAGE_SHARE),
+  standDatum: formatStandDatum(SNAPSHOT_DATE),
   laufzeitMs: de.format(LATENCY_MS_PER_INVOICE),
 } as const;
