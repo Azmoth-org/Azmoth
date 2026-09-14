@@ -6,11 +6,6 @@
 #
 # Runs ON the VM, normally from cron.
 #
-# This is the AWS mirror of infra/scripts/backup-to-azure.sh. Everything about WHAT is backed up and
-# HOW it is protected is identical — the same pg_dump over the network, the same archive
-# verification, the same age encryption to a key that is not on this box. Only the destination and
-# the credential mechanism changed. That file is not deleted: a deployment still on Azure needs it.
-#
 # ── The dump is taken over the network, because there is no local Postgres ────────────────────
 # This deployment has no postgres container to `docker compose exec` into — the database is Neon's —
 # so the dump is taken over the network instead: a throwaway `postgres:17-alpine` container runs
@@ -45,11 +40,11 @@
 # On the Free plan the history window is six hours, capped at 1 GB. That is a rollback. This is the
 # backup.
 #
-# One thing to be honest about after the move from Azure: Neon runs on AWS, so this bucket is now
-# with the same PROVIDER as the database rather than a different one. It is still a different
-# account, a different service and a different credential, which is what the requirement is about.
-# A practice that wants provider diversity needs a third copy somewhere else, and that is a
-# conversation to have rather than a thing to imply by silence.
+# One thing worth being honest about: Neon runs on AWS, so this bucket is with the same PROVIDER as
+# the database rather than a different one. It is still a different account, a different service
+# and a different credential, which is what the requirement is about. A practice that wants provider
+# diversity needs a third copy somewhere else, and that is a conversation to have rather than a
+# thing to imply by silence.
 #
 # ── Credentials: there are none on this box, except the one that has to be ────────────────────
 # S3 authentication is the EC2 instance profile that infra/aws/provision.sh attached — an IAM role
@@ -144,9 +139,8 @@ HINT
 fi
 
 STORAGE_BUCKET="${STORAGE_BUCKET:-}"
-# The key prefix inside the bucket. The Azure script had a container for this; a bucket has no
-# containers, so the same separation is a prefix — which is also what makes listing a month a prefix
-# query rather than a scan.
+# The key prefix inside the bucket — a folder-like separation, which is also what makes listing a
+# month a prefix query rather than a scan.
 BACKUP_PREFIX="${BACKUP_PREFIX:-db-backups}"
 AGE_RECIPIENT="${AGE_RECIPIENT:-}"
 DATABASE_URL="${DATABASE_URL:-}"
@@ -285,10 +279,10 @@ else
 fi
 
 # ── 4. Confirm the instance profile ───────────────────────────────────────────────────────────
-# There is no login step. The Azure script needed `az login --identity`; the AWS CLI resolves the
-# instance profile through the metadata service on its own, so the equivalent here is asking WHO it
-# resolved to — which is worth doing, because the failure without it lands at the upload as an
-# AccessDenied that reads like a policy problem when it is actually "this box has no role at all".
+# There is no login step. The AWS CLI resolves the instance profile through the metadata service on
+# its own, so this is asking WHO it resolved to — worth doing, because the failure without it lands
+# at the upload as an AccessDenied that reads like a policy problem when it is actually "this box
+# has no role at all".
 
 say "4/6 checking the instance profile"
 CALLER_ARN="$(aws sts get-caller-identity --query Arn --output text 2>/dev/null || true)"

@@ -352,9 +352,8 @@ benennen und vom Verantwortlichen zu genehmigen.
   verglichen**. Ein Upload, der Erfolg gemeldet und nichts gespeichert hat, wird damit erkannt.
 - Ein durch einen Neustart unterbrochener Stapelauftrag wird automatisch fortgesetzt; bereits
   erzeugte Ergebnisse werden nicht erneut berechnet.
-- Die dokumentierten Skripte sind `infra/scripts/backup-to-s3.sh` (bei einem Betrieb auf Azure:
-  `infra/scripts/backup-to-azure.sh`) sowie `docs/OPERATIONS.md § 7.6` (Sicherung) und
-  `docs/OPERATIONS.md § 7.7` (Wiederherstellung).
+- Das dokumentierte Skript ist `infra/scripts/backup-to-s3.sh` sowie `docs/OPERATIONS.md § 7.6`
+  (Sicherung) und `docs/OPERATIONS.md § 7.7` (Wiederherstellung).
 
 ### 6.7 Organisatorische Maßnahmen
 

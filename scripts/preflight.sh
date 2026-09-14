@@ -44,7 +44,7 @@ SSH_TARGET="$SSH_USER@$HOST"
 SSH_OPTS=(-o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new)
 
 COMPOSE_CMD="cd $REMOTE_ROOT/repo && sudo COMPOSE_PROJECT_NAME=azmoth docker compose \
--f infra/docker/docker-compose.yml -f infra/docker/docker-compose.azure.yml"
+-f infra/docker/docker-compose.yml -f infra/docker/docker-compose.aws.yml"
 
 # Which cloud the box is in, and therefore which backup script belongs on it. Learned over SSH in
 # § 5 and used by § 6 and § 7 to print a command that is actually runnable. Everything else in this
@@ -81,10 +81,9 @@ for p in 80 443; do
   else
     bad "port $p is CLOSED — it must be open"
     [ "$p" = 80 ] && note "80 is not optional: Let's Encrypt's HTTP-01 challenge arrives on it."
-    note "Check the cloud firewall rule for this box:"
+    note "Check the security group rule for this box:"
     note "  aws ec2 describe-security-groups --group-names azmoth-vm-sg --region eu-central-1 \\"
-    note "    --query 'SecurityGroups[0].IpPermissions'                       # AWS"
-    note "  az network nsg rule list -g azmoth-pilot --nsg-name azmoth-vm-nsg -o table   # Azure"
+    note "    --query 'SecurityGroups[0].IpPermissions'"
   fi
 done
 
@@ -92,7 +91,7 @@ done
 # apps/engine/app/api/tenancy.py. An open 8000 means anyone can POST a proposal as any practice.
 #
 # 5432, 3001 and 8080 are still checked even though nothing on this box could open them any more —
-# the database is Neon's, the marketing site is Vercel's, and adminer is profiled out of the azure
+# the database is Neon's, the marketing site is Vercel's, and adminer is profiled out of the aws
 # override. A check for a port that cannot be open is nearly free and catches the case this list
 # exists for: somebody adding a service back.
 for p in 8000 5432 3000 3001 8080; do
@@ -108,7 +107,7 @@ for p in 8000 5432 3000 3001 8080; do
     if [ "$p" = 5432 ]; then
       note "There is no Postgres on this box. Something else is listening on 5432 — find out what."
     fi
-    note "Fix: confirm the deploy used docker-compose.azure.yml (it unpublishes these), then"
+    note "Fix: confirm the deploy used docker-compose.aws.yml (it unpublishes these), then"
     note "     ssh $SSH_TARGET '$COMPOSE_CMD ps' — nothing but caddy may list a published port."
   else
     ok "port $p ($label) is closed"
@@ -280,32 +279,28 @@ section "5. On the box"
 if ! ssh "${SSH_OPTS[@]}" "$SSH_TARGET" true 2>/dev/null; then
   bad "cannot ssh to $SSH_TARGET — skipping every remaining check"
 else
-  # Asked of the instance metadata service for the same reason scripts/deploy.sh asks: the box is
-  # the only thing that knows, and the answer decides which backup script and which credential
-  # mechanism the rest of this checklist should be naming. AWS is probed with the IMDSv2 handshake
-  # because infra/aws/provision.sh sets HttpTokens=required.
+  # Asked of the instance metadata service rather than assumed: the box is the only thing that
+  # knows, and this is what decides whether the backup job has an instance profile to use. The
+  # IMDSv2 handshake, not the old unauthenticated GET, because infra/aws/provision.sh sets
+  # HttpTokens=required.
   CLOUD="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" '
     if curl -fsS -X PUT --max-time 3 -H "X-aws-ec2-metadata-token-ttl-seconds: 60" \
          http://169.254.169.254/latest/api/token >/dev/null 2>&1; then echo aws
-    elif curl -fsS --max-time 3 -H "Metadata: true" \
-         "http://169.254.169.254/metadata/instance?api-version=2021-02-01" >/dev/null 2>&1; then echo azure
     else echo unknown; fi' 2>/dev/null | tr -d '\r')"
   CLOUD="${CLOUD:-unknown}"
 
   case "$CLOUD" in
     aws)   BACKUP_SCRIPT="infra/scripts/backup-to-s3.sh"
            ok "this box is on AWS — the backup job is $BACKUP_SCRIPT" ;;
-    azure) BACKUP_SCRIPT="infra/scripts/backup-to-azure.sh"
-           ok "this box is on Azure — the backup job is $BACKUP_SCRIPT" ;;
-    *)     skipped "could not tell which cloud this box is in (metadata service unreachable)"
+    *)     skipped "could not tell this box is on AWS (metadata service unreachable)"
            note "Not a problem for the stack, which does not care. It does mean the backup job"
-           note "has no instance profile or managed identity to use — see docs/deploy/AWS.md § 6." ;;
+           note "has no instance profile to use — see docs/deploy/AWS.md § 6." ;;
   esac
 
   containers="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$COMPOSE_CMD ps --format json" 2>/dev/null)"
 
   # THREE long-running services, and that is the whole list. `postgres` and `marketing` used to be
-  # here; both are profiled out of docker-compose.azure.yml because the database is Neon's and the
+  # here; both are profiled out of docker-compose.aws.yml because the database is Neon's and the
   # public site is Vercel's. `engine-migrate` and `web-auth-migrate` are one-shots that exit 0 and
   # have no health status — they are checked by § 6 instead, by their effect on the schema.
   for svc in caddy web engine; do
@@ -320,10 +315,10 @@ else
   done
 
   # Nothing local should be listed at all beyond those three plus the exited one-shots. A `postgres`
-  # container here means the deploy resolved the base file without the azure override.
+  # container here means the deploy resolved the base file without the aws override.
   if echo "$containers" | jq -r '.Service' 2>/dev/null | grep -qx 'postgres'; then
     bad "[SEC] a 'postgres' container is running on this box"
-    note "The azure override profiles it out, so the deploy did not use both -f flags. That means"
+    note "The aws override profiles it out, so the deploy did not use both -f flags. That means"
     note "the engine's port 8000 is probably published too — check § 1 above first."
   else
     ok "no local postgres container (the database is Neon's)"
@@ -365,8 +360,8 @@ else
     ok "${swap} MiB of swap present (headroom for a solver spike on 2 GiB)"
   else
     bad "only ${swap:-0} MiB of swap — an OOM kill would take out a running container"
-    note "Re-run the provisioning script for this box — infra/aws/provision.sh or"
-    note "infra/azure/provision.sh. Both configure a 4 GiB swapfile, and both are idempotent."
+    note "Re-run the provisioning script for this box — infra/aws/provision.sh configures a"
+    note "4 GiB swapfile, and it is idempotent."
   fi
 
   # Memory in use. Meaningful now in a way it was not on a 4 GiB build box: if this is already near
@@ -376,10 +371,9 @@ else
     ok "${memfree} MiB memory available at rest"
   else
     bad "only ${memfree:-0} MiB available — this VM is too small for the running stack"
-    note "Take the next rung of the size ladder in the provisioning script's header. Both need the"
-    note "instance replaced, so read the header before running either:"
+    note "Take the next rung of the size ladder in the provisioning script's header. It needs the"
+    note "instance replaced, so read the header before running it:"
     note "  INSTANCE_TYPE=t3.medium ./infra/aws/provision.sh          (4 GiB)"
-    note "  VM_SIZE=Standard_B2als_v2 ./infra/azure/provision.sh      (4 GiB)"
   fi
 
   disk="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "df -h / | awk 'NR==2 {print \$5}'" 2>/dev/null | tr -d '%')"
@@ -467,7 +461,7 @@ asyncio.run(probe())
     bad "the engine is NOT on Postgres — approvals would not be durable"
   fi
 
-  # [SEC] The endpoint split. See the long note in docker-compose.azure.yml on the engine service:
+  # [SEC] The endpoint split. See the long note in docker-compose.aws.yml on the engine service:
   # SQLAlchemy+asyncpg cannot be made safe behind a transaction-mode pooler without a Python change,
   # so the engine on `-pooler` is a latent intermittent DuplicatePreparedStatementError, not a
   # working configuration that happens to be slower.
@@ -574,8 +568,6 @@ cat <<MANUAL
 $(case "$CLOUD" in
   aws)   echo "        AWS (eu-central-1 — this VM, the S3 backups, and the infrastructure"
          echo "        Neon itself runs on), Neon/Databricks, and Vercel (azmoth.com)." ;;
-  azure) echo "        Microsoft Azure (germanywestcentral), Neon/Databricks and AWS"
-         echo "        (aws-eu-central-1), and Vercel (azmoth.com)." ;;
   *)     echo "        whoever hosts this VM, Neon/Databricks and AWS (aws-eu-central-1),"
          echo "        and Vercel (azmoth.com). The first one is yours to name." ;;
 esac)

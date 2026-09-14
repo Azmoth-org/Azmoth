@@ -4,12 +4,6 @@ One EC2 instance, Docker Compose, Caddy in front. No ECS, no Kubernetes, no RDS,
 the box either. Not because the managed alternatives are bad, but because this shape costs about
 EUR 22/month and the alternatives cost several times that for a pilot that does not need them.
 
-**The application architecture did not change when hosting moved from Azure to AWS.** The same three
-containers, the same compose files, the same Caddyfile, the same images from GHCR, the same Neon
-database. What changed is one provisioning script and one backup script. If you are reading this
-expecting a migration, there is less to it than you think — and § 9 is the list of what actually
-moved.
-
 Three things run somewhere other than the instance, and each of them is why the instance is small:
 
 | | Where | Why it is not on the box |
@@ -30,33 +24,28 @@ deploying right now, read that one and come back here when something looks arbit
   ./scripts/preflight.sh <ip>         verify from outside
 ```
 
-[`docs/deploy/AZURE.md`](AZURE.md) is the same document for the Azure deployment, which still
-exists and still works. Where a section here says "unchanged", that document has the long version.
-
 ---
 
-## 0. Why this moved off Azure
+## 0. Why this shape
 
-The Azure deployment was correct and it was working. It moved for one reason: **an Azure for
-Students subscription cannot allocate compute in an EU region.** The AVV
-([`docs/AVV_TECHNICAL_ANNEX_DRAFT.md`](../AVV_TECHNICAL_ANNEX_DRAFT.md) § 5.1) commits to processing
-exclusively inside the European Union, and a subscription that can only give you a VM in the United
-States cannot host this.
+**A single VM rather than ECS or Kubernetes**, because the application is three containers behind a
+reverse proxy and a managed database — there is no fleet to orchestrate, and a control plane for one
+box is pure overhead. The whole stack fits in Docker Compose plus Caddy, which is what makes a small
+budget last a pilot rather than a fortnight.
 
-That is worth stating plainly, because the alternatives were considered and rejected:
+**AWS rather than a bare VPS** (Hetzner, Scaleway would be genuinely cheaper), for one reason: the
+database is already on AWS in `eu-central-1`, so putting the VM there too puts the engine and its
+database in the same region of the same provider instead of crossing between two — one fewer network
+path, one fewer provider in the AVV table, and one fewer thing to explain to a practice's lawyer.
 
-- **Pay-as-you-go on Azure** would have worked. It also means putting a card behind a pilot that a
-  student credit was covering, which is the decision this was trying to defer.
-- **A US region with EU data** is not a workaround, it is a different AVV. The annex names Frankfurt
-  and a practice signs it.
-- **A bare VPS** (Hetzner, Scaleway) is genuinely cheaper and genuinely in Frankfurt. It was the
-  runner-up. AWS won on one point: the database is already on AWS in `eu-central-1`, so putting the
-  VM there too puts the engine and its database in the same region of the same provider instead of
-  crossing between two — which is one fewer network path, one fewer provider in the AVV table, and
-  one fewer thing to explain to a practice's lawyer.
+**`eu-central-1` rather than any cheaper region**, because
+[`docs/AVV_TECHNICAL_ANNEX_DRAFT.md`](../AVV_TECHNICAL_ANNEX_DRAFT.md) § 5.1 commits to processing
+exclusively inside the European Union, and a practice signs that document. Frankfurt is what it names.
+`infra/aws/provision.sh` **refuses to run** with a region that is not EU, for exactly this reason.
 
-Nothing about this was an architecture decision. It is a hosting decision that the architecture was
-already indifferent to, which is the entire reason it was a two-script change.
+Nothing about this is an architecture decision — it is a hosting decision the application is
+indifferent to, which is why provisioning and deployment are two separate, independently reasoned
+scripts.
 
 ---
 
@@ -77,8 +66,8 @@ has to *run*:
 | `web` (Next.js standalone) | ~150–250 MiB |
 | dockerd + the OS | ~250 MiB |
 
-That is 800 MiB–1 GiB resting on a 2 GiB box. Postgres left the box (it is Neon's) and so did the
-marketing site (Vercel's), which is what made this fit at all.
+That is 800 MiB–1 GiB resting on a 2 GiB box. Postgres is not here (it is Neon's) and neither is the
+marketing site (Vercel's), which is what makes this fit at all.
 
 The 4 GiB swapfile is **runtime insurance, not a build crutch**: a Soufflé solve forks a process
 whose peak nobody has characterised, and the failure mode without swap is the OOM killer picking a
@@ -134,9 +123,6 @@ The Elastic IP survives that, which is exactly why it is an Elastic IP.
 nothing without Soufflé. Moving to Arm is a new Soufflé build and a multi-arch image, not an
 `INSTANCE_TYPE` change.
 
-This is the same constraint that ruled out `Standard_B2pls_v2` on Azure. Changing cloud did not
-change it.
-
 ### The disk is 32 GiB gp3
 
 What has to fit is Ubuntu, Docker, three pulled images (engine ~300 MB, web ~350 MB, the web
@@ -185,9 +171,8 @@ deliberate and it is not a formality: the failure mode it prevents is a resource
 `us-east-1` because a shell had `AWS_DEFAULT_REGION` set from something else, discovered months later
 by a lawyer rather than by an engineer.
 
-One thing genuinely improves here over Azure: Neon has no Azure region any more (`azure-gwc` stopped
-accepting new projects on 7 April 2026), so the database was always in `aws-eu-central-1`. The VM is
-now in the same region of the same provider rather than in a different provider's Frankfurt.
+The Neon project lives in `aws-eu-central-1` too, so the VM and its database never cross a provider
+boundary at all.
 
 ---
 
@@ -261,8 +246,7 @@ you the AMI's default 8 GiB root volume instead of 32, and no error.
 
 Three inbound rules. A security group is default-deny for ingress, so **8000 is closed because
 nothing opens it** — and there is no such thing as a deny rule in a security group, which is worth
-knowing before you go looking for one. The Azure NSG had priorities and an implicit
-`DenyAllInBound`; this has neither.
+knowing before you go looking for one.
 
 The default **egress** rule (allow all) is left as AWS creates it. That is what lets the engine reach
 Neon in Frankfurt over TLS on 5432 and lets Docker pull from `ghcr.io`. Those are the two flows to
@@ -270,12 +254,11 @@ remember if you ever tighten it: a locked-down egress rule set is a stack that c
 passes its own healthchecks, and cannot read a single proposal.
 
 **The SSH rule is rewritten on every run.** Your ISP reassigns your address, and re-running the
-script is how that rule is meant to be corrected — same behaviour as the Azure script's
-`nsg rule update`, but it needs a loop here because a security group holds a *list* of CIDRs on one
-rule rather than one rule per source. Every `22/tcp` CIDR that is not your current address is
-revoked. If you deliberately added a colleague's address, it will be gone after a rerun, and that is
-the intended trade: an SSH allowlist that accumulates entries nobody remembers adding is how a stale
-address stays authorised for a year.
+script is how that rule is meant to be corrected — a loop, because a security group holds a *list* of
+CIDRs on one rule rather than one rule per source. Every `22/tcp` CIDR that is not your current
+address is revoked. If you deliberately added a colleague's address, it will be gone after a rerun,
+and that is the intended trade: an SSH allowlist that accumulates entries nobody remembers adding is
+how a stale address stays authorised for a year.
 
 ```bash
 aws ec2 describe-security-groups --group-names azmoth-vm-sg --region eu-central-1 \
@@ -291,14 +274,8 @@ nc -zv -w5 <public-ip> 8000     # must time out
 ### Two walls, not one
 
 The security group is the outer wall.
-[`infra/docker/docker-compose.azure.yml`](../../infra/docker/docker-compose.azure.yml) is the inner
+[`infra/docker/docker-compose.aws.yml`](../../infra/docker/docker-compose.aws.yml) is the inner
 one: it unpublishes 8000 (engine) and 3000 (web) from Docker entirely.
-
-> **On that filename.** It says `azure` and it is used unchanged on AWS. Its content is about *not
-> publishing ports* and about which services are profiled out — neither of which is an Azure fact.
-> Renaming it would touch every compose invocation in `deploy.sh`, `preflight.sh`, `OPERATIONS.md`
-> and the `Makefile` for no behavioural gain, so it was left alone. Read it as
-> "docker-compose.**single-public-box**.yml".
 
 Both walls exist because **a published Docker port bypasses the host firewall**. Docker writes its
 own `DOCKER-USER` iptables rules, so a container publishing 8000 is reachable even when `ufw` insists
@@ -326,18 +303,16 @@ decision to make deliberately rather than a limit to bump in passing.
 
 ### The `azmoth` user
 
-The Ubuntu AMI logs in as `ubuntu`. `scripts/deploy.sh` defaults to `azmoth`, which is what the Azure
-box had, so cloud-init creates that user on first boot with the same authorized key and passwordless
-sudo. That is the only reason `./scripts/deploy.sh <ip>` is identical on both providers rather than
-needing a `--user` flag somebody has to remember.
+The Ubuntu AMI logs in as `ubuntu`. `scripts/deploy.sh` defaults to `azmoth`, so cloud-init creates
+that user on first boot with the same authorized key and passwordless sudo. That is the only reason
+`./scripts/deploy.sh <ip>` needs no `--user` flag somebody has to remember.
 
 cloud-init runs **once**, so step 7 of the script re-checks the user and the swapfile over SSH and
 fixes them if they are missing. That is what makes a rerun converge on an instance that already
 existed. It is not fatal if SSH is not answering yet — a fresh instance takes a minute or two, and
 the honest report is "could not check yet, run me again".
 
-> Why SSH and not SSM Run Command, which would be the closer analogue of Azure's
-> `vm run-command invoke`: SSM needs the `AmazonSSMManagedInstanceCore` managed policy on the
+> Why SSH and not SSM Run Command: SSM needs the `AmazonSSMManagedInstanceCore` managed policy on the
 > instance role. That policy grants far more than "write objects to one bucket", on the box holding
 > the clinical data. Keeping the role at two S3 actions is worth reaching for the SSH key the script
 > already required.
@@ -426,9 +401,6 @@ user-data on first boot and via SSH on every rerun.
 
 ## 3. DNS — **two** records, and two that must not move
 
-Unchanged from Azure, and the reasoning is at length in [AZURE.md § 3](AZURE.md#3-dns--two-records-and-two-that-must-not-move).
-The short version:
-
 ```
 A   app.azmoth.com    <elastic-ip>
 A   api.azmoth.com    <elastic-ip>
@@ -454,22 +426,19 @@ change with no benefit and one more AWS resource to bill for.
 
 ---
 
-## 4. The database — still Neon, still `aws-eu-central-1`
+## 4. The database — Neon, `aws-eu-central-1`
 
-**Unchanged, and this is the section where "we moved to AWS" most invites a wrong assumption.**
-Moving the VM to AWS did **not** move the database to RDS, and should not. The reasoning is in
-[AZURE.md § 4](AZURE.md#4-the-database--neon-and-why-it-is-on-aws) in full; the parts that matter
-after the move:
+Moving the VM did **not** move the database to RDS, and should not:
 
 - **Neon's Free plan is EUR 0.** The smallest RDS instance that would run this is roughly EUR 25/month
   on top of everything in § 1 — more than doubling the cost of the deployment to get a database that
   is worse suited to it (no scale-to-zero, no branching, no instant restore).
 - `infra/aws/provision.sh` creates **no RDS instance and no Aurora cluster**, deliberately and
   by design. If you want one, that is a separate decision with a separate AVV entry.
-- The Neon project was always in `aws-eu-central-1`. It is now in the same region as the VM, which
-  removes a cross-provider network path but changes nothing about the connection strings.
+- The Neon project is in `aws-eu-central-1`, the same region as the VM, which is what keeps the
+  engine and its database off a cross-provider network path.
 
-**Two connection strings, and they are not interchangeable.** Unchanged:
+**Two connection strings, and they are not interchangeable:**
 
 | | Which | Used by |
 |---|---|---|
@@ -477,21 +446,23 @@ after the move:
 | `DATABASE_URL_POOLED` | **pooled** (host contains `-pooler`) | Better Auth at runtime, in the web tier only |
 
 `scripts/deploy.sh` validates both — scheme, quoting, `$`, and the `-pooler` infix in the right one —
-before it ships a byte. **That validation was not touched by the move to AWS and must keep working.**
-The counter-intuitive half (why the *engine* gets the *direct* endpoint) is
-[AZURE.md § 4](AZURE.md#why-the-engine-gets-the-direct-endpoint--the-least-obvious-decision-here);
-the short version is that SQLAlchemy's asyncpg dialect mints named prepared statements that a
-transaction-mode pooler mishandles, and the symptom is an intermittent
-`DuplicatePreparedStatementError` under concurrency rather than a clean failure now.
+before it ships a byte.
+
+The counter-intuitive half is why the *engine* gets the *direct* endpoint rather than the pooled one.
+Short version: Neon's pooler is PgBouncer in transaction mode, and SQLAlchemy's asyncpg dialect mints
+named prepared statements per connection that a transaction-mode pooler cannot be trusted to route
+consistently — the symptom is an intermittent `DuplicatePreparedStatementError` under concurrency
+rather than a clean failure now. Better Auth's driver (`node-postgres`) has no such problem, which is
+why it is the one service on the pooled endpoint. The long version, with the SQLAlchemy internals, is
+in the `engine` service's own comment in
+[`infra/docker/docker-compose.aws.yml`](../../infra/docker/docker-compose.aws.yml).
 
 ---
 
 ## 5. Deploying
 
-**Unchanged.** `scripts/deploy.sh` needs an Ubuntu host it can `ssh` to as a sudoer; it does not care
-which cloud that host is in. See [AZURE.md § 5](AZURE.md#5-deploying) for the long version of *why*
-nothing is built on the box, why the source is still shipped as `git archive HEAD`, why the secrets
-are written once and never again, and why a rollback is a pull and a restart.
+`scripts/deploy.sh` needs an Ubuntu host it can `ssh` to as a sudoer, and nothing else — everything in
+it is SSH, `git archive` and Docker Compose.
 
 ```bash
 DATABASE_URL='postgresql+asyncpg://…@ep-xxx.eu-central-1.aws.neon.tech/azmoth?sslmode=require' \
@@ -499,13 +470,27 @@ DATABASE_URL_POOLED='postgresql+asyncpg://…@ep-xxx-pooler.eu-central-1.aws.neo
   ./scripts/deploy.sh <elastic-ip> --signup-allowlist "you@azmoth.com"
 ```
 
-The one AWS-aware thing it does: during bootstrap it asks the **instance metadata service** which
-cloud the box is in, and installs `aws` or `az` accordingly for the backup job. It asks the box
-rather than taking a flag because the box is the thing that knows, and because a wrong flag would
-fail silently — the symptom is a backup job that refuses to run, discovered weeks later.
+Nothing is built on the box: images come from GHCR at the commit's sha (§ 1's whole reason the VM can
+be 2 GiB). The source is still shipped as `git archive HEAD` for the compose files and the Caddyfile
+— the images carry the application, but the VM still needs to know how to run them. Secrets
+(`BETTER_AUTH_SECRET`, the Neon URLs) are written to `/opt/azmoth/shared/.env` on the first deploy and
+never rewritten, because regenerating them breaks something (every user logged out; a running
+deployment pointed at the wrong database).
 
-On a host that is in neither cloud it installs neither, says so, and deploys anyway. The stack runs
-fine; the backup job will not, because there is no instance profile for it to use.
+During bootstrap it confirms the box is actually on AWS, by asking the **instance metadata service**
+rather than assuming — and installs the `aws` CLI for the backup job if so. It asks rather than
+assumes because a wrong assumption fails silently: the symptom is a backup job that refuses to run,
+discovered weeks later.
+
+On a host that is not on AWS at all it installs nothing, says so, and deploys anyway — the stack runs
+fine on any Ubuntu box with Docker; the backup job will not, because there is no instance profile for
+it to use.
+
+A rollback is a pull and a restart, not a rebuild:
+
+```bash
+./scripts/deploy.sh <elastic-ip> --tag <older-sha>
+```
 
 ---
 
@@ -513,11 +498,6 @@ fine; the backup job will not, because there is no instance profile for it to us
 
 **An encrypted `pg_dump` of Neon, pushed to a private S3 bucket by
 [`infra/scripts/backup-to-s3.sh`](../../infra/scripts/backup-to-s3.sh).**
-
-This is the direct mirror of `backup-to-azure.sh`. Everything about *what* is backed up and *how it
-is protected* is identical — the same dump over the network, the same archive verification, the same
-`age` encryption to a key that is not on the box. Only the destination and the credential changed.
-`backup-to-azure.sh` is not deleted; a deployment still on Azure needs it.
 
 ### Why an off-host copy at all, when Neon has point-in-time restore
 
@@ -532,9 +512,9 @@ is protected* is identical — the same dump over the network, the same archive 
    `/opt/azmoth/shared/.env`, which contains the Neon connection strings, without which the dumps are
    just files.
 
-> **One thing to be honest about after the move.** Neon runs on AWS, so this bucket is now with the
-> same *provider* as the database rather than a different one. It is still a different account, a
-> different service and a different credential, which is what
+> **Worth being honest about.** Neon runs on AWS, so this bucket is with the same *provider* as the
+> database rather than a different one. It is still a different account, a different service and a
+> different credential, which is what
 > [`docs/OPERATIONS.md`](../OPERATIONS.md) § 2 is actually asking for. A practice that wants provider
 > diversity needs a third copy somewhere else entirely, and that is a conversation to have rather
 > than something to imply by silence.
@@ -656,9 +636,8 @@ do not pick a class per upload.
 
 ### Restoring
 
-The procedure is [`docs/OPERATIONS.md`](../OPERATIONS.md) § 7.7 and it has not changed except for the
-download command. **Restore into a Neon branch, not over production**, and do the decryption on your
-laptop, because that is where the private key is:
+The procedure is [`docs/OPERATIONS.md`](../OPERATIONS.md) § 7.7. **Restore into a Neon branch, not
+over production**, and do the decryption on your laptop, because that is where the private key is:
 
 ```bash
 # 1. find it — from your LAPTOP, with your own credentials. The VM cannot list.
@@ -686,13 +665,12 @@ decides not to.
 ./scripts/preflight.sh <elastic-ip> --domain azmoth.com
 ```
 
-**Unchanged**, and provider-agnostic by construction: it checks from the *outside*, over HTTP, TLS
-and DNS, which is the point — `docker compose ps` proves the containers are up and proves nothing
-about what the internet can reach. See [AZURE.md § 7](AZURE.md#7-pre-flight-checklist).
+Provider-agnostic by construction: it checks from the *outside*, over HTTP, TLS and DNS, which is the
+point — `docker compose ps` proves the containers are up and proves nothing about what the internet
+can reach.
 
-Two things it now does differently, both cosmetic: it asks the metadata service which cloud the box
-is in so that it names the right backup script in its hints, and its firewall hint prints both the
-`aws ec2 describe-security-groups` and the `az network nsg rule list` form.
+It asks the metadata service whether the box is on AWS so it can name the right backup script and
+firewall-check command in its hints.
 
 Checks marked `[SEC]` are the ones that would be a security incident rather than an outage. Exit
 status is 0 only if every check passes.
@@ -700,8 +678,6 @@ status is 0 only if every check passes.
 ---
 
 ## 8. Day two
-
-Everything in [AZURE.md § 8](AZURE.md#8-day-two) applies. The AWS-specific equivalents:
 
 ```bash
 # what is running
@@ -724,8 +700,8 @@ aws ce get-cost-and-usage --time-period Start=2026-09-01,End=2026-10-01 \
   --granularity MONTHLY --metrics UnblendedCost --group-by Type=DIMENSION,Key=SERVICE
 ```
 
-**Set a budget alert before you create anything**, not after. AWS has no spending cap — a fixed
-credit on Azure stopped when it ran out, and an AWS account does not:
+**Set a budget alert before you create anything**, not after. AWS has no spending cap of its own — a
+runaway resource keeps billing a card until somebody notices, rather than stopping on its own:
 
 ```bash
 aws budgets create-budget --account-id <account> --budget \
@@ -745,32 +721,8 @@ aws iam delete-role-policy --role-name azmoth-vm-backup-role --policy-name s3-ba
 aws iam delete-role --role-name azmoth-vm-backup-role
 ```
 
-There is no single `az group delete` equivalent — that is the one thing Azure genuinely did better
-here, and it is why the list above is worth keeping. **Release the Elastic IP.** An allocated,
-unassociated address bills at the same rate as one in use, and an abandoned pilot that left one
-behind goes on costing EUR 3.35/month forever.
+**Release the Elastic IP.** An allocated, unassociated address bills at the same rate as one in use,
+and an abandoned pilot that left one behind goes on costing EUR 3.35/month forever.
+`infra/aws/audit-leftovers.sh` lists everything billable left in the account, section by section.
 
-The bucket is left out of that list on purpose. Deleting it deletes the backups.
-
----
-
-## 9. What actually changed, and what did not
-
-| | Status |
-|---|---|
-| `infra/aws/provision.sh` | **new** |
-| `infra/scripts/backup-to-s3.sh` | **new** |
-| `scripts/setup-backups.sh` | **new** — one-time activation: prompts for the age key, writes the env file, installs the cron entry |
-| `infra/azure/provision.sh`, `backup-to-azure.sh` | unchanged, still work |
-| `scripts/deploy.sh` | detects the cloud and installs `aws` or `az`; hints and comments updated. No behavioural change on Azure. |
-| `scripts/preflight.sh` | names the right backup script and firewall command. No check added or removed. |
-| `infra/docker/docker-compose.yml`, `docker-compose.azure.yml`, `Caddyfile` | **untouched** |
-| `apps/*` | **untouched** |
-| Neon, the connection strings, the endpoint split | **untouched** |
-| Vercel and the marketing site | **untouched** |
-| GHCR and `release-images.yml` | **untouched** |
-| `docs/AVV_TECHNICAL_ANNEX_DRAFT.md` § 5 | **updated** — the sub-processor list is now three, not four |
-
-The AVV change is the one with consequences outside this repository. Microsoft leaves the list; AWS
-now appears for the VM and the backups as well as for the infrastructure Neon runs on. That is a
-document a practice signs, so it has to be right before anyone does.
+The bucket is left out of the teardown list on purpose. Deleting it deletes the backups.

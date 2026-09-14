@@ -4,8 +4,7 @@ Chronological. Every step is a command to paste and an output to check against. 
 bottom the first time; afterwards you only ever need [§ 5](#5-deploy) and [§ 6](#6-rollback).
 
 [`docs/deploy/AWS.md`](AWS.md) is the companion document and answers *why* — why this instance size,
-why Neon rather than RDS, why the engine does not use the connection pooler.
-[`docs/deploy/AZURE.md`](AZURE.md) is the same document for the Azure deployment. This file answers
+why Neon rather than RDS, why the engine does not use the connection pooler. This file answers
 *what to type*. When they disagree, the companion document is the one that was reasoned about; tell
 someone.
 
@@ -20,29 +19,6 @@ and 10 is waiting for DNS.
   § 5  deploy              pull, migrate, start, verify
   § 6  rollback            when § 5 was a mistake
 ```
-
-## Which cloud
-
-**This runbook covers both, and only § 1 and § 2 differ.** Azmoth runs on one Ubuntu box with Docker
-Compose; `scripts/deploy.sh` needs a host it can `ssh` to as a sudoer and does not care who is
-billing for it. So from § 3 onward there is one path, not two.
-
-| | Default | Alternative |
-|---|---|---|
-| Provisioning | `infra/aws/provision.sh` — EC2 `t3.small`, `eu-central-1` | `infra/azure/provision.sh` — `Standard_B1ms`, `germanywestcentral` |
-| Backups | `infra/scripts/backup-to-s3.sh` — S3 + instance profile | `infra/scripts/backup-to-azure.sh` — Blob + managed identity |
-
-**AWS is the default because an Azure for Students subscription cannot allocate EU compute**, and
-[the AVV](../AVV_TECHNICAL_ANNEX_DRAFT.md) § 5.1 requires the EU. [AWS.md § 0](AWS.md#0-why-this-moved-off-azure)
-is the full reasoning. Azure remains correct and supported if you have a subscription that can host
-in Frankfurt.
-
-Steps that differ are marked **[AWS]** and **[Azure]**. Do one, skip the other.
-
-> **On the name `AZURE_HOST`.** The shell variable and the `make azure-*` targets below kept their
-> names through the move. They mean "the deployment VM", whichever cloud it is in — renaming them
-> would touch every target in the [`Makefile`](../../Makefile) and every shell profile that has one
-> exported, for no behaviour. Read `AZURE_HOST` as `VM_HOST`.
 
 > **What this runbook does NOT set up.** The marketing site at `azmoth.com` is already live on
 > Vercel and is not touched by any of this. If a step below seems to ask you to move its DNS, you
@@ -72,9 +48,6 @@ Steps that differ are marked **[AWS]** and **[Azure]**. Do one, skip the other.
                           │ Neon Postgres   │                 │ S3 bucket        │
                           │ aws-eu-central-1│                 │ encrypted dumps  │
                           └─────────────────┘                 └──────────────────┘
-
-     On Azure the middle box is a Standard_B1ms in germanywestcentral and the right-hand
-     box is Blob Storage. Everything else on this diagram is identical.
 ```
 
 Three things run on the VM. The database is Neon's, the public site is Vercel's, and the images are
@@ -87,9 +60,8 @@ built by GitHub Actions — nothing is compiled on the box, which is why 2 GiB i
 ### 1.1 The tools
 
 ```bash
-aws --version       # [AWS]   https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-                    #         Ubuntu: sudo snap install aws-cli --classic
-az version          # [Azure] https://learn.microsoft.com/cli/azure/install-azure-cli
+aws --version       # https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+                    # Ubuntu: sudo snap install aws-cli --classic
 gh --version        # GitHub CLI — https://cli.github.com
 docker --version    # for the Caddyfile and compose checks below
 jq --version        # deploy.sh uses it to check the image manifests
@@ -97,15 +69,10 @@ dig -v              # bind9-dnsutils on Debian/Ubuntu
 age --version       # https://github.com/FiloSottile/age  — apt install age
 ```
 
-You need **one** of `aws` and `az` — whichever cloud you are provisioning in. Everything else on
-that list is needed either way.
-
 `jq` is not optional in spirit: without it `deploy.sh` skips the pre-flight manifest check and you
 find out about a missing image after Docker has been installed on the VM.
 
 ### 1.2 Sign in
-
-**[AWS]**
 
 ```bash
 aws configure          # or, if your account uses IAM Identity Center: aws sso login
@@ -131,28 +98,6 @@ Do **not** set `AWS_DEFAULT_REGION` to anything outside the EU in that profile. 
 refuses a non-`eu-` region rather than quietly building the pilot in Virginia, but the refusal is
 easier to read if it never fires.
 
-**[Azure]**
-
-```bash
-az login
-az account show --query '{name:name, id:id}' --output table
-```
-
-```
-Name                 Id
--------------------  ------------------------------------
-Azmoth Pilot         4f86d9ff-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
-
-If you have more than one subscription, pin the right one now — `provision.sh` uses whatever is
-current and creating a pilot in the wrong subscription is annoying to unpick:
-
-```bash
-az account set --subscription "Azmoth Pilot"
-```
-
-**Both**
-
 ```bash
 gh auth status
 ```
@@ -164,9 +109,8 @@ gh auth status
 
 ### 1.3 Set a budget alert before you create anything
 
-**[AWS]** This matters more here than it did on Azure. A fixed Azure credit stopped when it ran out;
-**an AWS account has no spending cap and will keep billing a card.** A budget alert is the only thing
-that tells you.
+**AWS has no spending cap and will keep billing a card.** A budget alert is the only thing that
+tells you, and it belongs here — before you create a single resource, not after.
 
 ```bash
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
@@ -182,18 +126,6 @@ aws budgets create-budget --account-id "$ACCOUNT" --budget '{
 room for a bad week without alerting on a normal one. Add a notification so it reaches you rather
 than sitting in the console — Billing → Budgets → *azmoth-pilot* → **Add alert threshold**, 80% of
 budgeted amount, to your address.
-
-**[Azure]** A fixed credit that runs out takes the pilot offline with no warning. Do this first, not
-later.
-
-```bash
-az consumption budget create --budget-name azmoth-pilot --amount 100 \
-  --category Cost --time-grain Monthly \
-  --start-date "$(date -u +%Y-%m-01)" --end-date "$(date -u -d '+1 year' +%Y-%m-01)"
-```
-
-If your subscription does not support `az consumption` (some student and sponsorship offers do not),
-set it in the portal under **Cost Management → Budgets** instead. Do not skip it.
 
 ### 1.4 The two keys you have to generate
 
@@ -265,17 +197,15 @@ with the commit sha — that sha is what `deploy.sh` deploys and what a rollback
 
 ## 2. Provision
 
-Both scripts are idempotent — every step checks before it creates, so a run that fails halfway (a
-capacity refusal, a dropped connection) is fixed by running it again rather than by working out
-which half happened. Both refuse to start without an SSH public key, and both **refuse to open port
-22 to the internet**: if the script cannot detect your public IP it stops and asks for it rather
-than defaulting to `0.0.0.0/0`.
-
-### 2a. [AWS]
-
 ```bash
 ./infra/aws/provision.sh
 ```
+
+Idempotent — every step checks before it creates, so a run that fails halfway (a capacity refusal, a
+dropped connection) is fixed by running it again rather than by working out which half happened. It
+refuses to start without an SSH public key, and it **refuses to open port 22 to the internet**: if
+the script cannot detect your public IP it stops and asks for it rather than defaulting to
+`0.0.0.0/0`.
 
 It prints a summary and asks before creating anything:
 
@@ -344,7 +274,7 @@ again in a minute to confirm.
 **Exactly six resources, and no more.** No RDS, no Aurora, no load balancer, no NAT gateway, no
 custom VPC. If you find one of those in the account, this script did not make it.
 
-#### If the instance type will not launch
+### If the instance type will not launch
 
 ```
 !! run-instances failed. ... InsufficientInstanceCapacity
@@ -367,108 +297,15 @@ Note that on a rerun the script **leaves an existing instance alone** — that i
 working, not the flag being ignored. Resizing an existing box is a stop/modify/start; see
 [AWS.md § 1](AWS.md#the-ladder).
 
-#### Save the address into your shell
+### Save the address into your shell
 
-Everything below assumes these. (`AZURE_HOST` is the historical name for "the deployment VM" — see
-the note in [Which cloud](#which-cloud) — and the `make` targets read it.)
+Everything below assumes these. (The Makefile's targets and `require-host` check read `AWS_HOST`.)
 
 ```bash
-export AZURE_HOST=3.120.45.67           # whatever provision.sh printed
+export AWS_HOST=3.120.45.67             # whatever provision.sh printed
 export AWS_REGION=eu-central-1
 export STORAGE_BUCKET=azmoth-backups-you
 ```
-
-### 2b. [Azure]
-
-```bash
-./infra/azure/provision.sh
-```
-
-It prints a summary and asks before creating anything:
-
-```
-==> Checking Standard_B1ms is available in germanywestcentral
-    available, no restrictions reported
-
-  resource group   azmoth-pilot
-  location         germanywestcentral          (EU — required by the AVV, see the header)
-  vm               azmoth-vm (Standard_B1ms)
-  image            Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest
-  os disk          32 GiB StandardSSD_LRS
-  ssh key          /home/you/.ssh/id_ed25519.pub
-  ssh allowed from 203.0.113.4/32           (and nowhere else)
-  storage account  azmothbackupyou/db-backups
-
-  NOT created by this script, and both are required before deploying:
-    - the Neon project (aws-eu-central-1) and its two connection strings
-    - the Vercel project for azmoth.com  — already live; leave its DNS alone
-
-Create these resources? [y/N]
-```
-
-Then, over three or four minutes:
-
-```
-==> 1/7 resource group: azmoth-pilot
-    created
-==> 2/7 static public IP: azmoth-vm-ip
-    created
-    address: 20.79.12.34
-==> 3/7 network security group: azmoth-vm-nsg
-    ssh created (from 203.0.113.4/32)
-    http created (from *)
-    https created (from *)
-==> 4/7 virtual network: azmoth-vm-vnet
-==> 5/7 virtual machine: azmoth-vm
-    created
-==> 6/7 swap
-    swap configured
-==> 7/7 storage account for backups: azmothbackupyou
-    container db-backups created
-==>     managed identity for backups
-    granted Storage Blob Data Contributor on db-backups
-```
-
-It ends by printing the public IP and the two DNS records. **Write the IP down.**
-
-#### If the VM size will not allocate
-
-```
-!! Standard_B1ms is offered but RESTRICTED for this subscription:
-   NotAvailableForSubscription
-```
-
-B-series **v1** has been growth-restricted since 31 July 2026 and retires 15 November 2028. Take the
-next rung and accept the shorter runway:
-
-```bash
-VM_SIZE=Standard_B2als_v2 ./infra/azure/provision.sh    # 2 vCPU / 4 GiB, AMD, not retiring
-```
-
-| `VM_SIZE` | | EUR/mo | Months on 100 EUR |
-|---|---|---|---|
-| `Standard_B1ms` | 1 vCPU / 2 GiB | 15.04 | ~4.9 — the default |
-| `Standard_B2als_v2` | 2 vCPU / 4 GiB | 27.08 | ~3.1 — AMD, not retiring |
-| `Standard_B2s` | 2 vCPU / 4 GiB | 30.08 | ~2.9 — v1, retiring |
-
-Do not reach for the Arm sizes even though `Standard_B2pls_v2` is the cheapest 4 GiB SKU there is at
-24.09 EUR: [`apps/engine/Dockerfile`](../../apps/engine/Dockerfile) installs an `x86_64` Soufflé
-package, and the engine is nothing without Soufflé.
-
-#### Save the resource-group name into your shell
-
-Everything below assumes these:
-
-```bash
-export AZURE_HOST=20.79.12.34          # whatever provision.sh printed
-export RG=azmoth-pilot
-```
-
----
-
-**From here on there is one path.** § 3 to § 6 are identical on both clouds — the database, the DNS,
-the deploy and the rollback do not know or care which one you chose. The only exception is
-[§ 5.4](#54-finish-the-backup-setup), where the backup job differs.
 
 ---
 
@@ -482,16 +319,10 @@ the deploy and the rollback do not know or care which one you chose. The only ex
 4. Postgres version: 17 (the default)
 5. Database name: `azmoth`
 
-> **The region cannot be changed afterwards, and Azure is not on the list.** Neon deprecated every
-> Azure region on 7 April 2026 and no longer accepts new projects in any of them on any plan, so
-> co-locating the database with the VM at one provider is no longer possible. `aws-eu-central-1` is
-> still Frankfurt and still the EU, which is what
-> [`docs/AVV_TECHNICAL_ANNEX_DRAFT.md`](../AVV_TECHNICAL_ANNEX_DRAFT.md) § 5.1 requires — but it puts
-> AWS into the sub-processor chain alongside Neon and its parent Databricks. See § 5.2 of that
-> annex, which this change is why you have to update.
-
-Verify the region before you go further, because everything downstream is cheap to redo and this is
-not:
+> **The region cannot be changed afterwards.** `aws-eu-central-1` is Frankfurt and inside the EU,
+> which is what [`docs/AVV_TECHNICAL_ANNEX_DRAFT.md`](../AVV_TECHNICAL_ANNEX_DRAFT.md) § 5.1
+> requires — verify it before you go further, because everything downstream is cheap to redo and
+> this is not.
 
 ```bash
 # In the console: Settings → General. The region is shown next to the project name.
@@ -530,9 +361,9 @@ postgresql://azmoth:npg_XXXXXXXX@ep-cool-darkness-a1b2c3d4-pooler.eu-central-1.a
 The engine's URL carries its driver, because SQLAlchemy takes the driver from the scheme. Neon gives
 you a plain `postgresql://`; the deployment wants `postgresql+asyncpg://`.
 
-`apps/web/lib/auth-db.ts` strips the suffix for node-postgres and the backup job
-(`backup-to-s3.sh`, or `backup-to-azure.sh` on Azure) strips it for `pg_dump`, so **one value with
-the suffix serves all three consumers** — you do not need a second copy without it.
+`apps/web/lib/auth-db.ts` strips the suffix for node-postgres and `infra/scripts/backup-to-s3.sh`
+strips it for `pg_dump`, so **one value with the suffix serves all three consumers** — you do not
+need a second copy without it.
 
 ```bash
 # Paste the two strings from the console. -s so they are not echoed and do not land in the
@@ -598,7 +429,7 @@ second run.
 
 Upgrading to **Launch** (usage-based, no monthly minimum — roughly 3–8 EUR/month at pilot volume)
 buys a 7-day point-in-time-restore window instead of 6 hours, scheduled backups, and the ability to
-turn scale-to-zero off. The budget accommodates it; see [`AZURE.md`](AZURE.md) § 4.
+turn scale-to-zero off. The budget accommodates it.
 
 ---
 
@@ -608,8 +439,8 @@ turn scale-to-zero off. The budget accommodates it; see [`AZURE.md`](AZURE.md) �
 
 | Type | Name | Value | TTL |
 |---|---|---|---|
-| A | `app.azmoth.com` | `20.79.12.34` | 300 |
-| A | `api.azmoth.com` | `20.79.12.34` | 300 |
+| A | `app.azmoth.com` | `3.120.45.67` | 300 |
+| A | `api.azmoth.com` | `3.120.45.67` | 300 |
 
 > ### Do not touch `azmoth.com` or `www.azmoth.com`
 >
@@ -636,8 +467,8 @@ dig +short api.azmoth.com
 ```
 
 ```
-20.79.12.34
-20.79.12.34
+3.120.45.67
+3.120.45.67
 ```
 
 Check the ones that must **not** have moved:
@@ -676,7 +507,7 @@ Both Neon strings are required, and only this once. They are already exported fr
 [§ 3.3](#33-add-the-asyncpg-driver-suffix):
 
 ```bash
-./scripts/deploy.sh "$AZURE_HOST" \
+./scripts/deploy.sh "$AWS_HOST" \
   --domain azmoth.com \
   --acme-email ops@azmoth.com \
   --signup-allowlist "you@azmoth.com,pilot@praxis-nord.de"
@@ -700,8 +531,8 @@ Expect 6–10 minutes. The shape of it:
     ok
 
 ==> Checking DNS
-    app.azmoth.com           20.79.12.34
-    api.azmoth.com           20.79.12.34
+    app.azmoth.com           3.120.45.67
+    api.azmoth.com           3.120.45.67
 
 ==> Checking the marketing site is still Vercel's
     azmoth.com               76.76.21.21
@@ -789,14 +620,14 @@ Three lines in that output are the ones worth reading rather than skimming:
 ### 5.2 Pre-flight — what "green" means
 
 ```bash
-./scripts/preflight.sh "$AZURE_HOST" --domain azmoth.com
+./scripts/preflight.sh "$AWS_HOST" --domain azmoth.com
 ```
 
 This checks from the **outside**, which is the point: `docker compose ps` proves the containers are
 up and proves nothing about what the internet can reach.
 
 ```
-Pre-flight — azmoth.com (20.79.12.34)
+Pre-flight — azmoth.com (3.120.45.67)
 
 1. What the internet can reach [SEC]
   ✓ port 80 is open (it must be)
@@ -869,7 +700,7 @@ the pooled endpoint.
 ```bash
 git push origin main
 gh run watch                                   # wait for images-ready
-make deploy                                    # AZURE_HOST is already exported
+make deploy                                    # AWS_HOST is already exported
 make preflight
 ```
 
@@ -881,31 +712,28 @@ practice none of their own records.
 ### 5.4 Finish the backup setup
 
 Nothing takes a backup for you, and Neon's Free-plan history window is **six hours** — a rollback,
-not a backup.
+not a backup. Both `STORAGE_BUCKET` and `AGE_RECIPIENT` are required — the backup job refuses to run
+without them, deliberately, because a backup job that quietly does nothing is worse than one that
+fails.
 
-**This is the one step after § 2 that differs by cloud.** Both scripts refuse to run without their
-storage setting and `AGE_RECIPIENT` — deliberately, because a backup job that quietly does nothing
-is worse than one that fails.
-
-**[AWS] — the short way.** `scripts/setup-backups.sh` does everything in this section except take
-the first backup: it prompts for the age public key (and refuses the private one, and a truncated
-paste), writes it and the bucket name into `/opt/azmoth/shared/.env` atomically, and installs the
-02:00 cron entry with a `PATH` that includes `/snap/bin`. Re-running it replaces its own cron entry
-rather than adding a second, so it is safe to run when you are not sure whether backups are already
-on.
+**The short way.** `scripts/setup-backups.sh` does everything in this section except take the first
+backup: it prompts for the age public key (and refuses the private one, and a truncated paste),
+writes it and the bucket name into `/opt/azmoth/shared/.env` atomically, and installs the 02:00 cron
+entry with a `PATH` that includes `/snap/bin`. Re-running it replaces its own cron entry rather than
+adding a second, so it is safe to run when you are not sure whether backups are already on.
 
 ```bash
-ssh "azmoth@$AZURE_HOST"
+ssh "azmoth@$AWS_HOST"
 /opt/azmoth/repo/scripts/setup-backups.sh          # as the deployment user, NOT with sudo
 ```
 
 Then skip to "Take a backup now" below. The rest of this section is the manual equivalent, kept
-because Azure has no such script and because it is worth being able to see what is being changed.
+because it is worth being able to see what is being changed.
 
-**[AWS] — by hand**
+**By hand**
 
 ```bash
-ssh "azmoth@$AZURE_HOST" bash -s <<EOF
+ssh "azmoth@$AWS_HOST" bash -s <<EOF
 set -e
 grep -q '^STORAGE_BUCKET=' /opt/azmoth/shared/.env || \
   echo 'STORAGE_BUCKET=$STORAGE_BUCKET' >> /opt/azmoth/shared/.env
@@ -915,36 +743,13 @@ chmod 600 /opt/azmoth/shared/.env
 EOF
 ```
 
-**[Azure]**
-
-```bash
-STORAGE_ACCOUNT="$(az storage account list --resource-group "$RG" \
-  --query '[0].name' --output tsv)"
-echo "$STORAGE_ACCOUNT"
-
-ssh "azmoth@$AZURE_HOST" bash -s <<EOF
-set -e
-grep -q '^STORAGE_ACCOUNT=' /opt/azmoth/shared/.env || \
-  echo 'STORAGE_ACCOUNT=$STORAGE_ACCOUNT' >> /opt/azmoth/shared/.env
-grep -q '^AGE_RECIPIENT=' /opt/azmoth/shared/.env || \
-  echo 'AGE_RECIPIENT=age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p' >> /opt/azmoth/shared/.env
-grep -q '^BACKUP_CONTAINER=' /opt/azmoth/shared/.env || \
-  echo 'BACKUP_CONTAINER=db-backups' >> /opt/azmoth/shared/.env
-chmod 600 /opt/azmoth/shared/.env
-EOF
-```
-
-**Both.** Replace that `age1ql3z...` with **your** public key from
+Replace that `age1ql3z...` with **your** public key from
 [§ 1.4](#14-the-two-keys-you-have-to-generate).
 
-Take a backup now, so you find out today whether it works. `make azure-backup` runs the Azure
-script; on AWS run the S3 one directly:
+Take a backup now, so you find out today whether it works:
 
 ```bash
-# [AWS]
-ssh "azmoth@$AZURE_HOST" 'sudo /opt/azmoth/repo/infra/scripts/backup-to-s3.sh'
-# [Azure]
-make azure-backup
+ssh "azmoth@$AWS_HOST" 'sudo /opt/azmoth/repo/infra/scripts/backup-to-s3.sh'
 ```
 
 ```
@@ -963,26 +768,23 @@ make azure-backup
 ==> done
 ```
 
-On Azure, step 4 reads `authenticating with the VM's managed identity` instead, and step 5 prints a
-container path. Everything else is the same script.
-
-Then schedule it — substituting `backup-to-azure.sh` on Azure. On AWS,
-`scripts/setup-backups.sh` has already done this; run it only if you took the manual path above.
+Then schedule it — `scripts/setup-backups.sh` has already done this; run the crontab command below
+only if you took the manual path above.
 
 `PATH` is set in the crontab, and it is not decoration: cron's default is `/usr/bin:/bin`, which
 does not include `/snap/bin` — where `snap install aws-cli --classic` puts the binary the job cannot
 run without. A backup that works when you run it by hand and fails from cron is nearly always this.
 
 ```bash
-ssh "azmoth@$AZURE_HOST" \
+ssh "azmoth@$AWS_HOST" \
   '(crontab -l 2>/dev/null | grep -v backup-to-; \
     echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"; \
     echo "0 2 * * * /opt/azmoth/repo/infra/scripts/backup-to-s3.sh >> /var/log/azmoth-backup.log 2>&1") \
    | crontab -'
-ssh "azmoth@$AZURE_HOST" 'crontab -l'
+ssh "azmoth@$AWS_HOST" 'crontab -l'
 ```
 
-> **[AWS] `aws s3 ls` from the VM will say AccessDenied, and that is correct.** The instance profile
+> **`aws s3 ls` from the VM will say AccessDenied, and that is correct.** The instance profile
 > grants `s3:PutObject` and `s3:GetObject` and deliberately not `s3:ListBucket` or
 > `s3:DeleteObject` — the box can write a backup and cannot enumerate or destroy one. List from your
 > laptop with your own credentials. [AWS.md § 6](AWS.md#no-credential-on-the-vm-and-the-vm-cannot-read-its-own-backups)
@@ -991,7 +793,7 @@ ssh "azmoth@$AZURE_HOST" 'crontab -l'
 ### 5.5 Back up the env file, and then the checks a script cannot do
 
 ```bash
-ssh "azmoth@$AZURE_HOST" 'sudo cat /opt/azmoth/shared/.env'
+ssh "azmoth@$AWS_HOST" 'sudo cat /opt/azmoth/shared/.env'
 ```
 
 Put that in your password manager. It is now the **only** copy of the credentials that can read the
@@ -1016,7 +818,7 @@ in GHCR, and `deploy.sh` keeps a week of them on the box.
 ### 6.1 Find the tag to go back to
 
 ```bash
-ssh "azmoth@$AZURE_HOST" 'cat /opt/azmoth/RELEASE'     # what is running now
+ssh "azmoth@$AWS_HOST" 'cat /opt/azmoth/RELEASE'     # what is running now
 git log --oneline -10                                   # candidates
 ```
 
@@ -1024,7 +826,7 @@ git log --oneline -10                                   # candidates
 
 ```bash
 make rollback TAG=6a3c14c
-# or:  ./scripts/deploy.sh "$AZURE_HOST" --tag 6a3c14c
+# or:  ./scripts/deploy.sh "$AWS_HOST" --tag 6a3c14c
 ```
 
 You will see a warning, and it is worth reading rather than dismissing:
@@ -1040,7 +842,7 @@ or the Caddyfile, check out the older commit first so the infra files match:
 
 ```bash
 git checkout 6a3c14c
-./scripts/deploy.sh "$AZURE_HOST"
+./scripts/deploy.sh "$AWS_HOST"
 ```
 
 ### 6.3 What a rollback does NOT undo
@@ -1068,21 +870,21 @@ and the first is almost always right:
 2. **Downgrade deliberately**, then roll back the image:
 
    ```bash
-   ssh "azmoth@$AZURE_HOST" 'cd /opt/azmoth/repo && \
+   ssh "azmoth@$AWS_HOST" 'cd /opt/azmoth/repo && \
      sudo COMPOSE_PROJECT_NAME=azmoth docker compose \
-       -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.azure.yml \
+       -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.aws.yml \
        run --rm --entrypoint alembic engine-migrate downgrade -1'
    make rollback TAG=6a3c14c
    ```
 
-   Take a backup first — `make azure-backup` — because a downgrade that drops a column drops the
+   Take a backup first — `make aws-backup` — because a downgrade that drops a column drops the
    data in it, and Neon's Free-plan history window is six hours.
 
 ### 6.4 Verify the rollback took
 
 ```bash
-ssh "azmoth@$AZURE_HOST" 'cat /opt/azmoth/RELEASE'
-make azure-ps
+ssh "azmoth@$AWS_HOST" 'cat /opt/azmoth/RELEASE'
+make aws-ps
 make preflight
 ```
 
@@ -1101,7 +903,7 @@ The steps are deliberately ordered so that a failure before `up -d` changes noth
 | `docker compose pull` | **previous release still serving** | check `gh run list`, and that the token has not expired |
 | the alembic step | **previous release still serving**, old schema | read the error; a Neon cold-start timeout just needs a re-run |
 | the Better Auth step | engine schema migrated, sessions may not be | re-run; sign-in shows a 500 until it succeeds |
-| the health wait | new containers up, not healthy | `make azure-logs SERVICE=web` — the script prints the last 40 lines itself |
+| the health wait | new containers up, not healthy | `make aws-logs SERVICE=web` — the script prints the last 40 lines itself |
 
 Only the last row leaves you mid-deploy. Everything above it left a working system running.
 
@@ -1111,7 +913,7 @@ Only the last row leaves you mid-deploy. Everything above it left a working syst
 
 | | |
 |---|---|
-| Why any of this is shaped this way | [`docs/deploy/AZURE.md`](AZURE.md) |
+| Why any of this is shaped this way | [`docs/deploy/AWS.md`](AWS.md) |
 | Day-two operations — logs, psql, restores, cost, failure modes | [`docs/OPERATIONS.md` § 7](../OPERATIONS.md#7-the-deployed-vm) |
 | What `api.azmoth.com` publishes, and why not more | [`infra/docker/Caddyfile`](../../infra/docker/Caddyfile) header |
 | The sub-processors this deployment created | [`docs/AVV_TECHNICAL_ANNEX_DRAFT.md`](../AVV_TECHNICAL_ANNEX_DRAFT.md) § 5.2 |

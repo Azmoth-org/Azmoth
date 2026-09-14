@@ -98,9 +98,9 @@ connection.
 
 ### If it is deployed the way the rest of the stack is
 
-Production today is Docker behind Caddy on Azure (`docs/deploy/AZURE.md`), not Vercel. Putting this
+Production today is Docker behind Caddy on AWS (`docs/deploy/AWS.md`), not Vercel. Putting this
 app there instead means three things and no Vercel project: a `Dockerfile` modelled on
 `apps/marketing/Dockerfile` — the build is the same shape, `output: "standalone"` with the
-entrypoint at `apps/docs/server.js` — a service in `infra/docker/docker-compose.azure.yml`, and a
+entrypoint at `apps/docs/server.js` — a service in `infra/docker/docker-compose.aws.yml`, and a
 `docs.azmoth.com` block in `infra/docker/Caddyfile` reverse-proxying to it. None of that is in the
 tree yet.

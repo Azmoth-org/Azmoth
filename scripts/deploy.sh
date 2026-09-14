@@ -5,18 +5,19 @@
 #     ./scripts/deploy.sh 20.79.x.x
 #     ./scripts/deploy.sh azmoth-vm.example.com --domain azmoth.com
 #
-# Provision first — infra/aws/provision.sh or infra/azure/provision.sh — and point DNS at the
-# address it prints BEFORE running this: Caddy gets certificates over HTTP-01, which only works once
-# the names resolve.
+# Provision first — infra/aws/provision.sh — and point DNS at the address it prints BEFORE running
+# this: Caddy gets certificates over HTTP-01, which only works once the names resolve.
 #
-# ── This script does not care which cloud the box is in ───────────────────────────────────────
-# It needs an Ubuntu host it can ssh to as a sudoer, and nothing else. That is why the move from
-# Azure to AWS was a new provisioning script and a new backup script rather than a new deployment:
-# everything below is SSH, `git archive` and Docker Compose.
+# ── This script does not care what the box is, only that it is an Ubuntu host ─────────────────
+# It needs an Ubuntu host it can ssh to as a sudoer, and nothing else — SSH, `git archive` and
+# Docker Compose. That is deliberate: infra/aws/provision.sh owns the one thing that is actually
+# provider-specific (the instance, its firewall, its backup credential), and everything below it is
+# not.
 #
-# The ONE thing it does ask the box about is which cloud it is on, and only to install the matching
-# CLI for the backup job — `aws` or `az`. That is in the bootstrap step, and it asks the instance
-# metadata service rather than taking a flag, because the box is the thing that knows.
+# It confirms the box is on AWS during the bootstrap step below, and only to install the `aws` CLI
+# for the backup job. It asks the instance metadata service rather than assuming, because the box is
+# the thing that knows, and because a wrong assumption fails silently — the symptom is a backup job
+# that refuses to run, discovered weeks later.
 #
 # ── What it does ──────────────────────────────────────────────────────────────────────────────
 #   1. Checks the VM is reachable and installs Docker + the Compose plugin if they are missing.
@@ -47,13 +48,13 @@
 #
 # The third image looks like waste and is not: `web-auth-migrate` runs Better Auth's own migrator
 # with pnpm and TypeScript, neither of which is in the traced runtime bundle. See the note on that
-# service in infra/docker/docker-compose.azure.yml.
+# service in infra/docker/docker-compose.aws.yml.
 #
-# ── infra/docker/docker-compose.azure.yml is REQUIRED at HEAD ────────────────────────────────
-# It is the port-closing override — the thing that makes 8000/3000 unreachable from the internet
-# on both Azure and AWS (historical name; see that file's own header). This script refuses to run
-# without it (the preflight check below), but a refusal five minutes into a deploy is still five
-# minutes wasted. Never delete it, and if it is ever missing: `git checkout HEAD -- infra/docker/docker-compose.azure.yml`.
+# ── infra/docker/docker-compose.aws.yml is REQUIRED at HEAD ────────────────────────────────
+# It is the port-closing override — the thing that makes 8000/3000 unreachable from the internet.
+# This script refuses to run without it (the preflight check below), but a refusal five minutes into
+# a deploy is still five minutes wasted. Never delete it, and if it is ever missing:
+# `git checkout HEAD -- infra/docker/docker-compose.aws.yml`.
 #
 # ── Why the source is still shipped ───────────────────────────────────────────────────────────
 # The images carry the application. The VM still needs the two compose files and the Caddyfile, and
@@ -76,7 +77,7 @@
 #
 # Why the engine is on the direct one rather than the pooler — which is the opposite of what you
 # would guess — is the long note on the `engine` service in
-# infra/docker/docker-compose.azure.yml. The short version: SQLAlchemy's asyncpg dialect cannot be
+# infra/docker/docker-compose.aws.yml. The short version: SQLAlchemy's asyncpg dialect cannot be
 # made safe behind a transaction-mode pooler without a Python change to `build_engine`.
 #
 # ── The secrets are written once and then never again ─────────────────────────────────────────
@@ -152,7 +153,7 @@ usage() {
   cat <<USAGE
 usage: ./scripts/deploy.sh <host> [options]
 
-  <host>                 IP address or hostname of the VM (AWS or Azure)
+  <host>                 IP address or hostname of the VM
 
   --user <name>          SSH user                      (default: $SSH_USER)
   --domain <domain>      apex domain                   (default: $DOMAIN)
@@ -423,18 +424,14 @@ fi
 missing=""
 for f in \
   infra/docker/docker-compose.yml \
-  infra/docker/docker-compose.azure.yml \
+  infra/docker/docker-compose.aws.yml \
   infra/docker/Caddyfile
 do
   git cat-file -e "HEAD:$f" 2>/dev/null || missing="$missing $f"
 done
 
-# The backup job, in whichever provider's flavour. ONE of the two has to be committed, not both:
-# requiring both would tie every deployment to a provider it does not use, and requiring neither
-# would let a box be deployed with no way to take a backup at all. Which one the VM actually needs
-# is decided on the VM — see the cloud detection in the bootstrap step below.
-if ! git cat-file -e HEAD:infra/scripts/backup-to-s3.sh 2>/dev/null \
-   && ! git cat-file -e HEAD:infra/scripts/backup-to-azure.sh 2>/dev/null; then
+# The backup job. Without it a box can be deployed with no way to take a backup at all.
+if ! git cat-file -e HEAD:infra/scripts/backup-to-s3.sh 2>/dev/null; then
   missing="$missing infra/scripts/backup-to-s3.sh"
 fi
 
@@ -455,7 +452,6 @@ ssh "${SSH_OPTS[@]}" "$SSH_TARGET" true 2>/dev/null \
    - is the firewall's SSH rule still pointing at your current IP? Your ISP may have changed it.
      Re-running the provisioning script is how that rule is meant to be corrected:
        MY_IP=\$(curl -s https://api.ipify.org) ./infra/aws/provision.sh      # AWS security group
-       MY_IP=\$(curl -s https://api.ipify.org) ./infra/azure/provision.sh    # Azure NSG
    - is your key loaded?  ssh-add -l
    - is the user right? --user defaults to '$SSH_USER'; a stock Ubuntu AMI logs in as 'ubuntu'
      until infra/aws/provision.sh has created '$SSH_USER'."
@@ -726,7 +722,7 @@ https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_C
   echo "    installed $(docker --version)"
 fi
 
-# `!reset` in docker-compose.azure.yml is what unpublishes the engine's port 8000. It is a Compose
+# `!reset` in docker-compose.aws.yml is what unpublishes the engine's port 8000. It is a Compose
 # merge tag added in v2.24; on an older Compose the tag is not understood and `ports` would MERGE
 # instead — quietly republishing 8000 on a public box. Refuse rather than deploy that.
 COMPOSE_VER="$(docker compose version --short 2>/dev/null | sed 's/^v//')"
@@ -746,12 +742,12 @@ if ! id -nG "$USER" | tr ' ' '\n' | grep -qx docker; then
   echo "    added $USER to the docker group (effective at your next login)"
 fi
 
-# ufw as a third layer, behind the cloud firewall (an AWS security group or an Azure NSG) and
+# ufw as a third layer, behind the cloud firewall (the AWS security group) and
 # behind not publishing the ports at all.
 #
 # Note what it does NOT do: Docker's published ports bypass ufw entirely by writing their own
 # DOCKER-USER chain rules, so ufw would not have closed 8000 if compose still published it. That is
-# what docker-compose.azure.yml is for. This is here for anything installed on the host later.
+# what docker-compose.aws.yml is for. This is here for anything installed on the host later.
 if command -v ufw >/dev/null 2>&1; then
   sudo ufw allow 22/tcp   >/dev/null 2>&1 || true
   sudo ufw allow 80/tcp   >/dev/null 2>&1 || true
@@ -782,68 +778,46 @@ if ! command -v age >/dev/null 2>&1; then
     || echo "    !! could not install age — backups will refuse to run until it is present"
 fi
 
-# ── Which cloud is this box in? ────────────────────────────────────────────────────────────────
+# ── Is this box actually on AWS? ──────────────────────────────────────────────────────────────
 # Asked of the instance metadata service, which is the only thing on the box that knows, rather
-# than taken as a flag from the laptop — a flag would be one more thing to get wrong on the deploy
-# that matters, and it would be wrong silently: the symptom is a backup job that refuses to run,
-# discovered weeks later.
+# than assumed — a wrong assumption fails silently: the symptom is a backup job that refuses to
+# run, discovered weeks later.
 #
-# AWS is probed FIRST and with the IMDSv2 handshake, because infra/aws/provision.sh sets
-# HttpTokens=required and the old unauthenticated GET returns 401 there. Azure's endpoint is at the
-# same 169.254.169.254 address but wants a `Metadata: true` header and a different path, so the two
-# probes cannot be confused for each other.
+# The IMDSv2 handshake, not the old unauthenticated GET, because infra/aws/provision.sh sets
+# HttpTokens=required and the plain GET returns 401 there.
 #
-# Short timeouts throughout: on a box that is in neither cloud, that address is not routed and the
-# connection hangs until it is cut off. Three seconds twice is the cost of asking.
-CLOUD=unknown
+# Short timeout: on a box that is not on AWS at all, that address is not routed and the connection
+# hangs until it is cut off. Three seconds is the cost of asking.
 imds_token="$(curl -fsS -X PUT --max-time 3 \
   -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' \
   http://169.254.169.254/latest/api/token 2>/dev/null || true)"
 
 if [ -n "$imds_token" ]; then
-  CLOUD=aws
-elif curl -fsS --max-time 3 -H 'Metadata: true' \
-     'http://169.254.169.254/metadata/instance?api-version=2021-02-01' >/dev/null 2>&1; then
-  CLOUD=azure
+  echo "    cloud: aws (from the instance metadata service)"
+  # For infra/scripts/backup-to-s3.sh. The snap is the AWS CLI v2 and is the version AWS
+  # documents; Ubuntu's own `awscli` package is v1 and is left as the fallback rather than the
+  # first choice, because v1 and v2 differ in enough places to be worth not guessing about.
+  if ! command -v aws >/dev/null 2>&1; then
+    echo "    installing the AWS CLI (for the backup job's instance-profile credentials)..."
+    if sudo snap install aws-cli --classic >/dev/null 2>&1; then
+      echo "    installed $(aws --version 2>&1 | head -1)"
+    elif sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq awscli >/dev/null 2>&1; then
+      echo "    !! installed Ubuntu's awscli (v1) — the snap was unavailable. It works for"
+      echo "       's3 cp' and 'sts get-caller-identity', which is all the backup job uses."
+    else
+      echo "    !! could not install the AWS CLI — backups will refuse to run until it is present"
+    fi
+  else
+    echo "    aws CLI already installed"
+  fi
+else
+  # Not fatal. Everything else in this deployment works on any Ubuntu box with Docker, and a bare
+  # VPS is a legitimate place to run it — but there is no instance profile to back up with, so that
+  # has to be arranged by hand rather than assumed to have happened.
+  echo "    !! not an AWS instance, so the AWS CLI was not installed."
+  echo "       The stack will deploy and run. The backup job will not: it needs 'aws' and a"
+  echo "       credential. See docs/deploy/AWS.md § 6."
 fi
-echo "    cloud: $CLOUD (from the instance metadata service)"
-
-case "$CLOUD" in
-  aws)
-    # For infra/scripts/backup-to-s3.sh. The snap is the AWS CLI v2 and is the version AWS
-    # documents; Ubuntu's own `awscli` package is v1 and is left as the fallback rather than the
-    # first choice, because v1 and v2 differ in enough places to be worth not guessing about.
-    if ! command -v aws >/dev/null 2>&1; then
-      echo "    installing the AWS CLI (for the backup job's instance-profile credentials)..."
-      if sudo snap install aws-cli --classic >/dev/null 2>&1; then
-        echo "    installed $(aws --version 2>&1 | head -1)"
-      elif sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq awscli >/dev/null 2>&1; then
-        echo "    !! installed Ubuntu's awscli (v1) — the snap was unavailable. It works for"
-        echo "       's3 cp' and 'sts get-caller-identity', which is all the backup job uses."
-      else
-        echo "    !! could not install the AWS CLI — backups will refuse to run until it is present"
-      fi
-    else
-      echo "    aws CLI already installed"
-    fi ;;
-  azure)
-    # For infra/scripts/backup-to-azure.sh, unchanged.
-    if ! command -v az >/dev/null 2>&1; then
-      echo "    installing the Azure CLI (for the backup job's managed-identity login)..."
-      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash >/dev/null 2>&1 \
-        && echo "    installed $(az version --query '\"azure-cli\"' -o tsv 2>/dev/null || echo 'azure-cli')" \
-        || echo "    !! could not install the Azure CLI — backups will refuse to run until it is present"
-    else
-      echo "    az CLI already installed"
-    fi ;;
-  *)
-    # Not fatal. Everything else in this deployment works on any Ubuntu box with Docker, and a bare
-    # VPS is a legitimate place to run it — but there is no instance profile and no managed identity
-    # to back up with, so that has to be arranged by hand rather than assumed to have happened.
-    echo "    !! not an AWS or Azure instance, so no cloud CLI was installed."
-    echo "       The stack will deploy and run. The backup job will not: it needs 'aws' or 'az'"
-    echo "       and a credential. See docs/deploy/AWS.md § 6." ;;
-esac
 
 sudo mkdir -p "$REMOTE_ROOT/shared" "$REMOTE_ROOT/repo" "$REMOTE_ROOT/backups"
 sudo chown -R "$USER:$USER" "$REMOTE_ROOT"
@@ -892,7 +866,7 @@ fi
 # way round is the mistake this deployment is most exposed to, and it does not fail loudly: the
 # engine on the pooled endpoint works fine until it is under concurrency, at which point it raises
 # intermittent DuplicatePreparedStatementError — see the note on the `engine` service in
-# infra/docker/docker-compose.azure.yml. Alembic on the pooled endpoint is similarly fine until it
+# infra/docker/docker-compose.aws.yml. Alembic on the pooled endpoint is similarly fine until it
 # is not.
 #
 # Neon marks the pooled endpoint with a `-pooler` infix in the hostname, which is what makes this
@@ -1014,7 +988,7 @@ fi
 #
 # The one place that loses SSL because of this strip is `web-auth-migrate`, which runs Better
 # Auth's own migrator — Node, over `pg`, but on the DIRECT url for the DDL reasons in the long
-# comment on that service. Its compose definition in infra/docker/docker-compose.azure.yml re-adds
+# comment on that service. Its compose definition in infra/docker/docker-compose.aws.yml re-adds
 # '?sslmode=require' to DATABASE_URL for that one service, so it does not need it here.
 DATABASE_URL_FOR_ENV="${DATABASE_URL%%\?*}"
 
@@ -1075,9 +1049,9 @@ ACME_EMAIL=$ACME_EMAIL
 # '?sslmode=require&channel_binding=require' — and an unquoted '&' in a file that gets sourced by a
 # shell is a background operator. This file IS sourced by a shell, in three places:
 # the backup job (infra/scripts/backup-to-s3.sh), the registry-login step of scripts/deploy.sh, and the
-# 'make azure-psql' target. Unquoted, the '&' is a parse error that abandons the rest of the file —
+# 'make aws-psql' target. Unquoted, the '&' is a parse error that abandons the rest of the file —
 # so the symptom is not "the database URL is truncated", it is "every variable after this line is
-# empty", which presents as the backup job claiming STORAGE_ACCOUNT is unset. DATABASE_URL no
+# empty", which presents as the backup job claiming STORAGE_BUCKET is unset. DATABASE_URL no
 # longer carries a query string, but it stays quoted for the same reason and for consistency.
 # Docker Compose strips the surrounding quotes, so nothing downstream sees them.
 DATABASE_URL="$DATABASE_URL_FOR_ENV"
@@ -1132,23 +1106,15 @@ PADNEXT_SCHEMA_POLICY=warn
 
 # -- backups ---------------------------------------------------------------------------------
 # Fill these in after provisioning; the backup job refuses to run without them, deliberately.
-# Uncomment the pair for the cloud this box is actually in — the deploy step above prints which
-# one that is, and it installed the matching CLI.
 #
 #   AGE_RECIPIENT     the PUBLIC half of a keypair generated on your LAPTOP. The private half
 #                     must never be on this VM — that is what makes a compromised host unable to
 #                     read back a single backup.  age-keygen -o azmoth-backup.key
-#                     Needed on either cloud.
 #
-# AWS — infra/scripts/backup-to-s3.sh, uploads with the EC2 instance profile:
+# infra/scripts/backup-to-s3.sh uploads with the EC2 instance profile:
 #   STORAGE_BUCKET    the bucket infra/aws/provision.sh created, from its final banner
 # STORAGE_BUCKET=
 # BACKUP_PREFIX=db-backups
-#
-# Azure — infra/scripts/backup-to-azure.sh, uploads with the VM's managed identity:
-#   STORAGE_ACCOUNT   the account infra/azure/provision.sh created
-# STORAGE_ACCOUNT=
-# BACKUP_CONTAINER=db-backups
 #
 # AGE_RECIPIENT=
 ENVFILE
@@ -1323,13 +1289,13 @@ cd "$REMOTE_ROOT/repo"
 export COMPOSE_PROJECT_NAME=azmoth
 COMPOSE=(sudo -E docker compose \
   -f infra/docker/docker-compose.yml \
-  -f infra/docker/docker-compose.azure.yml)
+  -f infra/docker/docker-compose.aws.yml)
 
 # ── Assert what this stack resolves to, before starting it ──────────────────────────────────────
 # Cheap, and it catches the two mistakes that would otherwise be discovered by a port scan or by a
 # practice seeing an empty database:
 #
-#   * a `postgres` service in the resolved config means the azure override was not applied, which
+#   * a `postgres` service in the resolved config means the aws override was not applied, which
 #     also means the engine's port 8000 is published on a public IP
 #   * more than the three expected published ports means the same thing
 echo
@@ -1340,7 +1306,7 @@ echo "      $resolved_services"
 for forbidden in postgres marketing adminer; do
   if printf '%s' "$resolved_services" | tr ' ' '\n' | grep -qx "$forbidden"; then
     echo "!! '$forbidden' is in the resolved config and must not be." >&2
-    echo "   docker-compose.azure.yml profiles it out; this deploy did not apply the override." >&2
+    echo "   docker-compose.aws.yml profiles it out; this deploy did not apply the override." >&2
     exit 1
   fi
 done
@@ -1351,7 +1317,7 @@ echo "    published ports: ${published:-none}"
 case "$published" in
   '80,443'|'443,80'|'?') echo "    ok — only Caddy publishes" ;;
   *) echo "!! unexpected published ports: $published — expected only 80 and 443" >&2
-     echo "   Something republished a port. Check infra/docker/docker-compose.azure.yml." >&2
+     echo "   Something republished a port. Check infra/docker/docker-compose.aws.yml." >&2
      exit 1 ;;
 esac
 
@@ -1527,7 +1493,7 @@ set -euo pipefail
 cd "$REMOTE_ROOT/repo"
 export COMPOSE_PROJECT_NAME=azmoth
 COMPOSE=(sudo -E docker compose \
-  -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.azure.yml)
+  -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.aws.yml)
 
 echo "    the engine reached Neon, on the right endpoint, and the schema is at head:"
 # Read out of the RUNNING container rather than out of the .env on disk. Those are two different
@@ -1591,7 +1557,7 @@ cat <<DONE
   yet, Caddy retries with a backoff — watch it with:
 
       ssh $SSH_TARGET 'cd $REMOTE_ROOT/repo && sudo docker compose \\
-        -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.azure.yml \\
+        -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.aws.yml \\
         logs -f caddy'
 
   NOW RUN THE PRE-FLIGHT CHECKLIST — it checks the things this script cannot,

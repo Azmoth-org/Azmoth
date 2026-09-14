@@ -1,9 +1,9 @@
 # The public-deployment layer. **This is an OVERRIDE — it does not run on its own.**
 #
 #     docker compose -f infra/docker/docker-compose.yml \
-#                    -f infra/docker/docker-compose.azure.yml up -d
+#                    -f infra/docker/docker-compose.aws.yml up -d
 #
-# `scripts/deploy.sh` and the `azure-*` Makefile targets always pass both flags. Running this file
+# `scripts/deploy.sh` and the `aws-*` Makefile targets always pass both flags. Running this file
 # alone fails with "service ... has neither an image nor a build context specified", which is the
 # same error that made docker-compose.dev.yml a full standalone copy rather than an override.
 #
@@ -28,10 +28,11 @@
 # writes its own DOCKER-USER iptables rules — a published port is reachable from the internet even
 # when ufw says it is not, which is the classic way a "firewalled" Docker host turns out not to be.
 #
-# The Network Security Group in infra/azure/provision.sh is the outer wall and denies everything but
-# 22/80/443. This is the inner one, and the reason for both is that they fail differently: an NSG
-# rule is edited in a portal by someone who does not know what 8000 is, and a published port is
-# added by someone editing compose. Neither alone would have caught the other's mistake.
+# The security group in infra/aws/provision.sh is the outer wall and denies everything but
+# 22/80/443. This is the inner one, and the reason for both is that they fail differently: a
+# security group rule is edited in a console by someone who does not know what 8000 is, and a
+# published port is added by someone editing compose. Neither alone would have caught the other's
+# mistake.
 #
 # ── 3. It runs pre-built images from GHCR instead of building ─────────────────────────────────
 # `build: !reset null` deletes the base file's build section outright, so this stack can only ever
@@ -322,7 +323,7 @@ services:
   # that nothing enables. The effect is the same and it is verifiable:
   #
   #     docker compose -f infra/docker/docker-compose.yml \
-  #                    -f infra/docker/docker-compose.azure.yml config --services
+  #                    -f infra/docker/docker-compose.aws.yml config --services
   #
   # prints caddy, engine, engine-migrate, web and web-auth-migrate — and none of the three below.
   # Their volumes are not created either, which is what makes `azmoth-postgres-data` never exist on
@@ -332,13 +333,13 @@ services:
   # stack for a laptop: postgres, marketing and adminer all belong there.
 
   postgres:
-    # Neon's now. External, managed, aws-eu-central-1 (Frankfurt) — see docs/deploy/AZURE.md § 4
+    # Neon's now. External, managed, aws-eu-central-1 (Frankfurt) — see docs/deploy/AWS.md § 4
     # for why that region and what it costs the AVV's sub-processor list.
     #
     # Nothing on this box speaks to a local Postgres, so an operator's `psql` is now a client on
-    # their laptop pointed at the Neon URL, not a `docker compose exec`. `make azure-psql` does
+    # their laptop pointed at the Neon URL, not a `docker compose exec`. `make aws-psql` does
     # exactly that.
-    profiles: !override ["disabled-on-azure"]
+    profiles: !override ["disabled-on-aws"]
 
   marketing:
     # Vercel's now, at azmoth.com and www.azmoth.com, statically prerendered from apps/marketing.
@@ -346,7 +347,7 @@ services:
     # this box is what removed the second `next build` from the deploy.
     #
     # Its APP_URL/MARKETING_SITE_URL build arguments move to the Vercel project's environment.
-    profiles: !override ["disabled-on-azure"]
+    profiles: !override ["disabled-on-aws"]
 
   adminer:
     # Behind the `debug` profile in the base file, which meant one `--profile debug` on the wrong
@@ -355,7 +356,7 @@ services:
     #
     # `!override` REPLACES the profile list rather than appending to it, so `--profile debug` no
     # longer reaches this service.
-    profiles: !override ["disabled-on-azure"]
+    profiles: !override ["disabled-on-aws"]
 
 volumes:
   caddy-data:

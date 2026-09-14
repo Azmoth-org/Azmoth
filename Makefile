@@ -9,35 +9,35 @@
 
 COMPOSE ?= infra/docker/docker-compose.yml
 COMPOSE_DEV ?= infra/docker/docker-compose.dev.yml
-COMPOSE_AZURE ?= infra/docker/docker-compose.azure.yml
+COMPOSE_AWS ?= infra/docker/docker-compose.aws.yml
 
-# ── The Azure deployment ──────────────────────────────────────────────────────────────────────
-# The azure-* targets run against the VM over SSH, from here. Set the host once:
+# ── The AWS deployment ────────────────────────────────────────────────────────────────────────
+# The aws-* targets run against the VM over SSH, from here. Set the host once:
 #
-#     export AZURE_HOST=20.79.12.34
-#     make azure-logs
+#     export AWS_HOST=3.120.45.67
+#     make aws-logs
 #
-# or per command: `make azure-logs AZURE_HOST=20.79.12.34`.
-AZURE_HOST ?=
-AZURE_USER ?= azmoth
+# or per command: `make aws-logs AWS_HOST=3.120.45.67`.
+AWS_HOST ?=
+AWS_USER ?= azmoth
 DOMAIN ?= azmoth.com
 REMOTE_ROOT ?= /opt/azmoth
 
 # One definition of "the compose command on the server", so no target can drift into running the
-# production file without the azure override — which would republish the engine's port 8000.
+# production file without the aws override — which would republish the engine's port 8000.
 REMOTE_COMPOSE = cd $(REMOTE_ROOT)/repo && sudo COMPOSE_PROJECT_NAME=azmoth docker compose \
-  -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.azure.yml
+  -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.aws.yml
 
 # Fails with a usable message rather than sshing to "@".
-require-host = @test -n "$(AZURE_HOST)" || { \
-	echo "AZURE_HOST is not set."; \
-	echo "  export AZURE_HOST=20.79.12.34      (or: make $@ AZURE_HOST=...)"; exit 2; }
+require-host = @test -n "$(AWS_HOST)" || { \
+	echo "AWS_HOST is not set."; \
+	echo "  export AWS_HOST=3.120.45.67      (or: make $@ AWS_HOST=...)"; exit 2; }
 
 .DEFAULT_GOAL := help
 .PHONY: help backup-db restore-db list-backups verify-db up down logs \
-        azure-provision deploy rollback preflight \
-        azure-ps azure-logs azure-logs-caddy azure-restart azure-shell azure-psql \
-        azure-backup azure-verify-db azure-migrate azure-check-db azure-cost
+        aws-provision deploy rollback preflight \
+        aws-ps aws-logs aws-logs-caddy aws-restart aws-shell aws-psql \
+        aws-backup aws-verify-db aws-migrate aws-check-db aws-cost
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -71,12 +71,12 @@ down: ## Stop the stack, keeping the volumes
 logs: ## Follow the engine's logs (JSON; pipe through jq)
 	docker compose -f $(COMPOSE) logs -f engine
 
-# ── Azure: deploying ──────────────────────────────────────────────────────────────────────────
+# ── AWS: deploying ────────────────────────────────────────────────────────────────────────────
 
-azure-provision: ## Create the Azure VM, static IP, NSG and backup storage (idempotent)
-	./infra/azure/provision.sh
+aws-provision: ## Create the EC2 VM, Elastic IP, security group and S3 backup bucket (idempotent)
+	./infra/aws/provision.sh
 
-deploy: ## Deploy HEAD to the Azure VM. Usage: make deploy AZURE_HOST=20.79.12.34
+deploy: ## Deploy HEAD to the AWS VM. Usage: make deploy AWS_HOST=3.120.45.67
 	$(require-host)
 	@# Make exports its environment to the recipe's shell, so the secrets deploy.sh reads from the
 	@# environment pass straight through. On the FIRST deploy both Neon strings are required:
@@ -86,47 +86,47 @@ deploy: ## Deploy HEAD to the Azure VM. Usage: make deploy AZURE_HOST=20.79.12.3
 	@# On every deploy after that they are already in /opt/azmoth/shared/.env and this is enough.
 	@# Nothing is built on the box — the images come from GHCR at HEAD's sha, so HEAD must be pushed
 	@# and its release-images workflow must have finished. deploy.sh checks before it touches the VM.
-	./scripts/deploy.sh $(AZURE_HOST) --user $(AZURE_USER) --domain $(DOMAIN)
+	./scripts/deploy.sh $(AWS_HOST) --user $(AWS_USER) --domain $(DOMAIN)
 
-rollback: ## Roll back to an earlier image. Usage: make rollback TAG=6a3c14c AZURE_HOST=...
+rollback: ## Roll back to an earlier image. Usage: make rollback TAG=6a3c14c AWS_HOST=...
 	$(require-host)
-	@test -n "$(TAG)" || { echo "usage: make rollback TAG=<sha> AZURE_HOST=..."; \
+	@test -n "$(TAG)" || { echo "usage: make rollback TAG=<sha> AWS_HOST=..."; \
 		echo "  candidates:"; git log --format='    %h  %s' -10; exit 2; }
 	@# A pull and a restart, not a rebuild — and it does NOT undo a migration. See
 	@# docs/deploy/RUNBOOK.md section 6 before rolling back across one.
-	./scripts/deploy.sh $(AZURE_HOST) --user $(AZURE_USER) --domain $(DOMAIN) --tag $(TAG)
+	./scripts/deploy.sh $(AWS_HOST) --user $(AWS_USER) --domain $(DOMAIN) --tag $(TAG)
 
 preflight: ## Run the pre-flight checklist against the deployment
 	$(require-host)
-	./scripts/preflight.sh $(AZURE_HOST) --user $(AZURE_USER) --domain $(DOMAIN)
+	./scripts/preflight.sh $(AWS_HOST) --user $(AWS_USER) --domain $(DOMAIN)
 
-# ── Azure: operating ──────────────────────────────────────────────────────────────────────────
+# ── AWS: operating ────────────────────────────────────────────────────────────────────────────
 
-azure-ps: ## What is running on the VM, and is it healthy
+aws-ps: ## What is running on the VM, and is it healthy
 	$(require-host)
-	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) ps'
+	@ssh $(AWS_USER)@$(AWS_HOST) '$(REMOTE_COMPOSE) ps'
 
-azure-logs: ## Follow the engine's logs (JSON; pipe through jq). SERVICE=web for another
+aws-logs: ## Follow the engine's logs (JSON; pipe through jq). SERVICE=web for another
 	$(require-host)
-	@ssh -t $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) logs -f --tail 100 $(or $(SERVICE),engine)'
+	@ssh -t $(AWS_USER)@$(AWS_HOST) '$(REMOTE_COMPOSE) logs -f --tail 100 $(or $(SERVICE),engine)'
 
-azure-logs-caddy: ## Follow Caddy's logs — where a TLS or certificate problem shows up
+aws-logs-caddy: ## Follow Caddy's logs — where a TLS or certificate problem shows up
 	$(require-host)
-	@ssh -t $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) logs -f --tail 100 caddy'
+	@ssh -t $(AWS_USER)@$(AWS_HOST) '$(REMOTE_COMPOSE) logs -f --tail 100 caddy'
 
-azure-restart: ## Restart one service without repulling. Usage: make azure-restart SERVICE=web
+aws-restart: ## Restart one service without repulling. Usage: make aws-restart SERVICE=web
 	$(require-host)
 	@# Three services, and that is the whole list: postgres and marketing are profiled out of the
-	@# azure override (Neon's and Vercel's respectively).
-	@test -n "$(SERVICE)" || { echo "usage: make azure-restart SERVICE=web|engine|caddy"; exit 2; }
-	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) restart $(SERVICE)'
-	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) ps $(SERVICE)'
+	@# aws override (Neon's and Vercel's respectively).
+	@test -n "$(SERVICE)" || { echo "usage: make aws-restart SERVICE=web|engine|caddy"; exit 2; }
+	@ssh $(AWS_USER)@$(AWS_HOST) '$(REMOTE_COMPOSE) restart $(SERVICE)'
+	@ssh $(AWS_USER)@$(AWS_HOST) '$(REMOTE_COMPOSE) ps $(SERVICE)'
 
-azure-shell: ## An interactive shell on the VM, in the release directory
+aws-shell: ## An interactive shell on the VM, in the release directory
 	$(require-host)
-	@ssh -t $(AZURE_USER)@$(AZURE_HOST) 'cd $(REMOTE_ROOT)/repo && exec $$SHELL -l'
+	@ssh -t $(AWS_USER)@$(AWS_HOST) 'cd $(REMOTE_ROOT)/repo && exec $$SHELL -l'
 
-azure-psql: ## A psql session against Neon, in a container on the VM (nothing is installed on it)
+aws-psql: ## A psql session against Neon, in a container on the VM (nothing is installed on it)
 	$(require-host)
 	@# The database is Neon's, so this is no longer `exec postgres psql` — there is no postgres
 	@# container. It runs psql in a throwaway pinned image and reads the connection string out of
@@ -137,13 +137,13 @@ azure-psql: ## A psql session against Neon, in a container on the VM (nothing is
 	@#
 	@# Note this is the DIRECT endpoint. An interactive session uses SET and session state, neither
 	@# of which the pooler supports.
-	@ssh -t $(AZURE_USER)@$(AZURE_HOST) 'set -a; . $(REMOTE_ROOT)/shared/.env; set +a; \
+	@ssh -t $(AWS_USER)@$(AWS_HOST) 'set -a; . $(REMOTE_ROOT)/shared/.env; set +a; \
 	  sudo docker run --rm -it -e PGURL="$$(echo $$DATABASE_URL | sed "s/+asyncpg//")" \
 	    postgres:17-alpine sh -c "psql \"\$$PGURL\""'
 
-azure-verify-db: ## Check the deployed engine reached Neon, on the direct endpoint, at schema head
+aws-verify-db: ## Check the deployed engine reached Neon, on the direct endpoint, at schema head
 	$(require-host)
-	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) exec -T engine python -c "\
+	@ssh $(AWS_USER)@$(AWS_HOST) '$(REMOTE_COMPOSE) exec -T engine python -c "\
 import urllib.parse; \
 from app.config import get_settings; s = get_settings(); \
 host = urllib.parse.urlsplit(s.database_url.replace(\"+asyncpg\", \"\")).hostname or \"\"; \
@@ -154,29 +154,31 @@ print(\"db host              :\", host); \
 print(\"endpoint             :\", \"POOLED — WRONG\" if \"-pooler.\" in host else \"direct\"); \
 assert s.database_is_durable, \"NOT Postgres — approvals would not be durable\"; \
 assert \"-pooler.\" not in host, \"the engine is on the POOLED endpoint; it must use the direct one\""'
-	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) exec -T engine sh -c "\
+	@ssh $(AWS_USER)@$(AWS_HOST) '$(REMOTE_COMPOSE) exec -T engine sh -c "\
 echo -n \"current : \"; alembic current; echo -n \"head    : \"; alembic heads"'
 
-azure-migrate: ## Run alembic upgrade head against Neon's direct endpoint, without a full deploy
+aws-migrate: ## Run alembic upgrade head against Neon's direct endpoint, without a full deploy
 	$(require-host)
-	@ssh $(AZURE_USER)@$(AZURE_HOST) '$(REMOTE_COMPOSE) run --rm engine-migrate'
+	@ssh $(AWS_USER)@$(AWS_HOST) '$(REMOTE_COMPOSE) run --rm engine-migrate'
 
-# ── Azure: backups ────────────────────────────────────────────────────────────────────────────
+# ── AWS: backups ──────────────────────────────────────────────────────────────────────────────
 
-azure-backup: ## Dump Neon over the network, verify, encrypt and push to Blob — now, not on a schedule
+aws-backup: ## Dump Neon over the network, verify, encrypt and push to S3 — now, not on a schedule
 	$(require-host)
-	@ssh $(AZURE_USER)@$(AZURE_HOST) 'sudo $(REMOTE_ROOT)/repo/infra/scripts/backup-to-azure.sh'
+	@ssh $(AWS_USER)@$(AWS_HOST) 'sudo $(REMOTE_ROOT)/repo/infra/scripts/backup-to-s3.sh'
 
-azure-check-db: ## The database section of the pre-flight: reachable, right endpoints, at head
+aws-check-db: ## The database section of the pre-flight: reachable, right endpoints, at head
 	$(require-host)
-	@# Was `azure-restore-test`, which drove a scratch database inside the postgres container. There
-	@# is no postgres container, and creating a throwaway database inside the Neon project on every
-	@# invocation would burn the Free plan's compute allowance to prove something Neon's own instant
-	@# restore already covers. A real restore drill needs the age private key and is therefore a
-	@# human's job — docs/OPERATIONS.md § 7.7.
-	./scripts/preflight.sh $(AZURE_HOST) --user $(AZURE_USER) --domain $(DOMAIN) 2>/dev/null \
+	@# There is no postgres container on this box, and creating a throwaway database inside the
+	@# Neon project on every invocation would burn the Free plan's compute allowance to prove
+	@# something Neon's own instant restore already covers. A real restore drill needs the age
+	@# private key and is therefore a human's job — docs/OPERATIONS.md § 7.7.
+	./scripts/preflight.sh $(AWS_HOST) --user $(AWS_USER) --domain $(DOMAIN) 2>/dev/null \
 		| sed -n '/6. The Neon database/,/7. Do these/p'
 
-azure-cost: ## What the pilot has spent so far, and on what
-	@az consumption usage list --output table 2>/dev/null \
-		|| echo "az consumption needs a subscription that reports usage; see the portal's Cost analysis"
+aws-cost: ## What the pilot has spent so far, and on what
+	@aws ce get-cost-and-usage \
+		--time-period Start=$$(date -u +%Y-%m-01),End=$$(date -u -d tomorrow +%Y-%m-%d) \
+		--granularity MONTHLY --metrics UnblendedCost --group-by Type=DIMENSION,Key=SERVICE \
+		--output table 2>/dev/null \
+		|| echo "Cost Explorer needs 'ce:GetCostAndUsage' on your caller; see the console's Cost Explorer instead."

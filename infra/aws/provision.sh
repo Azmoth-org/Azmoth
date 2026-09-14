@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 #
-# Provision the single VM Azmoth runs on, and nothing else. AWS edition.
+# Provision the single VM Azmoth runs on, and nothing else.
 #
 #     ./infra/aws/provision.sh
 #
-# This is the AWS mirror of infra/azure/provision.sh. **The application architecture does not
-# change**: Docker Compose and Caddy on one box, Neon for Postgres, Vercel for the marketing site,
-# GHCR for the images. Only the provisioning moved, and it moved for one reason — an Azure for
-# Students subscription cannot allocate compute in an EU region, and the AVV requires the EU. See
-# docs/deploy/AWS.md § 1.
+# Docker Compose and Caddy on one box, Neon for Postgres, Vercel for the marketing site, GHCR for
+# the images. See docs/deploy/AWS.md § 1 for the full reasoning behind this shape.
 #
 # Idempotent: every step checks whether the resource exists before creating it, so a run that fails
 # halfway through — a quota refusal, a dropped connection — is fixed by running it again rather than
@@ -33,12 +30,9 @@
 #     aws ec2 describe-instance-types --instance-types t3.small --region eu-central-1
 #     https://calculator.aws/
 #
-# It is roughly what the Azure box cost (EUR 20/mo for a Standard_B1ms), which is the point: this is
-# a lift-and-shift of the hosting, not a resize of the application.
-#
 # **2 GiB is enough because this box does not BUILD anything.** Images are built by
 # .github/workflows/release-images.yml on a GitHub runner and pulled from ghcr.io; see the header of
-# infra/docker/docker-compose.azure.yml. Postgres left the box (it is Neon's) and so did the
+# infra/docker/docker-compose.aws.yml. Postgres left the box (it is Neon's) and so did the
 # marketing site (Vercel's), which leaves caddy + engine + web at roughly 500-800 MiB resting, plus
 # ~250 MiB for dockerd and the OS. The 4 GiB swapfile below is insurance for a Soufflé solve that
 # spikes, not a crutch for a build.
@@ -61,8 +55,7 @@
 # **Not Graviton, however tempting the price is.** t4g.small is Arm and cheaper than any x86 SKU
 # with the same memory, and it cannot run this stack: apps/engine/Dockerfile installs
 # `x86_64-ubuntu-2204-souffle-2.5-Linux.deb`, and the engine is nothing without Soufflé. Moving to
-# Arm is a new Soufflé build and a multi-arch image, not an INSTANCE_TYPE change. This is the same
-# constraint that ruled out Standard_B2pls_v2 on Azure, and it has not changed by moving provider.
+# Arm is a new Soufflé build and a multi-arch image, not an INSTANCE_TYPE change.
 #
 # ── Region ────────────────────────────────────────────────────────────────────────────────────
 # eu-central-1 (Frankfurt), and this is a compliance constraint rather than a latency preference.
@@ -70,15 +63,12 @@
 # inside the EU. Frankfurt satisfies that. Do not move this to us-east-1 to save a euro — the script
 # refuses to run outside an EU region for exactly that reason.
 #
-# One thing genuinely improves in the move: the database was already in Frankfurt and already on
-# AWS. Neon has no Azure region any more (azure-gwc stopped accepting new projects on 7 April 2026),
-# so the Neon project lives in aws-eu-central-1. Putting the VM there too means the engine and its
-# database are in the same region of the same provider, instead of crossing between two.
+# The Neon project lives in aws-eu-central-1 too, so putting the VM in the same region of the same
+# provider means the engine and its database never cross a provider boundary at all.
 #
 # NOTE: deploying at all makes § 5.2 of that annex ("Unterauftragsverarbeiter") a list that has to
-# be kept true. After this move it reads: AWS (this VM, its S3 backups, and the infrastructure Neon
-# runs on), Neon/Databricks (the database), and Vercel (the public site). Microsoft leaves the list.
-# See docs/deploy/AWS.md § 4.
+# be kept true. It reads: AWS (this VM, its S3 backups, and the infrastructure Neon runs on),
+# Neon/Databricks (the database), and Vercel (the public site). See docs/deploy/AWS.md § 4.
 
 set -euo pipefail
 
@@ -97,10 +87,8 @@ ADMIN_USER="${ADMIN_USER:-azmoth}"
 # Ubuntu 22.04 LTS, resolved at run time from Canonical's own SSM public parameter rather than
 # written down here. An AMI id is region-specific AND changes with every image build, so a
 # hardcoded one is a guarantee of deploying a months-old kernel — or of a "does not exist" error the
-# day Canonical deregisters it. This parameter always names the current build.
-#
-# The Azure script pins a full image URN for the same reason it uses one at all: to be explicit
-# about the version. Here the version IS explicit — 22.04 — and only the build floats.
+# day Canonical deregisters it. This parameter always names the current build: the version is
+# explicit — 22.04 — and only the build floats.
 AMI_SSM_PARAMETER="${AMI_SSM_PARAMETER:-/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id}"
 
 # 32 GiB gp3. What has to fit is: Ubuntu, Docker, and three pulled images (engine ~300 MB, web
@@ -123,7 +111,7 @@ IAM_ROLE_NAME="${IAM_ROLE_NAME:-${INSTANCE_NAME}-backup-role}"
 IAM_PROFILE_NAME="${IAM_PROFILE_NAME:-${INSTANCE_NAME}-backup-profile}"
 
 # Where backups land. S3 bucket names are globally unique across every AWS account on earth, 3-63
-# characters, lowercase — hence the suffix, exactly as the Azure storage account name needed one.
+# characters, lowercase — hence the suffix.
 #
 # **Kept, deliberately, even though Neon has its own point-in-time restore.** The reasoning is at
 # step 3 below and in docs/deploy/AWS.md § 6; the short version is that Neon's Free-plan history
@@ -256,8 +244,8 @@ read -r -p "Create these resources? [y/N] " reply
 # machine that will use it, and a copy of it existed in an API response. Importing the public half
 # of a key you already have keeps the private half where it has always been.
 #
-# ed25519 is supported for imported EC2 key pairs on Linux instances, so the same
-# ~/.ssh/id_ed25519.pub the Azure box used works unchanged.
+# ed25519 is supported for imported EC2 key pairs on Linux instances, so your existing
+# ~/.ssh/id_ed25519.pub works unchanged.
 
 say "1/7 key pair: $KEY_NAME"
 if aws_ ec2 describe-key-pairs --key-names "$KEY_NAME" >/dev/null 2>&1; then
@@ -277,17 +265,16 @@ fi
 # Three inbound rules and no more. A security group is default-deny for ingress — anything not
 # named here is closed because nothing opens it — so port 8000 needs no explicit deny. There is no
 # such thing as a deny rule in a security group, which is worth knowing before you go looking for
-# one: the Azure NSG had priorities and an implicit DenyAllInBound, this has neither.
+# one.
 #
 # The default EGRESS rule (allow all) is left exactly as AWS creates it. That is what lets the
 # engine reach Neon in Frankfurt over TLS on 5432 and lets Docker pull from ghcr.io. If you ever
 # tighten it, those are the two flows to remember — a locked-down egress rule set is a stack that
 # comes up healthy and cannot read a single proposal.
 #
-# This is the outer wall. infra/docker/docker-compose.azure.yml is the inner one — it unpublishes
+# This is the outer wall. infra/docker/docker-compose.aws.yml is the inner one — it unpublishes
 # those ports from Docker as well, because a published Docker port writes its own iptables rules
-# and is reachable even when the host firewall thinks otherwise. (That file's name says azure and
-# its content is about not publishing ports; it is unchanged and correct on either provider.)
+# and is reachable even when the host firewall thinks otherwise.
 
 say "2/7 security group: $SG_NAME"
 SG_ID="$(aws_ ec2 describe-security-groups \
@@ -328,9 +315,8 @@ open_port 443 "HTTPS - Caddy terminates TLS here"
 
 # ── SSH, from one address, updated on every run ───────────────────────────────────────────────
 # Revoked and re-added rather than skipped, because MY_IP changes when the operator's ISP
-# reassigns it and a rerun is how this rule is meant to be corrected. That is the same behaviour as
-# the Azure script's `nsg rule update`, which needs a loop here because a security group holds a
-# LIST of CIDRs on one rule rather than one rule per source.
+# reassigns it and a rerun is how this rule is meant to be corrected. A loop, because a security
+# group holds a LIST of CIDRs on one rule rather than one rule per source.
 #
 # Every 22/tcp CIDR that is not the current address is removed. An operator who deliberately added
 # a second address — a colleague, an office range — will find it gone after a rerun, and that is
@@ -389,10 +375,10 @@ aws_ ec2 describe-security-groups --group-ids "$SG_ID" \
 #      together. docs/OPERATIONS.md § 2 has always required dumps to be kept off the same host as
 #      the database; a managed provider is a host.
 #
-#      Note that this is now a copy inside the same PROVIDER as the database — Neon runs on AWS —
-#      which it was not on Azure. It is still a different account, a different service and a
-#      different credential, which is what the requirement is actually about. If that is not enough
-#      for a given practice, the answer is a second copy somewhere else entirely, not moving the VM.
+#      Note that this is a copy inside the same PROVIDER as the database — Neon runs on AWS too. It
+#      is still a different account, a different service and a different credential, which is what
+#      the requirement is actually about. If that is not enough for a given practice, the answer is
+#      a second copy somewhere else entirely, not moving the VM.
 #
 #   3. **It also holds the things that are not in the database.** An encrypted copy of
 #      /opt/azmoth/shared/.env — which contains the Neon connection strings, without which the dumps
@@ -455,8 +441,7 @@ aws_ s3api put-bucket-encryption \
 echo "    encryption at rest: SSE-S3 (AES256)"
 
 # TLS-only, as a bucket policy. `aws:SecureTransport` is false for plain HTTP, and this denies
-# everything in that case — including to the instance profile and to you. It is the S3 equivalent of
-# the Azure storage account's `--https-only true`.
+# everything in that case — including to the instance profile and to you.
 tls_policy="$(mktemp)"
 trap 'rm -f "$tls_policy"' EXIT
 cat > "$tls_policy" <<POLICY
@@ -485,8 +470,7 @@ echo "    bucket policy: plain HTTP denied"
 # An IAM role assumed by the instance through an instance profile, granting s3:PutObject and
 # s3:GetObject on THIS BUCKET'S OBJECTS and nothing else. The backup job then calls `aws s3 cp` with
 # no credentials configured at all: the SDK reads a short-lived, automatically rotated set from the
-# instance metadata service. This is the direct equivalent of the Azure system-assigned managed
-# identity, and it is here for the same reason.
+# instance metadata service.
 #
 # The alternative is an access key pair in ~/.aws/credentials on the VM, and the difference matters:
 # an access key is a long-lived credential, it would sit next to the very dumps it protects, and
@@ -622,9 +606,8 @@ else
   # It does two things:
   #
   #   1. Creates the ADMIN_USER. The Ubuntu AMI's default login is `ubuntu`; scripts/deploy.sh
-  #      defaults to `azmoth`, which is what the Azure box had. Creating the user here means
-  #      deploy.sh and the runbook are identical on both providers rather than differing by a flag
-  #      somebody has to remember.
+  #      defaults to `azmoth`. Creating the user here means `./scripts/deploy.sh <ip>` needs no
+  #      `--user` flag somebody has to remember.
   #
   #   2. The swapfile. 4 GiB on a 2 GiB machine. Nothing is built here, so this is runtime
   #      insurance: a Soufflé solve forks a process whose peak nobody has characterised, and the
@@ -748,11 +731,10 @@ echo "    address: $PUBLIC_IP"
 # does not run again. So this step checks over SSH and applies them if they are missing, which is
 # what makes a rerun of this script converge on an instance that already existed.
 #
-# Over SSH rather than through SSM Run Command, which would be the closer analogue of the Azure
-# script's `vm run-command invoke`. SSM needs the AmazonSSMManagedInstanceCore managed policy on the
-# instance role — a policy that grants far more than "write objects to one bucket", on the box
-# holding the clinical data. Keeping the role at two S3 actions is worth reaching for the SSH key
-# this script already required.
+# Over SSH rather than through SSM Run Command. SSM needs the AmazonSSMManagedInstanceCore managed
+# policy on the instance role — a policy that grants far more than "write objects to one bucket", on
+# the box holding the clinical data. Keeping the role at two S3 actions is worth reaching for the
+# SSH key this script already required.
 #
 # Not fatal if it cannot connect. A freshly created instance takes a minute or two before sshd
 # answers, and cloud-init has already done the work — the honest report is "could not check yet".

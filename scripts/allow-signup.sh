@@ -4,7 +4,7 @@
 # access to the VM — no manual SSH session, no manual edit, no manual restart.
 #
 #     ./scripts/allow-signup.sh dr.b@praxis-nord.de
-#     AZURE_HOST=20.79.12.34 ./scripts/allow-signup.sh dr.b@praxis-nord.de
+#     AWS_HOST=20.79.12.34 ./scripts/allow-signup.sh dr.b@praxis-nord.de
 #     ./scripts/allow-signup.sh '@praxis-nord.de' 20.79.12.34
 #
 # This scripts the edit scripts/deploy.sh already tells an operator to make by hand, next to
@@ -28,14 +28,14 @@
 #
 # ── Host and SSH ──────────────────────────────────────────────────────────────────────────────
 # Same connection method as scripts/deploy.sh (same SSH_OPTS, same default user), and the same
-# AZURE_HOST / AZURE_USER environment variables the Makefile's azure-* targets already use — so
-# if you have AZURE_HOST exported for `make deploy` / `make azure-logs`, this needs nothing else.
+# AWS_HOST / AWS_USER environment variables the Makefile's aws-* targets already use — so
+# if you have AWS_HOST exported for `make deploy` / `make aws-logs`, this needs nothing else.
 
 set -euo pipefail
 
 EMAIL="${1:-}"
-HOST="${2:-${AZURE_HOST:-}}"
-SSH_USER="${SSH_USER:-${AZURE_USER:-azmoth}}"
+HOST="${2:-${AWS_HOST:-}}"
+SSH_USER="${SSH_USER:-${AWS_USER:-azmoth}}"
 REMOTE_ROOT=/opt/azmoth
 
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
@@ -46,7 +46,7 @@ die()  { printf '\033[1;31m !! %s\033[0m\n' "$*" >&2; exit 1; }
 
    examples:
      ./scripts/allow-signup.sh dr.b@praxis-nord.de 20.79.12.34
-     AZURE_HOST=20.79.12.34 ./scripts/allow-signup.sh dr.b@praxis-nord.de"
+     AWS_HOST=20.79.12.34 ./scripts/allow-signup.sh dr.b@praxis-nord.de"
 
 # Same shape apps/web/lib/auth-allowlist.ts recognises: a whole '@domain.tld', or one exact
 # 'local@domain.tld'. Same quote/'$' refusal as deploy.sh's own --signup-allowlist check — both
@@ -61,11 +61,11 @@ case "$EMAIL" in
   *) die "not an address or an @domain: '$EMAIL' (expected 'user@company.de' or '@company.de')" ;;
 esac
 
-[ -n "$HOST" ] || die "no host given, and \$AZURE_HOST is unset.
+[ -n "$HOST" ] || die "no host given, and \$AWS_HOST is unset.
 
      ./scripts/allow-signup.sh $EMAIL <host>
        or
-     AZURE_HOST=<host> ./scripts/allow-signup.sh $EMAIL"
+     AWS_HOST=<host> ./scripts/allow-signup.sh $EMAIL"
 
 SSH_TARGET="$SSH_USER@$HOST"
 SSH_OPTS=(-o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new)
@@ -162,7 +162,7 @@ cd "$REMOTE_ROOT/repo"
 export COMPOSE_PROJECT_NAME=azmoth
 sudo -E docker compose \
   -f infra/docker/docker-compose.yml \
-  -f infra/docker/docker-compose.azure.yml \
+  -f infra/docker/docker-compose.aws.yml \
   up -d web
 echo "    web service restarted"
 

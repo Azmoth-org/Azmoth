@@ -1,4 +1,4 @@
-# Build the three images the Azure VM runs, and push them to GHCR tagged with the commit sha.
+# Build the three images the EC2 VM runs, and push them to GHCR tagged with the commit sha.
 #
 # This workflow is the reason the VM is a 2 GiB box costing EUR 15/month rather than a 4 GiB box
 # costing EUR 30. `scripts/deploy.sh` used to run `docker compose build` over SSH; a `next build`
