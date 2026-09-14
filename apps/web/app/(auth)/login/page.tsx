@@ -4,10 +4,11 @@ import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
 import { AuthShell } from "@/components/auth/auth-shell"
 import { oauthErrorMessage } from "@/components/auth/auth-messages"
-import { GoogleButton } from "@/components/auth/google-button"
+// Google sign-in is disabled for the pilot — see the `social` prop below and `lib/auth.ts`.
+// import { GoogleButton } from "@/components/auth/google-button"
 import { LoginForm } from "@/components/auth/login-form"
 import { safeNext } from "@/lib/auth-redirect"
-import { googleSignInEnabled } from "@/lib/auth-google"
+// import { googleSignInEnabled } from "@/lib/auth-google"
 
 export const metadata: Metadata = {
   title: "Anmelden",
@@ -30,7 +31,9 @@ export const metadata: Metadata = {
  *
  * A server component holding a client form, rather than a client page: the title and the `robots`
  * metadata belong to the route, and there is nothing on this screen that needs the browser except
- * the inputs, the submit, and the Google button.
+ * the inputs and the submit.
+ *
+ * Google sign-in is disabled for the pilot (see `lib/auth.ts`), so `social` is always `null` here.
  */
 export default async function LoginPage({
   searchParams,
@@ -40,9 +43,6 @@ export default async function LoginPage({
   const { next, error } = await searchParams
   const destination = safeNext(next)
   const failure = oauthErrorMessage(error)
-  // The destination has to survive the trip to Google and back, and the only place to keep it is
-  // the URL these two callbacks name — there is no session yet to hold it in.
-  const back = `/login${next ? `?next=${encodeURIComponent(destination)}` : ""}`
 
   return (
     <AuthShell>
@@ -58,15 +58,8 @@ export default async function LoginPage({
             </Alert>
           ) : null
         }
-        social={
-          googleSignInEnabled() ? (
-            <GoogleButton
-              label="Mit Google anmelden"
-              callbackURL={destination}
-              errorCallbackURL={back}
-            />
-          ) : null
-        }
+        // Google sign-in is disabled for the pilot phase; see `lib/auth.ts`.
+        social={null}
       />
     </AuthShell>
   )

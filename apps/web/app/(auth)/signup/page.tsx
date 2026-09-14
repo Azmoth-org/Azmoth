@@ -5,10 +5,11 @@ import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
 import { AuthShell } from "@/components/auth/auth-shell"
 import { oauthErrorMessage } from "@/components/auth/auth-messages"
-import { GoogleButton } from "@/components/auth/google-button"
+// Google sign-in is disabled for the pilot — see the `social` prop below and `lib/auth.ts`.
+// import { GoogleButton } from "@/components/auth/google-button"
 import { SignupForm } from "@/components/auth/signup-form"
 import { safeNext } from "@/lib/auth-redirect"
-import { googleSignInEnabled } from "@/lib/auth-google"
+// import { googleSignInEnabled } from "@/lib/auth-google"
 
 export const metadata: Metadata = {
   title: "Registrieren",
@@ -38,10 +39,7 @@ export const metadata: Metadata = {
  * offers to create one — registering does not silently make a practice on somebody's behalf,
  * because an organisation is a boundary and inventing one would be inventing the wrong one.
  *
- * The Google button is the same component `/login` renders and reaches the same endpoint — OAuth has
- * one door, and whether it registers or signs in depends on the account rather than on which screen
- * was clicked. Only the label differs, because "Mit Google anmelden" under a heading that says
- * *Registrieren* reads as the wrong button.
+ * Google sign-in is disabled for the pilot (see `lib/auth.ts`), so `social` is always `null` here.
  */
 export default async function SignupPage({
   searchParams,
@@ -51,7 +49,6 @@ export default async function SignupPage({
   const { next, error } = await searchParams
   const destination = safeNext(next)
   const failure = oauthErrorMessage(error)
-  const back = `/signup${next ? `?next=${encodeURIComponent(destination)}` : ""}`
 
   return (
     <AuthShell>
@@ -86,15 +83,8 @@ export default async function SignupPage({
             </Alert>
           )
         }
-        social={
-          googleSignInEnabled() ? (
-            <GoogleButton
-              label="Mit Google registrieren"
-              callbackURL={destination}
-              errorCallbackURL={back}
-            />
-          ) : null
-        }
+        // Google sign-in is disabled for the pilot phase; see `lib/auth.ts`.
+        social={null}
       />
     </AuthShell>
   )
