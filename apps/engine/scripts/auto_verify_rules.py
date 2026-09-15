@@ -409,6 +409,11 @@ def build_user_prompt(candidate: Candidate, catalog: dict[str, CatalogEntry]) ->
         catalog[z].render() if z in catalog else _missing(z) for z in candidate.ziffern()
     ]
     row = candidate.row
+    rule_type = (
+        "factor cap (§ 5 GOÄ)"
+        if candidate.kind == "factor_cap"
+        else "exclusion (Nebeneinanderberechnung)"
+    )
     lines = [
         "## Official GOÄ text for every Ziffer this rule touches",
         "",
@@ -424,7 +429,7 @@ def build_user_prompt(candidate: Candidate, catalog: dict[str, CatalogEntry]) ->
         "## Proposed rule",
         "",
         f"  rule_id: {candidate.rule_id}",
-        f"  type:    {'factor cap (§ 5 GOÄ)' if candidate.kind == 'factor_cap' else 'exclusion (Nebeneinanderberechnung)'}",
+        f"  type:    {rule_type}",
         f"  claim:   {candidate.claim()}",
         "",
         "Is this claim a 100% logically sound, unambiguous deduction from the official text above?",
@@ -992,7 +997,10 @@ def print_report(
     print("=" * 96)
     print("GOÄ rule verification — state report")
     print("=" * 96)
-    print(f"  {'table':<26} {'rows':>7} {'verified':>10} {'ai_verdict':>11} {'untouched':>10} {'coverage':>9}")
+    print(
+        f"  {'table':<26} {'rows':>7} {'verified':>10} {'ai_verdict':>11} "
+        f"{'untouched':>10} {'coverage':>9}"
+    )
     print("  " + "-" * 78)
     for r in reports + [total]:
         if r is total:
@@ -1012,7 +1020,10 @@ def print_report(
     for i, candidate in enumerate(candidates[:10], 1):
         ziffern = ", ".join(candidate.ziffern())
         weight = punkte_weight(candidate, catalog)
-        print(f"    {i:>2}. {candidate.rule_id:<24} {candidate.kind:<11} Ziffern {ziffern:<12} ({weight} Punkte)")
+        print(
+            f"    {i:>2}. {candidate.rule_id:<24} {candidate.kind:<11} "
+            f"Ziffern {ziffern:<12} ({weight} Punkte)"
+        )
     print("=" * 96)
 
 
@@ -1163,7 +1174,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  model / effort : {args.model} / {args.effort}")
     if args.provider == "bedrock":
         print(f"  region         : {os.environ.get('BEDROCK_REGION') or DEFAULT_BEDROCK_REGION}")
-    print(f"  mode           : {'DRY RUN — nothing will be written' if args.dry_run else 'LIVE — CSV saved after every rule'}")
+    mode_label = (
+        "DRY RUN — nothing will be written" if args.dry_run else "LIVE — CSV saved after every rule"
+    )
+    print(f"  mode           : {mode_label}")
     print("=" * 96)
     print()
 
@@ -1237,7 +1251,8 @@ def main(argv: list[str] | None = None) -> int:
             print("--- PARSED " + "-" * 85)
             print(f"  verdict   : {verdict}")
             print(f"  reasoning : {' '.join(reasoning.split())[:400]}")
-            print(f"  effect    : {'verified=false -> true' if verdict == VERIFIED else 'verified stays false'}")
+            effect_label = "verified=false -> true" if verdict == VERIFIED else "verified stays false"
+            print(f"  effect    : {effect_label}")
             print()
         else:
             mark = "OK " if verdict == VERIFIED else "-- "
@@ -1288,7 +1303,8 @@ def main(argv: list[str] | None = None) -> int:
         + (f" (+{usage.thinking_tokens:,} thinking)" if usage.thinking_tokens else "")
     )
     cost = usage.cost_usd(args.model)
-    print(f"  approx. cost          : {f'${cost:.2f}' if cost is not None else 'n/a (no rate on file for this model)'}")
+    cost_label = f"${cost:.2f}" if cost is not None else "n/a (no rate on file for this model)"
+    print(f"  approx. cost          : {cost_label}")
     if args.provider == "bedrock" and cost is not None:
         print("                          (Anthropic list price; AWS bills Bedrock at its own rate)")
     if tally.errors:

@@ -30,12 +30,11 @@ finding on the report.
 from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
-from pathlib import Path
 from xml.etree import ElementTree
 
 import pytest
 
-from app.config import PADNEXT_EXAMPLES_DIR, REPO_ROOT
+from app.config import PADNEXT_EXAMPLES_DIR
 from app.padnext import audit_delivery, read_delivery
 from app.padnext.audit import (
     CENT_PER_EURO,

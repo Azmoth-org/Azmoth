@@ -1,0 +1,37 @@
+[tool.ruff]
+# The codebase's actual prose width, not an aspiration: nearly every file wraps at ~100 characters,
+# and a handful of German validation messages (`app/padnext/validation.py`,
+# `app/padnext/audit.py`) run well past it because a legal sentence is not a place to force a line
+# break. 110 covers the former without inviting the latter to be rewrapped; the few still over it
+# are `# noqa: E501`, individually, rather than raising the limit for the whole tree to accommodate
+# eleven lines.
+line-length = 110
+target-version = "py311"
+
+# `.venv` and `test.db` are not source. `alembic/versions` is generated once and then frozen —
+# Alembic's own template, not this project's style, and a lint pass rewriting a past migration is a
+# migration that no longer matches what actually ran against every environment that already applied
+# it.
+extend-exclude = ["alembic/versions", ".venv", "test.db"]
+
+[tool.ruff.lint]
+# Ruff's own default selection (`E4`, `E7`, `E9`, `F`) plus `E501`. Deliberately conservative for a
+# first gate: `E4`/`E7`/`E9` are import placement, statement-level and syntax-error-adjacent
+# pycodestyle checks — not the whitespace/formatting ones (`E1`/`E2`/`E3`), which this project has
+# never run a formatter for and which would be hundreds of findings about style nobody asked to
+# change. `F` is Pyflakes: unused imports, undefined names, unused local variables — real bugs, not
+# taste. `E501` is the one addition, so the `line-length` above means something; see its comment.
+select = ["E4", "E7", "E9", "F", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# `__init__.py` files in this codebase re-export names for their package's public surface — that is
+# what `F401` (imported but unused) exists to catch everywhere else, and exactly what it must not
+# flag here.
+"__init__.py" = ["F401"]
+
+# `tests/conftest.py` sets environment variables the settings layer reads once (`DATABASE_URL`,
+# `UPLOAD_DIR`, `APP_ENV`, `PADNEXT_SCHEMA_POLICY`) before importing anything from `app.*`, on
+# purpose — see that file's own comments. That ordering is exactly what `E402` exists to flag
+# everywhere else, and exactly what must not be refused here: importing `app.config` before the
+# environment is set would make the suite test a different configuration than the one it states.
+"tests/conftest.py" = ["E402"]

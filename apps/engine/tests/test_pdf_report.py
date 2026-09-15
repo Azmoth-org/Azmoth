@@ -36,7 +36,6 @@ from app.schemas.batch import (
 from app.schemas.padnext import (
     PadnextAuditedPosition,
     PadnextAuditReport,
-    PadnextFinding,
 )
 from app.padnext.pilot_scope import TEMPORAL_SCOPE_WARNING
 from app.services import pdf as pdf_module

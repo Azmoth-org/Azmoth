@@ -222,7 +222,7 @@ def cmd_check(args: argparse.Namespace) -> int:
             report(
                 "end-to-end coding",
                 bool(proposal.solver_result.coding.proposed_codes),
-                f"{[l.ziffer for l in proposal.solver_result.coding.proposed_codes]} "
+                f"{[code.ziffer for code in proposal.solver_result.coding.proposed_codes]} "
                 f"= {proposal.solver_result.coding.total.amount_eur} EUR",
             )
             report("result is a DRAFT proposal", str(proposal.status) == "DRAFT", str(proposal.status))

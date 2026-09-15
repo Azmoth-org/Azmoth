@@ -134,7 +134,9 @@ def test_a_refusal_is_still_a_padnext_error(name):
         read_delivery(fixture(name), schema_policy=PadnextSchemaPolicy.STRICT)
 
 
-@pytest.mark.parametrize("name,rule,needle", [(n, r, l) for n, (r, l) in sorted(CASES.items())])
+@pytest.mark.parametrize(
+    "name,rule,needle", [(n, r, needle) for n, (r, needle) in sorted(CASES.items())]
+)
 def test_a_violation_names_its_rule_and_its_line(name, rule, needle):
     """A structured violation, not a string: rule, line, column, readable path.
 

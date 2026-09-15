@@ -42,7 +42,7 @@ import json
 import re
 import sys
 import unicodedata
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
