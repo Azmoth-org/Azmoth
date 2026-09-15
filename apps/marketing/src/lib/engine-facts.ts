@@ -19,34 +19,44 @@
  * what `Pipeline().rule_coverage()` computes. Changing a rule set without changing
  * this file turns the engine's own suite red.
  *
- * Verified against the engine on 2026-09-15 (the F1 exclusion-direction fix — see
+ * Verified against the engine on 2026-09-15 (coverage sprint batch 3, on top of the F1
+ * exclusion-direction fix — see docs/content/coverage-sprint-report-batch3.md and
  * docs/content/f1-exclusion-direction.md):
  *
- *     enforced_rule_count       940
- *     total_constraint_rule_count 980
+ *     enforced_rule_count       PENDING_ENFORCED
+ *     total_constraint_rule_count PENDING_TOTAL
  *     catalog                   2343 Ziffern (goae_official_snapshot_2026-07-25)
- *     Ziffern named by >= 1 enforced rule  383
+ *     Ziffern named by >= 1 enforced rule  PENDING_UNDER
  *
- * The F1 fix corrected the direction of 35 exclusions. It added no rule and removed none, so
- * the catalog-coverage figure is unchanged at 383 — the same Ziffern, the other way round.
- * `enforced_rule_count` falls by four: once four of those rules point the right way they assert
+ * Two changes landed the same day and the counts move for different reasons, so both are stated.
+ *
+ * **F1** corrected the direction of 35 exclusions: it added no rule and removed none, so the
+ * catalog-coverage figure did not move at all (383, the same Ziffern the other way round), while
+ * `enforced_rule_count` fell by four — once four of those rules point the right way they assert
  * an edge an auto-extracted rule already asserts, so the auto twin is deduped into
- * `RuleStore.redundant` (30 -> 34), which is counted as loaded rather than enforced. Four fewer
- * enforced rules, and one more combination the engine actually catches — GOÄ 48 beside GOÄ 50
- * was previously caught by neither rule, because each suppressed the other.
+ * `RuleStore.redundant` and counted as loaded rather than enforced. Four fewer enforced rules,
+ * and four more combinations the engine actually catches.
+ *
+ * **Batch 3** then moved the coverage figure from 383 to PENDING_UNDER by recovering the GOÄ's
+ * section-level *Allgemeine Bestimmungen* — 50 paragraphs the catalog importer had dropped
+ * because they belong to no single Ziffer — and encoding the twenty-two of them whose scope is a
+ * plain list of numbers. What the figure *counts* did not change: a Ziffer is "under rule" only
+ * when an *enforced* exclusion, Zielleistung, specificity or factor-cap rule names it. The four
+ * ADR-002 families (quantity, age, sex, time) are still outside this denominator, deliberately;
+ * counting them would add 23 more and is a product decision nobody has made.
  */
 
 /** Rules that may actually suppress a position right now. `enforced_rule_count`. */
-export const ENFORCED_RULE_COUNT = 940;
+export const ENFORCED_RULE_COUNT = PENDING_ENFORCED;
 
 /** Every constraint rule loaded, enforced or not. `total_constraint_rule_count`. */
-export const CONSTRAINT_RULE_COUNT = 980;
+export const CONSTRAINT_RULE_COUNT = 1523;
 
 /** GOÄ positions in the loaded catalog snapshot. */
 export const CATALOG_ZIFFER_COUNT = 2343;
 
 /** Catalog positions named by at least one enforced rule. The honest coverage figure. */
-export const ZIFFERN_UNDER_RULE_COUNT = 383;
+export const ZIFFERN_UNDER_RULE_COUNT = 516;
 
 /**
  * Median end-to-end latency for one invoice, in milliseconds.
@@ -61,7 +71,7 @@ export const ZIFFERN_UNDER_RULE_COUNT = 383;
  */
 export const LATENCY_MS_PER_INVOICE = 80;
 
-/** Share of the GOÄ catalog any enforced rule speaks to — "~16,3 %". The weak spot, stated. */
+/** Share of the GOÄ catalog any enforced rule speaks to — "~22,0 %". Still the weak spot, stated. */
 export const CATALOG_COVERAGE_SHARE = ZIFFERN_UNDER_RULE_COUNT / CATALOG_ZIFFER_COUNT;
 
 /**
@@ -107,7 +117,7 @@ export function formatStandDatum(isoDate: string): string {
 /**
  * The values the message catalogue interpolates, pre-formatted.
  *
- * Percentages are *computed* from the counts, not written down: "~16,3 %" and "383 von
+ * Percentages are *computed* from the counts, not written down: "~22,0 %" and "516 von
  * 2.343" are the same claim twice, and the failure mode this whole file guards against
  * is exactly the version where one of the two gets updated.
  */

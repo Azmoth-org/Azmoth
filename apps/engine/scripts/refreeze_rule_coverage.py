@@ -72,6 +72,14 @@ ALLOWED = (
     "/audit_trail/rule_coverage_detail/unverified_rule_count",
     "/audit_trail/rule_coverage_detail/unverified_rules_not_enforced",
     "/audit_trail/rule_coverage_detail/verified_share",
+    #: The denominator of `verified_share`, which is already here. Both were missing until
+    #: coverage-sprint batch 3, so batch 1 and batch 2 each had to patch the six snapshots that
+    #: carry them by hand — twice, for a value that is `len(RuleStore.constraint_rules())` and
+    #: nothing else. Hand-patching a snapshot is the one habit this script exists to remove, and
+    #: doing it beside a guard that refused the same edit is worse than either: the guard looked
+    #: like it had passed. They are counts of rules loaded, in the same sense as every line above.
+    "/audit_trail/rule_coverage_detail/total_constraint_rule_count",
+    "/audit_trail/rule_summary/total_constraint_rules",
     "/audit_trail/rule_coverage_detail/rules_hash",
     "/audit_trail/rules_hash",
     "/audit_trail/rule_summary/factor_caps_enforced",

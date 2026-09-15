@@ -11,30 +11,36 @@ Two facts are load-bearing for how this whole bank must be written:
   `docs/api/PARTNER_API.md` — prints a bare rule count. `docs/content/` isn't in its scanned globs,
   so nothing here trips it mechanically, but the discipline is the point, not the test: **every
   number below is dated and sourced**, so a post reads as "true as of this commit," never as a
-  permanent claim. Treat "Stand: 2026-09-13" as part of the number, not a footnote.
+  permanent claim. Treat "Stand: 2026-09-15" as part of the number, not a footnote.
 - Two snapshots of the same engine disagree with each other, on purpose: `engine-facts.ts`
-  (verified 2026-09-13) and `docs/performance_baseline.md` (measured 2026-08-23) quote different
+  (verified 2026-09-15) and `docs/performance_baseline.md` (measured 2026-08-23) quote different
   catalog sizes and rule counts because the rule set and catalog changed between the two dates.
   **Never mix figures from different snapshots in one post.** F01–F04 use the current
-  (2026-09-13) snapshot; F33 is the older, dated one, kept only because F03's latency figure comes
+  (2026-09-15) snapshot; F33 is the older, dated one, kept only because F03's latency figure comes
   from that same measurement run.
 
 ---
 
-## Engine numbers (current snapshot, verified 2026-09-13)
+## Engine numbers (current snapshot, verified 2026-09-15)
 
-**F01 — Enforced rule count.** 944 rules may currently suppress a position; 980 constraint rules
-are loaded in total (enforced + not-yet-enforced). Moved from 858/894 by the coverage-sprint batch
-1 (`docs/content/coverage-sprint-plan.md`), which added 86 hand-verified rules.
+**F01 — Enforced rule count.** 1,346 rules may currently suppress a position; 1,523 constraint
+rules are loaded in total (enforced + not-yet-enforced). Moved from 858/894 by coverage-sprint
+batch 1 (`docs/content/coverage-sprint-plan.md`, +86 hand-verified rules), then from 944/980 by
+batch 3 (`docs/content/coverage-sprint-report-batch3.md`, +543 rows generated from twenty-two
+cited GOÄ provisions; the enforced figure rises by less than the row count because 171 rules now
+assert an edge a twin already covers and are counted as loaded, not enforced).
 Source: `apps/marketing/src/lib/engine-facts.ts:22-34` (`ENFORCED_RULE_COUNT`,
 `CONSTRAINT_RULE_COUNT`), pinned against the live engine by
 `test_the_marketing_site_quotes_the_engine_and_not_a_memory` (in
 `apps/engine/tests/test_published_numbers.py`).
 
-**F02 — Catalog coverage.** The loaded catalog snapshot holds 2,343 GOÄ Ziffern; 383 of them are
-named by at least one enforced rule — about 16.3% (`383 / 2343`). This is the number the site
-prints at the same size as its strongest figures, not in a footnote. Moved from 358 / ~15.3% by the
-same coverage-sprint batch.
+**F02 — Catalog coverage.** The loaded catalog snapshot holds 2,343 GOÄ Ziffern; 516 of them are
+named by at least one enforced rule — about 22.0% (`516 / 2343`). This is the number the site
+prints at the same size as its strongest figures, not in a footnote. Moved 358 → 383 by batch 1
+and 383 → 516 by batch 3, which recovered the GOÄ's section-level *Allgemeine Bestimmungen* —
+50 paragraphs the catalog importer had dropped because they belong to no single Ziffer. The
+definition did not move: still "named by an **enforced** exclusion, Zielleistung, specificity or
+factor-cap rule", still excluding the four ADR-002 families.
 Source: `apps/marketing/src/lib/engine-facts.ts:36-56` (`CATALOG_ZIFFER_COUNT`,
 `ZIFFERN_UNDER_RULE_COUNT`, `CATALOG_COVERAGE_SHARE`).
 

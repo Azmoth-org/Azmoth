@@ -153,15 +153,23 @@ REGRESSION_CASES = (
 #: Moved a fifth time on 2026-09-15 by the F1 exclusion-direction fix
 #: (`docs/content/f1-exclusion-direction.md`): 35 rows in
 #: `data/rules/exclusions.manual.csv` swapped `from_ziffer` and `to_ziffer` and were renamed to
-#: match, so `rules_hash()` moved. `logic_version` did not (nothing under `logic/` was touched).
-#: Case A claims GOÄ 1 and 301. GOÄ 1 *is* one half of a corrected pair (`excl_man_48_1` became
-#: `excl_man_1_48`), so the precise statement is not "case A is untouched by the fix" but "case A
-#: carries no GOÄ 48, so no corrected rule has both its Ziffern present and none can fire". GOÄ 301
-#: appears in no corrected pair at all. `scripts/refreeze_rule_coverage.py` reported METADATA ONLY
-#: for all nine frozen snapshots — no Ziffer, factor, amount or proof moved anywhere — which is the
-#: check that does not depend on anybody having reasoned that out correctly. Re-verified stable
-#: across two separate processes before this value was updated.
-CASE_A_RECEIPT_PREFIX = "4025ec499abf0c91"
+#: match, so `rules_hash()` moved.
+#:
+#: And a sixth time, in the same day, by coverage-sprint batch 3 rebased on top of that fix: 525
+#: rows added to `data/rules/exclusions.manual.csv` and 18 to `data/rules/factor_caps.csv`.
+#: `logic_version` did not move for either (nothing under `logic/` was touched by either change).
+#:
+#: Case A claims GOÄ 1 and 301, and both changes name one of them — which is the interesting part,
+#: and why the two are recorded together rather than as "unaffected". F1 renamed `excl_man_48_1`
+#: to `excl_man_1_48`, so GOÄ 1 is half of a corrected pair; batch 3 names 301 as the *blocked*
+#: side of the arthroscopy and whole-skeleton provisions (`excl_b3_2189_301`, `excl_b3_5050_301`).
+#: Neither can fire here: a two-Ziffer exclusion needs both Ziffern on the delivery, and case A
+#: carries no GOÄ 48, no 2189–2196 and no 5050/5060/5070. The check that does not depend on anyone
+#: having reasoned that out correctly is `scripts/refreeze_rule_coverage.py`, which reported
+#: METADATA ONLY for all nine frozen snapshots after each change — no Ziffer, factor, amount or
+#: proof moved anywhere. Re-verified stable across two separate processes before this value was
+#: updated.
+CASE_A_RECEIPT_PREFIX = "PENDING_REBASE"
 
 
 # ------------------------------------------------------------------------------------------

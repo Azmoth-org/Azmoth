@@ -1,0 +1,2485 @@
+{
+  "note": "Per-Ziffer classification of what coverage-sprint batch 3 actually encoded, computed by apps/engine/scripts/classify_batch3_coverage.py from data/rules/*.csv, the catalog and data/catalogs/goae_current/allgemeine_bestimmungen.json. See docs/content/coverage-sprint-report-batch3.md §5.",
+  "ziffern_classified": 254,
+  "counts": {
+    "PARTIAL": 96,
+    "MECHANICAL_ONLY": 148,
+    "FULLY_VERIFIED": 10
+  },
+  "ziffern": {
+    "1": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 28,
+      "encoded": 24,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ab_01",
+          "sentence": "Die Leistungen nach den Nummern 1 und/oder 5 sind neben Leistungen nach den Abschnitten C bis O im Behandlungsfall nur einmal berechnungsfähig"
+        },
+        {
+          "source": "ab_02",
+          "sentence": "Die Zuschläge nach den Buchstaben A bis D sowie K 1 sind nur mit dem einfachen Gebührensatz berechnungsfähig"
+        },
+        {
+          "source": "ab_02",
+          "sentence": "Neben den Zuschlägen nach den Buchstaben A bis D sowie K 1 dürfen die Zuschläge nach den Buchstaben E bis J sowie K 2 nicht berechnet werden"
+        },
+        {
+          "source": "ab_03",
+          "sentence": "Neben den Zuschlägen nach den Buchstaben E bis J sowie K 2 dürfen die Zuschläge nach den Buchstaben A bis D sowie K 1 nicht berechnet werden"
+        }
+      ]
+    },
+    "100": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 4,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 100 oder 101 dürfen die Zuschläge nach den Buchstaben F bis H unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        }
+      ]
+    },
+    "101": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 4,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 100 oder 101 dürfen die Zuschläge nach den Buchstaben F bis H unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        }
+      ]
+    },
+    "11": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1203": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1204": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1228": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1240": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1400": {
+      "classification": "FULLY_VERIFIED",
+      "constraint_sentences": 5,
+      "encoded": 5,
+      "golden_tested": true,
+      "not_encoded": []
+    },
+    "1401": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1414": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "15": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 8,
+      "encoded": 6,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:15",
+          "sentence": "Die Leistung nach Nummer 15 darf nur einmal im Kalenderjahr berechnet werden."
+        },
+        {
+          "source": "ziffer:15",
+          "sentence": "Neben der Leistung nach Nummer 15 ist die Leistung nach Nummer 4 im Behandlungsfall nicht berechnungsfähig."
+        }
+      ]
+    },
+    "1529": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1530": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1532": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:1532",
+          "sentence": "Die Leistung nach Nummer 1532 ist im Zusammenhang mit einer Intubationsnarkose nicht berechnungsfähig."
+        }
+      ]
+    },
+    "1728": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1729": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1730": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:1730",
+          "sentence": "Wird eine Harnblasenkatheterisierung lediglich ausgeführt, um eine gynäkologische Untersuchung nach Nummer 7 zu erleichtern, so ist sie neben der Leistung nach Nummer 7 nicht berechnungsfähig."
+        }
+      ]
+    },
+    "1731": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1732": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "1733": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "2": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 7,
+      "encoded": 4,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_02",
+          "sentence": "Neben den Zuschlägen nach den Buchstaben A bis D sowie K 1 dürfen die Zuschläge nach den Buchstaben E bis J sowie K 2 nicht berechnet werden"
+        },
+        {
+          "source": "ab_03",
+          "sentence": "Die Zuschläge nach den Buchstaben E bis J sowie K 2 sind nur mit dem einfachen Gebührensatz berechnungsfähig"
+        },
+        {
+          "source": "ab_03",
+          "sentence": "Neben den Zuschlägen nach den Buchstaben E bis J sowie K 2 dürfen die Zuschläge nach den Buchstaben A bis D sowie K 1 nicht berechnet werden"
+        }
+      ]
+    },
+    "20": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "200": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_05",
+          "sentence": "Wundverbände nach Nummer 200, die im Zusammenhang mit einer operativen Leistung (auch Ätzung, Fremdkörperentfernung), Punktion, Infusion, Transfusion oder Injektion durchgeführt werden, sind Bestandteil dieser Leistung."
+        }
+      ]
+    },
+    "201": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "204": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "206": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "207": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "208": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "209": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "21": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "210": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "211": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "2189": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ab_17",
+          "sentence": "Werden Leistungen nach den Nummern 2102, 2104, 2112, 2113, 2117, 2119, 2136, 2189, 2190, 2191 und/oder 2193 an demselben Gelenk im Rahmen derselben Sitzung erbracht, so sind diese Leistungen nicht mehrfach und nicht nebeneinander berechnungsfähig"
+        }
+      ]
+    },
+    "2190": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_17",
+          "sentence": "Werden Leistungen nach den Nummern 2102, 2104, 2112, 2113, 2117, 2119, 2136, 2189, 2190, 2191 und/oder 2193 an demselben Gelenk im Rahmen derselben Sitzung erbracht, so sind diese Leistungen nicht mehrfach und nicht nebeneinander berechnungsfähig"
+        }
+      ]
+    },
+    "2191": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_17",
+          "sentence": "Werden Leistungen nach den Nummern 2102, 2104, 2112, 2113, 2117, 2119, 2136, 2189, 2190, 2191 und/oder 2193 an demselben Gelenk im Rahmen derselben Sitzung erbracht, so sind diese Leistungen nicht mehrfach und nicht nebeneinander berechnungsfähig"
+        }
+      ]
+    },
+    "2192": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_17",
+          "sentence": "Die Leistungen nach den Nummern 2192, 2195 und/oder 2196 sind für operative Eingriffe an demselben Gelenk im Rahmen derselben Sitzung jeweils nur einmal berechnungsfähig."
+        }
+      ]
+    },
+    "2193": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_17",
+          "sentence": "Werden Leistungen nach den Nummern 2102, 2104, 2112, 2113, 2117, 2119, 2136, 2189, 2190, 2191 und/oder 2193 an demselben Gelenk im Rahmen derselben Sitzung erbracht, so sind diese Leistungen nicht mehrfach und nicht nebeneinander berechnungsfähig"
+        }
+      ]
+    },
+    "2195": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_17",
+          "sentence": "Die Leistungen nach den Nummern 2192, 2195 und/oder 2196 sind für operative Eingriffe an demselben Gelenk im Rahmen derselben Sitzung jeweils nur einmal berechnungsfähig."
+        }
+      ]
+    },
+    "2196": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_17",
+          "sentence": "Die Leistungen nach den Nummern 2192, 2195 und/oder 2196 sind für operative Eingriffe an demselben Gelenk im Rahmen derselben Sitzung jeweils nur einmal berechnungsfähig."
+        }
+      ]
+    },
+    "22": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 4,
+      "encoded": 4,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "23": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "24": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "247": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "25": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "250": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "251": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "252": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 252 bis 258 und 261 sind nicht mehrfach berechnungsfähig, wenn anstelle einer Mischung mehrere Arzneimittel bei liegender Kanüle im zeitlichen Zusammenhang nacheinander verabreicht werden"
+        }
+      ]
+    },
+    "253": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 252 bis 258 und 261 sind nicht mehrfach berechnungsfähig, wenn anstelle einer Mischung mehrere Arzneimittel bei liegender Kanüle im zeitlichen Zusammenhang nacheinander verabreicht werden"
+        }
+      ]
+    },
+    "254": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 252 bis 258 und 261 sind nicht mehrfach berechnungsfähig, wenn anstelle einer Mischung mehrere Arzneimittel bei liegender Kanüle im zeitlichen Zusammenhang nacheinander verabreicht werden"
+        }
+      ]
+    },
+    "255": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 252 bis 258 und 261 sind nicht mehrfach berechnungsfähig, wenn anstelle einer Mischung mehrere Arzneimittel bei liegender Kanüle im zeitlichen Zusammenhang nacheinander verabreicht werden"
+        }
+      ]
+    },
+    "256": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 252 bis 258 und 261 sind nicht mehrfach berechnungsfähig, wenn anstelle einer Mischung mehrere Arzneimittel bei liegender Kanüle im zeitlichen Zusammenhang nacheinander verabreicht werden"
+        }
+      ]
+    },
+    "257": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 252 bis 258 und 261 sind nicht mehrfach berechnungsfähig, wenn anstelle einer Mischung mehrere Arzneimittel bei liegender Kanüle im zeitlichen Zusammenhang nacheinander verabreicht werden"
+        }
+      ]
+    },
+    "258": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 252 bis 258 und 261 sind nicht mehrfach berechnungsfähig, wenn anstelle einer Mischung mehrere Arzneimittel bei liegender Kanüle im zeitlichen Zusammenhang nacheinander verabreicht werden"
+        }
+      ]
+    },
+    "259": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "26": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 5,
+      "encoded": 4,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:26",
+          "sentence": "Die Leistung nach Nummer 26 ist ab dem vollendeten 2. Lebensjahr je Kalenderjahr höchstens einmal berechnungsfähig."
+        }
+      ]
+    },
+    "260": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "261": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 252 bis 258 und 261 sind nicht mehrfach berechnungsfähig, wenn anstelle einer Mischung mehrere Arzneimittel bei liegender Kanüle im zeitlichen Zusammenhang nacheinander verabreicht werden"
+        },
+        {
+          "source": "ziffer:261",
+          "sentence": "Die Leistung nach Nummer 261 ist im Zusammenhang mit einer Anästhesie/Narkose nicht berechnungsfähig für die Einbringung von Anästhetika, Anästhesieadjuvantien und Anästhesieantidoten."
+        }
+      ]
+    },
+    "262": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "263": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "264": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "265": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "266": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "267": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "268": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "27": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "270": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "271": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 5,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        },
+        {
+          "source": "ziffer:273",
+          "sentence": "Die Leistungen nach den Nummern 271, 272 und 273 sind im Zusammenhang mit einer Anästhesie/Narkose nicht berechnungsfähig für die Einbringung von Anästhetika, Anästhesieadjuvantien und Anästhesieantidoten."
+        }
+      ]
+    },
+    "272": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 5,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        },
+        {
+          "source": "ziffer:273",
+          "sentence": "Die Leistungen nach den Nummern 271, 272 und 273 sind im Zusammenhang mit einer Anästhesie/Narkose nicht berechnungsfähig für die Einbringung von Anästhetika, Anästhesieadjuvantien und Anästhesieantidoten."
+        }
+      ]
+    },
+    "273": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 6,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        },
+        {
+          "source": "ziffer:273",
+          "sentence": "Die Leistungen nach den Nummern 271, 272 und 273 sind im Zusammenhang mit einer Anästhesie/Narkose nicht berechnungsfähig für die Einbringung von Anästhetika, Anästhesieadjuvantien und Anästhesieantidoten."
+        }
+      ]
+    },
+    "274": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 5,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "275": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 5,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "276": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 5,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "277": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "278": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "279": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "28": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "280": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "281": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "282": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "283": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "284": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "285": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "286": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_06",
+          "sentence": "Die Leistungen nach den Nummern 270, 273 bis 281, 283, 286 sowie 287 können jeweils nur einmal je Behandlungstag berechnet werden"
+        },
+        {
+          "source": "ab_06",
+          "sentence": "Gegebenenfalls erforderliche Gefäßpunktionen sind Bestandteil der Leistungen nach den Nummern 270 bis 287 und mit den Gebühren abgegolten"
+        }
+      ]
+    },
+    "286a": {
+      "classification": "FULLY_VERIFIED",
+      "constraint_sentences": 0,
+      "encoded": 0,
+      "golden_tested": true,
+      "not_encoded": []
+    },
+    "288": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "289": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "29": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "290": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "291": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "297": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "298": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "3": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 20,
+      "encoded": 20,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "30": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 7,
+      "encoded": 6,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:30",
+          "sentence": "Die Leistung nach Nummer 30 ist innerhalb von einem Jahr nur einmal berechnungsfähig."
+        }
+      ]
+    },
+    "300": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "301": {
+      "classification": "FULLY_VERIFIED",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": true,
+      "not_encoded": []
+    },
+    "302": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "3055": {
+      "classification": "FULLY_VERIFIED",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": true,
+      "not_encoded": []
+    },
+    "31": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:31",
+          "sentence": "Die Leistung nach Nummer 31 ist innerhalb von sechs Monaten höchstens dreimal berechnungsfähig."
+        }
+      ]
+    },
+    "32": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "33": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:33",
+          "sentence": "Die Leistung nach Nummer 33 ist innerhalb von einem Jahr höchstens dreimal berechnungsfähig."
+        }
+      ]
+    },
+    "3300": {
+      "classification": "FULLY_VERIFIED",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": true,
+      "not_encoded": []
+    },
+    "34": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 9,
+      "encoded": 8,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:34",
+          "sentence": "Die Leistung nach Nummer 34 ist innerhalb von 6 Monaten höchstens zweimal berechnungsfähig."
+        }
+      ]
+    },
+    "3572": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 0,
+      "encoded": 0,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "372": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "373": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "376": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "377": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "378": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "3890": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 0,
+      "encoded": 0,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "3891": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 0,
+      "encoded": 0,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "3892": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 0,
+      "encoded": 0,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "3893": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 0,
+      "encoded": 0,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "3894": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 0,
+      "encoded": 0,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "4": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 15,
+      "encoded": 12,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:15",
+          "sentence": "Neben der Leistung nach Nummer 15 ist die Leistung nach Nummer 4 im Behandlungsfall nicht berechnungsfähig."
+        },
+        {
+          "source": "ziffer:34",
+          "sentence": "Neben der Leistung nach Nummer 34 sind die Leistungen nach den Nummern 1, 3, 4, 15 und/oder 30 nicht berechnungsfähig."
+        },
+        {
+          "source": "ziffer:801",
+          "sentence": "Neben der Leistung nach Nummer 801 sind die Leistungen nach den Nummern 4, 8, 715 bis 718, 825, 826, 830 und 1400 nicht berechnungsfähig."
+        }
+      ]
+    },
+    "401": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 4,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "1.Die Zuschläge nach den Nummern 401 sowie 404 bis 406 sind nur mit dem einfachen Gebührensatz berechnungsfähig"
+        },
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "402": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 4,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "403": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 4,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "404": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 4,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "1.Die Zuschläge nach den Nummern 401 sowie 404 bis 406 sind nur mit dem einfachen Gebührensatz berechnungsfähig"
+        },
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "405": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "1.Die Zuschläge nach den Nummern 401 sowie 404 bis 406 sind nur mit dem einfachen Gebührensatz berechnungsfähig"
+        },
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "406": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 4,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "1.Die Zuschläge nach den Nummern 401 sowie 404 bis 406 sind nur mit dem einfachen Gebührensatz berechnungsfähig"
+        },
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "408": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "410": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 2,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "412": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "413": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "415": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 2,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "417": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "418": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "420": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ziffer:420",
+          "sentence": "Die Leistung nach Nummer 420 kann je Sitzung höchstens dreimal berechnet werden."
+        }
+      ]
+    },
+    "422": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 5,
+      "encoded": 4,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "423": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 5,
+      "encoded": 4,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "424": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 4,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_10",
+          "sentence": "Leistungen nach den Nummern 401 bis 418 sowie 422 bis 424 sind je Sitzung jeweils nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "427": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "428": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "429": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "430": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:430",
+          "sentence": "Die Leistung nach Nummer 430 ist auch bei mehrfacher Verabfolgung von Stromstößen in engem zeitlichen Zusammenhang zur Erreichung der Defibrillation nur einmal berechnungsfähig."
+        }
+      ]
+    },
+    "431": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "433": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "435": {
+      "classification": "FULLY_VERIFIED",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": true,
+      "not_encoded": []
+    },
+    "448": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 6,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_11",
+          "sentence": "Die Zuschläge nach den Nummern 442 bis 449 sind nicht berechnungsfähig, wenn der Patient an demselben Tag wegen derselben Erkrankung in stationäre Krankenhausbehandlung aufgenommen wird; das gilt nicht, wenn die stationäre Behandlung wegen unvorhersehbarer Komplikationen während oder nach der ambulanten Operation notwendig und entsprechend begründet wird."
+        },
+        {
+          "source": "ziffer:448",
+          "sentence": "Der Zuschlag nach Nummer 448 ist je Behandlungstag nur einmal berechnungsfähig."
+        },
+        {
+          "source": "ziffer:449",
+          "sentence": "Der Zuschlag nach Nummer 449 ist neben den Leistungen nach den Nummern 1 bis 8 und 56 sowie dem Zuschlag nach Nummer 448 nicht berechnungsfähig."
+        }
+      ]
+    },
+    "449": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 6,
+      "encoded": 4,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_11",
+          "sentence": "Die Zuschläge nach den Nummern 442 bis 449 sind nicht berechnungsfähig, wenn der Patient an demselben Tag wegen derselben Erkrankung in stationäre Krankenhausbehandlung aufgenommen wird; das gilt nicht, wenn die stationäre Behandlung wegen unvorhersehbarer Komplikationen während oder nach der ambulanten Operation notwendig und entsprechend begründet wird."
+        },
+        {
+          "source": "ziffer:449",
+          "sentence": "Der Zuschlag nach Nummer 449 ist je Behandlungstag nur einmal berechnungsfähig."
+        }
+      ]
+    },
+    "45": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 11,
+      "encoded": 8,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 45 bis 55 und 60 dürfen die Zuschläge unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        },
+        {
+          "source": "ziffer:45",
+          "sentence": "Die Leistung nach Nummer 45 ist neben anderen Leistungen des Abschnitts B nicht berechnungsfähig."
+        },
+        {
+          "source": "ziffer:E",
+          "sentence": "Der Zuschlag nach Buchstabe E ist neben Leistungen nach den Nummern 45 und/oder 46 nicht berechnungsfähig, es sei denn, die Visite wird durch einen Belegarzt durchgeführt"
+        }
+      ]
+    },
+    "46": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 10,
+      "encoded": 7,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 45 bis 55 und 60 dürfen die Zuschläge unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        },
+        {
+          "source": "ziffer:46",
+          "sentence": "Die Leistung nach Nummer 46 ist neben anderen Leistungen des Abschnitts B nicht berechnungsfähig."
+        },
+        {
+          "source": "ziffer:E",
+          "sentence": "Der Zuschlag nach Buchstabe E ist neben Leistungen nach den Nummern 45 und/oder 46 nicht berechnungsfähig, es sei denn, die Visite wird durch einen Belegarzt durchgeführt"
+        }
+      ]
+    },
+    "48": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 12,
+      "encoded": 8,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_01",
+          "sentence": "Besuchsgebühren nach den Nummern 48, 50 und/oder 51 sind für Besuche von Krankenhaus- und Belegärzten im Krankenhaus nicht berechnungsfähig"
+        },
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 45 bis 55 und 60 dürfen die Zuschläge unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        },
+        {
+          "source": "ziffer:50",
+          "sentence": "Neben der Leistung nach Nummer 50 sind die Leistungen nach den Nummern 1, 5, 48 und/oder 52 nicht berechnungsfähig."
+        },
+        {
+          "source": "ziffer:51",
+          "sentence": "Neben der Leistung nach Nummer 51 sind die Leistungen nach den Nummern 1, 5, 48 und/oder 52 nicht berechnungsfähig."
+        }
+      ]
+    },
+    "483": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "484": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "485": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "488": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "489": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "490": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "491": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "5": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 23,
+      "encoded": 22,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_01",
+          "sentence": "Die Leistungen nach den Nummern 1 und/oder 5 sind neben Leistungen nach den Abschnitten C bis O im Behandlungsfall nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "50": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 10,
+      "encoded": 5,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_01",
+          "sentence": "Besuchsgebühren nach den Nummern 48, 50 und/oder 51 sind für Besuche von Krankenhaus- und Belegärzten im Krankenhaus nicht berechnungsfähig"
+        },
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 45 bis 55 und 60 dürfen die Zuschläge unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        },
+        {
+          "source": "ziffer:45",
+          "sentence": "Anstelle oder neben der Visite im Krankenhaus sind die Leistungen nach den Nummern 1, 3, 4, 5, 6, 7, 8, 15, 48, 50 und/oder 51 nicht berechnungsfähig."
+        },
+        {
+          "source": "ziffer:46",
+          "sentence": "Anstelle oder neben der Zweitvisite im Krankenhaus sind die Leistungen nach den Nummern 1, 3, 4, 5, 6, 7, 8, 15, 45, 48, 50 und/oder 51 nicht berechnungsfähig."
+        },
+        {
+          "source": "ziffer:793",
+          "sentence": "Leistungen nach den Abschnitten B und C (mit Ausnahme der Leistung nach Nummer 50 in Verbindung mit einem Zuschlag nach den Buchstaben E, F, G und/oder H) sowie die Leistungen nach den Nummern 3550, 3555, 3557, 3558, 3562.H1, 3565.H1, 3574, 3580.H1, 3584.H1, 3585.H1, 3587.H1, 3592.H1, 3594.H1, 3595.H1, 3620, 3680, 3761 und 4381, die in ursächlichem Zusammenhang mit der Dialysebehandlung erbracht werden, sind nicht gesondert berechnungsfähig"
+        }
+      ]
+    },
+    "500": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "501": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "505": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "5050": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "5060": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "5070": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "51": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 9,
+      "encoded": 5,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_01",
+          "sentence": "Besuchsgebühren nach den Nummern 48, 50 und/oder 51 sind für Besuche von Krankenhaus- und Belegärzten im Krankenhaus nicht berechnungsfähig"
+        },
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 45 bis 55 und 60 dürfen die Zuschläge unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        },
+        {
+          "source": "ziffer:45",
+          "sentence": "Anstelle oder neben der Visite im Krankenhaus sind die Leistungen nach den Nummern 1, 3, 4, 5, 6, 7, 8, 15, 48, 50 und/oder 51 nicht berechnungsfähig."
+        },
+        {
+          "source": "ziffer:46",
+          "sentence": "Anstelle oder neben der Zweitvisite im Krankenhaus sind die Leistungen nach den Nummern 1, 3, 4, 5, 6, 7, 8, 15, 45, 48, 50 und/oder 51 nicht berechnungsfähig."
+        }
+      ]
+    },
+    "52": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 12,
+      "encoded": 9,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 45 bis 55 und 60 dürfen die Zuschläge unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        },
+        {
+          "source": "ziffer:52",
+          "sentence": "Sie ist nicht berechnungsfähig, wenn das nichtärztliche Personal den Arzt begleitet."
+        },
+        {
+          "source": "ziffer:52",
+          "sentence": "Wegegeld ist daneben nicht berechnungsfähig."
+        }
+      ]
+    },
+    "5295": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 22,
+      "encoded": 21,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:5295",
+          "sentence": "Der Zuschlag nach Nummer 5298 beträgt 25 v\\. H\\. des einfachen Gebührensatzes der betreffenden Leistung."
+        }
+      ]
+    },
+    "5473": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "5480": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ab_45",
+          "sentence": "Ergänzungsleistungen nach den Nummern 5480 bis 5485 sind je Basisleistung oder zulässiger Wiederholungsuntersuchung nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "5481": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 4,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_45",
+          "sentence": "Ergänzungsleistungen nach den Nummern 5480 bis 5485 sind je Basisleistung oder zulässiger Wiederholungsuntersuchung nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "5483": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_45",
+          "sentence": "Ergänzungsleistungen nach den Nummern 5480 bis 5485 sind je Basisleistung oder zulässiger Wiederholungsuntersuchung nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "5484": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_45",
+          "sentence": "Ergänzungsleistungen nach den Nummern 5480 bis 5485 sind je Basisleistung oder zulässiger Wiederholungsuntersuchung nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "5485": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ab_45",
+          "sentence": "Ergänzungsleistungen nach den Nummern 5480 bis 5485 sind je Basisleistung oder zulässiger Wiederholungsuntersuchung nur einmal berechnungsfähig"
+        }
+      ]
+    },
+    "55": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 45 bis 55 und 60 dürfen die Zuschläge unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        }
+      ]
+    },
+    "56": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 5,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:448",
+          "sentence": "Der Zuschlag nach Nummer 448 ist neben den Leistungen nach den Nummern 1 bis 8 und 56 sowie dem Zuschlag nach Nummer 449 nicht berechnungsfähig."
+        },
+        {
+          "source": "ziffer:449",
+          "sentence": "Der Zuschlag nach Nummer 449 ist neben den Leistungen nach den Nummern 1 bis 8 und 56 sowie dem Zuschlag nach Nummer 448 nicht berechnungsfähig."
+        }
+      ]
+    },
+    "6": {
+      "classification": "FULLY_VERIFIED",
+      "constraint_sentences": 18,
+      "encoded": 18,
+      "golden_tested": true,
+      "not_encoded": []
+    },
+    "600": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "601": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "602": {
+      "classification": "FULLY_VERIFIED",
+      "constraint_sentences": 7,
+      "encoded": 7,
+      "golden_tested": true,
+      "not_encoded": []
+    },
+    "603": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "604": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "605": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "606": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "607": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "608": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 5,
+      "encoded": 5,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "609": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "61": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 3,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:61",
+          "sentence": "Die Leistung nach Nummer 61 ist neben anderen Leistungen nicht berechnungsfähig."
+        },
+        {
+          "source": "ziffer:61",
+          "sentence": "Die Leistung nach Nummer 61 darf nicht berechnet werden, wenn die Assistenz durch nicht liquidationsberechtigte Ärzte erfolgt."
+        }
+      ]
+    },
+    "62": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "634": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "635": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "636": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "637": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "638": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "639": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "640": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "641": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "642": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "643": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "644": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "645": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "646": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "647": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "648": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 8,
+      "encoded": 8,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "650": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 8,
+      "encoded": 8,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "651": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 8,
+      "encoded": 8,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "652": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "653": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "654": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "655": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "656": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "657": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "659": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "660": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "661": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "665": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "666": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "669": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "670": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "671": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "672": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "7": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 19,
+      "encoded": 18,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:1730",
+          "sentence": "Wird eine Harnblasenkatheterisierung lediglich ausgeführt, um eine gynäkologische Untersuchung nach Nummer 7 zu erleichtern, so ist sie neben der Leistung nach Nummer 7 nicht berechnungsfähig."
+        }
+      ]
+    },
+    "70": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "75": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "76": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "77": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:77",
+          "sentence": "Die Leistung nach Nummer 77 ist für eine im zeitlichen Zusammenhang durchgeführte Kur unabhängig von deren Dauer nur einmal berechnungsfähig."
+        }
+      ]
+    },
+    "78": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "8": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 19,
+      "encoded": 18,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:800",
+          "sentence": "Neben der Leistung nach Nummer 800 sind die Leistungen nach den Nummern 8, 26, 825, 826, 830 und 1400 nicht berechnungsfähig."
+        }
+      ]
+    },
+    "80": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:96",
+          "sentence": "Die Schreibgebühren nach den Nummern 95 und 96 sind nur neben den Leistungen nach den Nummern 80, 85 und 90 und nur mit dem einfachen Gebührensatz berechnungsfähig."
+        }
+      ]
+    },
+    "804": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "806": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "807": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 4,
+      "encoded": 4,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "808": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "812": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "817": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "835": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "849": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "85": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:96",
+          "sentence": "Die Schreibgebühren nach den Nummern 95 und 96 sind nur neben den Leistungen nach den Nummern 80, 85 und 90 und nur mit dem einfachen Gebührensatz berechnungsfähig."
+        }
+      ]
+    },
+    "861": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "862": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "863": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "864": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "870": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "871": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "886": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 1,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "887": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "90": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 2,
+      "encoded": 1,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ziffer:96",
+          "sentence": "Die Schreibgebühren nach den Nummern 95 und 96 sind nur neben den Leistungen nach den Nummern 80, 85 und 90 und nur mit dem einfachen Gebührensatz berechnungsfähig."
+        }
+      ]
+    },
+    "95": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "96": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 2,
+      "encoded": 2,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "A": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 5,
+      "encoded": 4,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ziffer:A",
+          "sentence": "Der Zuschlag nach Buchstabe A ist für Krankenhausärzte nicht berechnungsfähig."
+        }
+      ]
+    },
+    "B": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 6,
+      "encoded": 5,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_02",
+          "sentence": "Die Zuschläge nach den Buchstaben B bis D dürfen von Krankenhausärzten nicht berechnet werden, es sei denn, die Leistungen werden durch den liquidationsberechtigten Arzt oder seinen Vertreter nach § 4 Abs. 2 Satz 3 erbracht"
+        }
+      ]
+    },
+    "C": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 6,
+      "encoded": 5,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_02",
+          "sentence": "Die Zuschläge nach den Buchstaben B bis D dürfen von Krankenhausärzten nicht berechnet werden, es sei denn, die Leistungen werden durch den liquidationsberechtigten Arzt oder seinen Vertreter nach § 4 Abs. 2 Satz 3 erbracht"
+        }
+      ]
+    },
+    "D": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 6,
+      "encoded": 4,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ab_02",
+          "sentence": "Die Zuschläge nach den Buchstaben B bis D dürfen von Krankenhausärzten nicht berechnet werden, es sei denn, die Leistungen werden durch den liquidationsberechtigten Arzt oder seinen Vertreter nach § 4 Abs. 2 Satz 3 erbracht"
+        },
+        {
+          "source": "ziffer:D",
+          "sentence": "Der Zuschlag nach Buchstabe D ist für Krankenhausärzte im Zusammenhang mit zwischen 8 und 20 Uhr erbrachten Leistungen nicht berechnungsfähig."
+        }
+      ]
+    },
+    "E": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 6,
+      "encoded": 4,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ziffer:793",
+          "sentence": "Leistungen nach den Abschnitten B und C (mit Ausnahme der Leistung nach Nummer 50 in Verbindung mit einem Zuschlag nach den Buchstaben E, F, G und/oder H) sowie die Leistungen nach den Nummern 3550, 3555, 3557, 3558, 3562.H1, 3565.H1, 3574, 3580.H1, 3584.H1, 3585.H1, 3587.H1, 3592.H1, 3594.H1, 3595.H1, 3620, 3680, 3761 und 4381, die in ursächlichem Zusammenhang mit der Dialysebehandlung erbracht werden, sind nicht gesondert berechnungsfähig"
+        },
+        {
+          "source": "ziffer:E",
+          "sentence": "Der Zuschlag nach Buchstabe E ist neben Leistungen nach den Nummern 45 und/oder 46 nicht berechnungsfähig, es sei denn, die Visite wird durch einen Belegarzt durchgeführt"
+        }
+      ]
+    },
+    "F": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 8,
+      "encoded": 6,
+      "golden_tested": true,
+      "not_encoded": [
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 100 oder 101 dürfen die Zuschläge nach den Buchstaben F bis H unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        },
+        {
+          "source": "ziffer:793",
+          "sentence": "Leistungen nach den Abschnitten B und C (mit Ausnahme der Leistung nach Nummer 50 in Verbindung mit einem Zuschlag nach den Buchstaben E, F, G und/oder H) sowie die Leistungen nach den Nummern 3550, 3555, 3557, 3558, 3562.H1, 3565.H1, 3574, 3580.H1, 3584.H1, 3585.H1, 3587.H1, 3592.H1, 3594.H1, 3595.H1, 3620, 3680, 3761 und 4381, die in ursächlichem Zusammenhang mit der Dialysebehandlung erbracht werden, sind nicht gesondert berechnungsfähig"
+        }
+      ]
+    },
+    "G": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 8,
+      "encoded": 6,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 100 oder 101 dürfen die Zuschläge nach den Buchstaben F bis H unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        },
+        {
+          "source": "ziffer:793",
+          "sentence": "Leistungen nach den Abschnitten B und C (mit Ausnahme der Leistung nach Nummer 50 in Verbindung mit einem Zuschlag nach den Buchstaben E, F, G und/oder H) sowie die Leistungen nach den Nummern 3550, 3555, 3557, 3558, 3562.H1, 3565.H1, 3574, 3580.H1, 3584.H1, 3585.H1, 3587.H1, 3592.H1, 3594.H1, 3595.H1, 3620, 3680, 3761 und 4381, die in ursächlichem Zusammenhang mit der Dialysebehandlung erbracht werden, sind nicht gesondert berechnungsfähig"
+        }
+      ]
+    },
+    "H": {
+      "classification": "PARTIAL",
+      "constraint_sentences": 7,
+      "encoded": 5,
+      "golden_tested": false,
+      "not_encoded": [
+        {
+          "source": "ab_03",
+          "sentence": "Im Zusammenhang mit Leistungen nach den Nummern 100 oder 101 dürfen die Zuschläge nach den Buchstaben F bis H unabhängig von der Anzahl und Kombination der erbrachten Leistungen je Inanspruchnahme des Arztes nur einmal berechnet werden"
+        },
+        {
+          "source": "ziffer:793",
+          "sentence": "Leistungen nach den Abschnitten B und C (mit Ausnahme der Leistung nach Nummer 50 in Verbindung mit einem Zuschlag nach den Buchstaben E, F, G und/oder H) sowie die Leistungen nach den Nummern 3550, 3555, 3557, 3558, 3562.H1, 3565.H1, 3574, 3580.H1, 3584.H1, 3585.H1, 3587.H1, 3592.H1, 3594.H1, 3595.H1, 3620, 3680, 3761 und 4381, die in ursächlichem Zusammenhang mit der Dialysebehandlung erbracht werden, sind nicht gesondert berechnungsfähig"
+        }
+      ]
+    },
+    "J": {
+      "classification": "MECHANICAL_ONLY",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": false,
+      "not_encoded": []
+    },
+    "K1": {
+      "classification": "FULLY_VERIFIED",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": true,
+      "not_encoded": []
+    },
+    "K2": {
+      "classification": "FULLY_VERIFIED",
+      "constraint_sentences": 3,
+      "encoded": 3,
+      "golden_tested": true,
+      "not_encoded": []
+    }
+  }
+}
