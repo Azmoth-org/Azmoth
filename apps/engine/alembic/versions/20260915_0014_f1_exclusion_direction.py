@@ -1,6 +1,6 @@
 """F1 — carry rule reviews across the 35 exclusion rule ids the direction fix renamed.
 
-Revision ID: 0014_f1_exclusion_direction_rule_ids
+Revision ID: 0014_f1_exclusion_direction
 Revises: 0013_patient_ziffer_history
 Create Date: 2026-09-15
 
@@ -26,6 +26,19 @@ reviewer through the UI. `POST /rules/{rule_id}/review` accepts any id the store
 "expected" is not "guaranteed", and a rename that is correct 99 % of the time and silently
 un-rejects a rule the other 1 % is not a rename anyone should ship.
 
+**What is deliberately *not* migrated.** A rule id also appears inside two JSON payload columns:
+`proposals.solver_result_json` (the full `CodingResponse`, with a `rule_id` on every blocked
+position and proof row) and `batch_files.report_json`. Those are write-once records of what the
+engine said at the time, and `proposals.receipt_hash` was computed over that exact document —
+`app/db/models.py` on the column: *"what has to be reproducible is the response as served."*
+Rewriting an id there would not correct a past answer, it would falsify the record of one and
+break its receipt. They are left alone on purpose.
+
+That is the whole list. `rule_reviews.rule_id` is the only column in the schema that holds a rule
+id as a live reference; `rule_proposals` keys on `ziffer`, and `proposals` carries
+`rules_hash`/`rules_version`, not ids. `tests/test_f1_migration.py` pins the rename list against
+the CSV so it cannot drift from the data it describes.
+
 Reversible: `downgrade()` maps the ids back, so rolling back to 0013 alongside a revert of the CSV
 leaves reviews attached to the rules they were written about.
 """
@@ -37,7 +50,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0014_f1_exclusion_direction_rule_ids"
+revision: str = "0014_f1_exclusion_direction"
 down_revision: str | None = "0013_patient_ziffer_history"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

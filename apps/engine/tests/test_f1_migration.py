@@ -1,6 +1,6 @@
 """The F1 rename list, checked against the data it claims to describe — and run.
 
-`alembic/versions/20260915_0014_f1_exclusion_direction_rule_ids.py` carries 35 `old -> new` rule
+`alembic/versions/20260915_0014_f1_exclusion_direction.py` carries 35 `old -> new` rule
 ids as a literal. A literal transcribed from a diff is exactly the kind of thing that is right on
 the day it is written and wrong six months later, and the failure is silent: a rename that names
 an id nothing has does nothing, and a review stays attached to a rule that no longer exists.
@@ -25,7 +25,7 @@ MIGRATION = (
     Path(__file__).resolve().parents[1]
     / "alembic"
     / "versions"
-    / "20260915_0014_f1_exclusion_direction_rule_ids.py"
+    / "20260915_0014_f1_exclusion_direction.py"
 )
 
 

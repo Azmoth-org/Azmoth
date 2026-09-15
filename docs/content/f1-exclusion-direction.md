@@ -213,8 +213,25 @@ offers rules that are unverified in the CSV, and all 35 are `verified: true`. Bu
 and a rename that is correct almost always and silently un-rejects a rule the rest of the time is
 not a rename worth shipping.
 
-`alembic/versions/20260915_0014_f1_exclusion_direction_rule_ids.py` maps the 35 ids, and
-downgrades.
+`alembic/versions/20260915_0014_f1_exclusion_direction.py` maps the 35 ids, and downgrades.
+
+**Everywhere else a rule id is stored**, checked rather than assumed:
+
+| Where | Holds a rule id? | Migrated? |
+|---|---|---|
+| `rule_reviews.rule_id` | yes, as a live reference | **yes** — migration 0014 |
+| `proposals.solver_result_json` | yes, inside the stored `CodingResponse` | **no, deliberately** |
+| `batch_files.report_json` | yes, inside a stored PADnext report | **no, deliberately** |
+| `rule_proposals` | no — keys on `ziffer` | n/a |
+| `proposals.rules_hash` / `rules_version` | no — hashes, not ids | n/a |
+
+The two JSON payloads are write-once records of what the engine said at the time, and
+`proposals.receipt_hash` was computed over that exact document — `app/db/models.py` on the column:
+*"what has to be reproducible is the response as served."* Rewriting an id there would not correct
+a past answer, it would falsify the record of one and break its receipt.
+
+A repo-wide grep for the 35 old ids finds them in no source file, fixture, or config outside the
+CSV itself and the three files that document the fix.
 
 ---
 
