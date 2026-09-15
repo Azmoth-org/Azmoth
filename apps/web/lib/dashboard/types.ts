@@ -22,6 +22,7 @@ import type {
   Proposal,
   ProposalList,
   RuleCoverage,
+  RuleProposalList,
 } from "@workspace/contracts"
 
 export type { BatchAuditJobSummary, HealthResponse, Proposal, RuleCoverage }
@@ -81,6 +82,15 @@ export function isBatchAuditJobList(
       isRecord(job) &&
       isNonEmptyString(job.batch_id) &&
       isNonEmptyString(job.status)
+  )
+}
+
+/** A `RuleProposalList` whose rows carry at least what `/rules/proposals` renders. */
+export function isRuleProposalList(value: unknown): value is RuleProposalList {
+  if (!isRecord(value) || !Array.isArray(value.items)) return false
+  return value.items.every(
+    (item) =>
+      isRecord(item) && isNonEmptyString(item.id) && isNonEmptyString(item.ziffer)
   )
 }
 

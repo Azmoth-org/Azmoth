@@ -60,6 +60,7 @@ import {
   toDeepLinkError,
 } from "@/lib/deep-link"
 import { downloadProposalExport } from "@/lib/download"
+import { RULE_REVIEW_ENABLED } from "@/lib/features"
 import {
   SYNTHETIC_CASES,
   findSyntheticCase,
@@ -400,24 +401,33 @@ export function ReviewWorkbench({
       {/*
         Picking and running a fixture is an input to the screen, not part of the document it
         produces — and it is a *development* input. It was the first card on the page, which meant
-        the screen a physician uses to approve a bill opened with a test-case picker. It is filed
-        under a collapsed disclosure now, in a dashed box that says at a glance it is tooling rather
-        than a step of the workflow. Everyone who arrives from `/proposals` or the dashboard has a
-        proposal already and never opens it.
+        the screen a physician uses to approve a bill opened with a test-case picker. Filing it
+        under a collapsed disclosure made it quieter; it did not make it belong on a customer's
+        screen, where "Entwicklerwerkzeuge" above a list of synthetic test cases says plainly that
+        the reader is looking at somebody's development build.
+
+        So it is behind `RULE_REVIEW_ENABLED`, the same flag that hides `/rules` — and the same
+        flag deliberately, rather than a second one. Both surfaces answer one question: is this
+        deployment ours or a customer's. Two flags would be two things to remember and one of them
+        would eventually ship wrong. `lib/features.ts` explains why it is opt-in and why it is not
+        an access control; this panel needs none, since every case it can run is synthetic and the
+        solve behind it is the same one `/proposals` reaches.
       */}
-      <div className="rounded-2xl border border-dashed px-4 py-3 print:hidden">
-        <Disclosure
-          label="Entwicklerwerkzeuge — synthetischen Fall ausführen"
-          printOpen={false}
-        >
-          <CaseSelector
-            selected={selected}
-            onSelect={selectCase}
-            onRun={run}
-            pending={pending === "solving"}
-          />
-        </Disclosure>
-      </div>
+      {RULE_REVIEW_ENABLED ? (
+        <div className="rounded-2xl border border-dashed px-4 py-3 print:hidden">
+          <Disclosure
+            label="Entwicklerwerkzeuge — synthetischen Fall ausführen"
+            printOpen={false}
+          >
+            <CaseSelector
+              selected={selected}
+              onSelect={selectCase}
+              onRun={run}
+              pending={pending === "solving"}
+            />
+          </Disclosure>
+        </div>
+      ) : null}
 
       {shownError ? (
         <ErrorPanel
@@ -579,12 +589,19 @@ export function ReviewWorkbench({
           <EmptyTitle>Kein Vorschlag ausgewählt</EmptyTitle>
           <EmptyDescription>
             Öffnen Sie eine Prüfung über <strong>Alle Prüfungen</strong> in der
-            Navigation oder über die Übersicht. Zum Ausprobieren lässt sich oben
-            unter <strong>Entwicklerwerkzeuge</strong> ein synthetischer Fall
-            ausführen; die Engine muss dafür unter{" "}
-            <span className="font-mono text-xs">ENGINE_BASE_URL</span>{" "}
-            erreichbar sein (Standard{" "}
-            <span className="font-mono text-xs">http://localhost:8000</span>).
+            Navigation oder über die Übersicht.
+            {RULE_REVIEW_ENABLED ? (
+              <>
+                {" "}
+                Zum Ausprobieren lässt sich oben unter{" "}
+                <strong>Entwicklerwerkzeuge</strong> ein synthetischer Fall
+                ausführen; die Engine muss dafür unter{" "}
+                <span className="font-mono text-xs">ENGINE_BASE_URL</span>{" "}
+                erreichbar sein (Standard{" "}
+                <span className="font-mono text-xs">http://localhost:8000</span>
+                ).
+              </>
+            ) : null}
           </EmptyDescription>
         </Empty>
       ) : null}

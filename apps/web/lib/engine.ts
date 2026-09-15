@@ -93,6 +93,40 @@ const USER_ID_HEADER = "X-User-ID"
  */
 const ORGANIZATION_ID_HEADER = "X-Organization-ID"
 
+/**
+ * The practice's *name*, for the one thing an id cannot do: be printed.
+ *
+ * Must match `ORGANIZATION_NAME_HEADER` in `app/api/tenancy.py`. Unlike the id this is optional on
+ * both sides — the engine falls back to the id-derived label when it is absent — and it is sent
+ * only by the callers that render a document, because it is display text and nothing filters,
+ * stores or authorises on it. `app/api/tenancy.py` is explicit that the id is the tenant boundary
+ * and this is not.
+ *
+ * It exists because a signed-in Prüfbericht printed the organisation id under "Praxis / Konto": a
+ * practice was handed a report headed by a 32-character UUID and could not tell it was theirs.
+ *
+ * **The value is percent-encoded**, and that is not optional — see `encodeHeaderValue`.
+ */
+export const ORGANIZATION_NAME_HEADER = "X-Organization-Name"
+
+/**
+ * A header value that survives the trip to the engine with its umlauts intact.
+ *
+ * HTTP header values are bytes, and the two ends disagree about how to read them: `fetch` refuses
+ * any code point above U+00FF outright (`TypeError: Invalid character in header content`), and
+ * Starlette decodes whatever arrives as latin-1 — so "Praxis Müller" sent as UTF-8 is *received* as
+ * "Praxis MÃ¼ller". Neither end is wrong; the encoding simply has to be stated rather than assumed.
+ *
+ * Percent-encoding states it. `encodeURIComponent` emits ASCII only, which `fetch` accepts and
+ * latin-1 round-trips unchanged, and `urllib.parse.unquote` on the engine side recovers the exact
+ * UTF-8 string. The alternative — dropping everything outside latin-1 — would silently print a
+ * practice's name with characters missing, which on a document they hand a payer is worse than
+ * printing no name at all.
+ */
+export function encodeHeaderValue(value: string): string {
+  return encodeURIComponent(value)
+}
+
 /** What the caller must have before anything is proxied: a session the database recognises. */
 type Identity =
   | { ok: true; headers: Record<string, string> }
@@ -504,6 +538,15 @@ export async function proxyEngineDownload(
     body?: unknown
     /** Raw bytes to POST — a PADnext delivery — with the filename the engine should echo back. */
     upload?: { bytes: ArrayBuffer; filename?: string; contentType?: string }
+    /**
+     * Extra headers for this one call. Display-only values a document needs and the tenant headers
+     * cannot carry — today just `X-Organization-Name`.
+     *
+     * Deliberately not merged over `identity.headers` below: the identity headers are what the
+     * engine authorises on, and a caller must not be able to overwrite the tenant it was resolved
+     * to by passing the same key here.
+     */
+    extraHeaders?: Record<string, string>
   }
 ): Promise<Response> {
   const url = `${engineBaseUrl()}${path}`
@@ -521,6 +564,9 @@ export async function proxyEngineDownload(
     response = await fetch(url, {
       method,
       headers: {
+        ...init?.extraHeaders,
+        // After `extraHeaders`, never before: the tenant this request was resolved to is not
+        // something a caller may override.
         ...identity.headers,
         ...(init?.upload
           ? {

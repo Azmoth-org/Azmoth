@@ -48,7 +48,9 @@ def test_same_fixture_twice_gives_identical_hash_but_different_identity(pipeline
     assert first.created_at != second.created_at
 
 
-def test_same_fixture_on_independent_pipelines_gives_identical_hash(pipeline, settings, catalog, rules, manual_case):
+def test_same_fixture_on_independent_pipelines_gives_identical_hash(
+    pipeline, settings, catalog, rules, manual_case
+):
     """The same guarantee without a shared cache: two independently constructed `Pipeline`
     instances (independent `ResultCache`s) solving the same fixture must still agree, because the
     hash is a pure function of catalog/rule/logic/solver identity and canonical input/output — not
@@ -146,12 +148,16 @@ def _bump_output_by_one_cent(kwargs: dict[str, Any]) -> None:
 
 
 FIELD_PERTURBATIONS = [
-    pytest.param("catalog_version", lambda k: k.__setitem__("catalog_version", "2026.2"), id="catalog_version"),
+    pytest.param(
+        "catalog_version", lambda k: k.__setitem__("catalog_version", "2026.2"), id="catalog_version"
+    ),
     pytest.param("catalog_sha256", lambda k: k.__setitem__("catalog_sha256", "c" * 64), id="catalog_sha256"),
     pytest.param("rules_version", lambda k: k.__setitem__("rules_version", "rv-2026.2"), id="rules_version"),
     pytest.param("rules_hash", lambda k: k.__setitem__("rules_hash", "d" * 64), id="rules_hash"),
     pytest.param("logic_version", lambda k: k.__setitem__("logic_version", "logic-1.1"), id="logic_version"),
-    pytest.param("solver_version", lambda k: k.__setitem__("solver_version", "clingo-5.7.2"), id="solver_version"),
+    pytest.param(
+        "solver_version", lambda k: k.__setitem__("solver_version", "clingo-5.7.2"), id="solver_version"
+    ),
     pytest.param(
         "rules_engine_version",
         lambda k: k.__setitem__("rules_engine_version", "souffle-2.5"),

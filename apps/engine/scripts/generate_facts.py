@@ -27,7 +27,9 @@ from app.rules.rule_store import RuleStore  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--manual", required=True, help="manual extraction JSON")
     parser.add_argument("-o", "--out", default="facts", help="output directory (default: facts/)")
     parser.add_argument(

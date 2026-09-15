@@ -31,7 +31,13 @@ def _write_report(repo_root, *, rules_hash_value: str, all_clean: bool) -> None:
             {
                 "generated_at": "2026-09-12T00:00:00+00:00",
                 "rules_hash": rules_hash_value,
-                "cases": {"case_001_knee": {"status": status, "allowed": 0, "not_allowed": 0 if all_clean else 1}},
+                "cases": {
+                    "case_001_knee": {
+                        "status": status,
+                        "allowed": 0,
+                        "not_allowed": 0 if all_clean else 1,
+                    }
+                },
                 "all_clean": all_clean,
             }
         ),

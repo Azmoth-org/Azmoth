@@ -60,10 +60,17 @@ from starlette.concurrency import run_in_threadpool
 from app.api.deps import batches, pipeline
 from app.api.identity import RequestActor
 from app.api.quota import apply as apply_quota, check_and_refuse, optional_quota
-from app.api.tenancy import ORGANIZATION_ID_HEADER, RequestOrganization, organization_label
+from app.api.tenancy import (
+    ORGANIZATION_ID_HEADER,
+    ORGANIZATION_NAME_HEADER,
+    RequestOrganization,
+    organization_label,
+    organization_name_label,
+)
 from app.core.observability import record_invoices
-from app.errors import EmptyRequestBody, UnknownZifferError
+from app.errors import EmptyRequestBody, ErrorCode, UnknownZifferError
 from app.padnext import audit_delivery, validate_bytes
+from app.padnext.reader import PadnextError
 from app.schemas import (
     BatchAuditAccepted,
     BatchAuditJob,
@@ -104,6 +111,69 @@ MAX_BATCH_FILE_BYTES = 8 * 1024 * 1024
 MAX_BATCH_TOTAL_BYTES = 64 * 1024 * 1024
 
 
+#: German prose for the two top-level refusals a caller can actually meet on this endpoint, keyed by
+#: the machine code that stays exactly as it was.
+#:
+#: **Why these two and only these two.** Every refusal that comes out of `app.padnext.validation`
+#: is already German — that module carries a `message_de` per problem and is where the batched,
+#: field-level diagnostics live. What was still English is the pair raised by the *reader* before
+#: validation gets a chance to collect anything: `InvalidXmlError` when the bytes do not parse at
+#: all, and the bare `PadnextError` for a payload that is not a delivery (wrong first byte, a
+#: DOCTYPE, an unopenable container, a size limit). Those two sentences reached a German UI as
+#: "XML is not well formed: mismatched tag: line 41, column 6" and "not XML: the payload does not
+#: start with '<'".
+#:
+#: **Only the prose is replaced.** `error_code` stays `INVALID_XML` / `PADNEXT_UNREADABLE`, the HTTP
+#: status stays what it was, and the original English text is preserved under
+#: `details.technical_detail` — a support call and a bug report both need the parser's own words,
+#: and they were the only copy of them.
+_GERMAN_MESSAGE: dict[ErrorCode, str] = {
+    ErrorCode.INVALID_XML: (
+        "Die Datei ist keine wohlgeformte XML-Datei und konnte nicht gelesen werden. "
+        "Häufige Ursachen: eine andere Kodierung als UTF-8, ein nicht maskiertes &, < oder > in "
+        "einem Freitextfeld, oder ein unvollständiger Export. Bitte erzeugen Sie die Datei in "
+        "Ihrem Praxisverwaltungssystem neu und laden Sie sie erneut hoch."
+    ),
+    ErrorCode.PADNEXT_UNREADABLE: (
+        "Die Datei konnte nicht als PADnext-Lieferung gelesen werden. Erwartet wird ein "
+        ".padx-Container oder eine *_padx.xml-Nutzdatei aus Ihrem Praxisverwaltungssystem. "
+        "Bitte prüfen Sie, ob Sie die richtige Datei ausgewählt haben und ob der Export "
+        "vollständig abgeschlossen wurde."
+    ),
+}
+
+
+def _in_german(exc: PadnextError) -> PadnextError:
+    """The same refusal, in the language the reader of this product speaks.
+
+    Returns the exception unchanged when there is no German prose for its code — which is the
+    common case, because everything `app.padnext.validation` raises is German already and carries
+    field-level detail this generic sentence could not improve on.
+
+    The technical text is not discarded. It moves to `details.technical_detail`, where the UI does
+    not show it (see `components/review/error-panel.tsx`, which no longer prints `details` at all)
+    and a log line, a support request and `docs/errors.md` can all still reach it.
+
+    **The exception is edited, not rebuilt, and that is not a shortcut.** `PadnextValidationFailed`
+    *adopts* its primary problem's identity by shadowing `error_code` and `http_status` as instance
+    attributes, and it carries a `result` holding every batched error, warning and preview the
+    validation collected. Constructing a fresh instance loses all of that and silently: a
+    well-formedness failure would go out as the class default `PADNEXT_UNREADABLE`/422 instead of
+    `INVALID_XML`/400, which is a contract change disguised as a translation. Only `message` and
+    `details` are ours to change, so only they are changed.
+    """
+    german = _GERMAN_MESSAGE.get(exc.error_code)
+    if german is None:
+        return exc
+
+    exc.message = german
+    exc.details = {**exc.details, "technical_detail": exc.args[0] if exc.args else ""}
+    # `Exception.args` is what `str(exc)` reads, and the handler is not the only thing that
+    # stringifies an exception — a log line does too.
+    exc.args = (german,)
+    return exc
+
+
 def _audit_bytes(body: bytes, *, source_name: str) -> PadnextAuditReport:
     """Read one delivery and audit it. Synchronous, and the only place that work happens.
 
@@ -131,8 +201,14 @@ def _audit_bytes(body: bytes, *, source_name: str) -> PadnextAuditReport:
     # `details.line`, `PADNEXT_SCHEMA_VIOLATION` still a 422 carrying `details.violations`,
     # `ECHTDATEN_UNDECLARED` still a 422 carrying `details.echtdaten_declared` — and the batched
     # list, the warnings and the preview arrive beside them under `details.errors`.
-    result = validate_bytes(body, source_name=source_name)
-    result.raise_for_status()
+    try:
+        result = validate_bytes(body, source_name=source_name)
+        result.raise_for_status()
+    except PadnextError as exc:
+        # Re-raised in German where there is German for it, with the machine code, the status and
+        # the technical text all preserved — see `_in_german`. `raise … from exc` keeps the original
+        # in the traceback, so a log still shows where the refusal was actually decided.
+        raise _in_german(exc) from exc
 
     # Not `None` once nothing is blocking: a readable delivery is exactly what "no errors" means.
     delivery, read_findings = result.delivery, result.findings
@@ -307,14 +383,24 @@ def padnext_audit_pdf(
     report = _audit_bytes(body, source_name=request.headers.get("x-padnext-filename", ""))
     document = render_single_report(
         report,
-        # Never `request.headers.get(...)` straight into the document. The header is asserted by a
-        # proxy and this endpoint neither stores nor filters anything by it, so it was free display
-        # text printed under "Praxis / Konto" — a Prüfbericht that names a practice, forgeable by
-        # anyone who could set a header. `organization_label` keeps it only if it has the shape of
-        # a Better Auth organisation id and prints a neutral label otherwise, including for the
-        # anonymous demo path, which sends no header at all. See `app.api.tenancy`.
-        organization=organization_label(request.headers.get(ORGANIZATION_ID_HEADER)),
+        # Never `request.headers.get(...)` straight into the document. Both headers are asserted by
+        # a proxy and this endpoint neither stores nor filters anything by them, so whatever they
+        # carry is free display text printed under "Praxis / Konto" — a Prüfbericht that names a
+        # practice, forgeable by anyone who could set a header. Both therefore go through
+        # `app.api.tenancy`, which states at length what each one is allowed to be.
+        #
+        # The *name* is preferred when the proxy resolved one, and that is the fix for a report
+        # whose account line read `K7xQ2mN8pR4tY6wZ1aB3cD5eF9gH0jL2` — a practice handed that
+        # document could not tell it was theirs. The id-derived label remains the fallback, for a
+        # caller that sends no name and for the anonymous demo path, which sends no header at all.
+        organization=(
+            organization_name_label(request.headers.get(ORGANIZATION_NAME_HEADER))
+            or organization_label(request.headers.get(ORGANIZATION_ID_HEADER))
+        ),
         generated_at=datetime.now(timezone.utc),
+        # The store this audit just ran against, so the rule counts the document prints are the
+        # ones that produced its verdicts rather than a figure written into the renderer.
+        rules=pipeline().rules,
     )
     log.info(
         "padnext/audit.pdf by %s: %d positions, %d pages",
@@ -592,8 +678,9 @@ async def padnext_batch_list(
 
     Scoped to the calling organisation, and `total` is recounted under that filter as well, so a
     practice sees its own batches and its own count. `total` is recounted under `status` and
-    `created_after` too, so it says how many batches match and never how many rows the table holds. The rows themselves stay in `jobs` — not `items`,
-    which is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one
+    `created_after` too, so it says how many batches match and never how many rows the table
+    holds. The rows themselves stay in `jobs` — not `items`, which is what the newer
+    `GET /api/v1/proposals` envelope uses. The two disagree because this one
     shipped first and renaming a field in a contract already committed to `packages/contracts/`
     would break a client to buy symmetry.
 

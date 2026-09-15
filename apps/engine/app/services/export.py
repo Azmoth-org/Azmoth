@@ -196,6 +196,27 @@ SUMMARY_COLUMNS = [
     "coverage_ratio",
 ]
 
+#: One row per claimed position. Fourteen columns, and the five added last are the ones that turn
+#: this file from a record into something a billing centre can work from.
+#:
+#:   - **`datum`** — the Leistungsdatum. Without it a disputed line cannot be matched to a visit in
+#:     the patient file, which is the first thing anybody does with a finding. It is also the field
+#:     two of the engine's own rules turn on (a same-day exclusion and one spanning two dates are
+#:     different verdicts), so its absence made those verdicts uncheckable.
+#:   - **`rechnungs_id`** — which invoice the line was billed on. `positionsnr` is scoped to an
+#:     `<abrechnungsfall>`, so a six-invoice batch had six rows reading "Position 1" with nothing to
+#:     tell them apart; sorting this file by position number produced nonsense. The PDF grew the
+#:     same column for the same reason.
+#:   - **`recomputed_amount_eur`** and **`amount_delta_eur`** — what the versioned catalog says the
+#:     position costs, and the difference from what was claimed. The file carried the claim only, so
+#:     the one question a reconciliation asks — *by how much?* — had to be answered by opening each
+#:     PDF. The delta is the engine's own computed field, not a subtraction done here: a spreadsheet
+#:     re-deriving it would disagree with the report the first time a rounding rule changed.
+#:   - **`legal_basis`** — the paragraph behind the position. A row saying "nicht berechnungsfähig"
+#:     with no citation is a claim a payer refuses; with `§ 4 Abs. 2a GOÄ` beside it, it is checkable.
+#:
+#: Appended rather than inserted, so an importer reading by index still finds every column it knew
+#: where it left it.
 LINE_ITEM_COLUMNS = [
     "filename",
     "positionsnr",
@@ -206,6 +227,11 @@ LINE_ITEM_COLUMNS = [
     "bucket_reason",
     "verified_rule_ids",
     "advisory_rule_ids",
+    "datum",
+    "rechnungs_id",
+    "recomputed_amount_eur",
+    "amount_delta_eur",
+    "legal_basis",
 ]
 
 FILE_COLUMNS = [
@@ -294,6 +320,24 @@ def line_item_rows(files: list[BatchFileRecord]) -> list[list[str]]:
                     position.bucket_reason,
                     LIST_SEPARATOR.join(position.verified_rule_ids),
                     LIST_SEPARATOR.join(position.advisory_rule_ids),
+                    # Empty rather than a placeholder wherever the delivery or the audit had no
+                    # value: a cell reading "0,00" would be a statement this file has none to make,
+                    # and `_iso` above takes the same line about timestamps. `datum` is written
+                    # exactly as the delivery stated it (ISO), not reformatted — this is the machine
+                    # -readable copy, and the PDF is where it is set in German order.
+                    position.datum or "",
+                    position.rechnungs_id,
+                    (
+                        ""
+                        if position.recomputed_amount_eur is None
+                        else str(position.recomputed_amount_eur)
+                    ),
+                    (
+                        ""
+                        if position.amount_delta_eur is None
+                        else str(position.amount_delta_eur)
+                    ),
+                    position.legal_basis,
                 ]
             )
     return rows

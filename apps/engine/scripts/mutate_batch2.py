@@ -369,7 +369,7 @@ def run_mutation(mutation: Mutation, keep: bool) -> dict:
             "survivor": not detected,
             "note": mutation.note,
             "command": (
-                f"python scripts/validate_batch2_csvs.py --rules-dir <copy> --catalog <catalog>"
+                "python scripts/validate_batch2_csvs.py --rules-dir <copy> --catalog <catalog>"
             ),
         }
     finally:

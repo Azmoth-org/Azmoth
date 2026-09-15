@@ -54,6 +54,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Literal, NamedTuple
 
+from app.rules.rule_store import RuleStore
 from app.schemas.batch import BatchAggregateSummary, BatchAuditJob, BatchFileStatus
 from app.schemas.padnext import PadnextAuditedPosition, PadnextAuditReport, PadnextFinding
 
@@ -1010,8 +1011,17 @@ def _summary_table(
     rows: Sequence[tuple[str, int, Decimal]],
     total_positions: int,
     coverage_ratio: float,
+    coverage_line: str | None = None,
 ) -> None:
-    """The three buckets and their total. Never four rows, never a merged »Risiko«."""
+    """The three buckets and their total. Never four rows, never a merged »Risiko«.
+
+    `coverage_line` replaces the »Prüfabdeckung: x %« line under the table. It exists because that
+    line is the first bold sentence a reader meets, and at a coverage of zero it read
+    »Prüfabdeckung: 0,0 % der abgerechneten Summe« — which a practice being shown this document
+    understands as *"your invoice scored nothing"* rather than as *"our rules did not reach it"*.
+    Nothing about the number is wrong; leading with it is. See `_lead_line`, which composes the
+    replacement out of what the engine actually checked.
+    """
     canvas.reserve(110)
 
     def share(value: Decimal) -> str:
@@ -1036,8 +1046,9 @@ def _summary_table(
             bold=True,
         )
     canvas.space(4)
-    canvas.text(
-        f"Prüfabdeckung: {_percent(coverage_ratio * 100)} der abgerechneten Summe",
+    canvas.paragraph(
+        coverage_line
+        or f"Prüfabdeckung: {_percent(coverage_ratio * 100)} der abgerechneten Summe",
         size=SIZE_SUBSECTION,
         bold=True,
         leading=16,
@@ -1437,6 +1448,124 @@ def _single_coverage_sentence(report: PadnextAuditReport) -> str:
     return "".join(parts).strip()
 
 
+def _enforced_rule_count(report: PadnextAuditReport, rules: RuleStore | None) -> int:
+    """How many rules were actually being enforced, counted and never asserted.
+
+    `rules` is the store the caller is holding — `render_single_report`'s callers both have the
+    pipeline's — and it is preferred because it is the live answer at render time. The report's own
+    figure is the fallback and is the same number by construction: `services/rule_coverage.build`
+    computes it from `RuleStore.enforced_rule_count()` at audit time, which is the one definition of
+    "enforced" in this codebase.
+
+    There is deliberately no literal here and none anywhere downstream. A document that quotes a
+    rule count is a document that goes stale the next time somebody verifies a rule, and this one
+    gets filed and read months later.
+    """
+    if rules is not None:
+        return rules.enforced_rule_count()
+    detail = report.rule_coverage_detail
+    if detail is not None:
+        return detail.enforced_rule_count
+    return report.enforced_rule_count
+
+
+def _lead_line(report: PadnextAuditReport, rules: RuleStore | None) -> str:
+    """The bold sentence under the summary table. What was checked — not a score.
+
+    **At a coverage of zero this document used to open with »Prüfabdeckung: 0,0 %«**, and that is
+    the single worst sentence the product emitted. The number is correct and it is a statement about
+    *this engine's rule coverage*, but it is printed directly beneath a table of the practice's own
+    euros, in bold, as the first conclusion on the page — where every reader takes it for a verdict
+    on the invoice. A practice whose billing is entirely correct got a report leading with a zero.
+
+    So at zero the lead says what the engine did instead: how many enforced rules the delivery was
+    checked against, and that nothing reaching a verified rule is the boundary of the rule set
+    rather than a finding. Above zero the percentage is meaningful — some share of the claim *was*
+    reached by a verified rule — and it is still what leads.
+    """
+    if report.coverage_ratio:
+        return f"Prüfabdeckung: {_percent(report.coverage_ratio * 100)} der abgerechneten Summe"
+
+    count = _enforced_rule_count(report, rules)
+    return (
+        f"Geprüft gegen {count} durchgesetzte Regeln. Keine der Positionen wurde von einer "
+        "verifizierten Regel erreicht — das ist die aktuelle Grenze der Regelabdeckung, kein Befund."
+    )
+
+
+#: The rule families this engine evaluates, in the order the document lists them: the label, the
+#: key in `RuleStore.summary()` that counts the family, and the one sentence that says what it
+#: decides. Every family runs against every delivery.
+#:
+#: **The point of printing this is that a report with no findings is ambiguous without it.** A
+#: reader who sees an empty findings list and a coverage of zero cannot tell "these checks ran and
+#: found nothing" from "these checks did not run", and the second reading is the one a sceptical
+#: Rechnungsprüfer reaches for. Naming the families — with their live counts, which is why the
+#: counts come off the store rather than out of this tuple — converts silence into a statement.
+_RULE_FAMILIES: tuple[tuple[str, str, str], ...] = (
+    (
+        "Ausschlüsse",
+        "exclusions_enforced",
+        "Ziffernpaare, die nebeneinander nicht berechnungsfähig sind.",
+    ),
+    (
+        "Steigerungsfaktoren",
+        "factor_caps_enforced",
+        "Ob der berechnete Faktor innerhalb des zulässigen Rahmens liegt und ob eine Begründung "
+        "nach § 12 Abs. 3 GOÄ vorliegt, wo sie verlangt ist.",
+    ),
+    (
+        "Spezifität",
+        "specificity_enforced",
+        "Ob eine allgemeine Ziffer neben der spezifischeren abgerechnet wurde.",
+    ),
+    (
+        "Zielleistungsprinzip",
+        "zielleistung_enforced",
+        "Methodisch notwendige Teilschritte, die nach § 4 Abs. 2a GOÄ mit der Zielleistung "
+        "abgegolten sind.",
+    ),
+)
+
+
+def _rule_families_section(
+    canvas: PdfCanvas, number: int, report: PadnextAuditReport, rules: RuleStore | None
+) -> None:
+    """What was evaluated, family by family, whether or not it found anything.
+
+    Counts are printed only when a `RuleStore` was passed: the per-family totals are not carried on
+    the report, and inventing them would be exactly the hardcoding this section exists to avoid. The
+    families themselves are named either way, because "these four checks ran" is the claim that
+    matters and it does not depend on a number.
+    """
+    _section(canvas, number, "Geprüfte Regelfamilien", needs=120)
+    canvas.paragraph(
+        "Diese Prüfungen laufen gegen jede Lieferung, unabhängig davon, ob sie etwas beanstanden. "
+        "Ein leerer Befundteil bedeutet deshalb, dass diese Regeln gegriffen und nichts gefunden "
+        "haben — nicht, dass nicht geprüft wurde. Gezählt werden ausschliesslich Regeln, die eine "
+        "Abrechnungsfachkraft bestätigt hat; nicht bestätigte Regeln werden unter der geltenden "
+        "Policy nicht durchgesetzt und sind in diesen Zahlen nicht enthalten.",
+        size=SIZE_SMALL,
+        grey=GREY_MUTED,
+    )
+    canvas.space(4)
+
+    summary = rules.summary() if rules is not None else None
+    for label, key, description in _RULE_FAMILIES:
+        count = summary.get(key) if summary else None
+        heading = label if count is None else f"{label} — {count} durchgesetzt"
+        canvas.reserve(14.0 + canvas.measure_paragraph(
+            description, size=SIZE_FOOTER, indent=_POSITION_INDENT
+        ))
+        canvas.row(
+            [Cell(0, heading, CONTENT_WIDTH, "left", True)],
+            size=SIZE_TABLE,
+            leading=13,
+        )
+        canvas.paragraph(description, size=SIZE_FOOTER, indent=_POSITION_INDENT, grey=GREY_MUTED)
+        canvas.space(2)
+
+
 #: The position table's shape. Six columns across 483 pt, with the three numeric ones right
 #: aligned so their last digits form a line a reader can add up down the page.
 #:
@@ -1444,18 +1573,55 @@ def _single_coverage_sentence(report: PadnextAuditReport) -> str:
 #: `<abrechnungsfall>` and not across a delivery, so it only says which line it is once the invoice
 #: is named — which is what the `Rechnung …` heading above each block now does. Together they are
 #: the address a billing centre corrects an invoice by: "Rechnung GOLDEN-F-0002, Position 1".
+#:
+#: **`Datum` is the column a payer asks for first and this table did not have.** A Prüfbericht is
+#: read against the patient file, and the question at every disputed line is "which visit was this?"
+#: — a `positionsnr` answers where the line sits in the invoice, not when the service was rendered.
+#: It also happens to be the field two of the engine's own rules turn on: a same-day exclusion and
+#: one spanning two dates are different verdicts (`classify_position`), so printing the date is what
+#: lets a reader check the verdict rather than take it.
+#:
+#: The 483 pt is unchanged and the room comes out of the Leistung column, which drops from 214 to
+#: 160 pt — about 32 characters of Leistungstext instead of 42. `fit` was already truncating that
+#: cell, so the change is to how much survives, not to whether it is truncated.
+#:
+#: **Every width here is the widest thing the column can hold plus the 2 pt gutter, measured rather
+#: than estimated.** At 9 pt Helvetica the widest Ziffer is `GOÄ 99999` (48.0 pt bold, which is why
+#: this column is 52 and not the 42 a first pass gave it — `GOZ 2020` alone is 42.0 and collided
+#: with the new Datum column by exactly the gutter), and a full date is `20.07.2026` at 45.0 pt.
+#: `tests/test_pdf_report.py::test_no_two_cells_in_the_demo_report_print_on_top_of_each_other`
+#: checks this against the rendered page, so a width chosen by eye does not survive the suite.
 _POSITION_COLUMNS = (
-    Column("Pos.", 0, 30),
-    Column("Ziffer", 30, 46),
-    Column("Leistung nach GOÄ", 76, 214),
-    Column("Faktor", 290, 40, "right"),
-    Column("Abgerechnet", 330, 76, "right"),
-    Column("Nachgerechnet", 406, 77, "right"),
+    Column("Pos.", 0, 24),
+    Column("Ziffer", 24, 52),
+    Column("Datum", 76, 50),
+    Column("Leistung nach GOÄ", 126, 160),
+    Column("Faktor", 286, 38, "right"),
+    Column("Abgerechnet", 324, 76, "right"),
+    Column("Nachgerechnet", 400, 83, "right"),
 )
 
 #: Where a position's explanatory lines are indented to: under the Leistung column, so the block
 #: reads as belonging to the Ziffer on its left rather than as a new row.
-_POSITION_INDENT = 76.0
+_POSITION_INDENT = 126.0
+
+
+def _service_date(raw: str | None) -> str:
+    """The Leistungsdatum as a German reader writes it, or an em dash.
+
+    PADnext carries `<datum>` as ISO `YYYY-MM-DD`; this document is German and sets every other date
+    as `DD.MM.YYYY` (see `_stamp`), so printing the ISO form here would be the one date on the page
+    in a different order. Anything that is not a plain ISO date is printed exactly as the delivery
+    wrote it rather than reformatted on a guess — a partial or non-standard date is information
+    about the delivery, and silently normalising it would hide that.
+    """
+    value = (raw or "").strip()
+    if not value:
+        return "—"
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").strftime("%d.%m.%Y")
+    except ValueError:
+        return fit(value, size=SIZE_TABLE, width=48)
 
 
 def _legal_bases_for(
@@ -1546,6 +1712,7 @@ def render_single_report(
     note: str | None = None,
     organization: str | None = None,
     generated_at: datetime | None = None,
+    rules: RuleStore | None = None,
 ) -> bytes:
     """One audited delivery as a Prüfbericht, ready to hand a Rechnungsprüfer.
 
@@ -1570,9 +1737,17 @@ def render_single_report(
     public demo passes the sentence that says this is synthetic. It is deliberately part of the
     document rather than a watermark, because a watermark is the first thing a photocopier loses.
 
-    `generated_at` is the document's only clock and it is a parameter. The demo passes none and its
-    two downloads are byte-identical; an authenticated export passes the request time, and prints
-    it, because a report going into a client file needs to say when it was drawn.
+    `generated_at` is the document's only clock and it is a parameter. An authenticated export
+    passes the request time and prints it, because a report going into a client file needs to say
+    when it was drawn; a caller that passes none gets a document with no clock in it at all, which
+    is what makes two renders of one delivery byte-identical.
+
+    `rules` is the store the audit ran against, and it is what the counts in § 1 and § 2 are read
+    off. Optional, because this is a rendering function and a caller that has a report but no store
+    must still be able to print it: without one the lead line falls back to the report's own
+    `enforced_rule_count` — the same number, computed from the same store at audit time — and the
+    rule-family section names the families without their per-family totals. No count in this
+    document is ever a literal; see `_enforced_rule_count`.
     """
     findings_by_position = _findings_by_position(report)
 
@@ -1621,12 +1796,22 @@ def render_single_report(
         ],
         total_positions=len(report.positions),
         coverage_ratio=report.coverage_ratio,
+        coverage_line=_lead_line(report, rules),
     )
     canvas.space(6)
     _reading_note(canvas, _single_coverage_sentence(report))
     canvas.space(8)
 
-    # ---- 2. the positions, grouped by invoice, then by bucket within it ----------------------
+    # ---- 2. what was evaluated ---------------------------------------------------------------
+    #
+    # Before the positions, because it is the answer to the question § 1 has just raised. A reader
+    # who has met "keine der Positionen wurde von einer verifizierten Regel erreicht" needs to know
+    # what *did* run before they read a table of their own euros, or they read the table as a list
+    # of things nobody looked at.
+    _rule_families_section(canvas, 2, report, rules)
+    canvas.space(8)
+
+    # ---- 3. the positions, grouped by invoice, then by bucket within it ----------------------
     #
     # **Invoice first, bucket second, and the order is the whole point of this section.** The
     # document used to open § 2 with "Belegbar nicht abrechenbar — 6 Positionen" and print six rows
@@ -1640,7 +1825,7 @@ def render_single_report(
     #
     # A report whose positions carry no invoice id falls back to the old bucket-first layout; see
     # `_invoice_groups`.
-    _section(canvas, 2, "Positionen im Einzelnen", needs=100)
+    _section(canvas, 3, "Positionen im Einzelnen", needs=100)
     grouped_by_invoice = _invoice_groups(report.positions)
     named = len(grouped_by_invoice) > 1 or bool(grouped_by_invoice[0][0])
     canvas.paragraph(
@@ -1739,9 +1924,10 @@ def render_single_report(
                     )
                     table.row(
                         [
-                            fit(position.positionsnr or "—", size=SIZE_TABLE, width=26),
+                            fit(position.positionsnr or "—", size=SIZE_TABLE, width=20),
                             label,
-                            fit(official, size=SIZE_TABLE, width=210),
+                            _service_date(position.datum),
+                            fit(official, size=SIZE_TABLE, width=156),
                             _factor(position.claimed_faktor),
                             _euro(position.claimed_amount_eur),
                             _euro(position.recomputed_amount_eur),
@@ -1759,7 +1945,7 @@ def render_single_report(
     canvas.space(8)
 
     # ---- 3. findings -------------------------------------------------------------------------
-    section = 3
+    section = 4
     if report.findings:
         _section(canvas, section, f"Befunde ({len(report.findings)})", needs=80)
         canvas.paragraph(

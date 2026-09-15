@@ -39,3 +39,12 @@
 export const RULE_REVIEW_ENABLED =
   process.env.NEXT_PUBLIC_RULE_REVIEW_ENABLED === "1" ||
   process.env.NEXT_PUBLIC_RULE_REVIEW_ENABLED === "true"
+
+/**
+ * The rule workbench's own path. Named here, beside the flag, rather than in `components/layout/nav.ts`
+ * where it used to live alone: `middleware.ts` needs the path to answer `404` before the `(app)`
+ * layout streams (see the comment on that check), and importing `nav.ts` for one string would pull
+ * every nav icon into the edge bundle for nothing. `nav.ts` re-exports it so its own call sites are
+ * unchanged.
+ */
+export const RULE_REVIEW_HREF = "/rules"

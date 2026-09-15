@@ -4283,6 +4283,39 @@
         "title": "RuleProposal",
         "type": "object"
       },
+      "RuleProposalList": {
+        "additionalProperties": false,
+        "description": "One page of a caller's own reports, newest first.\n\n`total` counts every report the organisation has filed, not the page — the same shape\n`ProposalList` uses, and for the same reason: a reader has to be able to tell \"50 of 50\" from\n\"50 of 400\" without a second request.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RuleProposal"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "RuleProposalList",
+        "type": "object"
+      },
       "RuleProposalRequest": {
         "additionalProperties": false,
         "description": "One pilot's report that a Ziffer has no rule at all.",
@@ -5760,7 +5793,7 @@
     },
     "/api/v1/demo/report.pdf": {
       "post": {
-        "description": "Derselbe Bericht als druckbares PDF, mit dem Demo-Hinweis im Dokument.\n\n`POST` statt `GET`, wie beim Stapelbericht: der Endpunkt rendert ein Dokument, statt ein\ngespeichertes zu lesen. Er ist trotzdem idempotent — dieselbe Lieferung ergibt dieselben Bytes.\n\n---\n\nThe same report as a printable PDF. The demo note is rendered *into* the document rather than\nstamped over it, so that a forwarded copy still says what it is.",
+        "description": "Derselbe Bericht als druckbares PDF, mit dem Demo-Hinweis im Dokument.\n\n`POST` statt `GET`, wie beim Stapelbericht: der Endpunkt rendert ein Dokument, statt ein\ngespeichertes zu lesen. Die Prüfung selbst ist deterministisch — dieselbe Lieferung ergibt\ndieselben Verdikte und denselben `receipt_hash`; das Dokument trägt zusätzlich den\nErstellungszeitpunkt, sodass sich zwei Abrufe genau darin unterscheiden.\n\n---\n\nThe same report as a printable PDF. The demo note is rendered *into* the document rather than\nstamped over it, so that a forwarded copy still says what it is.\n\n**Two downloads are no longer byte-identical, and that is the trade this endpoint now makes.**\nThe document used to carry no clock at all, which made it reproducible and made its header read\n\"Erstellt am —\". A Prüfbericht with no date on it is not a document somebody files; it is one\nthey ask you to send again properly. So the wall clock is stamped, exactly as the authenticated\n`/padnext/audit.pdf` has always stamped it, and what stays reproducible is the thing that\nactually has to be — the audit: same verdicts, same euros, same `receipt_hash`, which is the\nvalue a reader compares two copies by.",
         "operationId": "demo_pdf_api_v1_demo_report_pdf_post",
         "responses": {
           "200": {
@@ -5957,7 +5990,7 @@
     },
     "/api/v1/padnext/batch": {
       "get": {
-        "description": "A page of the batches this database holds, newest first, as headers without their files.\n\nThis is what makes a durable batch reachable again. A `batch_id` is issued once and the browser\nholds it in memory, so before this endpoint existed a page reload orphaned a finished batch —\nthe roll-up was still in Postgres and nothing could ask for it. It is also where an operator\nsees a batch that was `FAILED` by the startup recovery, and reads why in `error_message`.\n\nRows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every\ndelivery's full audit report would be megabytes to render a table. Open one with\n`GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.\n\nScoped to the calling organisation, and `total` is recounted under that filter as well, so a\npractice sees its own batches and its own count. `total` is recounted under `status` and\n`created_after` too, so it says how many batches match and never how many rows the table holds. The rows themselves stay in `jobs` — not `items`,\nwhich is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one\nshipped first and renaming a field in a contract already committed to `packages/contracts/`\nwould break a client to buy symmetry.\n\nThe page size ceiling is now 100, down from 500; `limit=200` is a `422` where it used to be\nserved. See `MAX_BATCH_LIST_LIMIT` for why.\n\nDeclared before `/batch/{batch_id}` for readability only — the two paths are distinct templates\nand neither shadows the other.",
+        "description": "A page of the batches this database holds, newest first, as headers without their files.\n\nThis is what makes a durable batch reachable again. A `batch_id` is issued once and the browser\nholds it in memory, so before this endpoint existed a page reload orphaned a finished batch —\nthe roll-up was still in Postgres and nothing could ask for it. It is also where an operator\nsees a batch that was `FAILED` by the startup recovery, and reads why in `error_message`.\n\nRows carry the stored `aggregate_summary` but **not** `files`: a listing that shipped every\ndelivery's full audit report would be megabytes to render a table. Open one with\n`GET /api/v1/padnext/batch/{batch_id}` for the per-file detail.\n\nScoped to the calling organisation, and `total` is recounted under that filter as well, so a\npractice sees its own batches and its own count. `total` is recounted under `status` and\n`created_after` too, so it says how many batches match and never how many rows the table\nholds. The rows themselves stay in `jobs` — not `items`, which is what the newer\n`GET /api/v1/proposals` envelope uses. The two disagree because this one\nshipped first and renaming a field in a contract already committed to `packages/contracts/`\nwould break a client to buy symmetry.\n\nThe page size ceiling is now 100, down from 500; `limit=200` is a `422` where it used to be\nserved. See `MAX_BATCH_LIST_LIMIT` for why.\n\nDeclared before `/batch/{batch_id}` for readability only — the two paths are distinct templates\nand neither shadows the other.",
         "operationId": "padnext_batch_list_api_v1_padnext_batch_get",
         "parameters": [
           {
@@ -6728,6 +6761,71 @@
       }
     },
     "/api/v1/rules/proposals": {
+      "get": {
+        "description": "The calling organisation's own `Regel fehlt? Ziffer melden` reports, newest first.\n\nRead-only and unscoped by status, because there is no status: a report is a data point, not a\nticket somebody works through (see the module docstring of `app.schemas.rule_proposals`). What\nthis closes is the gap `POST /rules/proposals` left — a pilot could file a report and never see\nit again, and nobody without direct database access could tell what had accumulated.\n\nScoped to `organization` the same way every other listing in this application is: the tenant\nfilter is in the `WHERE`, not a check applied after the fact.",
+        "operationId": "list_rule_proposals_api_v1_rules_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleProposalList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "List Rule Proposals",
+        "tags": [
+          "rules"
+        ]
+      },
       "post": {
         "description": "Record that a pilot hit a Ziffer this engine has no rule for at all.\n\nThe button on an audit report that opens this dialog is `Regel fehlt? Ziffer melden`. Unlike\nevery other write in this router, nothing here is verified against the catalog or the rule\ntables — a Ziffer that does not exist is itself a data point, and refusing the write would throw\nthe report away over the one thing this endpoint cannot check offline (see `RuleProposalRecord`).\n\nScoped to the caller's organisation and rate-limited per organisation — see\n`app.api.ratelimit.limit_rule_proposal` — because this is a browser-session endpoint with no\nAPI key to count against.",
         "operationId": "propose_rule_api_v1_rules_proposals_post",
@@ -6774,6 +6872,41 @@
           }
         },
         "summary": "Propose Rule",
+        "tags": [
+          "rules"
+        ]
+      }
+    },
+    "/api/v1/rules/proposals/export": {
+      "get": {
+        "description": "The same reports as `GET /rules/proposals`, as one CSV — everything, not just a page.\n\nReuses the CSV conventions `app.services.export` established for the batch export: RFC 4180\nwith a UTF-8 BOM, so \"Röntgen\" survives a double-click in a de-DE Excel rather than needing the\nData → From Text/CSV detour that file's own `README.txt` has to explain. No ZIP and no\ndisclaimer file — a flat, five-column report has nowhere for a reader to lose the fact that a\nreport is not a finding, unlike a column of euros.",
+        "operationId": "export_rule_proposals_api_v1_rules_proposals_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "See docs/errors.md for the codes."
+          }
+        },
+        "summary": "Export Rule Proposals",
         "tags": [
           "rules"
         ]

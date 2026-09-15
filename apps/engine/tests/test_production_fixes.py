@@ -19,7 +19,6 @@ from app.services.cache import entry as cache_entry
 from app.services.proposal_store import (
     IllegalTransition,
     ProposalNotFound,
-    ProposalStore,
 )
 from app.services.receipt import receipt_hash
 from app.solvers.clingo_solver import ClingoSolver, ClingoTimeout
@@ -578,7 +577,7 @@ def test_the_counts_move_with_the_policy(catalog, settings):
 
 
 def test_missing_documentation_names_the_gap_without_charging_for_it(client, manual_case):
-    body = solve_payload = solve_proposal(client, manual_case("case_001_knee"))["solver_result"]
+    body = solve_proposal(client, manual_case("case_001_knee"))["solver_result"]
     gaps = {g["ziffer"]: g for g in body["coding"]["missing_documentation"]}
     lines = {line["ziffer"]: line for line in body["coding"]["proposed_codes"]}
 
@@ -596,7 +595,7 @@ def test_a_documented_position_reports_no_gap(client, manual_case):
     missing about it."""
     body = solve_proposal(client, manual_case("case_001_knee"))["solver_result"]
     gaps = {g["ziffer"] for g in body["coding"]["missing_documentation"]}
-    line = next(l for l in body["coding"]["proposed_codes"] if l["ziffer"] == "301")
+    line = next(c for c in body["coding"]["proposed_codes"] if c["ziffer"] == "301")
 
     assert line["justification_present"] is True
     assert "301" not in gaps
@@ -605,7 +604,7 @@ def test_a_documented_position_reports_no_gap(client, manual_case):
 def test_the_existing_justification_flags_are_preserved(client, manual_case):
     """`justification_required` predates this migration and must not have been replaced."""
     body = solve_proposal(client, manual_case("case_001_knee"))["solver_result"]
-    line = next(l for l in body["coding"]["proposed_codes"] if l["ziffer"] == "301")
+    line = next(c for c in body["coding"]["proposed_codes"] if c["ziffer"] == "301")
 
     assert line["justification_required"] is True
     assert line["justification"], "the documented reason itself is still on the line"
@@ -642,7 +641,9 @@ def test_the_objective_ordering_is_untouched():
 
     # Each priority carries exactly one objective, so no second revenue term was slipped in at a
     # higher level. Comment lines (`%`) are excluded: the header documents the ordering in prose.
-    code = "\n".join(l for l in program.splitlines() if not l.lstrip().startswith("%"))
+    code = "\n".join(
+        text for text in program.splitlines() if not text.lstrip().startswith("%")
+    )
     for priority in ("@5", "@4", "@3", "@1"):
         assert code.count(priority) == 1, f"{priority} carries more than one objective"
     assert code.count("@2") == 2, "specificity weighs bill/1 and analog/2 — two terms, one level"

@@ -465,7 +465,10 @@ def main(argv: list[str] | None = None) -> int:
         if row is None:
             print(f"no such rule: {args.explain}")
             return 1
-        print(f"rule      : {row['rule_id']}  {row['from_ziffer']} -> {row['to_ziffer']} ({row['direction']})")
+        print(
+            f"rule      : {row['rule_id']}  {row['from_ziffer']} -> "
+            f"{row['to_ziffer']} ({row['direction']})"
+        )
         print(f"raw quote : {row['quote']}\n")
         for i, text in enumerate(split_provisions(row["quote"]), 1):
             p = parse_provision(text)
@@ -473,8 +476,10 @@ def main(argv: list[str] | None = None) -> int:
             if p is None:
                 print("    -> not an exclusion statement")
             else:
-                print(f"    -> form {p.form}  blockers={sorted(p.blockers)[:12]} blocked={sorted(p.blocked)[:12]}"
-                      f" mutual={sorted(p.mutual_set)[:12]}")
+                print(
+                    f"    -> form {p.form}  blockers={sorted(p.blockers)[:12]} "
+                    f"blocked={sorted(p.blocked)[:12]} mutual={sorted(p.mutual_set)[:12]}"
+                )
         verdict = adjudicate(row, catalog, reciprocals)
         print(f"\nverdict   : {verdict.status}  ({verdict.reason})")
         return 0

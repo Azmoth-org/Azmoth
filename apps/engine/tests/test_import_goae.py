@@ -7,12 +7,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
-from pathlib import Path
 
 import pytest
 
 from app.config import (
-    CATALOG_DIR,
     ENGINE_DIR,
     LICENSED_DIR,
     RAW_DIR,

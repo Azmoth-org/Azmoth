@@ -12,7 +12,7 @@ from app.validation.validator import (
     cent_to_eur,
     line_amount_cent,
 )
-from tests.conftest import make_bridge, make_extraction, one_act_per_ziffer
+from tests.conftest import make_extraction, one_act_per_ziffer
 
 
 # ------------------------------------------------------------------------------------------

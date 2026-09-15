@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { Breadcrumbs } from "@/components/layout/breadcrumbs"
 import { RuleReviewWorkbench } from "@/components/rules/review-workbench"
 import { RULE_REVIEW_ENABLED } from "@/lib/features"
 
@@ -34,12 +35,23 @@ export const metadata: Metadata = {
  * doesn't. The nav entry is filtered out by the same flag in `components/layout/nav.ts`, so with
  * the flag off there is nothing to click; this is what closes the typed URL. Both are needed —
  * `lib/features.ts` explains why neither is an access control.
+ *
+ * **This call alone used to leave the HTTP status at `200`.** `(app)/loading.tsx` wraps every page
+ * under that layout in a `Suspense` boundary, so the shell had already streamed to the browser by
+ * the time this component's render reached `notFound()` — the status is committed before a thrown
+ * `notFound()` inside a suspended segment can change it. `middleware.ts` now answers `404` for this
+ * exact path before any layout runs, which is what makes the status true; the call here is what
+ * makes the rendered body agree with it if that middleware check is ever removed.
  */
 export default function RulesPage() {
   if (!RULE_REVIEW_ENABLED) notFound()
 
   return (
     <>
+      <Breadcrumbs
+        trail={[{ label: "Übersicht", href: "/" }, { label: "Regelprüfung" }]}
+      />
+
       <header className="space-y-1">
         <h1 className="text-display-md">
           GOÄ-Regeln prüfen

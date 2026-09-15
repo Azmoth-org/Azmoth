@@ -31,6 +31,7 @@ anyone yet.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Response
 
@@ -49,6 +50,18 @@ router = APIRouter(prefix="/demo", tags=["demo"])
 DEMO_PDF_NOTE = (
     "DEMONSTRATION — synthetische Testdaten, keine echten Patienten- oder Abrechnungsdaten."
 )
+
+#: What goes on the demo report's "Praxis / Konto" line.
+#:
+#: The demo has no tenant by construction — that is the whole of why it may be public — so this
+#: line had nothing to print and printed an em dash. An em dash beside "Erstellt am —" reads as a
+#: document that failed to load its own header, on the one page a prospect forwards to a colleague.
+#: Naming the account as the demo is both true and the more useful statement.
+#:
+#: Not routed through `organization_label`: that function's job is to refuse a *caller-asserted*
+#: organisation the shape of a sentence (see `app.api.tenancy`), and this is a constant in our own
+#: source with no request anywhere near it.
+DEMO_PDF_ORGANIZATION = "Azmoth Demo (synthetische Daten)"
 
 
 def _unavailable(exc: DemoUnavailable) -> HTTPException:
@@ -119,19 +132,43 @@ def demo_pdf() -> Response:
     """Derselbe Bericht als druckbares PDF, mit dem Demo-Hinweis im Dokument.
 
     `POST` statt `GET`, wie beim Stapelbericht: der Endpunkt rendert ein Dokument, statt ein
-    gespeichertes zu lesen. Er ist trotzdem idempotent — dieselbe Lieferung ergibt dieselben Bytes.
+    gespeichertes zu lesen. Die Prüfung selbst ist deterministisch — dieselbe Lieferung ergibt
+    dieselben Verdikte und denselben `receipt_hash`; das Dokument trägt zusätzlich den
+    Erstellungszeitpunkt, sodass sich zwei Abrufe genau darin unterscheiden.
 
     ---
 
     The same report as a printable PDF. The demo note is rendered *into* the document rather than
     stamped over it, so that a forwarded copy still says what it is.
+
+    **Two downloads are no longer byte-identical, and that is the trade this endpoint now makes.**
+    The document used to carry no clock at all, which made it reproducible and made its header read
+    "Erstellt am —". A Prüfbericht with no date on it is not a document somebody files; it is one
+    they ask you to send again properly. So the wall clock is stamped, exactly as the authenticated
+    `/padnext/audit.pdf` has always stamped it, and what stays reproducible is the thing that
+    actually has to be — the audit: same verdicts, same euros, same `receipt_hash`, which is the
+    value a reader compares two copies by.
     """
     try:
         report = demo_report(pipeline())
     except DemoUnavailable as exc:
         raise _unavailable(exc) from exc
 
-    document = render_single_report(report, note=DEMO_PDF_NOTE)
+    document = render_single_report(
+        report,
+        note=DEMO_PDF_NOTE,
+        # A demo PDF whose header read "Erstellt am —" and "Praxis / Konto —" looked like a
+        # document with two failed lookups in it, which is the opposite of the impression a
+        # prospect should take from the one artefact they are allowed to keep. Both are stated
+        # rather than left blank: the clock is real, and the account line names the demo as a
+        # demo.
+        organization=DEMO_PDF_ORGANIZATION,
+        generated_at=datetime.now(timezone.utc),
+        # The store the audit actually ran against, so § 1's "geprüft gegen N durchgesetzte Regeln"
+        # and § 2's per-family counts are this deployment's real figures rather than a report-time
+        # echo. `pipeline()` is memoised, so this is the same object `demo_report` just used.
+        rules=pipeline().rules,
+    )
     return Response(
         content=document,
         media_type="application/pdf",

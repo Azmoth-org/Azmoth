@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { CheckCircle2Icon } from "lucide-react"
+import Link from "next/link"
 
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -103,7 +104,12 @@ export function ZifferReportDialog({
                 aria-hidden
               />
               <p className="text-sm">
-                Danke — Ihre Meldung hilft, die Abdeckung zu erweitern.
+                Danke — Ihre Meldung hilft, die Abdeckung zu erweitern. Alle
+                Meldungen Ihrer Organisation stehen unter{" "}
+                <Link href="/rules/proposals" className="underline">
+                  Ziffer-Meldungen
+                </Link>
+                .
               </p>
             </div>
             <DialogFooter>

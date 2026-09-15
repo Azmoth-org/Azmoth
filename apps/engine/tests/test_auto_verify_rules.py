@@ -280,9 +280,15 @@ def test_the_four_counts_partition_the_table_two_ways(script, tmp_path):
             # verified by a human, never seen by this script
             {"rule_id": "a", "from_ziffer": "1", "to_ziffer": "2", "verified": "true", "ai_verdict": ""},
             # verified by this script
-            {"rule_id": "b", "from_ziffer": "3", "to_ziffer": "4", "verified": "true", "ai_verdict": "VERIFIED"},
+            {
+                "rule_id": "b", "from_ziffer": "3", "to_ziffer": "4", "verified": "true",
+                "ai_verdict": "VERIFIED",
+            },
             # asked, and sent to a human — unverified, but NOT untouched
-            {"rule_id": "c", "from_ziffer": "5", "to_ziffer": "6", "verified": "false", "ai_verdict": "NEEDS_HUMAN_REVIEW"},
+            {
+                "rule_id": "c", "from_ziffer": "5", "to_ziffer": "6", "verified": "false",
+                "ai_verdict": "NEEDS_HUMAN_REVIEW",
+            },
             # the actual backlog
             {"rule_id": "d", "from_ziffer": "7", "to_ziffer": "8", "verified": "false", "ai_verdict": ""},
             {"rule_id": "e", "from_ziffer": "9", "to_ziffer": "10", "verified": "", "ai_verdict": ""},
@@ -305,7 +311,10 @@ def test_untouched_is_what_a_run_would_actually_ask_about(script, tmp_path):
         "exclusion",
         [
             {"rule_id": "a", "from_ziffer": "1", "to_ziffer": "2", "verified": "true", "ai_verdict": ""},
-            {"rule_id": "c", "from_ziffer": "5", "to_ziffer": "6", "verified": "false", "ai_verdict": "NEEDS_HUMAN_REVIEW"},
+            {
+                "rule_id": "c", "from_ziffer": "5", "to_ziffer": "6", "verified": "false",
+                "ai_verdict": "NEEDS_HUMAN_REVIEW",
+            },
             {"rule_id": "d", "from_ziffer": "7", "to_ziffer": "8", "verified": "false", "ai_verdict": ""},
         ],
     )
@@ -386,7 +395,13 @@ def test_punkte_desc_puts_the_most_expensive_rule_first_and_is_stable(script, tm
             {"rule_id": "rich", "from_ziffer": "3", "to_ziffer": "4", "verified": "false", "ai_verdict": ""},
             {"rule_id": "tie_a", "from_ziffer": "5", "to_ziffer": "6", "verified": "false", "ai_verdict": ""},
             {"rule_id": "tie_b", "from_ziffer": "5", "to_ziffer": "6", "verified": "false", "ai_verdict": ""},
-            {"rule_id": "unknown", "from_ziffer": "999", "to_ziffer": "998", "verified": "false", "ai_verdict": ""},
+            {
+                "rule_id": "unknown",
+                "from_ziffer": "999",
+                "to_ziffer": "998",
+                "verified": "false",
+                "ai_verdict": "",
+            },
         ],
     )
     entry = script.CatalogEntry
@@ -432,13 +447,26 @@ def test_ordering_never_changes_the_candidate_set(script, tmp_path):
         "exclusions.csv",
         "exclusion",
         [
-            {"rule_id": f"r{i}", "from_ziffer": str(i), "to_ziffer": "2", "verified": "false", "ai_verdict": ""}
+            {
+                "rule_id": f"r{i}",
+                "from_ziffer": str(i),
+                "to_ziffer": "2",
+                "verified": "false",
+                "ai_verdict": "",
+            }
             for i in range(6)
         ],
     )
     entry = script.CatalogEntry
     catalog = {
-        str(i): entry(ziffer=str(i), official_text="", punkte=i * 11, section="", section_title="", annotations=())
+        str(i): entry(
+            ziffer=str(i),
+            official_text="",
+            punkte=i * 11,
+            section="",
+            section_title="",
+            annotations=(),
+        )
         for i in range(6)
     }
     candidates = script.collect_candidates([table], redo=False)

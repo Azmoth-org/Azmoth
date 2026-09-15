@@ -114,7 +114,12 @@ def test_a_doctype_is_refused_before_it_can_expand(client):
         post_delivery(client, payload), status=422, code=ErrorCode.PADNEXT_UNREADABLE
     )
 
-    assert "DOCTYPE" in body["message"]
+    # `message` is the sentence the practice reads and is German; "DOCTYPE" is not a word that
+    # helps them, and the useful instruction — re-export the file — is what it carries instead.
+    # The reader's own reason is kept verbatim under `details.technical_detail`, which is where a
+    # support request and a bug report both look, and it is still the only copy of it.
+    assert "DOCTYPE" in body["details"]["technical_detail"]
+    assert "PADnext-Lieferung" in body["message"]
 
 
 def test_a_malformed_content_length_is_named_not_guessed(client):

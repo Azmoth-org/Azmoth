@@ -291,7 +291,6 @@ def exploding_client():
     unhandled error produces and the row it leaves, and neither exists if the exception escapes to
     the test instead of reaching the handler.
     """
-    from fastapi.testclient import TestClient
 
     from app.main import app
 

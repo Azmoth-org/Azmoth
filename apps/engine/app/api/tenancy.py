@@ -8,6 +8,7 @@ or re-run Praxis B's records.
 
     X-User-ID           who — recorded, never required, `anonymous` when absent
     X-Organization-ID   whose — required, and a `403` when absent
+    X-Organization-Name what to print — optional, display text only, never authorised on
 
 **The header is asserted, not proven, and that is the same caveat `identity.py` carries.** Nothing
 here verifies a signature. What makes it worth enforcing is the deployment shape rather than the
@@ -41,6 +42,7 @@ from __future__ import annotations
 
 import re
 from typing import Annotated
+from urllib.parse import unquote
 
 from fastapi import Depends, Request
 
@@ -112,6 +114,64 @@ def organization_label(raw: str | None) -> str:
     if candidate and _ORGANIZATION_ID_SHAPE.fullmatch(candidate):
         return candidate
     return PDF_ORGANIZATION_FALLBACK
+
+
+#: What the Next.js proxy sets alongside `X-Organization-ID` when it could resolve the practice's
+#: *name* from the session's organisation. Optional, unlike the id: a request without it prints the
+#: id-derived label exactly as before. Must match `ORGANIZATION_NAME_HEADER` in
+#: `apps/web/lib/engine.ts`.
+ORGANIZATION_NAME_HEADER = "x-organization-name"
+
+#: How long a printed practice name may be. Shorter than an id, because this one *is* chosen by a
+#: person and the cap is what keeps a table cell a table cell — `_account_label` in `services/pdf.py`
+#: applies its own floor under this as well.
+MAX_ORGANIZATION_NAME_LENGTH = 72
+
+#: Anything that is not ordinary text in a table cell. Newlines and tabs included: they are not
+#: caught by `isprintable()` on their own in every combination, and a line break is the one
+#: character that would let a name become two lines of a document.
+_NAME_WHITESPACE = re.compile(r"\s+")
+
+
+def organization_name_label(raw: str | None) -> str | None:
+    """The practice name to print, or `None` when the request did not state a usable one.
+
+    **Why a name may be printed at all, when `organization_label` refuses free text.** That function
+    guards the *id* header, and its reasoning is that a Prüfbericht naming a practice must not be
+    forgeable by anyone who can set a header — so it admits only the opaque shape Better Auth
+    generates. A name cannot be pinned that way; it is a sentence by nature, and refusing every
+    sentence is why signed-in reports printed a 32-character UUID under "Praxis / Konto" instead of
+    the practice's own name.
+
+    What changed is not the threat model but who is asserting. The web tier resolves this from the
+    organisation the session is actually a member of (`app/api/engine/padnext/audit/pdf/route.ts`),
+    so the value is a name the signed-in practice chose *for itself* and is printing *on its own*
+    report. A practice naming itself something misleading is a thing it could already do, and it is
+    not a lie this engine is telling on someone else's behalf.
+
+    What is still enforced here is shape, not truth: one line, printable characters only, whitespace
+    collapsed, and capped. That is what keeps a name from carrying a PDF operator, a right-to-left
+    override, or a paragraph into a table cell — the class of problem `organization_label` was
+    written for, and the one that does not depend on trusting the caller.
+
+    `None` rather than a fallback string, so the caller can tell "no name was sent" from "a name was
+    sent and rejected" and fall back to the id-derived label in both cases without inventing one.
+
+    **The value arrives percent-encoded and is decoded here**, which is the only way "Praxis Müller"
+    survives the trip. A header is bytes: `fetch` on the proxy's side refuses any code point above
+    U+00FF, and Starlette on this side decodes whatever arrives as latin-1 — so a UTF-8 umlaut sent
+    raw is read back as mojibake. `lib/engine.ts` percent-encodes for that reason and
+    `encodeHeaderValue` there says so. Decoding is safe *before* the sanitising below rather than
+    after: `%0A` must become a newline in order to be stripped as one.
+    """
+    if raw is None:
+        return None
+    decoded = unquote(raw, encoding="utf-8", errors="replace")
+    printable = "".join(character for character in decoded if character.isprintable())
+    collapsed = _NAME_WHITESPACE.sub(" ", printable).strip()
+    if not collapsed:
+        return None
+    return collapsed[:MAX_ORGANIZATION_NAME_LENGTH]
 
 
 def require_organization(request: Request) -> str:

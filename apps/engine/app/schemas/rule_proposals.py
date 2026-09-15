@@ -1,8 +1,9 @@
 """The contract for reporting a Ziffer this engine has no rule for at all.
 
-Deliberately the smallest schema module in this package. There is no status, no queue and nothing
-to page through — a report is a single write, and the only response a caller needs is confirmation
-that it landed. See `app/db/models.py` on why this is a new table rather than a repurposing of
+There is still no status and no queue — a report is a data point towards deciding which rule to
+write next, not a workflow item somebody works through. `RuleProposalList` exists so a pilot (and
+whoever triages the backlog) can read back what was reported, which `POST /rules/proposals` alone
+never let anyone do. See `app/db/models.py` on why this is a new table rather than a repurposing of
 `rule_reviews` or `proposals`.
 """
 
@@ -67,10 +68,27 @@ class RuleProposal(BaseModel):
     created_at: datetime
 
 
+class RuleProposalList(BaseModel):
+    """One page of a caller's own reports, newest first.
+
+    `total` counts every report the organisation has filed, not the page — the same shape
+    `ProposalList` uses, and for the same reason: a reader has to be able to tell "50 of 50" from
+    "50 of 400" without a second request.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[RuleProposal]
+    total: int
+    limit: int
+    offset: int
+
+
 __all__ = [
     "MAX_CONTEXT_LENGTH",
     "MAX_RECEIPT_HASH_LENGTH",
     "MAX_ZIFFER_LENGTH",
     "RuleProposal",
+    "RuleProposalList",
     "RuleProposalRequest",
 ]

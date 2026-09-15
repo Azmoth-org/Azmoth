@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 from decimal import Decimal
-from pathlib import Path
 
 import pytest
 
@@ -335,7 +334,7 @@ def test_bridge_never_proposes_a_position_absent_from_the_catalog(catalog, rules
     load_mapping.cache_clear()
     try:
         rows = load_mapping(broken)
-        act = map_extraction(
+        map_extraction(
             extraction(procedures=[{"type": "punktion", "organ": "knie"}]), catalog, rules
         )
     finally:
@@ -343,7 +342,6 @@ def test_bridge_never_proposes_a_position_absent_from_the_catalog(catalog, rules
 
     assert rows[0].ziffer == "99999"
     # The real mapping is reloaded above, so assert the guard directly instead.
-    from app.bridge.entity_to_ziffer import BridgeResult
     from app.schemas import ClinicalAct
 
     probe = ClinicalAct(

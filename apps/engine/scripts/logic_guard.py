@@ -75,7 +75,9 @@ FAMILY_CSVS = frozenset(
 )
 
 #: A touched family regression test — the human half of the carve-out's evidence.
-FAMILY_TEST_RE = re.compile(r"^apps/engine/tests/(test_batch2_[A-Za-z0-9_]+\.py|test_complex_constraints\.py)$")
+FAMILY_TEST_RE = re.compile(
+    r"^apps/engine/tests/(test_batch2_[A-Za-z0-9_]+\.py|test_complex_constraints\.py)$"
+)
 
 #: Where `scripts/refreeze_rule_coverage.py --report` writes its summary, and where this guard
 #: looks for it — both relative to the monorepo root.

@@ -335,3 +335,33 @@ jobs:
             exit 1
           fi
           echo "no tracked .env, no credential-shaped strings"
+
+  # ===========================================================================================
+  # JOB 6 — Python lint. The TS side has had `pnpm turbo lint` since JOB 4 existed; this is its
+  # counterpart for apps/engine, gated the same way rather than left to whoever remembers to run
+  # `ruff` by hand.
+  #
+  # No dependency install and no Docker: `ruff check` is a static read of the AST, not an import of
+  # the code, so it needs neither the engine's pinned requirements nor the Soufflé/Clingo binaries
+  # JOB 1 builds an image for. That is also why this is fast enough to sit beside
+  # contract-and-logic-gate as one of the first things a contributor sees finish.
+  # ===========================================================================================
+  engine-lint:
+    name: engine-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        # Pinned like every other tool this repo's CI installs directly, so a new ruff release
+        # cannot change what this gate accepts between two otherwise identical runs.
+        run: pip install --no-cache-dir ruff==0.16.7
+
+      - name: ruff check apps/engine
+        working-directory: apps/engine
+        run: ruff check .

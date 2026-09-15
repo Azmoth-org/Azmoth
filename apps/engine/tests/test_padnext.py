@@ -12,7 +12,6 @@ import json
 import re
 import zipfile
 from decimal import Decimal
-from pathlib import Path
 
 import pytest
 

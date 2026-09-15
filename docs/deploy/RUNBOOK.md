@@ -790,7 +790,50 @@ ssh "azmoth@$AWS_HOST" 'crontab -l'
 > laptop with your own credentials. [AWS.md § 6](AWS.md#no-credential-on-the-vm-and-the-vm-cannot-read-its-own-backups)
 > has the full table of what is absent and why.
 
-### 5.5 Back up the env file, and then the checks a script cannot do
+### 5.5 Finish the retention purge setup
+
+Nothing deletes anything for you either. `infra/docker/docker-compose.yml` has configured
+`DATA_RETENTION_DAYS` and `RETENTION_ENABLED` since the engine gained
+`scripts/purge_old_data.py`, and the comment beside them has always said "the host's crontab runs
+it" — DSGVO Art. 5 Abs. 1 lit. e (Speicherbegrenzung) is not satisfied by a script that exists,
+only by one that runs on a schedule.
+
+```bash
+ssh "azmoth@$AWS_HOST"
+/opt/azmoth/repo/scripts/setup-purge-cron.sh        # as the deployment user, NOT with sudo
+```
+
+Idempotent the same way `setup-backups.sh` is: re-running it replaces its own cron entry rather
+than adding a second. It installs exactly one line, at 03:30 — after the 02:00 backup, because a
+purge is irreversible and the night's backup is what you restore from if the retention window
+turns out to have been set wrong:
+
+```cron
+30 3 * * *  cd /opt/azmoth/repo && sudo COMPOSE_PROJECT_NAME=azmoth docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.aws.yml exec -T engine python -m scripts.purge_old_data >> /var/log/azmoth-retention.log 2>&1  # azmoth-nightly-retention-purge
+```
+
+Read what it would do before 03:30 finds out for you — this does not touch the database, it only
+reports:
+
+```bash
+ssh "azmoth@$AWS_HOST" 'cd /opt/azmoth/repo && \
+  sudo COMPOSE_PROJECT_NAME=azmoth docker compose \
+    -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.aws.yml \
+    exec -T engine python -m scripts.purge_old_data --dry-run'
+```
+
+`DATA_RETENTION_DAYS` is a *floor* under your own policy, not a substitute for having one: a
+deployment subject to a longer statutory retention (§ 147 AO, § 10 MBO-Ä) raises it in
+`/opt/azmoth/shared/.env` before the first real (non-dry-run) purge, because what it deletes does
+not come back. See `apps/engine/README.md` § Retention for exactly what each run removes and what
+it never touches (`audit_events`, by design — that is the record that the purge itself happened).
+
+```bash
+crontab -l                                          # confirm the schedule
+crontab -l | grep -Fv '# azmoth-nightly-retention-purge' | crontab -   # disable it
+```
+
+### 5.6 Back up the env file, and then the checks a script cannot do
 
 ```bash
 ssh "azmoth@$AWS_HOST" 'sudo cat /opt/azmoth/shared/.env'

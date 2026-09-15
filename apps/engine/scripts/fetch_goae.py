@@ -147,7 +147,9 @@ def write_offline_readme(url: str) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "--url",
         default=os.environ.get("GOAE_SOURCE_URL", DEFAULT_SOURCE_URL),

@@ -41,7 +41,7 @@ from pathlib import Path
 ENGINE_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ENGINE_ROOT))
 
-from app.config import CATALOG_DIR, DATA_DIR, RAW_DIR, RULES_DATA_DIR  # noqa: E402
+from app.config import CATALOG_DIR, RAW_DIR, RULES_DATA_DIR  # noqa: E402
 
 #: Data lives in the monorepo's data/ directory, not inside this app. Resolved through
 #: app.config so LOGIC_DIR / DATA_DIR overrides apply here exactly as they do to the service.
@@ -1082,7 +1082,9 @@ def write_outputs(result: dict) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--input", help="XML snapshot to parse (default: from data/raw/manifest.json)")
     parser.add_argument(
         "--illustrative",

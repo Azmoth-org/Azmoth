@@ -246,6 +246,9 @@ export type RuleProposalRequest = Schemas["RuleProposalRequest"];
 /** The stored report, echoed back as confirmation. */
 export type RuleProposal = Schemas["RuleProposal"];
 
+/** `GET /api/v1/rules/proposals`: one page of the caller's own reports, newest first. */
+export type RuleProposalList = Schemas["RuleProposalList"];
+
 /* -- catalog and vocabulary ---------------------------------------------------------------- */
 
 export type HealthResponse = Schemas["HealthResponse"];

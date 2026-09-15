@@ -248,6 +248,12 @@ mailing a failure every night.
 
 ### As a nightly cron job
 
+**On the AWS deployment this repository's `docker-compose.yml` targets, `scripts/setup-purge-cron.sh`
+installs the crontab entry for you** — see [`docs/deploy/RUNBOOK.md` § 5.5](../../docs/deploy/RUNBOOK.md#55-finish-the-retention-purge-setup).
+It mirrors `scripts/setup-backups.sh`: idempotent, and it prints the `--dry-run` command to read
+before trusting the schedule rather than running it for you. The two examples below are for a
+deployment shaped differently from that one.
+
 Exit status is `0` for success and `1` for a failure that committed nothing, so cron's own mail is
 the alerting. Run it as the user that owns `UPLOAD_DIR` — it deletes files as well as rows.
 
