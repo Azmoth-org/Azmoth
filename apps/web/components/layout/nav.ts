@@ -1,5 +1,6 @@
 import {
   FileCheck2Icon,
+  FlagIcon,
   HistoryIcon,
   KeyRoundIcon,
   LayersIcon,
@@ -9,7 +10,7 @@ import {
   StethoscopeIcon,
 } from "lucide-react"
 
-import { RULE_REVIEW_ENABLED } from "@/lib/features"
+import { RULE_REVIEW_ENABLED, RULE_REVIEW_HREF } from "@/lib/features"
 
 /**
  * The application's screens, in the order the work happens.
@@ -38,8 +39,12 @@ export type NavItem = {
 /** The dashboard's own path. Named because two things below have to agree about it. */
 export const DASHBOARD_HREF = "/"
 
-/** The rule workbench's path. Named because the entry and the filter must agree about it. */
-export const RULE_REVIEW_HREF = "/rules"
+/**
+ * The rule workbench's path. Defined in `lib/features.ts`, beside `RULE_REVIEW_ENABLED`, and
+ * re-exported here so this module's own call sites (`ALL_NAV_ITEMS`, `NAV_ITEMS` below) and any
+ * existing importer of it from this module are unchanged.
+ */
+export { RULE_REVIEW_HREF }
 
 /**
  * Every screen this application has, before feature flags.
@@ -92,6 +97,13 @@ const ALL_NAV_ITEMS: readonly NavItem[] = [
     description:
       "Alle gespeicherten PADnext-Stapelprüfungen, filterbar nach Status. Nur synthetische Daten.",
     icon: HistoryIcon,
+  },
+  {
+    href: "/rules/proposals",
+    label: "Ziffer-Meldungen",
+    description:
+      "Alle Meldungen aus „Regel fehlt? Ziffer melden“ der eigenen Organisation, mit CSV-Export.",
+    icon: FlagIcon,
   },
   {
     href: "/settings/api-keys",

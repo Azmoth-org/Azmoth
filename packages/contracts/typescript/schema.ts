@@ -464,12 +464,22 @@ export interface paths {
          * @description Derselbe Bericht als druckbares PDF, mit dem Demo-Hinweis im Dokument.
          *
          *     `POST` statt `GET`, wie beim Stapelbericht: der Endpunkt rendert ein Dokument, statt ein
-         *     gespeichertes zu lesen. Er ist trotzdem idempotent — dieselbe Lieferung ergibt dieselben Bytes.
+         *     gespeichertes zu lesen. Die Prüfung selbst ist deterministisch — dieselbe Lieferung ergibt
+         *     dieselben Verdikte und denselben `receipt_hash`; das Dokument trägt zusätzlich den
+         *     Erstellungszeitpunkt, sodass sich zwei Abrufe genau darin unterscheiden.
          *
          *     ---
          *
          *     The same report as a printable PDF. The demo note is rendered *into* the document rather than
          *     stamped over it, so that a forwarded copy still says what it is.
+         *
+         *     **Two downloads are no longer byte-identical, and that is the trade this endpoint now makes.**
+         *     The document used to carry no clock at all, which made it reproducible and made its header read
+         *     "Erstellt am —". A Prüfbericht with no date on it is not a document somebody files; it is one
+         *     they ask you to send again properly. So the wall clock is stamped, exactly as the authenticated
+         *     `/padnext/audit.pdf` has always stamped it, and what stays reproducible is the thing that
+         *     actually has to be — the audit: same verdicts, same euros, same `receipt_hash`, which is the
+         *     value a reader compares two copies by.
          */
         post: operations["demo_pdf_api_v1_demo_report_pdf_post"];
         delete?: never;
@@ -617,8 +627,9 @@ export interface paths {
          *
          *     Scoped to the calling organisation, and `total` is recounted under that filter as well, so a
          *     practice sees its own batches and its own count. `total` is recounted under `status` and
-         *     `created_after` too, so it says how many batches match and never how many rows the table holds. The rows themselves stay in `jobs` — not `items`,
-         *     which is what the newer `GET /api/v1/proposals` envelope uses. The two disagree because this one
+         *     `created_after` too, so it says how many batches match and never how many rows the table
+         *     holds. The rows themselves stay in `jobs` — not `items`, which is what the newer
+         *     `GET /api/v1/proposals` envelope uses. The two disagree because this one
          *     shipped first and renaming a field in a contract already committed to `packages/contracts/`
          *     would break a client to buy symmetry.
          *
@@ -964,7 +975,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Rule Proposals
+         * @description The calling organisation's own `Regel fehlt? Ziffer melden` reports, newest first.
+         *
+         *     Read-only and unscoped by status, because there is no status: a report is a data point, not a
+         *     ticket somebody works through (see the module docstring of `app.schemas.rule_proposals`). What
+         *     this closes is the gap `POST /rules/proposals` left — a pilot could file a report and never see
+         *     it again, and nobody without direct database access could tell what had accumulated.
+         *
+         *     Scoped to `organization` the same way every other listing in this application is: the tenant
+         *     filter is in the `WHERE`, not a check applied after the fact.
+         */
+        get: operations["list_rule_proposals_api_v1_rules_proposals_get"];
         put?: never;
         /**
          * Propose Rule
@@ -980,6 +1003,32 @@ export interface paths {
          *     API key to count against.
          */
         post: operations["propose_rule_api_v1_rules_proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rules/proposals/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Rule Proposals
+         * @description The same reports as `GET /rules/proposals`, as one CSV — everything, not just a page.
+         *
+         *     Reuses the CSV conventions `app.services.export` established for the batch export: RFC 4180
+         *     with a UTF-8 BOM, so "Röntgen" survives a double-click in a de-DE Excel rather than needing the
+         *     Data → From Text/CSV detour that file's own `README.txt` has to explain. No ZIP and no
+         *     disclaimer file — a flat, five-column report has nowhere for a reader to lose the fact that a
+         *     report is not a finding, unlike a column of euros.
+         */
+        get: operations["export_rule_proposals_api_v1_rules_proposals_export_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3916,6 +3965,24 @@ export interface components {
             ziffer: string;
         };
         /**
+         * RuleProposalList
+         * @description One page of a caller's own reports, newest first.
+         *
+         *     `total` counts every report the organisation has filed, not the page — the same shape
+         *     `ProposalList` uses, and for the same reason: a reader has to be able to tell "50 of 50" from
+         *     "50 of 400" without a second request.
+         */
+        RuleProposalList: {
+            /** Items */
+            items: components["schemas"]["RuleProposal"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /**
          * RuleProposalRequest
          * @description One pilot's report that a Ziffer has no rule at all.
          */
@@ -5622,6 +5689,47 @@ export interface operations {
             };
         };
     };
+    list_rule_proposals_api_v1_rules_proposals_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleProposalList"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     propose_rule_api_v1_rules_proposals_post: {
         parameters: {
             query?: never;
@@ -5643,6 +5751,42 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RuleProposal"];
                 };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description See docs/errors.md for the codes. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_rule_proposals_api_v1_rules_proposals_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description See docs/errors.md for the codes. */
             "4XX": {

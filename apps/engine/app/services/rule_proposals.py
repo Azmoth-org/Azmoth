@@ -8,10 +8,17 @@ worklist is a query somebody runs against this table later, not a responsibility
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.db.models import RuleProposalRecord, utcnow
 from app.db.session import Database, get_database
+
+#: Default and maximum page size for `GET /rules/proposals`. Same figures `ProposalStore` uses for
+#: its listing, for no reason stronger than consistency — a row here is far smaller than a
+#: `Proposal` (five short fields, no solver result), so the ceiling is not protecting against a
+#: heavy row the way it does there.
+DEFAULT_RULE_PROPOSAL_LIST_LIMIT = 50
+MAX_RULE_PROPOSAL_LIST_LIMIT = 100
 
 
 class RuleProposalStore:
@@ -49,20 +56,38 @@ class RuleProposalStore:
             return record
 
     async def list_for_organization(
-        self, organization_id: str, *, limit: int = 100
+        self, organization_id: str, *, limit: int = 100, offset: int = 0
     ) -> list[RuleProposalRecord]:
-        """The calling practice's reports, newest first. Used by tests and by ad-hoc triage."""
+        """The calling practice's reports, newest first. Used by tests, ad-hoc triage and the
+        `GET /rules/proposals` listing."""
         async with self.database.session() as session:
             statement = (
                 select(RuleProposalRecord)
                 .where(RuleProposalRecord.organization_id == organization_id)
-                .order_by(RuleProposalRecord.created_at.desc())
+                .order_by(RuleProposalRecord.created_at.desc(), RuleProposalRecord.id.desc())
                 .limit(limit)
+                .offset(offset)
             )
             rows = (await session.execute(statement)).scalars().all()
             for row in rows:
                 _ = (row.id, row.ziffer, row.context, row.receipt_hash, row.created_at)
             return list(rows)
 
+    async def count_for_organization(self, organization_id: str) -> int:
+        """How many reports the organisation has filed in total, ignoring any page.
 
-__all__ = ["RuleProposalStore"]
+        What `RuleProposalList.total` is built from — the same reason `ProposalStore.count` exists
+        beside `list_proposals`: a page cannot say "50 of how many" from its own length alone.
+        """
+        async with self.database.session() as session:
+            statement = select(func.count()).select_from(RuleProposalRecord).where(
+                RuleProposalRecord.organization_id == organization_id
+            )
+            return int((await session.execute(statement)).scalar_one())
+
+
+__all__ = [
+    "DEFAULT_RULE_PROPOSAL_LIST_LIMIT",
+    "MAX_RULE_PROPOSAL_LIST_LIMIT",
+    "RuleProposalStore",
+]

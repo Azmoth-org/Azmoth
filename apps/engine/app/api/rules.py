@@ -14,11 +14,14 @@ that used to be here went stale and misstated the engine by an order of magnitud
     POST /rules/{rule_id}/review    a verdict, stored and merged immediately
     GET  /rules/coverage            where the effort has got to
     POST /rules/proposals           a pilot's report that a Ziffer has no rule at all
+    GET  /rules/proposals           that caller's own reports, paged
+    GET  /rules/proposals/export    the same reports, as a CSV
 
-The fourth is a different kind of thing from the other three, and deliberately the simplest
-endpoint in this module. It does not touch the pipeline, merges nothing and enforces nothing — it
-writes one row to `rule_proposals` and returns. See `app.services.rule_proposals` and, on why this
-is a new table rather than an overlay onto `rule_reviews`, the module docstring of `app.db.models`.
+The last three are a different kind of thing from the first two, and deliberately the simplest
+endpoints in this module. None of them touch the pipeline, merge anything or enforce anything — they
+write to, and read from, `rule_proposals` and nothing else. See `app.services.rule_proposals` and, on
+why this is a new table rather than an overlay onto `rule_reviews`, the module docstring of
+`app.db.models`.
 
 **The CSVs are never written.** A verdict goes into `rule_reviews` in Postgres and is merged onto
 the parsed CSVs at load time. `data/rules/` is versioned source data whose changes need a reviewed
@@ -45,6 +48,8 @@ would block it is not.
 
 from __future__ import annotations
 
+import csv
+import io
 import logging
 
 from fastapi import APIRouter, HTTPException, Query, Response
@@ -55,10 +60,10 @@ from app.api.identity import RequestActor
 from app.api.ratelimit import RuleProposalRateLimit
 from app.api.session_auth import VerifiedSession
 from app.api.tenancy import RequestOrganization
-from app.db.models import as_utc
+from app.db.models import RuleProposalRecord, as_utc
 from app.rules.rule_store import RuleReviewStatus
 from app.schemas import RuleCoverage
-from app.schemas.rule_proposals import RuleProposal, RuleProposalRequest
+from app.schemas.rule_proposals import RuleProposal, RuleProposalList, RuleProposalRequest
 from app.schemas.rules import (
     ReviewableRule,
     RuleKind,
@@ -67,6 +72,11 @@ from app.schemas.rules import (
     RuleReviewResult,
 )
 from app.services import rule_reviews as review_service
+from app.services.export import CSV_DIALECT, UTF8_BOM, attachment_headers
+from app.services.rule_proposals import (
+    DEFAULT_RULE_PROPOSAL_LIST_LIMIT,
+    MAX_RULE_PROPOSAL_LIST_LIMIT,
+)
 
 log = logging.getLogger(__name__)
 
@@ -247,10 +257,84 @@ async def propose_rule(
         created_by=actor,
     )
     log.info("rule proposal for ziffer %s reported by %s", record.ziffer, actor)
+    return _rule_proposal(record)
+
+
+#: The most rows a CSV export may carry. Not paged — a spreadsheet is opened whole — but still
+#: bounded, because an organisation's `rule_proposals` grows with every pilot session and an
+#: unbounded `SELECT` is the wrong thing to run from a request handler. Far above what a pilot's
+#: reports could plausibly reach; the read-only listing above is where a caller pages through more.
+RULE_PROPOSAL_EXPORT_LIMIT = 5000
+
+
+def _rule_proposal(record: RuleProposalRecord) -> RuleProposal:
     return RuleProposal(
         id=str(record.id),
         ziffer=record.ziffer,
         context=record.context,
         receipt_hash=record.receipt_hash,
         created_at=as_utc(record.created_at),
+    )
+
+
+@router.get("/proposals", response_model=RuleProposalList)
+async def list_rule_proposals(
+    organization: RequestOrganization,
+    limit: int = Query(
+        default=DEFAULT_RULE_PROPOSAL_LIST_LIMIT, ge=1, le=MAX_RULE_PROPOSAL_LIST_LIMIT
+    ),
+    offset: int = Query(default=0, ge=0),
+) -> RuleProposalList:
+    """The calling organisation's own `Regel fehlt? Ziffer melden` reports, newest first.
+
+    Read-only and unscoped by status, because there is no status: a report is a data point, not a
+    ticket somebody works through (see the module docstring of `app.schemas.rule_proposals`). What
+    this closes is the gap `POST /rules/proposals` left — a pilot could file a report and never see
+    it again, and nobody without direct database access could tell what had accumulated.
+
+    Scoped to `organization` the same way every other listing in this application is: the tenant
+    filter is in the `WHERE`, not a check applied after the fact.
+    """
+    store = rule_proposals()
+    records = await store.list_for_organization(organization, limit=limit, offset=offset)
+    total = await store.count_for_organization(organization)
+    return RuleProposalList(
+        items=[_rule_proposal(record) for record in records],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/proposals/export", response_class=Response)
+async def export_rule_proposals(organization: RequestOrganization) -> Response:
+    """The same reports as `GET /rules/proposals`, as one CSV — everything, not just a page.
+
+    Reuses the CSV conventions `app.services.export` established for the batch export: RFC 4180
+    with a UTF-8 BOM, so "Röntgen" survives a double-click in a de-DE Excel rather than needing the
+    Data → From Text/CSV detour that file's own `README.txt` has to explain. No ZIP and no
+    disclaimer file — a flat, five-column report has nowhere for a reader to lose the fact that a
+    report is not a finding, unlike a column of euros.
+    """
+    records = await rule_proposals().list_for_organization(
+        organization, limit=RULE_PROPOSAL_EXPORT_LIMIT
+    )
+    buffer = io.StringIO(newline="")
+    writer = csv.writer(buffer, **CSV_DIALECT)
+    writer.writerow(["id", "ziffer", "context", "receipt_hash", "created_at"])
+    for record in records:
+        writer.writerow(
+            [
+                str(record.id),
+                record.ziffer,
+                record.context,
+                record.receipt_hash or "",
+                as_utc(record.created_at).isoformat(),
+            ]
+        )
+    body = UTF8_BOM + buffer.getvalue()
+    return Response(
+        content=body,
+        media_type="text/csv",
+        headers=attachment_headers("rule_proposals.csv"),
     )
