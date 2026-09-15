@@ -185,6 +185,20 @@ def test_the_generated_rows_are_exactly_what_the_generator_produces():
     )
 
 
+#: The per-Ziffer classification lives under `docs/`, which the runtime image does not ship
+#: (`apps/engine/Dockerfile` copies `app`, `scripts`, `tests`, `logic`, `data` and nothing else).
+#: Same situation as `test_published_numbers.py` has with `apps/marketing` and `docs/api`, and the
+#: same answer — skip rather than fail, because "the file is not in this image" says nothing about
+#: whether it is stale. The freshness check still runs in CI: `contract-and-logic-gate` executes
+#: `scripts/classify_batch3_coverage.py --check` on a full checkout, beside the OpenAPI one.
+CLASSIFICATION = REPO_ROOT / "docs" / "content" / "batch3-coverage-classification.json"
+
+
+def _classification() -> dict:
+    if not CLASSIFICATION.exists():
+        pytest.skip(f"{CLASSIFICATION.name} is not present (running from a built image)")
+    return json.loads(CLASSIFICATION.read_text(encoding="utf-8"))
+
 # ==========================================================================================
 # The per-Ziffer coverage classification — report §5
 # ==========================================================================================
@@ -198,6 +212,9 @@ def test_the_coverage_classification_is_current():
     module. Every one of those moves in a normal batch, so a committed classification that nobody
     regenerates is a stale honesty metric — the worst kind.
     """
+    if not CLASSIFICATION.exists():
+        pytest.skip(f"{CLASSIFICATION.name} is not present (running from a built image)")
+
     import classify_batch3_coverage
 
     assert classify_batch3_coverage.main(["--check"]) == 0, (
@@ -208,11 +225,7 @@ def test_the_coverage_classification_is_current():
 
 def test_no_ziffer_is_classified_fully_verified_without_a_golden_test():
     """The label means "encoded *and* tested". Nothing else may carry it."""
-    payload = json.loads(
-        (REPO_ROOT / "docs" / "content" / "batch3-coverage-classification.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    payload = _classification()
     wrong = [
         ziffer
         for ziffer, entry in payload["ziffern"].items()
@@ -224,11 +237,7 @@ def test_no_ziffer_is_classified_fully_verified_without_a_golden_test():
 
 def test_every_partial_ziffer_names_the_sentence_it_is_missing():
     """"Partial" has to be a list of specific sentences, or it is a hedge."""
-    payload = json.loads(
-        (REPO_ROOT / "docs" / "content" / "batch3-coverage-classification.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    payload = _classification()
     silent = [
         ziffer
         for ziffer, entry in payload["ziffern"].items()

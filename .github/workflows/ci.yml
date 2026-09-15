@@ -262,6 +262,35 @@ jobs:
           fi
 
       # ---------------------------------------------------------------------------------------
+      # STEP 1b — the generated rule artefacts are what their generators produce.
+      #
+      # Here rather than in JOB 1 because two of the three read files the runtime image does not
+      # ship: `docs/content/batch3-coverage-classification.json` lives under `docs/`, and the
+      # engine Dockerfile copies app/scripts/tests/logic/data and nothing else. The tests that
+      # read it skip in the container for exactly that reason (`test_batch3_citations.py`), the
+      # same way `test_published_numbers.py` skips on `apps/marketing`. This job runs on a full
+      # checkout, so it is where the freshness check belongs.
+      #
+      # All three are pure functions of committed inputs — the raw GOÄ XML, the rule CSVs, the
+      # catalog — so a diff here means somebody edited a generated file by hand or changed a
+      # generator without re-running it.
+      # ---------------------------------------------------------------------------------------
+      - name: Generated rule artefacts are not stale
+        working-directory: apps/engine
+        run: |
+          set -euo pipefail
+          for script in \
+            extract_allgemeine_bestimmungen \
+            build_batch3_rules \
+            classify_batch3_coverage
+          do
+            if ! python "scripts/$script.py" --check; then
+              echo "::error::scripts/$script.py reports its output is stale. Re-run it and commit the result."
+              exit 1
+            fi
+          done
+
+      # ---------------------------------------------------------------------------------------
       # STEP 2 — the logic guard.
       #
       # Changing the solver logic or the catalog changes what this product is willing to bill for.
