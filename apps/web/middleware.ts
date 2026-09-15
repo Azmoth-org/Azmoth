@@ -68,6 +68,7 @@
 import { getSessionCookie } from "better-auth/cookies"
 import { NextResponse, type NextRequest } from "next/server"
 
+import { RULE_REVIEW_ENABLED, RULE_REVIEW_HREF } from "@/lib/features"
 import {
   ONBOARDING_COOKIE,
   clearOnboardingCookie,
@@ -141,6 +142,28 @@ function isPublic(pathname: string): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
+
+  // Before every other gate, including the session one: a deployment that has not opted into the
+  // rule workbench must answer `404` for it, signed in or not.
+  //
+  // **Why this cannot be `notFound()` in `app/(app)/rules/page.tsx` alone.** `(app)/loading.tsx`
+  // makes Next wrap every page under that layout in a `<Suspense>` boundary automatically, so the
+  // shell (`AppShell`, the nav, the sidebar) streams to the browser — and the response headers,
+  // status included — before the suspended page segment ever runs and calls `notFound()`. The
+  // status is committed at `200` by the time the page's own render throws, so the reader got a
+  // blank page at `200` instead of a `404`. `page.tsx` still calls `notFound()`, and still should:
+  // it is what makes the *rendered* body say "not found" for anyone who reaches this far, e.g. a
+  // future refactor that removes this middleware check. This one is what makes the *status code*
+  // true, by answering before any layout has begun streaming anything at all.
+  if (pathname === RULE_REVIEW_HREF && !RULE_REVIEW_ENABLED) {
+    // Rewritten to a path nothing defines, rather than answered here directly, so the reader sees
+    // this application's actual `app/not-found.tsx` rather than a blank body. Next resolves routing
+    // — including "nothing matches, so this is a 404" — before any layout starts rendering, which
+    // is precisely the stage the page-level `notFound()` above cannot reach in time.
+    const unmatched = new URL(request.url)
+    unmatched.pathname = "/rules-workbench-not-part-of-this-deployment"
+    return NextResponse.rewrite(unmatched)
+  }
 
   // Before every other gate, because the paths it guards are the ones that are *supposed* to be
   // reachable without a session — `PUBLIC_PREFIXES` returns early a few lines below, so anything
