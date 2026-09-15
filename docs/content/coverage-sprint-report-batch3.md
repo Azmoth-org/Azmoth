@@ -282,7 +282,7 @@ the artefact names every sentence it considers missing, so any individual case i
 Neither is a batch-3 defect. Both were turned up by cross-checking batch 3's own rows and are
 recorded here because they bear on rules that are enforced today.
 
-### F1 — 35 hand-curated exclusions from batch 1 point the wrong way
+### 6.1 · F1 — 35 hand-curated exclusions from batch 1 point the wrong way
 
 `scripts/deterministic_rule_parser.py` names the hazard in its own docstring:
 
@@ -311,13 +311,30 @@ so the parser returns no verdict and the evidence is a person reading German. It
 **no other** hand-curated rule is inverted, which is what makes the finding's completeness
 falsifiable, and that every readable batch-3 row points the way its own sentence does.
 
-**Not fixed here, on purpose.** Flipping an enforced exclusion changes which position a real
-invoice loses. That belongs in a change a reviewer can see on its own, not inside a 543-row data
-commit — and the guard test means it cannot be quietly forgotten: correcting the rows fails
-`test_the_machine_confirmed_half_of_the_finding_still_describes_the_corpus`, with this section
-named in the message.
+**Fixed in PR #87, not here.** Flipping an enforced exclusion changes which position a real
+invoice loses, and that belongs in a change a reviewer can see on its own rather than inside a
+543-row data commit. `docs/content/f1-exclusion-direction.md` carries the 35 ids, the euro deltas,
+the golden-suite and deployed-invoice analysis, and a corpus-wide regression test
+(`tests/test_exclusion_direction.py`) that checks all 948 exclusions rather than the 35.
 
-### F2 — the GOÄ contradicts itself about GOÄ 448/449 beside GOÄ 56
+**What that means for this batch.** `tests/test_batch3_direction.py` describes the corpus *before*
+the fix, which is what made the finding falsifiable; once PR #87 lands, two of its tests fail on
+purpose and with the instruction in the message. When rebasing this branch onto the fixed
+exclusions:
+
+* `test_the_machine_confirmed_half_of_the_finding_still_describes_the_corpus` and
+  `test_the_hand_read_half_…` — delete both, along with `INVERTED_CONFIRMED_BY_PARSER` and
+  `INVERTED_READ_BY_HAND`. The finding they record is closed, and
+  `tests/test_exclusion_direction.py` supersedes them with a stronger check.
+* `test_no_other_manual_rule_is_inverted` — also superseded; PR #87's
+  `test_no_exclusion_runs_opposite_to_the_sentence_it_quotes` makes the same assertion over the
+  whole corpus instead of the hand-curated file.
+* The three batch-3-specific tests (`test_every_readable_batch3_row_points_the_way_its_sentence
+  _does`, `test_the_unreadable_provisions_are_exactly_the_two_we_know_about`,
+  `test_every_readable_provision_is_confirmed_row_by_row`) stay: they guard *this* batch's
+  generator, which PR #87 knows nothing about.
+
+### 6.2 · F2 — the GOÄ contradicts itself about GOÄ 448/449 beside GOÄ 56
 
 Allgemeine Bestimmungen zu Abschnitt C VIII, Nr. 4: *"Neben den Leistungen nach Nummer 448 oder
 449 darf die Leistung nach Nummer 56 nicht berechnet werden."* — GOÄ 56 loses.
@@ -431,15 +448,31 @@ PY
 
 ## 9. Open questions for a human (not guessed)
 
-1. **F1's 35 inverted rules** (§6) — flip them? It is a billing-behaviour change on enforced
-   rules and wants its own PR and its own golden-case review. The four GOÄ 48 rows are the urgent
-   half: they silence a correct rule rather than merely reversing one.
-2. **Should `import_goae.py` carry the Allgemeine Bestimmungen into the catalog**, rather than a
+1. **F1's 35 inverted rules** (§6.1) — **answered, and fixed in PR #87**
+   (`docs/content/f1-exclusion-direction.md`). This batch must be rebased on it before merging:
+   the two guard tests in `tests/test_batch3_direction.py` describe the corpus *before* the fix
+   and will fail once it lands, which is the behaviour they were written for. §6.1 records what
+   to do with them.
+2. **F2's contradictory pair, GOÄ 448/449 beside GOÄ 56 (§6.2) — still open, and a decision only a
+   human should make.** Two sentences of the official text disagree about which position loses,
+   and this batch ships `direction: mutual`, which asserts only what both sentences agree on —
+   that the two may not stand together — and hands the choice to the ASP arbitrator, where it
+   surfaces on the report as a conflict.
+
+   That is deliberately *not* a resolution. A reviewer with the standard commentaries may
+   conclude that one of the two sentences governs (the Allgemeine Bestimmung is the later and more
+   specific provision; the Anmerkung is printed under the Ziffer it restricts), in which case the
+   pair becomes a one-way exclusion and the mutual rows are replaced. Until somebody decides that
+   on the law rather than on the data, the engine says "these two conflict" instead of picking a
+   winner the GOÄ does not pick. The two sentences are quoted in full in §6.2, and
+   `tests/test_coverage_sprint_batch3.py` pins the current mutual behaviour, so a change of mind
+   is a visible edit rather than a drift.
+3. **Should `import_goae.py` carry the Allgemeine Bestimmungen into the catalog**, rather than a
    sibling artefact? It would put the batch-3 citations under the same `citation_verbatim` check
    as everything else, at the cost of a schema for "text that governs a range of Ziffern" and a
    re-pin of the catalog snapshot identity. Deliberately not decided inside a data batch.
-3. **The five constraint shapes with no rule table** (§4: fee reduction, keep-the-dearest,
+4. **The five constraint shapes with no rule table** (§4: fee reduction, keep-the-dearest,
    keep-the-cheaper, general Zielleistung, cross-code cumulative cap). Together with batch 1 §6.1
    and ADR-002, this is now a list, not an exception — worth deciding as a group.
-4. **Abschnitt boundaries** (§4, batch 1 §6.2) — unchanged, and now blocking four provisions
+5. **Abschnitt boundaries** (§4, batch 1 §6.2) — unchanged, and now blocking four provisions
    instead of two.

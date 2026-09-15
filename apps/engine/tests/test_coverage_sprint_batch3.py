@@ -304,3 +304,50 @@ def test_two_zuschlaege_from_the_same_group_are_not_in_conflict_by_this_rule(sou
         b for b in result.blocked if (b.rule_id or "").startswith("excl_b3_")
     ]
     assert from_batch3 == []
+
+
+# ==========================================================================================
+# F2 — the pair the GOÄ contradicts itself about (report §6.2 and §9.2)
+# ==========================================================================================
+
+
+def test_the_contradictory_448_56_pair_is_a_conflict_and_not_a_verdict(souffle):
+    """GOÄ 448 beside GOÄ 56: the source says both "56 loses" and "448 loses".
+
+    Allgemeine Bestimmungen zu Abschnitt C VIII Nr. 4 — "Neben den Leistungen nach Nummer 448 oder
+    449 darf die Leistung nach Nummer 56 nicht berechnet werden" — makes 56 the loser. The
+    Anmerkung under GOÄ 448 says the reverse: "Der Zuschlag nach Nummer 448 ist neben den
+    Leistungen nach den Nummern 1 bis 8 und 56 … nicht berechnungsfähig."
+
+    Both are the official text; they agree the two may not stand together and differ on which is
+    dropped. So the rows ship `direction: mutual`, which asserts only the agreed part and leaves
+    the choice to the arbitrator, where it surfaces as a conflict on the report.
+
+    This test pins that, deliberately, as the thing a human has to change on purpose. If a
+    reviewer decides one sentence governs (report §9.2), this test is what tells them the engine's
+    behaviour is about to move — rather than the pair quietly becoming one-way in a later batch.
+    """
+    result = souffle.run(make_extraction(), one_act_per_ziffer("448", "56"))
+
+    conflicts = {frozenset((c.ziffer_a, c.ziffer_b)) for c in result.conflicts}
+    assert frozenset(("448", "56")) in conflicts, (
+        "GOÄ 448 + 56 must be reported as a conflict for the arbitrator, not decided in the data"
+    )
+    assert result.billable == [], "a mutual conflict is arbitrated by the ASP solver, not here"
+
+    one_way = [
+        b for b in result.blocked if (b.rule_id or "").startswith("excl_b3_") and b.ziffer in {"448", "56"}
+    ]
+    assert one_way == [], (
+        f"batch 3 picked a winner the GOÄ does not pick: {[(b.ziffer, b.rule_id) for b in one_way]}"
+    )
+
+
+def test_the_unambiguous_half_of_the_same_anmerkung_is_still_one_way(souffle):
+    """The rest of GOÄ 448's Anmerkung is not contradicted anywhere, and is encoded as written:
+    form A, so the Zuschlag is what may not be charged beside a consultation."""
+    result = souffle.run(make_extraction(), one_act_per_ziffer("1", "448"))
+
+    assert result.billable == ["1"]
+    blocked = _blocked(result, "448")
+    assert blocked is not None and blocked.rule_id == "excl_b3_1_448"

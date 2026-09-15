@@ -1416,7 +1416,7 @@
       "classification": "PARTIAL",
       "constraint_sentences": 6,
       "encoded": 3,
-      "golden_tested": false,
+      "golden_tested": true,
       "not_encoded": [
         {
           "source": "ab_11",
@@ -1782,7 +1782,7 @@
       "classification": "PARTIAL",
       "constraint_sentences": 5,
       "encoded": 3,
-      "golden_tested": false,
+      "golden_tested": true,
       "not_encoded": [
         {
           "source": "ziffer:448",
