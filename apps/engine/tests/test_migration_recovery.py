@@ -51,7 +51,7 @@ BILLING = "0010_subscriptions_and_invoices"
 
 #: The current tip of the migration history. Bump this alongside a new migration file — it is the
 #: one hardcoded assumption in this file that a later revision naturally invalidates.
-HEAD = "0013_patient_ziffer_history"
+HEAD = "0014_f1_exclusion_direction"
 
 #: `Base.metadata` as of the incident — `BILLING`'s tables and everything before them. Fixed to this
 #: exact set rather than derived from the live `Base.metadata`, because `_damaged` recreates history
@@ -456,3 +456,42 @@ def test_diagnose_reports_nothing_pending_at_head(tmp_path):
 
     assert code == 0
     assert "nothing pending" in output
+
+#: The width of `alembic_version.version_num`. Alembic creates that table itself, with a
+#: `String(32)` column, and does not check a revision id against it — the id is written only at the
+#: *end* of `upgrade()`, so an over-long one runs every migration in the file, commits the DDL, and
+#: then dies on `UPDATE alembic_version SET version_num=...` with
+#: `StringDataRightTruncationError`. On Postgres the transaction rolls the whole thing back and the
+#: deploy stops; on SQLite, where the suite runs, the column has no length enforcement at all, so
+#: nothing local fails. That asymmetry is the whole reason this constant is asserted rather than
+#: assumed: revision 0014 shipped at 36 characters, passed the entire local suite, and broke CI on
+#: the first Postgres run. `0010_subscriptions_and_invoices` is 31 — one character of headroom is
+#: why nobody had hit it before.
+VERSION_NUM_WIDTH = 32
+
+
+def test_every_revision_id_fits_the_alembic_version_column():
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    script = ScriptDirectory.from_config(Config(str(ENGINE_DIR / "alembic.ini")))
+    too_long = sorted(
+        (revision.revision, len(revision.revision))
+        for revision in script.walk_revisions()
+        if len(revision.revision) > VERSION_NUM_WIDTH
+    )
+    assert too_long == [], (
+        f"revision ids longer than alembic_version.version_num ({VERSION_NUM_WIDTH} chars). "
+        f"They run fine on SQLite and fail on Postgres *after* applying the schema change: "
+        f"{too_long}"
+    )
+
+
+def test_the_history_has_exactly_one_head():
+    """A second head is a merge conflict that `upgrade head` reports as ambiguity at deploy time."""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    script = ScriptDirectory.from_config(Config(str(ENGINE_DIR / "alembic.ini")))
+    heads = script.get_heads()
+    assert list(heads) == [HEAD], f"expected a single head {HEAD!r}, found {heads}"

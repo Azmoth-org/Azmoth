@@ -239,8 +239,27 @@ def test_no_behavioural_value_moved_in_any_frozen_snapshot_on_this_branch():
         pytest.skip("not in a git checkout that carries the batch 2 history")
     first_commit = intro.stdout.split()[-1]
 
+    #: …and close the window at batch 2's *last* commit, not at `HEAD`. The comment above already
+    #: says why a wider window is wrong — "it would make the test fail for a reason batch 2 did not
+    #: cause" — and `HEAD` becomes exactly that window the moment any later commit touches a golden
+    #: file for a legitimate reason. The F1 exclusion-direction fix is the first one that does:
+    #: correcting 35 rule directions moves a rule count in all nine snapshots, which this test read
+    #: as batch 2 having deleted a line.
+    #:
+    #: Located the same way as the opening bound, by the file batch 2 introduced: nothing since has
+    #: touched `quantity_limits.manual.csv`, so its newest commit is batch 2's newest commit. A
+    #: future change that *does* edit that file moves this bound with it, which is correct — the
+    #: claim is about the golden files as of the last change to batch 2's own data.
+    last_commit = subprocess.run(
+        ["git", "log", "-1", "--format=%H", "--", "data/rules/quantity_limits.manual.csv"],
+        capture_output=True, text=True, cwd=repo_root,
+    )
+    if last_commit.returncode != 0 or not last_commit.stdout.strip():
+        pytest.skip("not in a git checkout that carries the batch 2 history")
+
     diff = subprocess.run(
-        ["git", "diff", "-U0", f"{first_commit}^", "HEAD", "--", "logic/tests/golden"],
+        ["git", "diff", "-U0", f"{first_commit}^", last_commit.stdout.strip(),
+         "--", "logic/tests/golden"],
         capture_output=True, text=True, cwd=repo_root,
     )
     assert diff.returncode == 0

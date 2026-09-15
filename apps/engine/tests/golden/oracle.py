@@ -149,7 +149,19 @@ REGRESSION_CASES = (
 #: own Ziffern, factors and amounts are unchanged, which the rest of `test_golden_cases.py`
 #: asserts independently. Re-verified stable across two separate processes before this value was
 #: updated.
-CASE_A_RECEIPT_PREFIX = "a6ab0366db492a08"
+#:
+#: Moved a fifth time on 2026-09-15 by the F1 exclusion-direction fix
+#: (`docs/content/f1-exclusion-direction.md`): 35 rows in
+#: `data/rules/exclusions.manual.csv` swapped `from_ziffer` and `to_ziffer` and were renamed to
+#: match, so `rules_hash()` moved. `logic_version` did not (nothing under `logic/` was touched).
+#: Case A claims GOÄ 1 and 301. GOÄ 1 *is* one half of a corrected pair (`excl_man_48_1` became
+#: `excl_man_1_48`), so the precise statement is not "case A is untouched by the fix" but "case A
+#: carries no GOÄ 48, so no corrected rule has both its Ziffern present and none can fire". GOÄ 301
+#: appears in no corrected pair at all. `scripts/refreeze_rule_coverage.py` reported METADATA ONLY
+#: for all nine frozen snapshots — no Ziffer, factor, amount or proof moved anywhere — which is the
+#: check that does not depend on anybody having reasoned that out correctly. Re-verified stable
+#: across two separate processes before this value was updated.
+CASE_A_RECEIPT_PREFIX = "4025ec499abf0c91"
 
 
 # ------------------------------------------------------------------------------------------
