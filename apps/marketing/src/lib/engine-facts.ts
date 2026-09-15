@@ -19,17 +19,25 @@
  * what `Pipeline().rule_coverage()` computes. Changing a rule set without changing
  * this file turns the engine's own suite red.
  *
- * Verified against the engine on 2026-09-13 (coverage sprint batch 1, 2026-09-12 — see
- * docs/content/coverage-sprint-plan.md — re-checked unchanged the following day):
+ * Verified against the engine on 2026-09-15 (the F1 exclusion-direction fix — see
+ * docs/content/f1-exclusion-direction.md):
  *
- *     enforced_rule_count       944
+ *     enforced_rule_count       940
  *     total_constraint_rule_count 980
  *     catalog                   2343 Ziffern (goae_official_snapshot_2026-07-25)
  *     Ziffern named by >= 1 enforced rule  383
+ *
+ * The F1 fix corrected the direction of 35 exclusions. It added no rule and removed none, so
+ * the catalog-coverage figure is unchanged at 383 — the same Ziffern, the other way round.
+ * `enforced_rule_count` falls by four: once four of those rules point the right way they assert
+ * an edge an auto-extracted rule already asserts, so the auto twin is deduped into
+ * `RuleStore.redundant` (30 -> 34), which is counted as loaded rather than enforced. Four fewer
+ * enforced rules, and one more combination the engine actually catches — GOÄ 48 beside GOÄ 50
+ * was previously caught by neither rule, because each suppressed the other.
  */
 
 /** Rules that may actually suppress a position right now. `enforced_rule_count`. */
-export const ENFORCED_RULE_COUNT = 944;
+export const ENFORCED_RULE_COUNT = 940;
 
 /** Every constraint rule loaded, enforced or not. `total_constraint_rule_count`. */
 export const CONSTRAINT_RULE_COUNT = 980;
@@ -64,7 +72,7 @@ export const CATALOG_COVERAGE_SHARE = ZIFFERN_UNDER_RULE_COUNT / CATALOG_ZIFFER_
  * Every stat tile on the site prints this next to the numbers it goes with. A rule count without
  * a date is exactly the kind of claim this file exists to prevent — see the module docstring.
  */
-export const SNAPSHOT_DATE = "2026-09-13";
+export const SNAPSHOT_DATE = "2026-09-15";
 
 /**
  * German number formatting, fixed to `de-DE` rather than the request locale.
