@@ -50,12 +50,21 @@ import {
  *
  * Better Auth's `name` field still exists on every user row and is not nullable, so it is set to the
  * organisation's own name rather than asked for twice — nothing in this application reads a
- * personal name back out of it. Immediately after `signUp.email` succeeds, `authClient.organization.
- * create` and `.setActive` run in the same submit, so a reader who has just registered lands on a
- * dashboard that already knows which organisation it is rather than one reading "Keine
+ * personal name back out of it. Immediately after `signUp.email` succeeds this form settles the
+ * organisation and makes it active in the same submit, so a reader who has just registered lands on
+ * a dashboard that already knows which organisation it is rather than one reading "Keine
  * Organisation" until they find the prompt in `organisation-switcher.tsx` that used to be the only
  * way to get one. That stopgap still exists for a second organisation later; it is no longer the
  * first one's only door.
+ *
+ * **What this form does is rename, not create.** `user.create.after` in `lib/auth.ts` gives every
+ * new account an organisation named after its email domain — it has to, because an account with no
+ * organisation cannot make a single engine call, and this form is not the only way an account comes
+ * into existence. So the name typed here updates that organisation instead of adding a second one;
+ * `organization.create` is kept only as the fallback for the case where the hook could not create
+ * anything at all. Two practices in the rail after one registration would be the visible symptom of
+ * getting this wrong, and the invisible one is worse: the session opens on the *earliest*
+ * membership, which would be the domain-derived name rather than the typed one.
  *
  * A failure to create the organisation is reported rather than swallowed — the account exists at
  * that point regardless, and signing in afterwards reaches the same rail's "Organisation anlegen".
@@ -140,22 +149,50 @@ export function SignupForm({
 
       // The account exists at this point regardless of what happens below, so a failure here is
       // reported rather than left to look like the sign-up itself failed — see the module docstring.
-      const { data: organization, error: organizationFailure } =
-        await authClient.organization.create({
-          name: organizationName,
-          slug: slugifyOrganizationName(organizationName),
+      //
+      // **Rename before create.** `user.create.after` in `lib/auth.ts` has already made this
+      // account an organisation named after its email domain, so that an account created by any
+      // other route is usable at all. Calling `organization.create` unconditionally here would
+      // leave a reader who filled in this form with *two* practices in the rail, and — because the
+      // session opens on the earliest membership — signed in to the domain-derived one rather than
+      // the one they just typed. So the name on this form updates the organisation that exists,
+      // and only creates one when the hook could not (a database without the organisation tables,
+      // which is the same condition the hook logs and swallows).
+      const { data: existing } = await authClient.organization.list()
+      const claimed = existing?.[0]
+
+      let organizationId = claimed?.id
+      if (claimed) {
+        const { error: renameFailure } = await authClient.organization.update({
+          organizationId: claimed.id,
+          data: { name: organizationName },
         })
-      if (organizationFailure) {
-        setError(authErrorMessage(organizationFailure))
-        setPending(false)
-        return
+        if (renameFailure) {
+          setError(authErrorMessage(renameFailure))
+          setPending(false)
+          return
+        }
+      } else {
+        const { data: organization, error: organizationFailure } =
+          await authClient.organization.create({
+            name: organizationName,
+            slug: slugifyOrganizationName(organizationName),
+          })
+        if (organizationFailure) {
+          setError(authErrorMessage(organizationFailure))
+          setPending(false)
+          return
+        }
+        organizationId = organization.id
       }
 
-      // `create` does not itself make the new organisation the session's active one — the rail
-      // would otherwise still read "Keine Organisation" until something else set it.
-      await authClient.organization.setActive({
-        organizationId: organization.id,
-      })
+      // Neither `create` nor `update` makes an organisation the session's active one on its own —
+      // the rail would otherwise still read "Keine Organisation" until something else set it. The
+      // hook's organisation is usually already active (`session.create.before` picks the earliest
+      // membership), and setting it again is idempotent rather than a second state to reason about.
+      if (organizationId) {
+        await authClient.organization.setActive({ organizationId })
+      }
 
       router.refresh()
       router.push(next)

@@ -11,9 +11,16 @@ import { expect, test } from "@playwright/test"
  * Three things are checked, in the order a reader would notice them going wrong: the three labels
  * on the form (no phone, no address, no personal name — see the signup brief this guards), that
  * submitting them succeeds at all, and that the account lands on an organisation already active
- * rather than "Keine Organisation" — the whole reason `signup-form.tsx` calls
- * `organization.create` and `.setActive` in the same submit instead of leaving that to the sidebar
- * prompt.
+ * rather than "Keine Organisation".
+ *
+ * **That last assertion now guards two mechanisms rather than one, and it is the more valuable for
+ * it.** `user.create.after` in `lib/auth.ts` gives every new account an organisation named after
+ * its email domain — here that would be "E2e Azmoth" — so that an account created by any route at
+ * all can make an engine call; `session.create.before` then opens the session on it. The form's job
+ * is to *rename* that organisation to what was typed, and to set it active. So a rail reading
+ * "Keine Organisation" means the hook did not run, and a rail reading "E2e Azmoth" means the form
+ * created a second organisation instead of renaming the first — two different regressions, both
+ * caught by asserting the typed name below.
  *
  * `@e2e.azmoth.test` — the domain this repository documents as admitted for testing (see
  * `docs/api/E2E_GOLDEN.md` and `auth.setup.ts`, which signs in under the same domain): a spec that

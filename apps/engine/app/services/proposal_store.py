@@ -87,13 +87,42 @@ class ProposalNotFound(KeyError):
         self.proposal_id = proposal_id
 
 
+#: The lifecycle states, in the words a reviewer reads on screen. `ProposalStatus` is the wire value
+#: and stays English — it is in the API contract and in `packages/contracts` — so this is the one
+#: place the two vocabularies meet, rather than a `str.title()` somewhere in the UI.
+STATUS_LABEL_DE: dict[ProposalStatus, str] = {
+    ProposalStatus.DRAFT: "Entwurf",
+    ProposalStatus.APPROVED: "freigegeben",
+    ProposalStatus.REJECTED: "abgelehnt",
+    ProposalStatus.EXPORTED: "exportiert",
+}
+
+
 class IllegalTransitionError(RuntimeError):
-    """A status change the lifecycle does not allow. Refused, never silently applied."""
+    """A status change the lifecycle does not allow. Refused, never silently applied.
+
+    **The message is German because it is rendered.** `app/api/proposals.py` puts `str(exc)` into
+    the `409` body's `message`, which `ErrorPanel` shows to whoever clicked the button — so "A
+    proposal in status APPROVED cannot become APPROVED" was an English sentence in the middle of a
+    German product, on one of the few errors an ordinary reviewer actually meets (two people
+    approving the same draft, or a double-click).
+
+    The machine-readable half is untouched: `error` stays `illegal_transition`, and
+    `current_status`/`requested_status` still carry the English `ProposalStatus` values that the API
+    contract and `packages/contracts` are written in. Only the prose changed.
+    """
 
     def __init__(self, current: ProposalStatus, requested: ProposalStatus) -> None:
+        allowed = ", ".join(STATUS_LABEL_DE[s] for s in ALLOWED[current])
         super().__init__(
-            f"A proposal in status {current} cannot become {requested}. "
-            f"Allowed from {current}: {', '.join(str(s) for s in ALLOWED[current]) or 'nothing'}."
+            f"Ein Vorschlag im Status „{STATUS_LABEL_DE[current]}“ kann nicht nach "
+            f"„{STATUS_LABEL_DE[requested]}“ wechseln. "
+            + (
+                f"Aus „{STATUS_LABEL_DE[current]}“ ist möglich: {allowed}."
+                if allowed
+                else f"„{STATUS_LABEL_DE[current]}“ ist ein Endstatus — "
+                "es ist kein weiterer Wechsel möglich."
+            )
         )
         self.current = current
         self.requested = requested

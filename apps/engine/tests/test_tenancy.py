@@ -663,8 +663,13 @@ def test_no_route_hands_a_raw_header_to_a_pdf_renderer():
     nothing about the code around it looked wrong. A future route that renders a Prüfbericht will
     reach for the same expression, and no test of *behaviour* catches it until someone thinks to
     write one for that new route. So the shape is asserted directly: every read of the header in
-    `app/` goes through `app.api.tenancy`, and every value that reaches a renderer goes through
-    `organization_label` or comes off a database row.
+    `app/` goes through `app.api.tenancy`, and every value that reaches a renderer goes through one
+    of that module's label functions or comes off a database row.
+
+    **The check is per line inside the call, not per call.** It used to ask whether the statement
+    contained `organization_label(` anywhere — which passes a call that sanitises one header and
+    feeds a second one raw, and that is exactly the shape a second header introduced. Now every
+    line of the renderer call that reads a header has to name a sanctioned function *itself*.
     """
     import re
     from pathlib import Path
@@ -673,24 +678,54 @@ def test_no_route_hands_a_raw_header_to_a_pdf_renderer():
     offenders: list[str] = []
     raw_read = re.compile(r"headers\.get\(\s*[\"\']x-organization-id[\"\']", re.IGNORECASE)
 
+    #: The functions in `app.api.tenancy` that are allowed to stand between a header and a
+    #: document. Both refuse what they cannot vouch for: `organization_label` admits only the shape
+    #: of a generated organisation id, `organization_name_label` admits one line of printable text
+    #: and nothing that could carry a PDF operator or a paragraph into a table cell.
+    sanctioned = ("organization_label(", "organization_name_label(")
+
+    def statement_lines(lines: list[str], start: int) -> list[str]:
+        """The whole call beginning at `start`, by parenthesis balance rather than a fixed window.
+
+        A fixed window is what let this guard miss the second header: the call grew past twelve
+        lines and the sanitising call fell outside it while the raw read stayed inside.
+        """
+        depth = 0
+        collected: list[str] = []
+        for line in lines[start:]:
+            collected.append(line)
+            depth += line.count("(") - line.count(")")
+            if depth <= 0:
+                break
+        return collected
+
     for source in sorted(api_dir.glob("*.py")):
         if source.name == "tenancy.py":
             continue  # the module that owns the header; its reads are the sanctioned ones
         text = source.read_text(encoding="utf-8")
-        for number, line in enumerate(text.splitlines(), start=1):
+        lines = text.splitlines()
+        for number, line in enumerate(lines, start=1):
             if raw_read.search(line):
                 offenders.append(f"{source.name}:{number}: {line.strip()}")
             if "render_single_report(" in line or "render_batch_report(" in line:
-                # The call spans several lines; check the whole statement.
-                statement = "\n".join(text.splitlines()[number - 1 : number + 12])
-                if "headers.get(" in statement and "organization_label(" not in statement:
-                    offenders.append(f"{source.name}:{number}: renderer fed a raw header")
+                for offset, inner in enumerate(statement_lines(lines, number - 1)):
+                    # A comment explaining the rule is not a violation of it — and the comment
+                    # above this very call quotes `request.headers.get(...)` in order to warn
+                    # against it. Only code counts.
+                    code = inner.split("#", 1)[0]
+                    if "headers.get(" not in code:
+                        continue
+                    inner = code
+                    if not any(name in inner for name in sanctioned):
+                        offenders.append(
+                            f"{source.name}:{number + offset}: renderer fed a raw header — "
+                            f"{inner.strip()}"
+                        )
 
     assert not offenders, (
-        "a raw X-Organization-ID reaches a document: "
+        "a raw header reaches a document: "
         + "; ".join(offenders)
-        + ". Route it through app.api.tenancy.organization_label — a Prüfbericht is filed and "
-        "forwarded to a payer, and a line on it naming a practice must not be free text from a "
-        "request."
+        + ". Route it through app.api.tenancy — a Prüfbericht is filed and forwarded to a payer, "
+        "and a line on it naming a practice must not be free text from a request."
     )
 

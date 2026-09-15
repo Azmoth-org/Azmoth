@@ -1,62 +1,118 @@
+"use client"
+
 import { AlertTriangleIcon, RotateCwIcon } from "lucide-react"
+import * as React from "react"
 
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@workspace/ui/components/alert"
-import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 
-import { RawJson } from "@/components/review/raw-json"
 import type { ReviewError } from "@/lib/review/types"
 
-/** Human-readable guidance per failure the screen can hit. Anything unlisted falls back to none. */
-const HINTS: Record<string, string> = {
+/** The sentence shown for anything not named below, and for anything that has no useful advice. */
+const GENERIC_MESSAGE =
+  "Ein technischer Fehler ist aufgetreten. Bitte versuchen Sie es erneut oder " +
+  "kontaktieren Sie den Support."
+
+/**
+ * What each failure means to the person who hit it. German, specific, and actionable or silent.
+ *
+ * Every entry here is a promise that the reader can do something with the sentence. A failure whose
+ * only honest description is "our software broke" is deliberately absent and falls through to
+ * `GENERIC_MESSAGE` — an entry that restates the error code in longer words is worse than no entry,
+ * because it costs the reader the time to find out it says nothing.
+ */
+const MESSAGES: Record<string, string> = {
+  // Infrastructure. The reader cannot fix any of these and must not be told to try; what they can
+  // do is wait or call us, and that is what these say.
   engine_unreachable:
-    "Engine starten: cd apps/engine && .venv/bin/uvicorn app.main:app --port 8000 — oder ENGINE_BASE_URL prüfen.",
+    "Der Prüfdienst ist zurzeit nicht erreichbar. Bitte versuchen Sie es in einigen Minuten " +
+    "erneut — falls das Problem bestehen bleibt, kontaktieren Sie den Support.",
   engine_unreachable_timeout:
-    "Die Engine läuft, antwortet aber nicht. Prüfen, ob der Prozess der Regel-Engine hängt (GET /api/v1/health).",
+    "Der Prüfdienst antwortet zurzeit nicht. Bitte versuchen Sie es in einigen Minuten erneut — " +
+    "falls das Problem bestehen bleibt, kontaktieren Sie den Support.",
   proxy_unreachable:
-    "Der Next.js-Server ist nicht erreichbar. pnpm dev neu starten.",
+    "Die Verbindung zum Server ist unterbrochen. Bitte prüfen Sie Ihre Internetverbindung und " +
+    "laden Sie die Seite neu.",
+  rules_engine_failed: GENERIC_MESSAGE,
+  validation_failed: GENERIC_MESSAGE,
+  empty_response: GENERIC_MESSAGE,
+  unparsable_response: GENERIC_MESSAGE,
+  unexpected_response_shape: GENERIC_MESSAGE,
+
+  // The solver gave up. Worth its own sentence because the *absence* of a draft is deliberate here
+  // and a reader who is not told that will read it as a lost result.
   solver_timeout:
-    "Der Optimierer hat innerhalb von SOLVER_TIMEOUT_SECONDS kein Modell gefunden. Es wird bewusst KEIN Entwurf ausgegeben: ein leeres Ergebnis wäre nicht von „nichts ist berechnungsfähig“ zu unterscheiden.",
-  rules_engine_failed:
-    "Die deterministische Regel-Engine ist ausgefallen. GET /api/v1/health zeigt unter „Regel-Engine“, ob sie auf diesem Host verfügbar ist.",
-  validation_failed:
-    "Die unabhängige Validierung hat dem Solver widersprochen. Das ist ein Defekt in der Engine, nicht in der Eingabe — es wird absichtlich kein Entwurf zurückgegeben.",
+    "Die Prüfung hat zu lange gedauert und wurde abgebrochen. Es wird bewusst kein " +
+    "unvollständiger Entwurf ausgegeben. Bitte versuchen Sie es erneut oder prüfen Sie die " +
+    "Rechnung in kleineren Teilen.",
+
+  // The reader's own input or their own workflow. These are the ones where a specific sentence
+  // actually saves them something.
   validation_error:
-    "Die Eingabe entspricht nicht dem Extraktionsschema. Das betroffene Feld steht in den Details.",
+    "Die hochgeladene Datei entspricht nicht dem erwarteten Format. Bitte prüfen Sie die Datei " +
+    "und laden Sie sie erneut hoch.",
   illegal_transition:
-    "Dieser Statuswechsel ist nicht erlaubt. Ein abgelehnter oder exportierter Vorschlag wird nicht erneut entschieden — und ein Export ist nur einmal möglich.",
-  // Was: "Vorschläge liegen nur im Speicher der Engine und überleben keinen Neustart." That was the
-  // right explanation while the store was in-memory and is now simply false — and it pointed the
-  // reviewer at the wrong fix, since re-running the case does not help with a mistyped id.
+    "Dieser Schritt ist für den aktuellen Status nicht möglich. Ein abgelehnter oder bereits " +
+    "exportierter Vorschlag kann nicht erneut entschieden werden, und ein Export ist nur einmal " +
+    "möglich.",
   proposal_not_found:
-    "Unter dieser ID ist kein Vorschlag gespeichert. Vorschläge werden dauerhaft gespeichert — ID prüfen, oder den Fall neu ausführen.",
-  // The two below are refused before a request is sent: the id in the link cannot be one this
-  // engine issued. Worth separating from `*_not_found`, because "the link is damaged" and "the
-  // record is gone" send a reader to look in two different places.
+    "Unter dieser Adresse ist kein Vorschlag gespeichert. Bitte prüfen Sie den Link oder suchen " +
+    "Sie den Vorschlag über „Alle Prüfungen“.",
   malformed_proposal_id:
-    "Die ID in der Adresszeile hat nicht die Form prop_<hex>. Vermutlich ist der Link unvollständig kopiert — der Vorschlag lässt sich über „Alle Prüfungen“ suchen.",
+    "Der Link ist unvollständig. Bitte öffnen Sie den Vorschlag über „Alle Prüfungen“.",
   malformed_batch_id:
-    "Die ID in der Adresszeile hat nicht die Form batch_<hex>. Vermutlich ist der Link unvollständig kopiert — der Stapel lässt sich über die Stapel-Historie suchen.",
-  unexpected_response_shape:
-    "Engine und UI verwenden möglicherweise verschiedene Contract-Versionen. In apps/engine: python scripts/export_openapi.py, dann pnpm generate:contracts.",
-  batch_not_completed:
-    "Nur ein abgeschlossener Stapel kann exportiert werden. Eine Zwischensumme wäre ein Stand, den später niemand mehr identifizieren kann.",
+    "Der Link ist unvollständig. Bitte öffnen Sie den Stapel über die Stapel-Historie.",
   batch_not_found:
-    "Unter dieser ID ist kein Stapel gespeichert. ID prüfen, oder die Dateien neu hochladen.",
+    "Unter dieser Adresse ist kein Stapel gespeichert. Bitte prüfen Sie den Link oder laden Sie " +
+    "die Dateien erneut hoch.",
+  batch_not_completed:
+    "Der Stapel ist noch nicht vollständig geprüft. Der Export ist erst möglich, wenn alle " +
+    "Dateien abgeschlossen sind.",
   unreadable_request_body:
-    "Der Export benötigt einen Namen im Feld exported_by.",
-  empty_response:
-    "Die Engine hat einen leeren Body geliefert. Engine-Logs prüfen.",
-  unparsable_response:
-    "Die Antwort war kein JSON. Steht ein Proxy zwischen UI und Engine?",
+    "Für den Export wird ein Name benötigt. Bitte tragen Sie ein, wer den Export vornimmt.",
+  no_active_organization:
+    "Diese Sitzung ist keiner Praxis zugeordnet. Bitte wählen Sie oben links eine Organisation " +
+    "aus oder legen Sie eine an.",
+  unauthenticated:
+    "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
 }
 
 /**
- * One failure, in the same shape everywhere the app can fail.
+ * One failure, in the same shape everywhere the app can fail — written for the person who hit it.
+ *
+ * ## What this panel used to show, and why none of it belongs here
+ *
+ * It showed the reader three things they could do nothing with:
+ *
+ *   - **Shell commands.** `engine_unreachable` answered with *"Engine starten: cd apps/engine &&
+ *     .venv/bin/uvicorn app.main:app --port 8000"*. `proxy_unreachable` said *"pnpm dev neu
+ *     starten"*. `unexpected_response_shape` said *"python scripts/export_openapi.py, dann pnpm
+ *     generate:contracts"*. A customer has no checkout, no terminal on our machine and no business
+ *     being told to restart our services; what the instruction actually communicates is that they
+ *     are looking at somebody's development build.
+ *   - **An `error_code` badge**, in monospace, beside the message. `solver_timeout` is a token for
+ *     a bug tracker, not a sentence.
+ *   - **The raw JSON `details`**, pretty-printed under the message — the engine's internal payload,
+ *     verbatim, in the customer's face.
+ *
+ * All three were right for the audience the screen was built for. None of them survives the
+ * product being shown to somebody who is evaluating whether to buy it.
+ *
+ * ## What replaced them
+ *
+ * A German sentence per failure, saying what happened in terms of *their* work, and what to do
+ * next when there is something to do. Where there is nothing useful to say, the generic sentence
+ * is used rather than a specific-sounding one that says nothing: *"Ein technischer Fehler ist
+ * aufgetreten. Bitte versuchen Sie es erneut oder kontaktieren Sie den Support."*
+ *
+ * **The diagnostic detail is not deleted, it is moved.** Every render logs the code, the HTTP
+ * status and the whole `details` payload through `console.error`, so the browser console still has
+ * exactly what the panel used to print — which is where a developer looks anyway, and where a
+ * customer does not. A support call still starts with "open the console and send me what is red".
  *
  * `onRetry` is optional and should only be passed for a failure that can plausibly succeed on a
  * second attempt — see `isRetryable` in `lib/deep-link.ts`. A retry button on a 404 is a lie: it
@@ -64,6 +120,7 @@ const HINTS: Record<string, string> = {
  * that out. `pending` disables it while the retry is in flight, so a slow engine does not collect a
  * queue of clicks.
  */
+
 export function ErrorPanel({
   error,
   onRetry,
@@ -73,7 +130,25 @@ export function ErrorPanel({
   onRetry?: () => void
   pending?: boolean
 }) {
-  const hint = HINTS[error.error]
+  /**
+   * Everything the panel no longer prints, kept where a developer can still reach it.
+   *
+   * In an effect rather than in render, so React's double-invocation in development does not log
+   * each failure twice, and keyed on the fields that identify the failure so a re-render for an
+   * unrelated reason does not log it again either.
+   */
+  React.useEffect(() => {
+    console.error("[azmoth] request failed", {
+      error_code: error.error,
+      status: error.status,
+      message: error.message,
+      details: error.details,
+    })
+    // `details` is deliberately not a dependency: it is a fresh object on every render, so
+    // including it would log the same failure again on every unrelated re-render. The three
+    // scalars below identify a failure; the payload logged is whatever is current when they change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error.error, error.status, error.message])
 
   return (
     <Alert variant="destructive">
@@ -81,22 +156,16 @@ export function ErrorPanel({
       {/*
         `min-w-0` on both cells is what keeps this panel inside the content column. `Alert` lays
         itself out as `grid-cols-[auto_1fr]`, and a grid item's automatic minimum is its content's
-        intrinsic width — so an engine message with no spaces to break at, or the `<pre>` in
-        `RawJson` below, widens the `1fr` column past the page and puts a scrollbar on the
-        viewport. `break-words` is the same guard for the message itself: these are German
-        compounds and XML paths.
+        intrinsic width — so a long German compound widens the `1fr` column past the page and puts
+        a scrollbar on the viewport. `break-words` is the same guard for the sentence itself.
       */}
-      <AlertTitle className="flex min-w-0 flex-wrap items-center gap-2">
-        <span className="min-w-0 break-words">{error.message}</span>
-        <Badge variant="destructive" className="font-mono">
-          {error.error}
-        </Badge>
-        {error.status ? (
-          <Badge variant="outline">HTTP {error.status}</Badge>
-        ) : null}
+      <AlertTitle className="min-w-0">
+        <span className="break-words">Die Aktion konnte nicht ausgeführt werden</span>
       </AlertTitle>
       <AlertDescription className="min-w-0 space-y-3">
-        {hint ? <p className="text-foreground/80">{hint}</p> : null}
+        <p className="break-words text-foreground/80">
+          {MESSAGES[error.error] ?? GENERIC_MESSAGE}
+        </p>
         {onRetry ? (
           <Button
             variant="outline"
@@ -111,9 +180,6 @@ export function ErrorPanel({
             {pending ? "Wird erneut geladen…" : "Erneut versuchen"}
           </Button>
         ) : null}
-        {error.details === undefined || error.details === null ? null : (
-          <RawJson value={error.details} label="Details (unverändert)" />
-        )}
       </AlertDescription>
     </Alert>
   )

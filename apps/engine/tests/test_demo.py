@@ -20,6 +20,9 @@ patient data" earns its place by being provably unable to receive any.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from pathlib import Path
+
 import pytest
 from sqlalchemy import select
 
@@ -248,7 +251,7 @@ def test_the_bundled_demo_delivery_is_synthetic():
 def test_missing_fixture_is_a_503_not_a_500(anonymous_client, monkeypatch):
     """A deployment fault answers 503 and keeps the rest of the service up."""
     monkeypatch.setattr(
-        demo_service, "demo_delivery_path", lambda settings=None: __import__("pathlib").Path("/nonexistent/x.xml")
+        demo_service, "demo_delivery_path", lambda settings=None: Path("/nonexistent/x.xml")
     )
     demo_service.reset_demo_cache()
 
@@ -265,7 +268,16 @@ def test_missing_fixture_is_a_503_not_a_500(anonymous_client, monkeypatch):
 # ==================================================================================================
 
 
-def test_demo_pdf_renders_and_is_deterministic(anonymous_client):
+def test_demo_pdf_renders_and_reports_the_same_audit_every_time(anonymous_client):
+    """The audit is reproducible; the document is stamped with when it was drawn.
+
+    This used to assert `first.content == second.content`, which held because the demo passed no
+    `generated_at` and the renderer therefore wrote no clock — and the visible cost was a header
+    reading "Erstellt am —" on the one artefact a prospect keeps. The demo now stamps the wall
+    clock like every other Prüfbericht, so two downloads differ, and what is pinned instead is the
+    property that was ever load-bearing: the same delivery yields the same audit. The `receipt_hash`
+    is how a reader compares two copies, so the `receipt_hash` is what this compares.
+    """
     first = anonymous_client.post("/api/v1/demo/report.pdf")
     second = anonymous_client.post("/api/v1/demo/report.pdf")
 
@@ -273,7 +285,32 @@ def test_demo_pdf_renders_and_is_deterministic(anonymous_client):
     assert first.headers["content-type"] == "application/pdf"
     assert first.content.startswith(b"%PDF-1.4")
     assert "azmoth_demo_pruefbericht.pdf" in first.headers["content-disposition"]
-    assert first.content == second.content
+
+    receipt = anonymous_client.post("/api/v1/demo/audit").json()["receipt_hash"]
+    assert receipt
+    assert receipt.encode("cp1252") in first.content
+    assert receipt.encode("cp1252") in second.content
+
+    # Everything that is not the clock is still identical. `/CreationDate` and `/ModDate` live in
+    # the trailing /Info object and "Erstellt am" in the header block; the audited body does not
+    # move between two renders of one delivery.
+    assert len(first.content) == len(second.content)
+
+
+def test_demo_pdf_states_its_date_and_names_the_account(anonymous_client):
+    """The two header lines that read "—" before, on the document a prospect forwards."""
+    from app.api.demo import DEMO_PDF_ORGANIZATION
+
+    content = anonymous_client.post("/api/v1/demo/report.pdf").content
+
+    # The canvas escapes `(` and `)` inside a content-stream string, so the label is matched by its
+    # parenthesis-free head rather than whole. That is enough: nothing else in this document
+    # produces "Azmoth Demo".
+    assert DEMO_PDF_ORGANIZATION.split(" (")[0].encode("cp1252") in content
+    assert b"/CreationDate (D:" in content
+    # "Erstellt am" is drawn with a real stamp beside it rather than the em dash `_stamp(None)`
+    # returns. The year is enough to say a date was rendered without pinning the clock.
+    assert f"{datetime.now(timezone.utc):%Y}".encode("cp1252") in content
 
 
 def test_demo_pdf_says_it_is_synthetic_inside_the_document(anonymous_client):

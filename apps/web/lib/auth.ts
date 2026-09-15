@@ -64,6 +64,8 @@ import {
   mayRegister,
 } from "@/lib/auth-allowlist"
 import { authDatabase, optionalEnv } from "@/lib/auth-db"
+import { organizationNameForEmail } from "@/lib/organization-name"
+import { slugifyOrganizationName } from "@/lib/organization-slug"
 // Google sign-in is disabled for the pilot — see `socialProviders` below.
 // import { googleCredentials } from "@/lib/auth-google"
 
@@ -254,6 +256,59 @@ function buildAuth() {
               code: SIGNUP_REFUSED_CODE,
               message: SIGNUP_REFUSED_MESSAGE,
             })
+          },
+
+          /**
+           * Every account gets a practice, at the moment the account exists.
+           *
+           * **This is what makes a new account usable at all.** `lib/engine.ts` refuses any
+           * proxied call whose session carries no `activeOrganizationId` with a `403`, and the
+           * engine refuses it again on its own side (`app/api/tenancy.py`) — so an account with no
+           * organisation reached the dashboard and watched every panel fail, including
+           * `/api/engine/rules/coverage`, which is the first thing the dashboard asks for. The
+           * organisation was previously created by the sign-up *form*, which left every other way
+           * an account can come into existence — a seeded account, a future invite, a social
+           * sign-in the day one is enabled — with no practice and no route to one.
+           *
+           * **Here rather than on the sign-up route**, for exactly the reason the `before` hook
+           * above gives: this runs on every path that creates a user row, so there is one place
+           * that can be wrong rather than one per door.
+           *
+           * **No `headers`, and that is load-bearing.** `/organization/create` treats a call with
+           * a request or headers but no session as unauthorised; a call with neither and a
+           * `userId` in the body is its server-side path. There *is* no session here — the session
+           * row is written after this hook returns, which is also why `session.create.before`
+           * below then finds this membership and opens the rail on it.
+           *
+           * **A failure here must not cost anybody their account.** The user row is already
+           * written by the time this runs, so throwing would leave a registered address that
+           * cannot be registered again and cannot be signed in to usefully either. The two
+           * realistic failures are a database without the organisation tables (`auth:migrate` not
+           * run) and a slug collision that survived its retries; both are logged and swallowed, and
+           * the reader lands on a rail reading "Keine Organisation" with a button that creates one
+           * — which is exactly where they were before this hook existed.
+           *
+           * The name is a placeholder derived from the email domain, not a claim — see
+           * `lib/organization-name.ts`. `/onboarding` renames this organisation rather than
+           * creating a second one, and so does the sign-up form.
+           */
+          after: async (user) => {
+            const name = organizationNameForEmail(user.email)
+            try {
+              await getAuth().api.createOrganization({
+                body: {
+                  name,
+                  slug: slugifyOrganizationName(name),
+                  userId: user.id,
+                },
+              })
+            } catch (error) {
+              console.warn(
+                `[signup] could not create an organisation for ${user.email}: ${
+                  error instanceof Error ? error.message : String(error)
+                } — the account exists and can create one from the rail.`
+              )
+            }
           },
         },
       },
