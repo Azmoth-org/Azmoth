@@ -32,10 +32,11 @@ import {
  *
  * ## The third tile is the point
  *
- * Two of these numbers flatter the product. The third — 383 of 2,343 catalog positions have any
- * enforced rule speaking to them, ~16.3 percent — does not, and it is rendered at exactly the
- * same size as the other two rather than tucked into a footnote. Stand 2026-09-12, siehe
- * docs/content/facts.md.
+ * Two of these numbers flatter the product. The third — 516 of 2,343 catalog positions have any
+ * enforced rule speaking to them, ~22.0 percent — does not, and it is rendered at exactly the
+ * same size as the other two rather than tucked into a footnote. Stand 2026-09-15, siehe
+ * docs/content/facts.md. It is the figure coverage-sprint batch 3 moved (383 → 516); the tile
+ * reads whatever `engine-facts.ts` holds, so it never has to be edited when that happens.
  *
  * That is a deliberate conversion decision, not a fit of conscience. The audience is billing
  * centres and PVS vendors who have been sold "KI-gestützte Abrechnungsoptimierung" before and know
@@ -63,11 +64,11 @@ type Metric = {
   value: number;
   display: string;
   format?: "integer" | "percent";
-  /** Rendered after the figure, at body size: "ms", "%", "von 980". */
+  /** Rendered after the figure, at body size: "ms", "%", "von 1.523". */
   unit?: string;
   /**
-   * The plain-language reading of the figure for assistive tech — "944 von 980", not "944" then,
-   * as a separate node, "von 980 geladen". `CountUp` already hides its own animated span from AT
+   * The plain-language reading of the figure for assistive tech — "1.342 von 1.523", not "1.342"
+   * then, as a separate node, "von 1.523 geladen". `CountUp` hides its own animated span from AT
    * and exposes the finished number through a `sr-only` sibling, but that still leaves the number
    * and the unit as two separately-announced nodes; this is the one string a screen reader speaks
    * for the whole tile instead.
@@ -158,8 +159,8 @@ export function Metrics() {
       {/*
         The one share figure worth stating on its own line under the tiles.
 
-        Only the catalog share — "383 von 2.343" said as a percentage — belongs here. The rules
-        share (944 von 980, as a percentage) is a share of Azmoth's own rule table, not of the
+        Only the catalog share — "516 von 2.343" said as a percentage — belongs here. The rules
+        share (1.342 von 1.523, as a percentage) is a share of Azmoth's own rule table, not of the
         GOÄ, and printing it beside the catalog figure invited a reader to conflate the two; the
         honest coverage claim this page can make is `katalogAnteil` alone.
       */}
