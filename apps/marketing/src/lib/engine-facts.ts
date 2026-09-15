@@ -23,10 +23,10 @@
  * exclusion-direction fix — see docs/content/coverage-sprint-report-batch3.md and
  * docs/content/f1-exclusion-direction.md):
  *
- *     enforced_rule_count       PENDING_ENFORCED
- *     total_constraint_rule_count PENDING_TOTAL
+ *     enforced_rule_count       1342
+ *     total_constraint_rule_count 1523
  *     catalog                   2343 Ziffern (goae_official_snapshot_2026-07-25)
- *     Ziffern named by >= 1 enforced rule  PENDING_UNDER
+ *     Ziffern named by >= 1 enforced rule  516
  *
  * Two changes landed the same day and the counts move for different reasons, so both are stated.
  *
@@ -37,7 +37,7 @@
  * `RuleStore.redundant` and counted as loaded rather than enforced. Four fewer enforced rules,
  * and four more combinations the engine actually catches.
  *
- * **Batch 3** then moved the coverage figure from 383 to PENDING_UNDER by recovering the GOÄ's
+ * **Batch 3** then moved the coverage figure from 383 to 516 by recovering the GOÄ's
  * section-level *Allgemeine Bestimmungen* — 50 paragraphs the catalog importer had dropped
  * because they belong to no single Ziffer — and encoding the twenty-two of them whose scope is a
  * plain list of numbers. What the figure *counts* did not change: a Ziffer is "under rule" only
@@ -47,7 +47,7 @@
  */
 
 /** Rules that may actually suppress a position right now. `enforced_rule_count`. */
-export const ENFORCED_RULE_COUNT = PENDING_ENFORCED;
+export const ENFORCED_RULE_COUNT = 1342;
 
 /** Every constraint rule loaded, enforced or not. `total_constraint_rule_count`. */
 export const CONSTRAINT_RULE_COUNT = 1523;

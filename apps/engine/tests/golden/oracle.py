@@ -169,7 +169,7 @@ REGRESSION_CASES = (
 #: METADATA ONLY for all nine frozen snapshots after each change — no Ziffer, factor, amount or
 #: proof moved anywhere. Re-verified stable across two separate processes before this value was
 #: updated.
-CASE_A_RECEIPT_PREFIX = "PENDING_REBASE"
+CASE_A_RECEIPT_PREFIX = "04da0826df816a65"
 
 
 # ------------------------------------------------------------------------------------------

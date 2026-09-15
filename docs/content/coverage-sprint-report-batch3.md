@@ -8,7 +8,8 @@ section that quotes it. Nothing here is typed from memory — §8 says how to re
 
 **Result: 383 → 516 Ziffern under an enforced rule (16.35 % → 22.02 %).** 543 new rule rows, all
 generated from twenty-two cited GOÄ provisions by `apps/engine/scripts/build_batch3_rules.py`.
-`enforced_rule_count` 944 → 1,346; `total_constraint_rule_count` 980 → 1,523.
+`enforced_rule_count` 940 → 1,342; `total_constraint_rule_count` 980 → 1,523. (The 940 baseline
+is main after the F1 exclusion-direction fix, PR #87, which this batch is rebased on — see §8.)
 
 ---
 
@@ -311,28 +312,28 @@ so the parser returns no verdict and the evidence is a person reading German. It
 **no other** hand-curated rule is inverted, which is what makes the finding's completeness
 falsifiable, and that every readable batch-3 row points the way its own sentence does.
 
-**Fixed in PR #87, not here.** Flipping an enforced exclusion changes which position a real
-invoice loses, and that belongs in a change a reviewer can see on its own rather than inside a
+**Fixed in PR #87 — merged, and this batch is rebased on it.** Flipping an enforced exclusion
+changes which position a real invoice loses, so it went in as its own change rather than inside a
 543-row data commit. `docs/content/f1-exclusion-direction.md` carries the 35 ids, the euro deltas,
 the golden-suite and deployed-invoice analysis, and a corpus-wide regression test
-(`tests/test_exclusion_direction.py`) that checks all 948 exclusions rather than the 35.
+(`tests/test_exclusion_direction.py`) that checks all one-way exclusions rather than the 35.
 
-**What that means for this batch.** `tests/test_batch3_direction.py` describes the corpus *before*
-the fix, which is what made the finding falsifiable; once PR #87 lands, two of its tests fail on
-purpose and with the instruction in the message. When rebasing this branch onto the fixed
-exclusions:
+**What the rebase did to this batch's own tests.** `tests/test_batch3_direction.py` recorded the
+finding as executable data — the corpus *before* the fix — which is what made it falsifiable and
+also what made it fail the moment the fix landed, by design. The three entries that described the
+defect (`INVERTED_CONFIRMED_BY_PARSER`, `INVERTED_READ_BY_HAND` and the tests over them) are gone:
+the finding is closed and `test_exclusion_direction.py` supersedes them over the whole corpus. What
+remains guards *this* batch's generator, which that test knows nothing about.
 
-* `test_the_machine_confirmed_half_of_the_finding_still_describes_the_corpus` and
-  `test_the_hand_read_half_…` — delete both, along with `INVERTED_CONFIRMED_BY_PARSER` and
-  `INVERTED_READ_BY_HAND`. The finding they record is closed, and
-  `tests/test_exclusion_direction.py` supersedes them with a stronger check.
-* `test_no_other_manual_rule_is_inverted` — also superseded; PR #87's
-  `test_no_exclusion_runs_opposite_to_the_sentence_it_quotes` makes the same assertion over the
-  whole corpus instead of the hand-curated file.
-* The three batch-3-specific tests (`test_every_readable_batch3_row_points_the_way_its_sentence
-  _does`, `test_the_unreadable_provisions_are_exactly_the_two_we_know_about`,
-  `test_every_readable_provision_is_confirmed_row_by_row`) stay: they guard *this* batch's
-  generator, which PR #87 knows nothing about.
+The traffic goes the other way too. Batch 3's rules brought two sentence shapes into the
+corpus-wide check that did not exist when it was written — the Anmerkung to GOÄ 435 and the
+Abschnitt M III 9 provision — so both are added to its `HAND_READ` with the reading that justifies
+them. GOÄ 435 also forced a better guard there: it states **182 exclusions in one sentence**, and a
+row-weighted "how much is machine-confirmed" ratio fell from 94 % to 80 % without a single extra
+sentence going unchecked. That ratio was measuring fan-out, not coverage, so it now counts
+**distinct sentences** (110 of 123, 89 %) and is paired with a hard cap on how many sentences may
+rest on a written reading at all — thirteen is a list a reviewer works through, a hundred is a
+formality.
 
 ### 6.2 · F2 — the GOÄ contradicts itself about GOÄ 448/449 beside GOÄ 56
 
@@ -367,8 +368,8 @@ encoded as written.
 * `tests/test_batch3_direction.py` (6) — §6's cross-check.
 * `tests/test_batch3_quarantine.py` (26) — §4, enforced.
 
-Full `apps/engine` suite (run from `apps/engine`, not the monorepo root): **2,344 passed, 7
-skipped, 0 failed.** `python scripts/engine_cli.py check`: `1346 of 1523 enforced`, **0 dangling**
+Full `apps/engine` suite (run from `apps/engine`, not the monorepo root): **2,382 passed, 7
+skipped, 0 failed** — the count includes the 36 tests PR #87 added to `main`. `python scripts/engine_cli.py check`: `1342 of 1523 enforced`, **0 dangling**
 references — every Ziffer named by a new rule, including `286a`, `K1` and `3055`, resolves in the
 loaded catalog.
 
@@ -394,14 +395,19 @@ adds no new rule family, no new predicate and no DSL.
 
 ## 8. Numbers, and how to regenerate them
 
-| | Before batch 3 | After |
+Baseline is `main` **after** the F1 exclusion-direction fix (PR #87), which this batch is rebased
+on. F1 moved `enforced_rule_count` 944 → 940 and `redundant` 30 → 34 without touching coverage; the
+"before" column is that state, not the pre-F1 one.
+
+| | Before batch 3 (main @ F1) | After |
 |---|---|---|
 | Ziffern named by ≥ 1 enforced rule | 383 / 2,343 (16.35 %) | **516 / 2,343 (22.02 %)** |
-| `enforced_rule_count` | 944 | **1,346** |
+| `enforced_rule_count` | 940 | **1,342** |
 | `total_constraint_rule_count` | 980 | **1,523** |
-| Enforced exclusions | 912 | 1,296 |
+| Enforced exclusions | 908 | 1,292 |
+| Enforced mutual pairs | 54 | 117 |
 | Enforced factor caps | 27 | 45 |
-| Redundant (verified, edge already covered) | 30 | 171 |
+| Redundant (verified, edge already covered) | 34 | 175 |
 
 Unchanged on purpose: the **definition**. A Ziffer is "under rule" when an *enforced* exclusion,
 Zielleistung, specificity or factor-cap rule names it — exactly what
@@ -448,11 +454,9 @@ PY
 
 ## 9. Open questions for a human (not guessed)
 
-1. **F1's 35 inverted rules** (§6.1) — **answered, and fixed in PR #87**
-   (`docs/content/f1-exclusion-direction.md`). This batch must be rebased on it before merging:
-   the two guard tests in `tests/test_batch3_direction.py` describe the corpus *before* the fix
-   and will fail once it lands, which is the behaviour they were written for. §6.1 records what
-   to do with them.
+1. **F1's 35 inverted rules** (§6.1) — **closed.** Fixed in PR #87
+   (`docs/content/f1-exclusion-direction.md`), merged, and this batch is rebased on it. §6.1
+   records what the rebase changed in both directions.
 2. **F2's contradictory pair, GOÄ 448/449 beside GOÄ 56 (§6.2) — still open, and a decision only a
    human should make.** Two sentences of the official text disagree about which position loses,
    and this batch ships `direction: mutual`, which asserts only what both sentences agree on —

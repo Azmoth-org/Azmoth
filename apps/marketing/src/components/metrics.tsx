@@ -67,7 +67,7 @@ type Metric = {
   /** Rendered after the figure, at body size: "ms", "%", "von 1.523". */
   unit?: string;
   /**
-   * The plain-language reading of the figure for assistive tech — "1.346 von 1.523", not "1.346"
+   * The plain-language reading of the figure for assistive tech — "1.342 von 1.523", not "1.342"
    * then, as a separate node, "von 1.523 geladen". `CountUp` hides its own animated span from AT
    * and exposes the finished number through a `sr-only` sibling, but that still leaves the number
    * and the unit as two separately-announced nodes; this is the one string a screen reader speaks
@@ -160,7 +160,7 @@ export function Metrics() {
         The one share figure worth stating on its own line under the tiles.
 
         Only the catalog share — "516 von 2.343" said as a percentage — belongs here. The rules
-        share (1.346 von 1.523, as a percentage) is a share of Azmoth's own rule table, not of the
+        share (1.342 von 1.523, as a percentage) is a share of Azmoth's own rule table, not of the
         GOÄ, and printing it beside the catalog figure invited a reader to conflate the two; the
         honest coverage claim this page can make is `katalogAnteil` alone.
       */}

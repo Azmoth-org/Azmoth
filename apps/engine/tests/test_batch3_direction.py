@@ -16,9 +16,13 @@ this batch, does not share a line of code with `scripts/build_batch3_rules.py`, 
 direction structurally — from where `neben` sits relative to the verb — rather than from anything
 the row asserts about itself.
 
-`test_the_known_inverted_batch1_rows_are_still_inverted` is not a batch-3 test. It is the finding
-this cross-check turned up on the *existing* corpus, recorded as an executable xfail so it cannot
-be lost: see `docs/content/coverage-sprint-report-batch3.md` §6.
+**Scope, after F1.** This cross-check originally carried the finding it turned up on the *existing*
+corpus — 35 hand-curated exclusions pointing the wrong way — as executable data, because a finding
+that lives only in prose decays. That finding is closed: `docs/content/f1-exclusion-direction.md`
+fixed the 35, and `tests/test_exclusion_direction.py` now makes the same assertion over all 948
+exclusions the engine loads rather than over the hand-curated file alone. Those entries are gone
+from here, as `docs/content/coverage-sprint-report-batch3.md` §6.1 said they would be; what remains
+is the part that guards *this batch's generator*, which the corpus-wide test knows nothing about.
 """
 
 from __future__ import annotations
@@ -138,106 +142,3 @@ def test_every_readable_provision_is_confirmed_row_by_row(batch3_rows):
 
     confirmed = sorted(b for b, v in by_basis.items() if v == {True})
     assert len(confirmed) >= 6, f"only {len(confirmed)} provisions independently confirmed"
-
-
-# ==========================================================================================
-# The finding on the existing corpus — see the module docstring and report §6
-# ==========================================================================================
-
-#: Rows from coverage-sprint **batch 1** whose sentence is form A but which were entered as if it
-#: were form B. In each one the *subject* of the sentence is the position that may not be charged,
-#: and it was recorded as the one that survives. The auto-extractor gets the identical shape right
-#: — `excl_auto_626_355`, from "Die Leistung nach Nummer 355 ist neben … 626 … nicht
-#: berechnungsfähig", stores 626 → 355 — so the corpus currently disagrees with itself about which
-#: way this shape points.
-#:
-#: Split by **what proves it**, because the two halves are not equally proven and saying otherwise
-#: would be the same kind of overclaim this whole module is about.
-#:
-#: Not fixed here. Flipping an enforced exclusion changes which position a real invoice loses, and
-#: that belongs in a change a reviewer can see on its own, not inside a 505-row data commit. See
-#: `docs/content/coverage-sprint-report-batch3.md` §6.
-
-#: Machine-confirmed: `parse_provision` reads these quotes and returns the opposite edge.
-#:
-#: The four GOÄ 48 rows are the worse half. A *reverse* auto-extracted rule exists for each
-#: (`excl_auto_1_48`, `excl_auto_50_48`, …) and is correct, but LAYER 3 of
-#: `logic/datalog/goae_rules.dl` only decides a one-way edge when the opposite edge is absent
-#: (`!exclusion(_, B, A, _)`). So the inverted row does not merely point the wrong way — it
-#: silences the correct rule, and GOÄ 48 beside GOÄ 50 is caught by nothing at all today.
-INVERTED_CONFIRMED_BY_PARSER = (
-    "excl_man_260_355", "excl_man_260_356", "excl_man_260_357", "excl_man_260_360",
-    "excl_man_260_361", "excl_man_260_626", "excl_man_260_627", "excl_man_260_628",
-    "excl_man_260_629", "excl_man_260_630", "excl_man_260_631", "excl_man_260_632",
-    "excl_man_260_648",
-    "excl_man_48_1", "excl_man_48_50", "excl_man_48_51", "excl_man_48_52",
-)
-
-#: Read by hand, and *not* machine-confirmable: the blocked side of each sentence is named by
-#: Buchstabe ("Der Zuschlag nach Buchstabe F ist neben den Leistungen nach den Nummern 45, 46, 48
-#: und 52 nicht berechnungsfähig"), and `expand_numbers` reads digits, so the parser returns no
-#: verdict rather than the wrong one. The grammar is the same form A as the rows above — the
-#: Zuschlag is the sentence's subject and is therefore the position that may not be charged — but
-#: the evidence here is a person reading German, so these are listed separately and pinned only by
-#: the edge they currently assert.
-INVERTED_READ_BY_HAND = {
-    "excl_man_A_B": ("A", "B"), "excl_man_A_C": ("A", "C"), "excl_man_A_D": ("A", "D"),
-    "excl_man_E_F": ("E", "F"), "excl_man_E_G": ("E", "G"), "excl_man_E_H": ("E", "H"),
-    "excl_man_F_45": ("F", "45"), "excl_man_F_46": ("F", "46"),
-    "excl_man_F_48": ("F", "48"), "excl_man_F_52": ("F", "52"),
-    "excl_man_G_45": ("G", "45"), "excl_man_G_46": ("G", "46"),
-    "excl_man_G_48": ("G", "48"), "excl_man_G_52": ("G", "52"),
-    "excl_man_H_45": ("H", "45"), "excl_man_H_46": ("H", "46"),
-    "excl_man_H_48": ("H", "48"), "excl_man_H_52": ("H", "52"),
-}
-
-
-def test_the_machine_confirmed_half_of_the_finding_still_describes_the_corpus():
-    """The 17 rows the parser can read are still pointing the way the finding says.
-
-    A plain assertion rather than an `xfail` on the direction check, so that *fixing* them fails
-    loudly with the report section to update named in the message — an xfail would flip to XPASS
-    and be easy to scroll past.
-    """
-    by_id = {r["rule_id"]: r for r in _manual_rows()}
-    missing = [rid for rid in INVERTED_CONFIRMED_BY_PARSER if rid not in by_id]
-    assert missing == [], f"finding §6 names rules that no longer exist: {missing}"
-
-    fixed = sorted(
-        rid for rid in INVERTED_CONFIRMED_BY_PARSER if _supported(by_id[rid]) is not False
-    )
-    assert not fixed, (
-        f"{len(fixed)} of the rules recorded as inverted in "
-        f"docs/content/coverage-sprint-report-batch3.md §6 no longer are: {fixed}. If they were "
-        f"fixed on purpose, drop them from INVERTED_CONFIRMED_BY_PARSER and close out §6 — the "
-        f"finding and the corpus must not disagree."
-    )
-
-
-def test_the_hand_read_half_of_the_finding_still_describes_the_corpus():
-    by_id = {r["rule_id"]: r for r in _manual_rows()}
-    actual = {
-        rid: (by_id[rid]["from_ziffer"], by_id[rid]["to_ziffer"])
-        for rid in INVERTED_READ_BY_HAND
-        if rid in by_id
-    }
-    assert actual == INVERTED_READ_BY_HAND, (
-        "the Zuschlag rows recorded as inverted in §6 have moved. If they were corrected, update "
-        "INVERTED_READ_BY_HAND and close out §6."
-    )
-
-
-def test_no_other_manual_rule_is_inverted():
-    """The finding claims to be complete, for everything the parser can decide. This is what
-    makes that claim falsifiable — and it is why `INVERTED_READ_BY_HAND` is scoped by the parser
-    being silent rather than by anybody's confidence."""
-    known = set(INVERTED_CONFIRMED_BY_PARSER) | set(INVERTED_READ_BY_HAND)
-    newly = [
-        r["rule_id"]
-        for r in _manual_rows()
-        if r["rule_id"].startswith("excl_man_")
-        and r["direction"] == "one_way"
-        and r["rule_id"] not in known
-        and _supported(r) is False
-    ]
-    assert newly == [], f"inverted hand-curated exclusions the finding does not list: {newly}"

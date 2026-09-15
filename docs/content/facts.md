@@ -23,7 +23,7 @@ Two facts are load-bearing for how this whole bank must be written:
 
 ## Engine numbers (current snapshot, verified 2026-09-15)
 
-**F01 — Enforced rule count.** 1,346 rules may currently suppress a position; 1,523 constraint
+**F01 — Enforced rule count.** 1,342 rules may currently suppress a position; 1,523 constraint
 rules are loaded in total (enforced + not-yet-enforced). Moved from 858/894 by coverage-sprint
 batch 1 (`docs/content/coverage-sprint-plan.md`, +86 hand-verified rules), then from 944/980 by
 batch 3 (`docs/content/coverage-sprint-report-batch3.md`, +543 rows generated from twenty-two
